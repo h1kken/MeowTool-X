@@ -1,0 +1,106 @@
+{
+    "Gamepasses": [
+        {
+            "id": 9985664,
+            "name": "Cool Custom Stand"
+        },
+        {
+            "id": 10397197,
+            "name": "3+ Stand Storage Slots"
+        },
+        {
+            "id": 10478668,
+            "name": "3+ Bank Slots"
+        },
+        {
+            "id": 10479192,
+            "name": "3+ Bank Slots Storage"
+        },
+        {
+            "id": 10562035,
+            "name": "Item Notifier"
+        },
+        {
+            "id": 10753254,
+            "name": "Donation"
+        },
+        {
+            "id": 10304426,
+            "name": "Small Donation"
+        },
+        {
+            "id": 10096532,
+            "name": "Medium Donation"
+        },
+        {
+            "id": 10507934,
+            "name": "kur's Donation"
+        },
+        {
+            "id": 10516158,
+            "name": "Hydra's Donation Perks"
+        },
+        {
+            "id": 10381097,
+            "name": "Tips"
+        },
+        {
+            "id": 11491183,
+            "name": "Custom Chat Color"
+        },
+        {
+            "id": 11581293,
+            "name": "Chat Background Color"
+        },
+        {
+            "id": 13675608,
+            "name": "Emotes Pack v1"
+        },
+        {
+            "id": 14014491,
+            "name": "Emote Pack v2"
+        },
+        {
+            "id": 822694616,
+            "name": "Emote Pack v3"
+        },
+        {
+            "id": 822666635,
+            "name": "Emote Pack v4"
+        },
+        {
+            "id": 837754540,
+            "name": "Emote Pack v5"
+        },
+        {
+            "id": 920471052,
+            "name": "JJK Emote Pack"
+        },
+        {
+            "id": 939773206,
+            "name": "Smart Assistant"
+        },
+        {
+            "id": 948648926,
+            "name": "Community Emote Pack"
+        }
+    ],
+    "Badges": [
+        {
+            "id": 2124647551,
+            "name": "AUT Winter/X-Mas"
+        },
+        {
+            "id": 2124749486,
+            "name": "New Universe"
+        },
+        {
+            "id": 3072215579952874,
+            "name": "A Haunting Time"
+        },
+        {
+            "id": 500904421623568,
+            "name": "A Jolly Time"
+        }
+    ]
+}

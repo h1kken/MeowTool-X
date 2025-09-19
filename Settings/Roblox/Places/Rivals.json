@@ -1,0 +1,50 @@
+{
+    "Gamepasses": [
+        {
+            "id": 838203071,
+            "name": "Standard Weapons Bundle!"
+        },
+        {
+            "id": 977061826,
+            "name": "Energy Bundle!"
+        },
+        {
+            "id": 838198043,
+            "name": "Heavy Duty Bundle!"
+        },
+        {
+            "id": 838160059,
+            "name": "Classic Bundle!"
+        },
+        {
+            "id": 838087219,
+            "name": "Exogun Bundle!"
+        },
+        {
+            "id": 837904767,
+            "name": "Medkit Bundle!"
+        },
+        {
+            "id": 938353691,
+            "name": "Pixel Bundle!"
+        },
+        {
+            "id": 839491390,
+            "name": "Starter Bundle!"
+        },
+        {
+            "id": 1162134376,
+            "name": "RPG Bundle!"
+        }
+    ],
+    "Badges": [
+        {
+            "id": 2904819966736756,
+            "name": "Welcome!"
+        },
+        {
+            "id": 1330297521556384,
+            "name": "Alpha Tester!"
+        }
+    ]
+}

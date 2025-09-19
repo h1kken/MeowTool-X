@@ -1,0 +1,38 @@
+{
+    "Gamepasses": [
+        {
+            "id": 6028662,
+            "name": "2x Money"
+        },
+        {
+            "id": 6028786,
+            "name": "Dark Blade"
+        },
+        {
+            "id": 6240746,
+            "name": "2x Mastery"
+        },
+        {
+            "id": 6525589,
+            "name": "Fast Boats"
+        },
+        {
+            "id": 6738811,
+            "name": "Fruit Notifier"
+        },
+        {
+            "id": 7578721,
+            "name": "2x Boss Drops"
+        }
+    ],
+    "Badges": [
+        {
+            "id": 2125253106,
+            "name": "Second Sea"
+        },
+        {
+            "id": 2125253113,
+            "name": "Third Sea"
+        }
+    ]
+}

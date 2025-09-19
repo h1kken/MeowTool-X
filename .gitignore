@@ -1,0 +1,21 @@
+
+# enviroments
+.env/
+
+# paths created MeowTool
+/Proxy/
+/Roblox/
+/Settings/Configs/
+/Versions/
+
+# logs
+Logs/
+*.log
+
+# caches
+__pycache__/
+
+# other
+.vscode/
+test_*.py
+notepad.txt

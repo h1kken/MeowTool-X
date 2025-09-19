@@ -1,0 +1,44 @@
+{
+    "Gamepasses": [
+        {
+            "id": 952453152,
+            "name": "VIP"
+        },
+        {
+            "id": 957906237,
+            "name": "Anime Emotes"
+        },
+        {
+            "id": 958185291,
+            "name": "Toxic Emotes"
+        },
+        {
+            "id": 965195377,
+            "name": "Skip Spins"
+        },
+        {
+            "id": 1034038790,
+            "name": "Awakening Outfits"
+        },
+        {
+            "id": 1045871823,
+            "name": "Goal Sound"
+        },
+        {
+            "id": 1046171023,
+            "name": "Ankle Breaker Sound"
+        },
+        {
+            "id": 1054209537,
+            "name": "Privacy Servers+"
+        },
+        {
+            "id": 924321836,
+            "name": "Slot 2"
+        },
+        {
+            "id": 924345504,
+            "name": "Slot 3"
+        }
+    ]
+}

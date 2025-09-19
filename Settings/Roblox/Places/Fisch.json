@@ -1,0 +1,334 @@
+{
+    "Gamepasses": [
+        {
+            "id": 837341519,
+            "name": "Appraisers Luck"
+        },
+        {
+            "id": 837360470,
+            "name": "Double XP"
+        },
+        {
+            "id": 837478377,
+            "name": "Supporter"
+        },
+        {
+            "id": 847012516,
+            "name": "Emote Pack"
+        },
+        {
+            "id": 901839344,
+            "name": "Sell Anywhere"
+        },
+        {
+            "id": 927437431,
+            "name": "Bobber Pack"
+        },
+        {
+            "id": 948629114,
+            "name": "Radio"
+        },
+        {
+            "id": 986687236,
+            "name": "Spawn Boat Anywhere"
+        },
+        {
+            "id": 986882975,
+            "name": "Appraise Anywhere"
+        },
+        {
+            "id": 1202313985,
+            "name": "Aquarium Boat"
+        }
+    ],
+    "Badges": [
+        {
+            "id": 3713345851024569,
+            "name": "First Time Fischer"
+        },
+        {
+            "id": 2548603185740666,
+            "name": "Special Someone"
+        },
+        {
+            "id": 4227551957813448,
+            "name": "Economy Expert"
+        },
+        {
+            "id": 398396161277206,
+            "name": "Rare Hunter"
+        },
+        {
+            "id": 292081433761936,
+            "name": "Keepers Pupil"
+        },
+        {
+            "id": 2087500307302023,
+            "name": "Attempted Upgrade"
+        },
+        {
+            "id": 4469874271658702,
+            "name": "Divine Relic"
+        },
+        {
+            "id": 3051769055311800,
+            "name": "50 Catches"
+        },
+        {
+            "id": 980568772269520,
+            "name": "100 Catches"
+        },
+        {
+            "id": 2392322242811007,
+            "name": "500 Catches"
+        },
+        {
+            "id": 2121501969748139,
+            "name": "1000 Catches"
+        },
+        {
+            "id": 4043528816128290,
+            "name": "2000 Catches"
+        },
+        {
+            "id": 2237691197864883,
+            "name": "3000 Catches"
+        },
+        {
+            "id": 2586667227808420,
+            "name": "4000 Catches"
+        },
+        {
+            "id": 2440764735271938,
+            "name": "5000 Catches"
+        },
+        {
+            "id": 1009279661183813,
+            "name": "10,000 Catches"
+        },
+        {
+            "id": 1708816354589502,
+            "name": "Lava Caster"
+        },
+        {
+            "id": 3526079295826418,
+            "name": "Recon Expert"
+        },
+        {
+            "id": 163992758707317,
+            "name": "True Power"
+        },
+        {
+            "id": 553555175646641,
+            "name": "Experienced True Beauty"
+        },
+        {
+            "id": 1045860405568363,
+            "name": "Bestiary: Ocean"
+        },
+        {
+            "id": 3871316346306270,
+            "name": "Bestiary: Moosewood"
+        },
+        {
+            "id": 225841574756551,
+            "name": "Bestiary: Roslit"
+        },
+        {
+            "id": 2903347774735091,
+            "name": "Bestiary: Sunstone Island"
+        },
+        {
+            "id": 2994442057572213,
+            "name": "Bestiary: Terrapin Island"
+        },
+        {
+            "id": 4479912445209985,
+            "name": "Bestiary: Roslit Volcano"
+        },
+        {
+            "id": 3200076862852988,
+            "name": "Bestiary: Vertigo"
+        },
+        {
+            "id": 4343979385420841,
+            "name": "Bestiary: Mushgrove Swamp"
+        },
+        {
+            "id": 4101868524305507,
+            "name": "Bestiary: Snowcap"
+        },
+        {
+            "id": 635398639427099,
+            "name": "Bestiary: Everything"
+        },
+        {
+            "id": 772547227400435,
+            "name": "Bestiary: Keepers Altar"
+        },
+        {
+            "id": 3161443122784523,
+            "name": "Bestiary: Desolate Deep"
+        },
+        {
+            "id": 1535329670769985,
+            "name": "Bestiary: Brine Pool"
+        },
+        {
+            "id": 3591399443042848,
+            "name": "Bestiary: Forsaken Shores"
+        },
+        {
+            "id": 2042505003241970,
+            "name": "Bestiary: The Depths"
+        },
+        {
+            "id": 1666493813690822,
+            "name": "Bestiary: Ancient Archives"
+        },
+        {
+            "id": 2054807830474099,
+            "name": "Bestiary: Ancient Isle"
+        },
+        {
+            "id": 272078520028439,
+            "name": "Bestiary: Overgrowth Caves"
+        },
+        {
+            "id": 843774301770016,
+            "name": "Bestiary: Frigid Cavern"
+        },
+        {
+            "id": 4189906956026791,
+            "name": "Bestiary: Cryogenic Canal"
+        },
+        {
+            "id": 1396071619017862,
+            "name": "Bestiary: Glacial Grotto"
+        },
+        {
+            "id": 968483808853747,
+            "name": "Bestiary: Grand Reef"
+        },
+        {
+            "id": 32642745294476,
+            "name": "Bestiary: Atlantean Storm"
+        },
+        {
+            "id": 2070428894950149,
+            "name": "Bestiary: Atlantis"
+        },
+        {
+            "id": 2971899933109154,
+            "name": "Bestiary: Volcanic Vents"
+        },
+        {
+            "id": 2580846320562382,
+            "name": "Bestiary: Challengers Deep"
+        },
+        {
+            "id": 440171660675783,
+            "name": "Bestiary: Abyssal Zenith"
+        },
+        {
+            "id": 699973517072777,
+            "name": "Bestiary: Calm Zone"
+        },
+        {
+            "id": 434000111228886,
+            "name": "Bestiary: Veil of the Forsaken"
+        },
+        {
+            "id": 4035200905115276,
+            "name": "Bestiary: Waveborne"
+        },
+        {
+            "id": 2613933330373724,
+            "name": "Bestiary: Azure Lagoon"
+        },
+        {
+            "id": 62688893003566,
+            "name": "Bestiary: Isle Of New Beginnings"
+        },
+        {
+            "id": 1997541657461197,
+            "name": "Bestiary: Lushgrove"
+        },
+        {
+            "id": 2076076069924140,
+            "name": "Bestiary: Emberreach"
+        },
+        {
+            "id": 410506324603873,
+            "name": "Bestiary: The Cursed Shores"
+        },
+        {
+            "id": 3256592958077820,
+            "name": "Bestiary: Pine Shoals"
+        },
+        {
+            "id": 279267787604757,
+            "name": "Bestiary: Open Ocean"
+        },
+        {
+            "id": 2020919067872646,
+            "name": "Bestiary: Octophant"
+        },
+        {
+            "id": 4460712899366124,
+            "name": "Bestiary: Animals First Sea"
+        },
+        {
+            "id": 1444909653191652,
+            "name": "Bestiary: Animals Second Sea"
+        },
+        {
+            "id": 4358181133009953,
+            "name": "Bestiary: Blue Moon First Sea"
+        },
+        {
+            "id": 1132127671855113,
+            "name": "Bestiary: Blue Moon Second Sea"
+        },
+        {
+            "id": 507614698244930,
+            "name": "Bestiary: Lego"
+        },
+        {
+            "id": 246796205450087,
+            "name": "Bestiary: Carrot Garden"
+        },
+        {
+            "id": 3824103730892525,
+            "name": "A Trip Through Space"
+        },
+        {
+            "id": 1930105118522861,
+            "name": "Silent Lullaby"
+        },
+        {
+            "id": 1434830770922550,
+            "name": "LEGO Backpack"
+        },
+        {
+            "id": 158854108363478,
+            "name": "Shark Frenzy"
+        },
+        {
+            "id": 2790188123225486,
+            "name": "Jurassic World | Fisch Quest"
+        },
+        {
+            "id": 385394182585789,
+            "name": "Jurassic Island Bestiary"
+        },
+        {
+            "id": 1857933038828956,
+            "name": "?"
+        },
+        {
+            "id": 2594646182778359,
+            "name": "FISCHFRIGHT 2024"
+        }
+    ]
+}

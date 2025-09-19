@@ -1,0 +1,78 @@
+{
+    "Gamepasses": [
+        {
+            "id": 257811346,
+            "name": "VIP!"
+        },
+        {
+            "id": 205379487,
+            "name": "Lucky!"
+        },
+        {
+            "id": 257803774,
+            "name": "Ultra Lucky!"
+        },
+        {
+            "id": 258567677,
+            "name": "Magic Eggs!"
+        },
+        {
+            "id": 259437976,
+            "name": "+15 Pets!"
+        },
+        {
+            "id": 264808140,
+            "name": "Huge Hunter!"
+        },
+        {
+            "id": 265320491,
+            "name": "Auto Farm!"
+        },
+        {
+            "id": 265324265,
+            "name": "Auto Tap!"
+        },
+        {
+            "id": 651611000,
+            "name": "Daycare Slots!"
+        },
+        {
+            "id": 655859720,
+            "name": "+15 Eggs!"
+        },
+        {
+            "id": 690997523,
+            "name": "Super Drops!"
+        },
+        {
+            "id": 720275150,
+            "name": "Double Stars!"
+        },
+        {
+            "id": 975558264,
+            "name": "Super Shiny Hunter!"
+        },
+        {
+            "id": 1099764410,
+            "name": "Pass"
+        }
+    ],
+    "Badges": [
+        {
+            "id": 2153913164,
+            "name": "Welcome"
+        },
+        {
+            "id": 3189151177666639,
+            "name": "The Hunt: First Edition"
+        },
+        {
+            "id": 754796678735151,
+            "name": "The Hunt: Mega Edition"
+        },
+        {
+            "id": 327631483993374,
+            "name": "Journey's End"
+        }
+    ]
+}

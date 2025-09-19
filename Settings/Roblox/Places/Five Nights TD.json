@@ -1,0 +1,134 @@
+{
+    "Gamepasses": [
+        {
+            "id": 755213386,
+            "name": "VIP"
+        },
+        {
+            "id": 970374466,
+            "name": "Shiny Hunter"
+        },
+        {
+            "id": 1232238756,
+            "name": "Starter Pack & Exclusive Title"
+        }
+    ],
+    "Badges": [
+        {
+            "id": 450768915498982,
+            "name": "Join The Game"
+        },
+        {
+            "id": 3361299059765,
+            "name": "Win a Game"
+        },
+        {
+            "id": 1801557447657311,
+            "name": "Complete Game 1"
+        },
+        {
+            "id": 660308672766666,
+            "name": "Complete Game 2"
+        },
+        {
+            "id": 1249525436995984,
+            "name": "Finish Game 3"
+        },
+        {
+            "id": 1352734224772502,
+            "name": "Complete Game 4"
+        },
+        {
+            "id": 3840686186033460,
+            "name": "Complete Game 5"
+        },
+        {
+            "id": 1289932523675224,
+            "name": "Complete Game 6"
+        },
+        {
+            "id": 890542128167403,
+            "name": "Completed game 7"
+        },
+        {
+            "id": 4360266057339738,
+            "name": "Completed game 8"
+        },
+        {
+            "id": 1323923615523391,
+            "name": "Completed Game 10"
+        },
+        {
+            "id": 2308722040924793,
+            "name": "The ARG 1"
+        },
+        {
+            "id": 4348953112147721,
+            "name": "ARG 2 Winner"
+        },
+        {
+            "id": 4093753784951799,
+            "name": "Play Summer Event"
+        },
+        {
+            "id": 4192377969805376,
+            "name": "Complete Summer Event"
+        },
+        {
+            "id": 3717054685843370,
+            "name": "Play Military Event"
+        },
+        {
+            "id": 1710710467179779,
+            "name": "Complete Military Event"
+        },
+        {
+            "id": 78638580451212,
+            "name": "Play Wild West Event"
+        },
+        {
+            "id": 4427897814216895,
+            "name": "Finish Wild West"
+        },
+        {
+            "id": 481777508062526,
+            "name": "Play Halloween Event"
+        },
+        {
+            "id": 314612341496152,
+            "name": "Complete Halloween Event"
+        },
+        {
+            "id": 2794698248016894,
+            "name": "Played Steampunk Event"
+        },
+        {
+            "id": 4321640724737709,
+            "name": "Completed Steampunk Event"
+        },
+        {
+            "id": 2924114884782147,
+            "name": "Played Christmas Event!"
+        },
+        {
+            "id": 2486341879016297,
+            "name": "Completed Christmas Event"
+        },
+        {
+            "id": 1350170603923805,
+            "name": "Fools Hunt Winner"
+        },
+        {
+            "id": 1462238683858305,
+            "name": "Play Prehistoric Event"
+        },
+        {
+            "id": 477734488413301,
+            "name": "Complete Prehistoric Event"
+        },
+        {
+            "id": 3554984265461704,
+            "name": "Claim Calender Special Reward"
+        }
+    ]
+}

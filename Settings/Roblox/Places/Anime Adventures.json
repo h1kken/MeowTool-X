@@ -1,0 +1,30 @@
+{
+    "Gamepasses": [
+        {
+            "id": 55372677,
+            "name": "VIP"
+        },
+        {
+            "id": 55373046,
+            "name": "Shiny Hunter"
+        },
+        {
+            "id": 55373124,
+            "name": "Unit Storage"
+        },
+        {
+            "id": 55373224,
+            "name": "Display 3 Units"
+        },
+        {
+            "id": 99127218,
+            "name": "Display All Units"
+        }
+    ],
+    "Badges": [
+        {
+            "id": 4244887231710040,
+            "name": "The Hatch 2025"
+        }
+    ]
+}

@@ -1,0 +1,50 @@
+{
+    "Gamepasses": [
+        {
+            "id": 77102481,
+            "name": "Innate Slot 3"
+        },
+        {
+            "id": 77102528,
+            "name": "Innate Slot 4"
+        },
+        {
+            "id": 77102969,
+            "name": "Heavenly Restriction"
+        },
+        {
+            "id": 77103194,
+            "name": "Extra Emote Slots"
+        },
+        {
+            "id": 77103458,
+            "name": "Item Notifier"
+        },
+        {
+            "id": 77110710,
+            "name": "Innate Bag"
+        },
+        {
+            "id": 259500454,
+            "name": "Skip Spins"
+        }
+    ],
+    "Badges": [
+        {
+            "id": 2136221767,
+            "name": "Played Jujutsu Infinite"
+        },
+        {
+            "id": 2136222659,
+            "name": "Domain Expansion"
+        },
+        {
+            "id": 2136224010,
+            "name": "Special Grade Sorcerer"
+        },
+        {
+            "id": 1768126716824041,
+            "name": "Played Tutorial"
+        }
+    ]
+}

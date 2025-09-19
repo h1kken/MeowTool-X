@@ -1,0 +1,74 @@
+{
+    "Gamepasses": [
+        {
+            "id": 7355317,
+            "name": "Item Notifier"
+        },
+        {
+            "id": 7361207,
+            "name": "Select Pose"
+        },
+        {
+            "id": 7368580,
+            "name": "Cosmetics Bundle #1"
+        },
+        {
+            "id": 7376923,
+            "name": "Voice Lines"
+        },
+        {
+            "id": 8062778,
+            "name": "Tips"
+        },
+        {
+            "id": 9837261,
+            "name": "Stand Storage: Slot #1"
+        },
+        {
+            "id": 9838197,
+            "name": "Stand Storage: Slot #2"
+        },
+        {
+            "id": 9838201,
+            "name": "Stand Storage: Slot #3"
+        },
+        {
+            "id": 16423469,
+            "name": "Stand Storage: Slot #4"
+        },
+        {
+            "id": 16423475,
+            "name": "Stand Storage: Slot #5"
+        },
+        {
+            "id": 13258801,
+            "name": "Style Storage: Slot #2"
+        },
+        {
+            "id": 13258808,
+            "name": "Style Storage: Slot #3"
+        },
+        {
+            "id": 14597766,
+            "name": "2x Cosmetic Slots"
+        },
+        {
+            "id": 14597778,
+            "name": "2x Inventory"
+        }
+    ],
+    "Badges": [
+        {
+            "id": 2124517293,
+            "name": "Prestige 1"
+        },
+        {
+            "id": 2124517294,
+            "name": "Prestige 2"
+        },
+        {
+            "id": 2124517296,
+            "name": "Prestige 3"
+        }
+    ]
+}

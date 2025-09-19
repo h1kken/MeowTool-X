@@ -1,0 +1,58 @@
+{
+    "Gamepasses": [
+        {
+            "id": 7866886,
+            "name": "Tips"
+        },
+        {
+            "id": 7888149,
+            "name": "Quest Experience x2"
+        },
+        {
+            "id": 7929804,
+            "name": "Night Blade"
+        },
+        {
+            "id": 7936106,
+            "name": "Fruit Position"
+        },
+        {
+            "id": 8114853,
+            "name": "Quest Money x2"
+        },
+        {
+            "id": 8287391,
+            "name": "Conqueror Ability"
+        },
+        {
+            "id": 9876237,
+            "name": "Coffin Boat"
+        },
+        {
+            "id": 18044132,
+            "name": "Item Drop x2"
+        },
+        {
+            "id": 18399361,
+            "name": "Legacy Pose"
+        },
+        {
+            "id": 23746192,
+            "name": "Fruit Bag"
+        },
+        {
+            "id": 1324228345,
+            "name": "Volt Bundle"
+        }
+    ],
+    "Badges": [
+        {
+            "id": 570761085363018,
+            "name": "Second Sea"
+        },
+        {
+            "id": 2677309180656288,
+            "name": "Third Sea"
+        }
+    ]
+}

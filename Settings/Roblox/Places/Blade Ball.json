@@ -1,0 +1,30 @@
+{
+    "Gamepasses": [
+        {
+            "id": 223367086,
+            "name": "VIP"
+        },
+        {
+            "id": 226785981,
+            "name": "Double Coins"
+        },
+        {
+            "id": 229765926,
+            "name": "Instant Spin"
+        },
+        {
+            "id": 895596060,
+            "name": "Trading Sign"
+        },
+        {
+            "id": 1203969437,
+            "name": "Radiant Veil"
+        }
+    ],
+    "Badges": [
+        {
+            "id": 3790278758533153,
+            "name": "The Hatch"
+        }
+    ]
+}

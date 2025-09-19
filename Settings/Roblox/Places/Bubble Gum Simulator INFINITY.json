@@ -1,0 +1,106 @@
+{
+    "Gamepasses": [
+        {
+            "id": 1110079647,
+            "name": "VIP"
+        },
+        {
+            "id": 1109858215,
+            "name": "Infinity Gum"
+        },
+        {
+            "id": 1111553262,
+            "name": "Extra Equips"
+        },
+        {
+            "id": 1111985110,
+            "name": "Fast Hatch"
+        },
+        {
+            "id": 1112014853,
+            "name": "Triple Hatch"
+        },
+        {
+            "id": 1109959879,
+            "name": "Digital Storage"
+        },
+        {
+            "id": 1109987673,
+            "name": "Double Luck"
+        },
+        {
+            "id": 1169607896,
+            "name": "Double Currency"
+        },
+        {
+            "id": 1111001300,
+            "name": "Double Gems"
+        }
+    ],
+    "Badges": [
+        {
+            "id": 967619436348747,
+            "name": "Welcome"
+        },
+        {
+            "id": 542484307529882,
+            "name": "Bubbler (500)"
+        },
+        {
+            "id": 1305120438687619,
+            "name": "Starter (2500)"
+        },
+        {
+            "id": 470805405292091,
+            "name": "Advanced (25K)"
+        },
+        {
+            "id": 3118039627796133,
+            "name": "Expert (100K)"
+        },
+        {
+            "id": 2718129323670663,
+            "name": "Extreme Bubbler (500K)"
+        },
+        {
+            "id": 1596637791422828,
+            "name": "Elite Bubbler (1M)"
+        },
+        {
+            "id": 1504133711887303,
+            "name": "Gum Specialist (10M)"
+        },
+        {
+            "id": 2113590115918140,
+            "name": "Bubble Gummer (100M)"
+        },
+        {
+            "id": 1138391338389053,
+            "name": "The Best Bubbler (1B)"
+        },
+        {
+            "id": 2893978931392677,
+            "name": "Bubble King (5B)"
+        },
+        {
+            "id": 3148356404260788,
+            "name": "Hatch 100 Eggs"
+        },
+        {
+            "id": 1697379762708218,
+            "name": "Hatch 1,000 Eggs"
+        },
+        {
+            "id": 264494209383906,
+            "name": "Hatch 10,000 Eggs"
+        },
+        {
+            "id": 4447657895374809,
+            "name": "Hatch 100,000 Eggs"
+        },
+        {
+            "id": 2118067099446539,
+            "name": "Hatch 1,000,000 Eggs"
+        }
+    ]
+}

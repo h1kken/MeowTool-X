@@ -1,0 +1,170 @@
+{
+    "Gamepasses": [
+        {
+            "id": 7010034,
+            "name": "VIP"
+        },
+        {
+            "id": 7578781,
+            "name": "Advanced Building"
+        },
+        {
+            "id": 8510023,
+            "name": "Lucky Egg"
+        },
+        {
+            "id": 8510024,
+            "name": "Resource Hog"
+        },
+        {
+            "id": 8510025,
+            "name": "Big Backpack"
+        },
+        {
+            "id": 8510026,
+            "name": "Lucky Trainer"
+        },
+        {
+            "id": 9802010,
+            "name": "Multi-Riding"
+        },
+        {
+            "id": 10999031,
+            "name": "Lucky Tailor"
+        },
+        {
+            "id": 12000312,
+            "name": "Multi-Accessory"
+        }
+    ],
+    "Badges": [
+        {
+            "id": 2124634392,
+            "name": "Met a Developer!"
+        },
+        {
+            "id": 2129850167,
+            "name": "Christmas 2022"
+        },
+        {
+            "id": 2124564089,
+            "name": "Winter 2019"
+        },
+        {
+            "id": 2124879418,
+            "name": "Winter 2021"
+        },
+        {
+            "id": 1724546607470910,
+            "name": "Winter 2023"
+        },
+        {
+            "id": 1680929594185010,
+            "name": "Winter 2024"
+        },
+        {
+            "id": 2124564091,
+            "name": "Valentines 2020"
+        },
+        {
+            "id": 2124928448,
+            "name": "Valentines 2022"
+        },
+        {
+            "id": 2140856200,
+            "name": "Valentines 2023"
+        },
+        {
+            "id": 2897784583321876,
+            "name": "Valentines 2024"
+        },
+        {
+            "id": 3543596453313423,
+            "name": "Valentines 2025"
+        },
+        {
+            "id": 2124564088,
+            "name": "Halloween 2019"
+        },
+        {
+            "id": 2124622292,
+            "name": "Halloween 2020"
+        },
+        {
+            "id": 2124843641,
+            "name": "Halloween 2021"
+        },
+        {
+            "id": 2129053839,
+            "name": "Halloween 2022"
+        },
+        {
+            "id": 2153596435,
+            "name": "Halloween 2023"
+        },
+        {
+            "id": 778861698160847,
+            "name": "Halloween 2024"
+        },
+        {
+            "id": 2124564092,
+            "name": "Easter 2020"
+        },
+        {
+            "id": 2124706777,
+            "name": "Easter 2021"
+        },
+        {
+            "id": 2125832921,
+            "name": "Easter 2022"
+        },
+        {
+            "id": 2143031781,
+            "name": "Easter 2023"
+        },
+        {
+            "id": 3467626479412502,
+            "name": "Easter 2024"
+        },
+        {
+            "id": 1570550551506460,
+            "name": "Easter 2025"
+        },
+        {
+            "id": 2124564093,
+            "name": "Solstice 2020"
+        },
+        {
+            "id": 2124583228,
+            "name": "Solstice 2021"
+        },
+        {
+            "id": 2128140324,
+            "name": "Solstice 2022"
+        },
+        {
+            "id": 2150313169,
+            "name": "Solstice 2023"
+        },
+        {
+            "id": 1575651999109337,
+            "name": "Solstice 2024"
+        },
+        {
+            "id": 2126825175,
+            "name": "Galaxy 2022"
+        },
+        {
+            "id": 2147481065,
+            "name": "Galaxy 2023"
+        },
+        {
+            "id": 2412831398413312,
+            "name": "Galaxy 2024"
+        },
+        {
+            "id": 3448916649511144,
+            "name": "Galaxy 2025"
+        }
+    ]
+}

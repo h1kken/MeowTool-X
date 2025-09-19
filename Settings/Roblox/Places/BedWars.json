@@ -1,0 +1,334 @@
+{
+    "Gamepasses": [
+        {
+            "id": 18301866,
+            "name": "VIP Rank"
+        },
+        {
+            "id": 21693382,
+            "name": "BP Season 1"
+        },
+        {
+            "id": 24095899,
+            "name": "BP Season 2"
+        },
+        {
+            "id": 26144939,
+            "name": "BP Season 3"
+        },
+        {
+            "id": 35261547,
+            "name": "BP Season 4"
+        },
+        {
+            "id": 50948602,
+            "name": "BP Season 5"
+        },
+        {
+            "id": 87558788,
+            "name": "BP Season 6"
+        },
+        {
+            "id": 137859107,
+            "name": "BP Season 7"
+        },
+        {
+            "id": 194467229,
+            "name": "BP Season 8"
+        },
+        {
+            "id": 655966705,
+            "name": "BP Season 9"
+        },
+        {
+            "id": 773957870,
+            "name": "BP Season 10"
+        },
+        {
+            "id": 894182315,
+            "name": "BP Season 11"
+        },
+        {
+            "id": 1004797371,
+            "name": "BP Season 12"
+        },
+        {
+            "id": 1164146553,
+            "name": "BP Season 13"
+        },
+        {
+            "id": 26343736,
+            "name": "Holiday Bundle 2021"
+        },
+        {
+            "id": 113770382,
+            "name": "Holiday Bundle 2022"
+        },
+        {
+            "id": 675791713,
+            "name": "Holiday Bundle 2023"
+        },
+        {
+            "id": 1009510880,
+            "name": "Holiday Bundle 2024"
+        },
+        {
+            "id": 27969090,
+            "name": "Lunar New Year Bundle 2022"
+        },
+        {
+            "id": 701489596,
+            "name": "Lunar Bundle 2024"
+        },
+        {
+            "id": 678316034,
+            "name": "News Years Bundle 2024"
+        },
+        {
+            "id": 44594629,
+            "name": "Lumen & Ember Kit Bundle"
+        },
+        {
+            "id": 47400080,
+            "name": "Ember & Lumen Kit Bundle"
+        },
+        {
+            "id": 29973548,
+            "name": "Miner Bundle"
+        },
+        {
+            "id": 67052293,
+            "name": "Evelynn Bundle"
+        },
+        {
+            "id": 78679462,
+            "name": "Hannah Bundle"
+        },
+        {
+            "id": 839951205,
+            "name": "Marina Bundle"
+        },
+        {
+            "id": 1083085937,
+            "name": "Trixie Bundle"
+        },
+        {
+            "id": 42490369,
+            "name": "Cyber Kit"
+        },
+        {
+            "id": 850765902,
+            "name": "Marina Kit"
+        },
+        {
+            "id": 893892894,
+            "name": "Silas Kit"
+        },
+        {
+            "id": 893911891,
+            "name": "Wren Kit"
+        },
+        {
+            "id": 893913917,
+            "name": "Nazar Kit"
+        },
+        {
+            "id": 893937811,
+            "name": "Kaida Kit"
+        },
+        {
+            "id": 893960773,
+            "name": "Death Adder Kit"
+        },
+        {
+            "id": 952119163,
+            "name": "Arachne Kit"
+        },
+        {
+            "id": 1002745620,
+            "name": "Nyoka Kit"
+        },
+        {
+            "id": 1003015617,
+            "name": "Agni Kit"
+        },
+        {
+            "id": 1003723662,
+            "name": "Void Knight Kit"
+        },
+        {
+            "id": 1003729549,
+            "name": "Grove Kit"
+        },
+        {
+            "id": 1003867591,
+            "name": "Hephaestus Kit"
+        },
+        {
+            "id": 1004227635,
+            "name": "Bekzat Kit"
+        },
+        {
+            "id": 1004335582,
+            "name": "Styx Kit"
+        },
+        {
+            "id": 1004557543,
+            "name": "Uma Kit"
+        },
+        {
+            "id": 1027096064,
+            "name": "Skoll Kit"
+        },
+        {
+            "id": 1105395958,
+            "name": "Trixie Kit"
+        },
+        {
+            "id": 18876495,
+            "name": "Farmer Cletus"
+        },
+        {
+            "id": 19086951,
+            "name": "Baker"
+        },
+        {
+            "id": 19088340,
+            "name": "Builder"
+        },
+        {
+            "id": 19275795,
+            "name": "Archer"
+        },
+        {
+            "id": 19546564,
+            "name": "Infernal Shielder"
+        },
+        {
+            "id": 19551065,
+            "name": "Barbarian"
+        },
+        {
+            "id": 19722364,
+            "name": "Melody"
+        },
+        {
+            "id": 20030035,
+            "name": "Pirate Davey"
+        },
+        {
+            "id": 20245233,
+            "name": "Eldertree"
+        },
+        {
+            "id": 20645574,
+            "name": "Lassy"
+        },
+        {
+            "id": 20872871,
+            "name": "Grim Reaper"
+        },
+        {
+            "id": 21261740,
+            "name": "Wizard"
+        },
+        {
+            "id": 21421966,
+            "name": "Vulcan"
+        },
+        {
+            "id": 24393543,
+            "name": "Axolotl Amy"
+        },
+        {
+            "id": 24913310,
+            "name": "Vanessa"
+        },
+        {
+            "id": 25647124,
+            "name": "Freiya"
+        },
+        {
+            "id": 28594502,
+            "name": "Yuzi"
+        },
+        {
+            "id": 32610830,
+            "name": "Clan Pass"
+        },
+        {
+            "id": 33821514,
+            "name": "Miner"
+        },
+        {
+            "id": 72590411,
+            "name": "Evelynn"
+        },
+        {
+            "id": 83730490,
+            "name": "Hannah"
+        },
+        {
+            "id": 97149830,
+            "name": "Crypt"
+        },
+        {
+            "id": 104797973,
+            "name": "Zenith"
+        },
+        {
+            "id": 111620008,
+            "name": "Adetunde"
+        },
+        {
+            "id": 169772861,
+            "name": "Lyla"
+        },
+        {
+            "id": 255781462,
+            "name": "Milo"
+        },
+        {
+            "id": 641095710,
+            "name": "Eldric"
+        },
+        {
+            "id": 719110861,
+            "name": "Lian"
+        },
+        {
+            "id": 845519348,
+            "name": "Triton"
+        }
+    ],
+    "Badges": [
+        {
+            "id": 2129916158,
+            "name": "Be Victorious on Minigame Mountain"
+        },
+        {
+            "id": 2146951156,
+            "name": "Champion"
+        },
+        {
+            "id": 64120254673374,
+            "name": "New Year's 2025"
+        },
+        {
+            "id": 661345209724224,
+            "name": "The Hunt - BedWars"
+        },
+        {
+            "id": 731758855100911,
+            "name": "Egg Hunt 2025"
+        },
+        {
+            "id": 1229219986658067,
+            "name": "Roblox Classic Event - Token 1"
+        },
+        {
+            "id": 2466928501842682,
+            "name": "Roblox Classic Event - Tix 1"
+        }
+    ]
+}

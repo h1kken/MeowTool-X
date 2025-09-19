@@ -1,0 +1,214 @@
+{
+    "Gamepasses": [
+        {
+            "id": 257410325,
+            "name": "VIP"
+        },
+        {
+            "id": 208619622,
+            "name": "Lucky"
+        },
+        {
+            "id": 208620375,
+            "name": "Double Coins"
+        },
+        {
+            "id": 646799606,
+            "name": "+1000 Inventory Storage"
+        },
+        {
+            "id": 767749542,
+            "name": "Infinite Units"
+        },
+        {
+            "id": 897195671,
+            "name": "Clan Creator"
+        },
+        {
+            "id": 930624309,
+            "name": "2x Drills"
+        },
+        {
+            "id": 952446306,
+            "name": "Shiny Hunter"
+        },
+        {
+            "id": 1198051550,
+            "name": "Trait Hunter"
+        },
+        {
+            "id": 1272594550,
+            "name": "Summer Pass: Premium Track"
+        },
+        {
+            "id": 1105184340,
+            "name": "Double Lucky Toilet Spawning!"
+        }
+    ],
+    "Badges": [
+        {
+            "id": 2148808870,
+            "name": "Beat Easy Difficulty!"
+        },
+        {
+            "id": 2148808877,
+            "name": "Beat Medium Difficulty!"
+        },
+        {
+            "id": 2148967266,
+            "name": "Beat Hard Difficulty!"
+        },
+        {
+            "id": 2149510852,
+            "name": "Beat Nightmare Difficulty!"
+        },
+        {
+            "id": 205916089448424,
+            "name": "Beat Abysmal Difficulty!"
+        },
+        {
+            "id": 3269012098035529,
+            "name": "Beat Secret Evil Wave"
+        },
+        {
+            "id": 2148698556,
+            "name": "Titan Speakerman"
+        },
+        {
+            "id": 2148967295,
+            "name": "Titan TV Man"
+        },
+        {
+            "id": 2149260235,
+            "name": "Ninja Cameraman"
+        },
+        {
+            "id": 2149529631,
+            "name": "Mech Cameraman"
+        },
+        {
+            "id": 2149898179,
+            "name": "Laser Cameraman Car"
+        },
+        {
+            "id": 2150077001,
+            "name": "Secret Agent"
+        },
+        {
+            "id": 2150356615,
+            "name": "Upgraded Titan Cameraman"
+        },
+        {
+            "id": 2150356638,
+            "name": "Titan Cinemaman"
+        },
+        {
+            "id": 2150593479,
+            "name": "Dark Speakerman"
+        },
+        {
+            "id": 2150879473,
+            "name": "Upgraded Titan Speakerman"
+        },
+        {
+            "id": 2151779704,
+            "name": "Dancing Speakerwoman"
+        },
+        {
+            "id": 2153379585,
+            "name": "Glitch Cameraman"
+        },
+        {
+            "id": 2153379588,
+            "name": "Jetpack Speakerman"
+        },
+        {
+            "id": 2502574037187648,
+            "name": "Upgraded Titan Cinemaman"
+        },
+        {
+            "id": 4443545723157147,
+            "name": "Dual Bat Speakerman"
+        },
+        {
+            "id": 3045860093689297,
+            "name": "Large Laser Cameraman"
+        },
+        {
+            "id": 2385641468984928,
+            "name": "Shotgun Cameraman"
+        },
+        {
+            "id": 1233182747919466,
+            "name": "Minigun Camerawoman"
+        },
+        {
+            "id": 2817031393332978,
+            "name": "Katana Speakerwoman"
+        },
+        {
+            "id": 1150879405352932,
+            "name": "Spear Speakerman"
+        },
+        {
+            "id": 931050305844465,
+            "name": "Red Laser Cameraman"
+        },
+        {
+            "id": 1115010233662541,
+            "name": "Upgraded Mech Cameraman"
+        },
+        {
+            "id": 1127660680344125,
+            "name": "Mace Camerawoman"
+        },
+        {
+            "id": 1630314579932289,
+            "name": "Clock Event"
+        },
+        {
+            "id": 4014008284565926,
+            "name": "Knife Upgraded Titan Speakerman"
+        },
+        {
+            "id": 3721219248389823,
+            "name": "Astro Gun Cameraman"
+        },
+        {
+            "id": 2473445528937503,
+            "name": "Summer Event 2024"
+        },
+        {
+            "id": 2247321279730360,
+            "name": "Finished Beach Ball Hunt 2024"
+        },
+        {
+            "id": 1712380323524027,
+            "name": "Buff Mutant Toilet"
+        },
+        {
+            "id": 1983663233025849,
+            "name": "Beat Drill Forest"
+        },
+        {
+            "id": 3719490798478354,
+            "name": "Beat Drill World"
+        },
+        {
+            "id": 2977453670049037,
+            "name": "Beat Halloween Graveyard 2024"
+        },
+        {
+            "id": 1799362452924436,
+            "name": "Beat Thanksgiving Table"
+        },
+        {
+            "id": 315021521983622,
+            "name": "Beat Dice World"
+        },
+        {
+            "id": 1001707030871277,
+            "name": "The Hatch!"
+        }
+    ]
+}

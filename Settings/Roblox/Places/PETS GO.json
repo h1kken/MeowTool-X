@@ -1,0 +1,90 @@
+{
+    "Gamepasses": [
+        {
+            "id": 923677450,
+            "name": "Lucky!"
+        },
+        {
+            "id": 924643143,
+            "name": "Ultra Lucky!"
+        },
+        {
+            "id": 974931021,
+            "name": "Celestial Luck!"
+        },
+        {
+            "id": 947426555,
+            "name": "VIP!"
+        },
+        {
+            "id": 955414606,
+            "name": "+3 Pets!"
+        },
+        {
+            "id": 923754964,
+            "name": "Hyper Dice!"
+        },
+        {
+            "id": 951531608,
+            "name": "Double Dice!"
+        },
+        {
+            "id": 955430652,
+            "name": "Double Coins!"
+        },
+        {
+            "id": 966471470,
+            "name": "Huge Hunter!"
+        },
+        {
+            "id": 977188877,
+            "name": "Shiny Hunter!"
+        },
+        {
+            "id": 1008933294,
+            "name": "Diamond Printer!"
+        },
+        {
+            "id": 1009157126,
+            "name": "Rainbow Rolling!"
+        },
+        {
+            "id": 1089231744,
+            "name": "Skill Master!"
+        }
+    ],
+    "Badges": [
+        {
+            "id": 3587889778036452,
+            "name": "P"
+        },
+        {
+            "id": 513094477922687,
+            "name": "E"
+        },
+        {
+            "id": 2446810370554117,
+            "name": "T"
+        },
+        {
+            "id": 2632896258542796,
+            "name": "S"
+        },
+        {
+            "id": 3957160897472233,
+            "name": "G"
+        },
+        {
+            "id": 1244002859092897,
+            "name": "O"
+        },
+        {
+            "id": 3275096128139364,
+            "name": "Roblox Winter Token!"
+        },
+        {
+            "id": 3275096128139364,
+            "name": "Roblox Winter Elite Token!"
+        }
+    ]
+}
