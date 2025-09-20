@@ -11,7 +11,8 @@ def create_needed_folders_and_files():
         ('Roblox', 'Cookie Sorter'),
         ('Roblox', 'Cookie Checker', 'cookies.txt'),
         ('Roblox', 'Cookie Refresher', 'Mass Mode', 'cookies.txt'),
-        ('Roblox', 'Transaction Analysis', 'cookies.txt')
+        ('Roblox', 'Transaction Analysis', 'cookies.txt'),
+        ('Roblox', 'Time Booster', 'cookies.txt')
     ]
 
     for args in PATHS:
@@ -23,19 +24,19 @@ def create_needed_folders_and_files():
 def get_nested(data: dict, key: str, *, sep='.', default=None):
     keys = key.split(sep)
     current = data
-    for k in keys:
-        if not isinstance(current, dict) or k not in current:
+    for key in keys:
+        if not isinstance(current, dict) or key not in current:
             return default
-        current = current[k]
+        current = current[key]
     return current
 
-def set_nested(data: dict, key: str, value, *, sep="."):
+def set_nested(data: dict, key: str, value, *, sep='.'):
     keys = key.split(sep)
     current = data
-    for k in keys[:-1]:
-        if k not in current or not isinstance(current[k], dict):
-            current[k] = {}
-        current = current[k]
+    for key in keys[:-1]:
+        if key not in current or not isinstance(current[key], dict):
+            current[key] = {}
+        current = current[key]
     current[keys[-1]] = value
 
 def get_files_from_folder(*args, only_files: bool = True) -> list[str]:

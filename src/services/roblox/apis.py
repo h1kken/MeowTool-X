@@ -1,7 +1,7 @@
 from typing import Literal
-from managers.request_manager import RequestManager
+from src.http.manager import RequestManager
 
-class RobloxServices:
+class RobloxApis:
     @staticmethod
     def get_simple_account_data(cookies: dict[str, str]) -> dict:
         with RequestManager(cookies=cookies) as client:

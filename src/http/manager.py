@@ -1,7 +1,7 @@
 import time
 import httpx
 from utils.logger import logger
-from exceptions.roblox_exceptions import (
+from exceptions.roblox import (
     InvalidCookie,
     AccountBanned
 )
