@@ -57,6 +57,10 @@ class ConfigManager(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             os.remove(self._path.parent / f'{filename}.json')
             if self._path.stem == filename:
                 self.load('default')
+                
+    @property
+    def name(self):
+        return self._path.stem
     
     
 config = ConfigManager(config_loader.get('Loader.Load_On_Launch', default='default'))
