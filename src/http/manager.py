@@ -1,5 +1,6 @@
-import time
 import httpx
+import atexit
+import asyncio
 from utils.logger import logger
 from exceptions.roblox import (
     InvalidCookie,
@@ -7,25 +8,41 @@ from exceptions.roblox import (
 )
 
 
-class RequestManager:
-    def __init__(self, *, headers: dict=None, cookies: dict=None):
-        self.headers = headers
-        self.cookies = cookies
+class AsyncRequestManager:
+    def __init__(self, *, headers: dict = None, cookies: dict = None):
+        self._client = httpx.AsyncClient(headers=headers, cookies=cookies)
+        atexit.register(self._cleanup)
     
-    def __enter__(self):
-        self._client = httpx.Client(headers=self.headers, cookies=self.cookies)
+    async def __aenter__(self):
         return self
+
+    async def __aexit__(self, *_):
+        await self.close()
+
+    def _cleanup(self):
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(self.close())
+        else:
+            loop.create_task(self.close())
+        
+    async def close(self):
+        await self._client.aclose()
     
-    def __exit__(self, *_):
-        self._client.close()
-        self._client = None
-        return False
+    def set_headers(self, headers: dict):
+        self._client.headers.update(headers)
     
-    def get(self, url: str):
-        for i in range(1, 10):
-            response = self._client.get(url)
+    def set_cookies(self, cookies: dict):
+        self._client.cookies.update(cookies)
+    
+    async def _request(self, method: str, url: str, *, data: dict = None, json: dict = None, params: dict = None):
+        while True:
+            response = await self._client.request(method, url, data=data, json=json, params=params)
             match response.status_code:
                 case 200:
+                    return response
+                case 403 if method == 'post':
                     return response
                 case 204:
                     return None
@@ -34,17 +51,14 @@ class RequestManager:
                 case 403:
                     raise AccountBanned
                 case _:
-                    logger.debug(f'[{response.status_code}] URL: {url} | Try #{i}')
-                    time.sleep(10)
+                    logger.debug(f'[{response.status_code}] URL: {url}')
+                    await asyncio.sleep(10)
     
-    def post(self, url: str, *, data: dict=None):
-        for i in range(1, 10):
-            response = self._client.post(url, data=data)
-            match response.status_code:
-                case 200 | 403:
-                    return response
-                case 401:
-                    raise InvalidCookie
-                case _:
-                    logger.debug(f'[{response.status_code}] URL: {url} | Try #{i}')
-                    time.sleep(10)
+    async def get(self, url: str, *, params: dict = None):
+        return await self._request('get', url, params=params)
+    
+    async def post(self, url: str, *, data: dict = None, json: dict = None, params: dict = None):
+        return await self._request('post', url, data=data, json=json, params=params)
+    
+    
+client = AsyncRequestManager()

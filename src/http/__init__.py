@@ -1,5 +1,5 @@
-from .manager import RequestManager
+from .manager import AsyncRequestManager
 
 __all__ = [
-    'RequestManager'
+    'AsyncRequestManager'
 ]
