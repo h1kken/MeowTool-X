@@ -36,7 +36,7 @@ class ConfigManager(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         try:
             with open(self._path, 'r', encoding='utf-8', errors='ignore') as f:
                 self._data = validate_config(json.load(f), get_default_config())
-                self.save()
+            self.save()
         except (FileNotFoundError, json.JSONDecodeError):
             logger.exception(f'Config can\'t be initialized. Using default settings...')
             self._path = self._path.parent / 'default.json'
@@ -57,10 +57,6 @@ class ConfigManager(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             os.remove(self._path.parent / f'{filename}.json')
             if self._path.stem == filename:
                 self.load('default')
-                
-    @property
-    def name(self):
-        return self._path.stem
     
     
 config = ConfigManager(config_loader.get('Loader.Load_On_Launch', default='default'))
