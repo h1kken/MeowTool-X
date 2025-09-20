@@ -47,15 +47,28 @@ def get_files_from_folder(*args, only_files: bool = True) -> list[str]:
 
     return [p.name for p in path.iterdir() if p.is_file() or not only_files]
 
-def detect_system_locale():
+def detect_system_locale() -> str:
     system_locale = locale.getlocale()[0].lower()
     if 'russia' in system_locale:
         return 'ru'
     else:
         return 'en'
 
-def current_time_in_ms():
+def current_time_in_ms() -> int:
     return math.floor((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000)
 
-def generate_browser_tracker_id():
+def generate_browser_tracker_id() -> str:
     return str(random.randint(100000, 175000)) + str(random.randint(100000, 900000))
+
+async def convert_date(input_date: str, output_format: str):
+    DATE_FORMATS = [
+        '%Y-%m-%dT%H:%M:%S.%fZ',
+        '%Y-%m-%dT%H:%M:%SZ'
+    ]
+
+    for date_format in DATE_FORMATS:
+        try:
+            date_formatted = datetime.strptime(input_date, date_format)
+            return date_formatted.strftime(output_format)
+        except ValueError:
+            continue
