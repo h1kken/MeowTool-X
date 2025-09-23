@@ -40,7 +40,7 @@ class ConfigManager(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         except (FileNotFoundError, json.JSONDecodeError):
             logger.exception(f'Config can\'t be initialized. Using default settings...')
             self._path = self._path.parent / 'default.json'
-            self._data = default_config()
+            self._data = {} # default_config()
             with open(self._path, 'w', encoding='utf-8') as f:
                 json.dump(self._data, f, indent=2, ensure_ascii=False)
         finally:
@@ -49,13 +49,13 @@ class ConfigManager(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         
     def set(self, key, value, *, sep='.'):
         super().set(key, value, sep=sep)
-        if config_loader.get('Loader.Auto_Save', default=False):
+        if config_loader.get('Saver.Auto_Save', default=False):
             self.save()
         
     def reset(self, filename: str):
         self._path.parent.mkdir(parents=True, exist_ok=True)
         with open(self._path.parent / f'{filename}.json', 'w', encoding='utf-8') as f:
-            json.dump(default_config(), f, indent=2, ensure_ascii=False)
+            json.dump({}, f, indent=2, ensure_ascii=False)
             
     def delete(self, filename: str):
         if self._path.exists():
