@@ -1,30 +1,18 @@
 {
-    "Gamepasses": [
-        {
-            "id": 223367086,
-            "name": "VIP"
-        },
-        {
-            "id": 226785981,
-            "name": "Double Coins"
-        },
-        {
-            "id": 229765926,
-            "name": "Instant Spin"
-        },
-        {
-            "id": 895596060,
-            "name": "Trading Sign"
-        },
-        {
-            "id": 1203969437,
-            "name": "Radiant Veil"
-        }
-    ],
-    "Badges": [
-        {
-            "id": 3790278758533153,
-            "name": "The Hatch"
-        }
-    ]
+  "id": 13772394625,
+  "names": {
+    "default": "Blade Ball",
+    "clean": "Blade Ball",
+    "short": "BB"
+  },
+  "gamepasses": {
+    "223367086": "VIP",
+    "226785981": "Double Coins",
+    "229765926": "Instant Spin",
+    "895596060": "Trading Sign",
+    "1203969437": "Radiant Veil"
+  },
+  "badges": {
+    "3790278758533153": "The Hatch"
+  }
 }

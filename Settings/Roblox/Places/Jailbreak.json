@@ -1,90 +1,33 @@
 {
-    "Gamepasses": [
-        {
-            "id": 2068240,
-            "name": "Extra Storage"
-        },
-        {
-            "id": 2070427,
-            "name": "SWAT Team"
-        },
-        {
-            "id": 2218187,
-            "name": "Car Stereo"
-        },
-        {
-            "id": 2219040,
-            "name": "Duffel Bag"
-        },
-        {
-            "id": 2296901,
-            "name": "VIP (Very Important Player)"
-        },
-        {
-            "id": 2725211,
-            "name": "Pro Garage"
-        },
-        {
-            "id": 4974038,
-            "name": "Crime Boss"
-        },
-        {
-            "id": 6631507,
-            "name": "XP Boost"
-        },
-        {
-            "id": 56149618,
-            "name": "VIP Trading"
-        }
-    ],
-    "Badges": [
-        {
-            "id": 958186367,
-            "name": "MVP (Most Valuable Player)"
-        },
-        {
-            "id": 958186842,
-            "name": "Top Gun"
-        },
-        {
-            "id": 958186941,
-            "name": "Bank Bust"
-        },
-        {
-            "id": 958187053,
-            "name": "Drill Sergeant"
-        },
-        {
-            "id": 958187226,
-            "name": "Master Criminal"
-        },
-        {
-            "id": 958187343,
-            "name": "Bonnie & Clyde"
-        },
-        {
-            "id": 958187470,
-            "name": "Smooth Criminal"
-        },
-        {
-            "id": 1399506017,
-            "name": "Meet The Devs!"
-        },
-        {
-            "id": 2124624990,
-            "name": "Jailbreak RB Battles Championship Badge"
-        },
-        {
-            "id": 2129891386,
-            "name": "Defeat The CEO!"
-        },
-        {
-            "id": 2124575784,
-            "name": "??? 1"
-        },
-        {
-            "id": 2129465542,
-            "name": "??? 2"
-        }
-    ]
+  "id": 606849621,
+  "names": {
+    "default": "Jailbreak",
+    "clean": "Jailbreak",
+    "short": "Jb"
+  },
+  "gamepasses": {
+    "2068240": "Extra Storage",
+    "2070427": "SWAT Team",
+    "2218187": "Car Stereo",
+    "2219040": "Duffel Bag",
+    "2296901": "VIP (Very Important Player)",
+    "2725211": "Pro Garage",
+    "4974038": "Crime Boss",
+    "6631507": "XP Boost",
+    "56149618": "VIP Trading"
+  },
+  "badges": {
+    "958186367": "MVP (Most Valuable Player)",
+    "958186842": "Top Gun",
+    "958186941": "Bank Bust",
+    "958187053": "Drill Sergeant",
+    "958187226": "Master Criminal",
+    "958187343": "Bonnie & Clyde",
+    "958187470": "Smooth Criminal",
+    "1399506017": "Meet The Devs!",
+    "2124624990": "Jailbreak RB Battles Championship Badge",
+    "2129891386": "Defeat The CEO!",
+    "2124575784": "??? 1",
+    "2129465542": "??? 2"
+  }
 }

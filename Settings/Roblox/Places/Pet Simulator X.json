@@ -1,70 +1,28 @@
 {
-    "Gamepasses": [
-        {
-            "id": 18674288,
-            "name": "8 Pets Equipped!"
-        },
-        {
-            "id": 18674296,
-            "name": "Teleport!"
-        },
-        {
-            "id": 18674298,
-            "name": "Hoverboard!"
-        },
-        {
-            "id": 18674305,
-            "name": "VIP!"
-        },
-        {
-            "id": 18674307,
-            "name": "Triple Eggs!"
-        },
-        {
-            "id": 18674321,
-            "name": "Egg Skip!"
-        },
-        {
-            "id": 18674317,
-            "name": "Pet Storage!"
-        },
-        {
-            "id": 18829757,
-            "name": "Super Pet Storage!"
-        },
-        {
-            "id": 21176989,
-            "name": "Auto Hatch!"
-        },
-        {
-            "id": 21583760,
-            "name": "Lucky!"
-        },
-        {
-            "id": 22596039,
-            "name": "Magic Eggs!"
-        },
-        {
-            "id": 26398305,
-            "name": "Super Magnet!"
-        },
-        {
-            "id": 21641016,
-            "name": "Mythical Hunter!"
-        },
-        {
-            "id": 109685917,
-            "name": "Shiny Hunter!"
-        },
-        {
-            "id": 122535467,
-            "name": "Secret Hunter!"
-        }
-    ],
-    "Badges": [
-        {
-            "id": 2124793144,
-            "name": "Welcome!"
-        }
-    ]
+  "id": 6284583030,
+  "names": {
+    "default": "Pet Simulator X",
+    "clean": "Pet Simulator X",
+    "short": "PSX"
+  },
+  "gamepasses": {
+    "18674288": "8 Pets Equipped!",
+    "18674296": "Teleport!",
+    "18674298": "Hoverboard!",
+    "18674305": "VIP!",
+    "18674307": "Triple Eggs!",
+    "18674321": "Egg Skip!",
+    "18674317": "Pet Storage!",
+    "18829757": "Super Pet Storage!",
+    "21176989": "Auto Hatch!",
+    "21583760": "Lucky!",
+    "22596039": "Magic Eggs!",
+    "26398305": "Super Magnet!",
+    "21641016": "Mythical Hunter!",
+    "109685917": "Shiny Hunter!",
+    "122535467": "Secret Hunter!"
+  },
+  "badges": {
+    "2124793144": "Welcome!"
+  }
 }

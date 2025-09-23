@@ -1,36 +1,18 @@
 {
-    "Gamepasses": [
-        {
-            "id": 812679198,
-            "name": "VIP"
-        },
-        {
-            "id": 812891077,
-            "name": "Shiny Hunter"
-        },
-        {
-            "id": 812985318,
-            "name": "More Booth Space"
-        },
-        {
-            "id": 857122763,
-            "name": "Divine Dragon Battlepass"
-        },
-        {
-            "id": 895533720,
-            "name": "Athenyx's Battlepass"
-        },
-        {
-            "id": 903541948,
-            "name": "3x Speed"
-        },
-        {
-            "id": 903895415,
-            "name": "50x Unboxing"
-        },
-        {
-            "id": 1004747738,
-            "name": "Christmas Battlepass"
-        }
-    ]
+  "id": 17017769292,
+  "names": {
+    "default": "Anime Defenders",
+    "clean": "Anime Defenders",
+    "short": "AD"
+  },
+  "gamepasses": {
+    "812679198": "VIP",
+    "812891077": "Shiny Hunter",
+    "812985318": "More Booth Space",
+    "857122763": "Divine Dragon Battlepass",
+    "895533720": "Athenyx's Battlepass",
+    "903541948": "3x Speed",
+    "903895415": "50x Unboxing",
+    "1004747738": "Christmas Battlepass"
+  }
 }

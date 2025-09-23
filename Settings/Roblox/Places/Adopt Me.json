@@ -1,186 +1,57 @@
 {
-    "Gamepasses": [
-        {
-            "id": 3196348,
-            "name": "VIP"
-        },
-        {
-            "id": 3745845,
-            "name": "Glider"
-        },
-        {
-            "id": 4785795,
-            "name": "Starter Pack"
-        },
-        {
-            "id": 4796463,
-            "name": "DJ"
-        },
-        {
-            "id": 5246776,
-            "name": "Candy Cannon"
-        },
-        {
-            "id": 5300198,
-            "name": "Premium Plots"
-        },
-        {
-            "id": 5704158,
-            "name": "Premium Faces"
-        },
-        {
-            "id": 5785139,
-            "name": "Supercar Pack"
-        },
-        {
-            "id": 5885873,
-            "name": "Heart Hoverboard"
-        },
-        {
-            "id": 5904007,
-            "name": "Royal Carriages"
-        },
-        {
-            "id": 6040696,
-            "name": "Millionaire Pack"
-        },
-        {
-            "id": 6164327,
-            "name": "Mermaid Mansion"
-        },
-        {
-            "id": 6408694,
-            "name": "Celebrity Mansion"
-        },
-        {
-            "id": 6558811,
-            "name": "Pet Horse"
-        },
-        {
-            "id": 6558813,
-            "name": "Pet Griffin"
-        },
-        {
-            "id": 6858591,
-            "name": "Lemonade Stand"
-        },
-        {
-            "id": 7124470,
-            "name": "Hotdog Stand"
-        },
-        {
-            "id": 6965379,
-            "name": "Modern Mansion"
-        },
-        {
-            "id": 189425850,
-            "name": "Cozy Home Lure"
-        },
-        {
-            "id": 951065968,
-            "name": "School and Hospital Homes"
-        },
-        {
-            "id": 951395729,
-            "name": "Soccer Stadium"
-        },
-        {
-            "id": 951441773,
-            "name": "Fossil Isle Returns Bundle"
-        }
-    ],
-    "Badges": [
-        {
-            "id": 2124439922,
-            "name": "Tiny Isles"
-        },
-        {
-            "id": 2124439923,
-            "name": "Ancient Ruins"
-        },
-        {
-            "id": 2124439924,
-            "name": "Coastal Climb"
-        },
-        {
-            "id": 2124439925,
-            "name": "Lonely Peak"
-        },
-        {
-            "id": 2124439926,
-            "name": "Miniworld"
-        },
-        {
-            "id": 2124439927,
-            "name": "Pyramid"
-        },
-        {
-            "id": 2124439928,
-            "name": "Shipwreck Bay"
-        },
-        {
-            "id": 2124520917,
-            "name": "Roblox Egg Hunt 2020"
-        },
-        {
-            "id": 2129488028,
-            "name": "RB Battles Challenge"
-        },
-        {
-            "id": 2129488030,
-            "name": "???"
-        },
-        {
-            "id": 135520552767917,
-            "name": "Garden"
-        },
-        {
-            "id": 1048893619880427,
-            "name": "Roblox The Games: Adopt Me! - Quest 1"
-        },
-        {
-            "id": 763171671267524,
-            "name": "Roblox The Games: Adopt Me! - Quest 2"
-        },
-        {
-            "id": 925260774262149,
-            "name": "Roblox The Games: Adopt Me! - Quest 3"
-        },
-        {
-            "id": 89650026776535,
-            "name": "Roblox The Games: Adopt Me! - Shine 1"
-        },
-        {
-            "id": 292596439745713,
-            "name": "Roblox The Games: Adopt Me! - Shine 2"
-        },
-        {
-            "id": 1683279614525471,
-            "name": "Roblox The Games: Adopt Me! - Shine 3"
-        },
-        {
-            "id": 1065569517641022,
-            "name": "Roblox The Games: Adopt Me! - Shine 4"
-        },
-        {
-            "id": 3865916040798951,
-            "name": "Roblox The Games: Adopt Me! - Shine 5"
-        },
-        {
-            "id": 160677344563654,
-            "name": "Hunter Badge"
-        },
-        {
-            "id": 211728180632535,
-            "name": "Where Bear? Badge"
-        },
-        {
-            "id": 639601989428398,
-            "name": "Survivor Badge"
-        },
-        {
-            "id": 2388128713374485,
-            "name": "Testing"
-        }
-    ]
+  "id": 920587237,
+  "names": {
+    "default": "Adopt Me",
+    "clean": "Adopt Me",
+    "short": "AM"
+  },
+  "gamepasses": {
+    "3196348": "VIP",
+    "3745845": "Glider",
+    "4785795": "Starter Pack",
+    "4796463": "DJ",
+    "5246776": "Candy Cannon",
+    "5300198": "Premium Plots",
+    "5704158": "Premium Faces",
+    "5785139": "Supercar Pack",
+    "5885873": "Heart Hoverboard",
+    "5904007": "Royal Carriages",
+    "6040696": "Millionaire Pack",
+    "6164327": "Mermaid Mansion",
+    "6408694": "Celebrity Mansion",
+    "6558811": "Pet Horse",
+    "6558813": "Pet Griffin",
+    "6858591": "Lemonade Stand",
+    "7124470": "Hotdog Stand",
+    "6965379": "Modern Mansion",
+    "189425850": "Cozy Home Lure",
+    "951065968": "School and Hospital Homes",
+    "951395729": "Soccer Stadium",
+    "951441773": "Fossil Isle Returns Bundle"
+  },
+  "badges": {
+    "2124439922": "Tiny Isles",
+    "2124439923": "Ancient Ruins",
+    "2124439924": "Coastal Climb",
+    "2124439925": "Lonely Peak",
+    "2124439926": "Miniworld",
+    "2124439927": "Pyramid",
+    "2124439928": "Shipwreck Bay",
+    "2124520917": "Roblox Egg Hunt 2020",
+    "2129488028": "RB Battles Challenge",
+    "2129488030": "???",
+    "135520552767917": "Garden",
+    "1048893619880427": "Roblox The Games: Adopt Me! - Quest 1",
+    "763171671267524": "Roblox The Games: Adopt Me! - Quest 2",
+    "925260774262149": "Roblox The Games: Adopt Me! - Quest 3",
+    "89650026776535": "Roblox The Games: Adopt Me! - Shine 1",
+    "292596439745713": "Roblox The Games: Adopt Me! - Shine 2",
+    "1683279614525471": "Roblox The Games: Adopt Me! - Shine 3",
+    "1065569517641022": "Roblox The Games: Adopt Me! - Shine 4",
+    "3865916040798951": "Roblox The Games: Adopt Me! - Shine 5",
+    "160677344563654": "Hunter Badge",
+    "211728180632535": "Where Bear? Badge",
+    "639601989428398": "Survivor Badge",
+    "2388128713374485": "Testing"
+  }
 }

@@ -1,438 +1,120 @@
 {
-    "Gamepasses": [
-        {
-            "id": 4231119,
-            "name": "x2 Convert Speed"
-        },
-        {
-            "id": 4231126,
-            "name": "x2 Bee Gather Pollen"
-        },
-        {
-            "id": 4257788,
-            "name": "Bear Bee"
-        },
-        {
-            "id": 4492467,
-            "name": "x2 Ticket Chance"
-        }
-    ],
-    "Badges": [
-        {
-            "id": 2124634293,
-            "name": "You Played Bee Swarm Simulator!"
-        },
-        {
-            "id": 2124520746,
-            "name": "Swarming Egg Of The Hive"
-        },
-        {
-            "id": 2124445684,
-            "name": "Beesmas Beeliever"
-        },
-        {
-            "id": 2124445842,
-            "name": "Beesmas Overachiever"
-        },
-        {
-            "id": 2124458125,
-            "name": "Egg Hunt 2019"
-        },
-        {
-            "id": 1749468648,
-            "name": "1 Million Honey"
-        },
-        {
-            "id": 1749519033,
-            "name": "10 Million Honey"
-        },
-        {
-            "id": 1749523673,
-            "name": "100 Million Honey"
-        },
-        {
-            "id": 1749534539,
-            "name": "1 Billion Honey"
-        },
-        {
-            "id": 2124426329,
-            "name": "20 Billion Honey"
-        },
-        {
-            "id": 1874484250,
-            "name": "500 Thousand Goo"
-        },
-        {
-            "id": 1874485358,
-            "name": "5 Million Goo"
-        },
-        {
-            "id": 1874486035,
-            "name": "50 Million Goo"
-        },
-        {
-            "id": 1874487127,
-            "name": "500 Million Goo"
-        },
-        {
-            "id": 2124426332,
-            "name": "10 Billion Goo"
-        },
-        {
-            "id": 1749564142,
-            "name": "100 Battle Points"
-        },
-        {
-            "id": 1749566481,
-            "name": "1 Thousand Battle Points"
-        },
-        {
-            "id": 1749568562,
-            "name": "10 Thousand Battle Points"
-        },
-        {
-            "id": 1749570424,
-            "name": "50 Thousand Battle Points"
-        },
-        {
-            "id": 2124426330,
-            "name": "1 Million Battle Points"
-        },
-        {
-            "id": 1874442964,
-            "name": "2500 Ability Tokens"
-        },
-        {
-            "id": 1874445609,
-            "name": "25 Thousand Ability Tokens"
-        },
-        {
-            "id": 1874446720,
-            "name": "100 Thousand Ability Tokens"
-        },
-        {
-            "id": 1874447816,
-            "name": "1 Million Ability Tokens"
-        },
-        {
-            "id": 2124426331,
-            "name": "10 Million Ability Tokens"
-        },
-        {
-            "id": 1749604083,
-            "name": "Sunflower Cadet"
-        },
-        {
-            "id": 1749606287,
-            "name": "Sunflower Hotshot"
-        },
-        {
-            "id": 1749608577,
-            "name": "Sunflower Ace"
-        },
-        {
-            "id": 1749610498,
-            "name": "Sunflower Master"
-        },
-        {
-            "id": 2124426333,
-            "name": "Sunflower Grandmaster"
-        },
-        {
-            "id": 1749628495,
-            "name": "Dandelion Cadet"
-        },
-        {
-            "id": 1749630489,
-            "name": "Dandelion Hotshot"
-        },
-        {
-            "id": 1749631489,
-            "name": "Dandelion Ace"
-        },
-        {
-            "id": 1749632737,
-            "name": "Dandelion Master"
-        },
-        {
-            "id": 2124426334,
-            "name": "Dandelion Grandmaster"
-        },
-        {
-            "id": 1749673718,
-            "name": "Mushroom Cadet"
-        },
-        {
-            "id": 1749675237,
-            "name": "Mushroom Hotshot"
-        },
-        {
-            "id": 1749676247,
-            "name": "Mushroom Ace"
-        },
-        {
-            "id": 1749677419,
-            "name": "Mushroom Master"
-        },
-        {
-            "id": 2124426335,
-            "name": "Mushroom Grandmaster"
-        },
-        {
-            "id": 1749679114,
-            "name": "Blue Flower Cadet"
-        },
-        {
-            "id": 1749680097,
-            "name": "Blue Flower Hotshot"
-        },
-        {
-            "id": 1749680902,
-            "name": "Blue Flower Ace"
-        },
-        {
-            "id": 1749681692,
-            "name": "Blue Flower Master"
-        },
-        {
-            "id": 2124426336,
-            "name": "Blue Flower Grandmaster"
-        },
-        {
-            "id": 1749684261,
-            "name": "Clover Cadet"
-        },
-        {
-            "id": 1749685928,
-            "name": "Clover Hotshot"
-        },
-        {
-            "id": 1749686750,
-            "name": "Clover Ace"
-        },
-        {
-            "id": 1749688211,
-            "name": "Clover Master"
-        },
-        {
-            "id": 2124426337,
-            "name": "Clover Grandmaster"
-        },
-        {
-            "id": 1749770193,
-            "name": "Spider Cadet"
-        },
-        {
-            "id": 1749771674,
-            "name": "Spider Hotshot"
-        },
-        {
-            "id": 1749772538,
-            "name": "Spider Ace"
-        },
-        {
-            "id": 1749773617,
-            "name": "Spider Master"
-        },
-        {
-            "id": 2124426338,
-            "name": "Spider Grandmaster"
-        },
-        {
-            "id": 1749775523,
-            "name": "Strawberry Cadet"
-        },
-        {
-            "id": 1749776451,
-            "name": "Strawberry Hotshot"
-        },
-        {
-            "id": 1749777194,
-            "name": "Strawberry Ace"
-        },
-        {
-            "id": 1749779193,
-            "name": "Strawberry Master"
-        },
-        {
-            "id": 2124426339,
-            "name": "Strawberry Grandmaster"
-        },
-        {
-            "id": 1749780645,
-            "name": "Bamboo Cadet"
-        },
-        {
-            "id": 1749781861,
-            "name": "Bamboo Hotshot"
-        },
-        {
-            "id": 1749782542,
-            "name": "Bamboo Ace"
-        },
-        {
-            "id": 1749783500,
-            "name": "Bamboo Master"
-        },
-        {
-            "id": 2124426340,
-            "name": "Bamboo Grandmaster"
-        },
-        {
-            "id": 1749784769,
-            "name": "Pineapple Cadet"
-        },
-        {
-            "id": 1749786138,
-            "name": "Pineapple Hotshot"
-        },
-        {
-            "id": 1749787209,
-            "name": "Pineapple Ace"
-        },
-        {
-            "id": 1749788323,
-            "name": "Pineapple Master"
-        },
-        {
-            "id": 2124426341,
-            "name": "Pineapple Grandmaster"
-        },
-        {
-            "id": 1749833884,
-            "name": "Pumpkin Cadet"
-        },
-        {
-            "id": 1749835166,
-            "name": "Pumpkin Hotshot"
-        },
-        {
-            "id": 1749835972,
-            "name": "Pumpkin Ace"
-        },
-        {
-            "id": 1749836699,
-            "name": "Pumpkin Master"
-        },
-        {
-            "id": 2124426342,
-            "name": "Pumpkin Grandmaster"
-        },
-        {
-            "id": 1749838495,
-            "name": "Cactus Cadet"
-        },
-        {
-            "id": 1749839078,
-            "name": "Cactus Hotshot"
-        },
-        {
-            "id": 1749840246,
-            "name": "Cactus Ace"
-        },
-        {
-            "id": 1749841052,
-            "name": "Cactus Master"
-        },
-        {
-            "id": 2124426343,
-            "name": "Cactus Grandmaster"
-        },
-        {
-            "id": 1749842402,
-            "name": "Rose Cadet"
-        },
-        {
-            "id": 1749843985,
-            "name": "Rose Hotshot"
-        },
-        {
-            "id": 1749844635,
-            "name": "Rose Ace"
-        },
-        {
-            "id": 1749845555,
-            "name": "Rose Master"
-        },
-        {
-            "id": 2124426344,
-            "name": "Rose Grandmaster"
-        },
-        {
-            "id": 1749846876,
-            "name": "Pine Tree Cadet"
-        },
-        {
-            "id": 1749847825,
-            "name": "Pine Tree Hotshot"
-        },
-        {
-            "id": 1749848603,
-            "name": "Pine Tree Ace"
-        },
-        {
-            "id": 1749849756,
-            "name": "Pine Tree Master"
-        },
-        {
-            "id": 2124426345,
-            "name": "Pine Tree Grandmaster"
-        },
-        {
-            "id": 1873772794,
-            "name": "Quest Cadet"
-        },
-        {
-            "id": 1873774367,
-            "name": "Quest Hotshot"
-        },
-        {
-            "id": 1873775257,
-            "name": "Quest Ace"
-        },
-        {
-            "id": 1873779975,
-            "name": "Quest Master"
-        },
-        {
-            "id": 2124442929,
-            "name": "Stump Cadet"
-        },
-        {
-            "id": 2124442930,
-            "name": "Stump Hotshot"
-        },
-        {
-            "id": 2124442931,
-            "name": "Stump Ace"
-        },
-        {
-            "id": 2124442932,
-            "name": "Stump Master"
-        },
-        {
-            "id": 2124442933,
-            "name": "Stump Grandmaster"
-        },
-        {
-            "id": 2124443228,
-            "name": "Playtime Cadet"
-        },
-        {
-            "id": 2124443229,
-            "name": "Playtime Hotshot"
-        },
-        {
-            "id": 2124443230,
-            "name": "Playtime Ace"
-        },
-        {
-            "id": 2124443231,
-            "name": "Playtime Master"
-        },
-        {
-            "id": 2124443232,
-            "name": "Playtime Grandmaster"
-        }
-    ]
+  "id": 1537690962,
+  "names": {
+    "default": "Bee Swarm Simulator",
+    "clean": "Bee Swarm Simulator",
+    "short": "BSS"
+  },
+  "gamepasses": {
+    "4231119": "x2 Convert Speed",
+    "4231126": "x2 Bee Gather Pollen",
+    "4257788": "Bear Bee",
+    "4492467": "x2 Ticket Chance"
+  },
+  "badges": {
+    "2124634293": "You Played Bee Swarm Simulator!",
+    "2124520746": "Swarming Egg Of The Hive",
+    "2124445684": "Beesmas Beeliever",
+    "2124445842": "Beesmas Overachiever",
+    "2124458125": "Egg Hunt 2019",
+    "1749468648": "1 Million Honey",
+    "1749519033": "10 Million Honey",
+    "1749523673": "100 Million Honey",
+    "1749534539": "1 Billion Honey",
+    "2124426329": "20 Billion Honey",
+    "1874484250": "500 Thousand Goo",
+    "1874485358": "5 Million Goo",
+    "1874486035": "50 Million Goo",
+    "1874487127": "500 Million Goo",
+    "2124426332": "10 Billion Goo",
+    "1749564142": "100 Battle Points",
+    "1749566481": "1 Thousand Battle Points",
+    "1749568562": "10 Thousand Battle Points",
+    "1749570424": "50 Thousand Battle Points",
+    "2124426330": "1 Million Battle Points",
+    "1874442964": "2500 Ability Tokens",
+    "1874445609": "25 Thousand Ability Tokens",
+    "1874446720": "100 Thousand Ability Tokens",
+    "1874447816": "1 Million Ability Tokens",
+    "2124426331": "10 Million Ability Tokens",
+    "1749604083": "Sunflower Cadet",
+    "1749606287": "Sunflower Hotshot",
+    "1749608577": "Sunflower Ace",
+    "1749610498": "Sunflower Master",
+    "2124426333": "Sunflower Grandmaster",
+    "1749628495": "Dandelion Cadet",
+    "1749630489": "Dandelion Hotshot",
+    "1749631489": "Dandelion Ace",
+    "1749632737": "Dandelion Master",
+    "2124426334": "Dandelion Grandmaster",
+    "1749673718": "Mushroom Cadet",
+    "1749675237": "Mushroom Hotshot",
+    "1749676247": "Mushroom Ace",
+    "1749677419": "Mushroom Master",
+    "2124426335": "Mushroom Grandmaster",
+    "1749679114": "Blue Flower Cadet",
+    "1749680097": "Blue Flower Hotshot",
+    "1749680902": "Blue Flower Ace",
+    "1749681692": "Blue Flower Master",
+    "2124426336": "Blue Flower Grandmaster",
+    "1749684261": "Clover Cadet",
+    "1749685928": "Clover Hotshot",
+    "1749686750": "Clover Ace",
+    "1749688211": "Clover Master",
+    "2124426337": "Clover Grandmaster",
+    "1749770193": "Spider Cadet",
+    "1749771674": "Spider Hotshot",
+    "1749772538": "Spider Ace",
+    "1749773617": "Spider Master",
+    "2124426338": "Spider Grandmaster",
+    "1749775523": "Strawberry Cadet",
+    "1749776451": "Strawberry Hotshot",
+    "1749777194": "Strawberry Ace",
+    "1749779193": "Strawberry Master",
+    "2124426339": "Strawberry Grandmaster",
+    "1749780645": "Bamboo Cadet",
+    "1749781861": "Bamboo Hotshot",
+    "1749782542": "Bamboo Ace",
+    "1749783500": "Bamboo Master",
+    "2124426340": "Bamboo Grandmaster",
+    "1749784769": "Pineapple Cadet",
+    "1749786138": "Pineapple Hotshot",
+    "1749787209": "Pineapple Ace",
+    "1749788323": "Pineapple Master",
+    "2124426341": "Pineapple Grandmaster",
+    "1749833884": "Pumpkin Cadet",
+    "1749835166": "Pumpkin Hotshot",
+    "1749835972": "Pumpkin Ace",
+    "1749836699": "Pumpkin Master",
+    "2124426342": "Pumpkin Grandmaster",
+    "1749838495": "Cactus Cadet",
+    "1749839078": "Cactus Hotshot",
+    "1749840246": "Cactus Ace",
+    "1749841052": "Cactus Master",
+    "2124426343": "Cactus Grandmaster",
+    "1749842402": "Rose Cadet",
+    "1749843985": "Rose Hotshot",
+    "1749844635": "Rose Ace",
+    "1749845555": "Rose Master",
+    "2124426344": "Rose Grandmaster",
+    "1749846876": "Pine Tree Cadet",
+    "1749847825": "Pine Tree Hotshot",
+    "1749848603": "Pine Tree Ace",
+    "1749849756": "Pine Tree Master",
+    "2124426345": "Pine Tree Grandmaster",
+    "1873772794": "Quest Cadet",
+    "1873774367": "Quest Hotshot",
+    "1873775257": "Quest Ace",
+    "1873779975": "Quest Master",
+    "2124442929": "Stump Cadet",
+    "2124442930": "Stump Hotshot",
+    "2124442931": "Stump Ace",
+    "2124442932": "Stump Master",
+    "2124442933": "Stump Grandmaster",
+    "2124443228": "Playtime Cadet",
+    "2124443229": "Playtime Hotshot",
+    "2124443230": "Playtime Ace",
+    "2124443231": "Playtime Master",
+    "2124443232": "Playtime Grandmaster"
+  }
 }

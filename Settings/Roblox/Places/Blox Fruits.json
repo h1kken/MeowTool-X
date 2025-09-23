@@ -1,38 +1,20 @@
 {
-    "Gamepasses": [
-        {
-            "id": 6028662,
-            "name": "2x Money"
-        },
-        {
-            "id": 6028786,
-            "name": "Dark Blade"
-        },
-        {
-            "id": 6240746,
-            "name": "2x Mastery"
-        },
-        {
-            "id": 6525589,
-            "name": "Fast Boats"
-        },
-        {
-            "id": 6738811,
-            "name": "Fruit Notifier"
-        },
-        {
-            "id": 7578721,
-            "name": "2x Boss Drops"
-        }
-    ],
-    "Badges": [
-        {
-            "id": 2125253106,
-            "name": "Second Sea"
-        },
-        {
-            "id": 2125253113,
-            "name": "Third Sea"
-        }
-    ]
+  "id": 2753915549,
+  "names": {
+    "default": "Blox Fruits",
+    "clean": "Blox Fruits",
+    "short": "BF"
+  },
+  "gamepasses": {
+    "6028662": "2x Money",
+    "6028786": "Dark Blade",
+    "6240746": "2x Mastery",
+    "6525589": "Fast Boats",
+    "6738811": "Fruit Notifier",
+    "7578721": "2x Boss Drops"
+  },
+  "badges": {
+    "2125253106": "Second Sea",
+    "2125253113": "Third Sea"
+  }
 }

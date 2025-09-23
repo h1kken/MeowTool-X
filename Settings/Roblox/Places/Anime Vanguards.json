@@ -1,24 +1,15 @@
 {
-    "Gamepasses": [
-        {
-            "id": 780911708,
-            "name": "Anime Vanguards Tester"
-        },
-        {
-            "id": 842367966,
-            "name": "Extra Unit Storage"
-        },
-        {
-            "id": 843295206,
-            "name": "VIP"
-        },
-        {
-            "id": 846032291,
-            "name": "Shiny Hunter"
-        },
-        {
-            "id": 846695813,
-            "name": "Display All Units"
-        }
-    ]
+  "id": 16146832113,
+  "names": {
+    "default": "Anime Vanguards",
+    "clean": "Anime Vanguards",
+    "short": "AV"
+  },
+  "gamepasses": {
+    "780911708": "Anime Vanguards Tester",
+    "842367966": "Extra Unit Storage",
+    "843295206": "VIP",
+    "846032291": "Shiny Hunter",
+    "846695813": "Display All Units"
+  }
 }

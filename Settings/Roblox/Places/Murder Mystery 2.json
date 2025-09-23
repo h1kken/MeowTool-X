@@ -1,318 +1,90 @@
 {
-    "Gamepasses": [
-        {
-            "id": 429957,
-            "name": "Elite"
-        },
-        {
-            "id": 1308795,
-            "name": "Radio"
-        },
-        {
-            "id": 79442,
-            "name": "Randomized Faces 1"
-        },
-        {
-            "id": 429356,
-            "name": "Randomized Faces 2"
-        },
-        {
-            "id": 1201672,
-            "name": "Shadow Item Pack"
-        },
-        {
-            "id": 1491260,
-            "name": "Clockwork Item Pack "
-        },
-        {
-            "id": 1531578,
-            "name": "8-BIT Item Pack"
-        },
-        {
-            "id": 1712843,
-            "name": "Futuristic Item Pack"
-        },
-        {
-            "id": 2002511,
-            "name": "American Item Pack"
-        },
-        {
-            "id": 3346253,
-            "name": "Halloween Item Pack"
-        },
-        {
-            "id": 3646351,
-            "name": "Winter Item Pack"
-        },
-        {
-            "id": 5299081,
-            "name": "Batwing"
-        },
-        {
-            "id": 5593012,
-            "name": "Icewing"
-        },
-        {
-            "id": 7435036,
-            "name": "Ghostly Item Pack"
-        },
-        {
-            "id": 7795820,
-            "name": "Frostbite Item Pack"
-        },
-        {
-            "id": 8456434,
-            "name": "Bioblade"
-        },
-        {
-            "id": 10747452,
-            "name": "Prismatic"
-        },
-        {
-            "id": 12448341,
-            "name": "Vampire's Edge"
-        },
-        {
-            "id": 13308756,
-            "name": "Peppermint"
-        },
-        {
-            "id": 13502690,
-            "name": "Cookieblade"
-        },
-        {
-            "id": 15066851,
-            "name": "Heartblade"
-        },
-        {
-            "id": 16462794,
-            "name": "Eggblade"
-        },
-        {
-            "id": 24102758,
-            "name": "EVO: Reaver"
-        },
-        {
-            "id": 112956652,
-            "name": "EVO: Icecrusher"
-        },
-        {
-            "id": 674830453,
-            "name": "EVO: Gingerscythe"
-        },
-        {
-            "id": 1326724250,
-            "name": "EVO: Synthwave"
-        },
-        {
-            "id": 658376309,
-            "name": "PACK: Latte"
-        },
-        {
-            "id": 21348436,
-            "name": "GODLY: Nebula"
-        },
-        {
-            "id": 26304638,
-            "name": "GODLY: Ice Beam"
-        },
-        {
-            "id": 26304644,
-            "name": "GODLY: Ice Flake"
-        },
-        {
-            "id": 26304640,
-            "name": "BUNDLE: Ice Beam, Ice Flake, Ice Effect"
-        },
-        {
-            "id": 55292828,
-            "name": "GODLY: Plasmabeam"
-        },
-        {
-            "id": 55292879,
-            "name": "GODLY: Plasmablade"
-        },
-        {
-            "id": 55292987,
-            "name": "BUNDLE: Plasma"
-        },
-        {
-            "id": 93780280,
-            "name": "GODLY: Phantom"
-        },
-        {
-            "id": 93780323,
-            "name": "GODLY: Spectre"
-        },
-        {
-            "id": 93780371,
-            "name": "BUNDLE: Phantom & Spectre"
-        },
-        {
-            "id": 131048887,
-            "name": "GODLY: Blossom"
-        },
-        {
-            "id": 131048950,
-            "name": "GODLY: Sakura"
-        },
-        {
-            "id": 131048794,
-            "name": "BUNDLE: Sakura"
-        },
-        {
-            "id": 156618021,
-            "name": "GODLY: Rainbow Gun"
-        },
-        {
-            "id": 156618096,
-            "name": "GODLY: Rainbow"
-        },
-        {
-            "id": 156618061,
-            "name": "BUNDLE: Rainbow"
-        },
-        {
-            "id": 200073999,
-            "name": "GODLY: Ocean"
-        },
-        {
-            "id": 200074174,
-            "name": "GODLY: Waves"
-        },
-        {
-            "id": 200074115,
-            "name": "BUNDLE: Beach Pack"
-        },
-        {
-            "id": 273009597,
-            "name": "GODLY: Darkshot"
-        },
-        {
-            "id": 273009675,
-            "name": "GODLY: Darksword"
-        },
-        {
-            "id": 273009641,
-            "name": "BUNDLE: Darkness Pack"
-        },
-        {
-            "id": 658667213,
-            "name": "GODLY: Turkey"
-        },
-        {
-            "id": 768389355,
-            "name": "GODLY: Flowerwood Gun"
-        },
-        {
-            "id": 769140200,
-            "name": "GODLY: Flowerwood"
-        },
-        {
-            "id": 767127317,
-            "name": "BUNDLE: Flowerwood"
-        },
-        {
-            "id": 850293409,
-            "name": "GODLY: Pearlshine"
-        },
-        {
-            "id": 850003963,
-            "name": "GODLY: Pearl"
-        },
-        {
-            "id": 850387075,
-            "name": "BUNDLE: Pearls"
-        },
-        {
-            "id": 942004724,
-            "name": "GODLY: Spirit"
-        },
-        {
-            "id": 941784760,
-            "name": "GODLY: Soul"
-        },
-        {
-            "id": 942030669,
-            "name": "BUNDLE: Spirit & Soul"
-        },
-        {
-            "id": 1008841389,
-            "name": "GODLY: Borealis"
-        },
-        {
-            "id": 1008813284,
-            "name": "GODLY: Australis"
-        },
-        {
-            "id": 1009231264,
-            "name": "BUNDLE: Aurora"
-        },
-        {
-            "id": 1167438350,
-            "name": "GODLY: Flora"
-        },
-        {
-            "id": 1165838634,
-            "name": "GODLY: Bloom"
-        },
-        {
-            "id": 1166580569,
-            "name": "BUNDLE: Bloom"
-        }
-    ],
-    "Badges": [
-        {
-            "id": 196198137,
-            "name": "Level 10"
-        },
-        {
-            "id": 196198654,
-            "name": "Level 20"
-        },
-        {
-            "id": 196198776,
-            "name": "Level 30"
-        },
-        {
-            "id": 196199518,
-            "name": "Level 40"
-        },
-        {
-            "id": 196200089,
-            "name": "Level 50"
-        },
-        {
-            "id": 196200207,
-            "name": "Level 60"
-        },
-        {
-            "id": 196200425,
-            "name": "Level 70"
-        },
-        {
-            "id": 196200625,
-            "name": "Level 80"
-        },
-        {
-            "id": 196200691,
-            "name": "Level 90"
-        },
-        {
-            "id": 196200785,
-            "name": "Level 100"
-        },
-        {
-            "id": 2129030855,
-            "name": "Joined the Survivors"
-        },
-        {
-            "id": 2129030849,
-            "name": "Joined the Zombies"
-        },
-        {
-            "id": 2124636122,
-            "name": "RB Knife"
-        }
-    ]
+  "id": 142823291,
+  "names": {
+    "default": "Murder Mystery 2",
+    "clean": "Murder Mystery 2",
+    "short": "MM2"
+  },
+  "gamepasses": {
+    "429957": "Elite",
+    "1308795": "Radio",
+    "79442": "Randomized Faces 1",
+    "429356": "Randomized Faces 2",
+    "1201672": "Shadow Item Pack",
+    "1491260": "Clockwork Item Pack ",
+    "1531578": "8-BIT Item Pack",
+    "1712843": "Futuristic Item Pack",
+    "2002511": "American Item Pack",
+    "3346253": "Halloween Item Pack",
+    "3646351": "Winter Item Pack",
+    "5299081": "Batwing",
+    "5593012": "Icewing",
+    "7435036": "Ghostly Item Pack",
+    "7795820": "Frostbite Item Pack",
+    "8456434": "Bioblade",
+    "10747452": "Prismatic",
+    "12448341": "Vampire's Edge",
+    "13308756": "Peppermint",
+    "13502690": "Cookieblade",
+    "15066851": "Heartblade",
+    "16462794": "Eggblade",
+    "24102758": "EVO: Reaver",
+    "112956652": "EVO: Icecrusher",
+    "674830453": "EVO: Gingerscythe",
+    "1326724250": "EVO: Synthwave",
+    "658376309": "PACK: Latte",
+    "21348436": "GODLY: Nebula",
+    "26304638": "GODLY: Ice Beam",
+    "26304644": "GODLY: Ice Flake",
+    "26304640": "BUNDLE: Ice Beam, Ice Flake, Ice Effect",
+    "55292828": "GODLY: Plasmabeam",
+    "55292879": "GODLY: Plasmablade",
+    "55292987": "BUNDLE: Plasma",
+    "93780280": "GODLY: Phantom",
+    "93780323": "GODLY: Spectre",
+    "93780371": "BUNDLE: Phantom & Spectre",
+    "131048887": "GODLY: Blossom",
+    "131048950": "GODLY: Sakura",
+    "131048794": "BUNDLE: Sakura",
+    "156618021": "GODLY: Rainbow Gun",
+    "156618096": "GODLY: Rainbow",
+    "156618061": "BUNDLE: Rainbow",
+    "200073999": "GODLY: Ocean",
+    "200074174": "GODLY: Waves",
+    "200074115": "BUNDLE: Beach Pack",
+    "273009597": "GODLY: Darkshot",
+    "273009675": "GODLY: Darksword",
+    "273009641": "BUNDLE: Darkness Pack",
+    "658667213": "GODLY: Turkey",
+    "768389355": "GODLY: Flowerwood Gun",
+    "769140200": "GODLY: Flowerwood",
+    "767127317": "BUNDLE: Flowerwood",
+    "850293409": "GODLY: Pearlshine",
+    "850003963": "GODLY: Pearl",
+    "850387075": "BUNDLE: Pearls",
+    "942004724": "GODLY: Spirit",
+    "941784760": "GODLY: Soul",
+    "942030669": "BUNDLE: Spirit & Soul",
+    "1008841389": "GODLY: Borealis",
+    "1008813284": "GODLY: Australis",
+    "1009231264": "BUNDLE: Aurora",
+    "1167438350": "GODLY: Flora",
+    "1165838634": "GODLY: Bloom",
+    "1166580569": "BUNDLE: Bloom"
+  },
+  "badges": {
+    "196198137": "Level 10",
+    "196198654": "Level 20",
+    "196198776": "Level 30",
+    "196199518": "Level 40",
+    "196200089": "Level 50",
+    "196200207": "Level 60",
+    "196200425": "Level 70",
+    "196200625": "Level 80",
+    "196200691": "Level 90",
+    "196200785": "Level 100",
+    "2129030855": "Joined the Survivors",
+    "2129030849": "Joined the Zombies",
+    "2124636122": "RB Knife"
+  }
 }

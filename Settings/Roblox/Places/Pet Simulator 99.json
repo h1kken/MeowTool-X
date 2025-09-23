@@ -1,78 +1,30 @@
 {
-    "Gamepasses": [
-        {
-            "id": 257811346,
-            "name": "VIP!"
-        },
-        {
-            "id": 205379487,
-            "name": "Lucky!"
-        },
-        {
-            "id": 257803774,
-            "name": "Ultra Lucky!"
-        },
-        {
-            "id": 258567677,
-            "name": "Magic Eggs!"
-        },
-        {
-            "id": 259437976,
-            "name": "+15 Pets!"
-        },
-        {
-            "id": 264808140,
-            "name": "Huge Hunter!"
-        },
-        {
-            "id": 265320491,
-            "name": "Auto Farm!"
-        },
-        {
-            "id": 265324265,
-            "name": "Auto Tap!"
-        },
-        {
-            "id": 651611000,
-            "name": "Daycare Slots!"
-        },
-        {
-            "id": 655859720,
-            "name": "+15 Eggs!"
-        },
-        {
-            "id": 690997523,
-            "name": "Super Drops!"
-        },
-        {
-            "id": 720275150,
-            "name": "Double Stars!"
-        },
-        {
-            "id": 975558264,
-            "name": "Super Shiny Hunter!"
-        },
-        {
-            "id": 1099764410,
-            "name": "Pass"
-        }
-    ],
-    "Badges": [
-        {
-            "id": 2153913164,
-            "name": "Welcome"
-        },
-        {
-            "id": 3189151177666639,
-            "name": "The Hunt: First Edition"
-        },
-        {
-            "id": 754796678735151,
-            "name": "The Hunt: Mega Edition"
-        },
-        {
-            "id": 327631483993374,
-            "name": "Journey's End"
-        }
-    ]
+  "id": 8737899170,
+  "names": {
+    "default": "Pet Simulator 99",
+    "clean": "Pet Simulator 99",
+    "short": "PS99"
+  },
+  "gamepasses": {
+    "257811346": "VIP!",
+    "205379487": "Lucky!",
+    "257803774": "Ultra Lucky!",
+    "258567677": "Magic Eggs!",
+    "259437976": "+15 Pets!",
+    "264808140": "Huge Hunter!",
+    "265320491": "Auto Farm!",
+    "265324265": "Auto Tap!",
+    "651611000": "Daycare Slots!",
+    "655859720": "+15 Eggs!",
+    "690997523": "Super Drops!",
+    "720275150": "Double Stars!",
+    "975558264": "Super Shiny Hunter!",
+    "1099764410": "Pass"
+  },
+  "badges": {
+    "2153913164": "Welcome",
+    "3189151177666639": "The Hunt: First Edition",
+    "754796678735151": "The Hunt: Mega Edition",
+    "327631483993374": "Journey's End"
+  }
 }

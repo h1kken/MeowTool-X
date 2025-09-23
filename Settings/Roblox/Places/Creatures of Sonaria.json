@@ -1,158 +1,50 @@
 {
-    "Gamepasses": [
-        {
-            "id": 216724088,
-            "name": "Corvurax Species"
-        }
-    ],
-    "Badges": [
-        {
-            "id": 3863179600038190,
-            "name": "Creatures of Sonaria: THE HATCH"
-        },
-        {
-            "id": 2124595590,
-            "name": "Beta Tester"
-        },
-        {
-            "id": 2124595592,
-            "name": "Beta Supporter"
-        },
-        {
-            "id": 2129022315,
-            "name": "Halloween 2022"
-        },
-        {
-            "id": 2153215846,
-            "name": "Halloween 2023"
-        },
-        {
-            "id": 4462319084474111,
-            "name": "Halloween 2024"
-        },
-        {
-            "id": 2124660417,
-            "name": "Christmas 2020"
-        },
-        {
-            "id": 2129936623,
-            "name": "Christmas 2022"
-        },
-        {
-            "id": 2124686302,
-            "name": "Valentines 2021"
-        },
-        {
-            "id": 2140726547,
-            "name": "Valentines 2023"
-        },
-        {
-            "id": 55658403086320,
-            "name": "Valentines 2024"
-        },
-        {
-            "id": 8003417492984,
-            "name": "Valentines 2025"
-        },
-        {
-            "id": 2143625119,
-            "name": "Easter 2023"
-        },
-        {
-            "id": 1734098717984624,
-            "name": "Easter 2024"
-        },
-        {
-            "id": 1675841494057005,
-            "name": "Easter 2025"
-        },
-        {
-            "id": 2145610041,
-            "name": "Land Sea Sky 2023"
-        },
-        {
-            "id": 2960167874826659,
-            "name": "Land Sea Sky 2024"
-        },
-        {
-            "id": 90884767978344,
-            "name": "Land Sea Sky 2025"
-        },
-        {
-            "id": 2149100257,
-            "name": "Summer Paradise 2023"
-        },
-        {
-            "id": 1654242147814853,
-            "name": "Summer Paradise 2024"
-        },
-        {
-            "id": 2661459542444321,
-            "name": "Winter 2023"
-        },
-        {
-            "id": 2998142934210494,
-            "name": "Winter 2024"
-        },
-        {
-            "id": 1040006371199126,
-            "name": "Spring Meadows 2024"
-        },
-        {
-            "id": 956526096696823,
-            "name": "Spring Meadows 2025"
-        },
-        {
-            "id": 1888520945881505,
-            "name": "Disaster 2024"
-        },
-        {
-            "id": 3078297039018317,
-            "name": "Disaster 2025"
-        },
-        {
-            "id": 4346068251661631,
-            "name": "Lore 2024"
-        },
-        {
-            "id": 1596996370838262,
-            "name": "Harvest 2024"
-        },
-        {
-            "id": 2291949305789809,
-            "name": "Amazon 2024"
-        },
-        {
-            "id": 2148143991,
-            "name": "Fireworks 2023"
-        },
-        {
-            "id": 2566270751122609,
-            "name": "Fireworks 2024"
-        },
-        {
-            "id": 1342436313329184,
-            "name": "Fireworks 2025"
-        },
-        {
-            "id": 2124810991,
-            "name": "Twenty One Pilots Event"
-        },
-        {
-            "id": 2147582505,
-            "name": "Recode Early Access"
-        },
-        {
-            "id": 2147584013,
-            "name": "Recode Supporter Title & Creature"
-        },
-        {
-            "id": 1964648519335747,
-            "name": "Twin Atlas Winter Clash"
-        },
-        {
-            "id": 2521539978905021,
-            "name": "NINJAGO Legends Event"
-        }
-    ]
+  "id": 5233782396,
+  "names": {
+    "default": "Creatures of Sonaria",
+    "clean": "Creatures of Sonaria",
+    "short": "CoS"
+  },
+  "gamepasses": {
+    "216724088": "Corvurax Species"
+  },
+  "badges": {
+    "3863179600038190": "Creatures of Sonaria: THE HATCH",
+    "2124595590": "Beta Tester",
+    "2124595592": "Beta Supporter",
+    "2129022315": "Halloween 2022",
+    "2153215846": "Halloween 2023",
+    "4462319084474111": "Halloween 2024",
+    "2124660417": "Christmas 2020",
+    "2129936623": "Christmas 2022",
+    "2124686302": "Valentines 2021",
+    "2140726547": "Valentines 2023",
+    "55658403086320": "Valentines 2024",
+    "8003417492984": "Valentines 2025",
+    "2143625119": "Easter 2023",
+    "1734098717984624": "Easter 2024",
+    "1675841494057005": "Easter 2025",
+    "2145610041": "Land Sea Sky 2023",
+    "2960167874826659": "Land Sea Sky 2024",
+    "90884767978344": "Land Sea Sky 2025",
+    "2149100257": "Summer Paradise 2023",
+    "1654242147814853": "Summer Paradise 2024",
+    "2661459542444321": "Winter 2023",
+    "2998142934210494": "Winter 2024",
+    "1040006371199126": "Spring Meadows 2024",
+    "956526096696823": "Spring Meadows 2025",
+    "1888520945881505": "Disaster 2024",
+    "3078297039018317": "Disaster 2025",
+    "4346068251661631": "Lore 2024",
+    "1596996370838262": "Harvest 2024",
+    "2291949305789809": "Amazon 2024",
+    "2148143991": "Fireworks 2023",
+    "2566270751122609": "Fireworks 2024",
+    "1342436313329184": "Fireworks 2025",
+    "2124810991": "Twenty One Pilots Event",
+    "2147582505": "Recode Early Access",
+    "2147584013": "Recode Supporter Title & Creature",
+    "1964648519335747": "Twin Atlas Winter Clash",
+    "2521539978905021": "NINJAGO Legends Event"
+  }
 }

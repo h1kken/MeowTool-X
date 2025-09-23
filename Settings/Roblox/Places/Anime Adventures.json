@@ -1,30 +1,18 @@
 {
-    "Gamepasses": [
-        {
-            "id": 55372677,
-            "name": "VIP"
-        },
-        {
-            "id": 55373046,
-            "name": "Shiny Hunter"
-        },
-        {
-            "id": 55373124,
-            "name": "Unit Storage"
-        },
-        {
-            "id": 55373224,
-            "name": "Display 3 Units"
-        },
-        {
-            "id": 99127218,
-            "name": "Display All Units"
-        }
-    ],
-    "Badges": [
-        {
-            "id": 4244887231710040,
-            "name": "The Hatch 2025"
-        }
-    ]
+  "id": 8304191830,
+  "names": {
+    "default": "Anime Adventures",
+    "clean": "Anime Adventures",
+    "short": "AA"
+  },
+  "gamepasses": {
+    "55372677": "VIP",
+    "55373046": "Shiny Hunter",
+    "55373124": "Unit Storage",
+    "55373224": "Display 3 Units",
+    "99127218": "Display All Units"
+  },
+  "badges": {
+    "4244887231710040": "The Hatch 2025"
+  }
 }

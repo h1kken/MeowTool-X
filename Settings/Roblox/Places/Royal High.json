@@ -1,90 +1,33 @@
 {
-    "Gamepasses": [
-        {
-            "id": 3436552,
-            "name": "Faster Flight!"
-        },
-        {
-            "id": 3455446,
-            "name": "2x Double Diamonds!"
-        },
-        {
-            "id": 3457593,
-            "name": "4x Quadruple Diamonds!"
-        },
-        {
-            "id": 3457412,
-            "name": "Paintbrush Pass!"
-        },
-        {
-            "id": 4097864,
-            "name": "New Hair Colors +GLOWING Hair Pass"
-        },
-        {
-            "id": 5350675,
-            "name": "Fly on Earth!"
-        },
-        {
-            "id": 5585682,
-            "name": "Special Fabric Designs (7,000+ designs!)"
-        },
-        {
-            "id": 6316501,
-            "name": "Crystal Ball Power"
-        },
-        {
-            "id": 10111433,
-            "name": "Sticker Packs Pass!"
-        },
-        {
-            "id": 785128363,
-            "name": "Upload Custom Fabrics Pass!"
-        },
-        {
-            "id": 982344484,
-            "name": "Materials Pass!"
-        }
-    ],
-    "Badges": [
-        {
-            "id": 2124428491,
-            "name": "Pumpkin Contest 2018"
-        },
-        {
-            "id": 2124428509,
-            "name": "Halloween 2018"
-        },
-        {
-            "id": 2124487935,
-            "name": "Halloween 2019 Designer Event Completionist!"
-        },
-        {
-            "id": 2124490533,
-            "name": "Royale High Halloween 2019!"
-        },
-        {
-            "id": 2124490534,
-            "name": "Completed Super Hard Maze 2019"
-        },
-        {
-            "id": 2124498675,
-            "name": "Royale Christmas 2019!"
-        },
-        {
-            "id": 2124500186,
-            "name": "Happy New Years with Royale High 2020!"
-        },
-        {
-            "id": 2124509827,
-            "name": "Royale Valentines Day 2020!"
-        },
-        {
-            "id": 2124459883,
-            "name": "Saint Patrick's Day 2019!"
-        },
-        {
-            "id": 2124517063,
-            "name": "Saint Patrick's Day 2020!"
-        }
-    ]
+  "id": 735030788,
+  "names": {
+    "default": "Royal High",
+    "clean": "Royal High",
+    "short": "RH"
+  },
+  "gamepasses": {
+    "3436552": "Faster Flight!",
+    "3455446": "2x Double Diamonds!",
+    "3457593": "4x Quadruple Diamonds!",
+    "3457412": "Paintbrush Pass!",
+    "4097864": "New Hair Colors +GLOWING Hair Pass",
+    "5350675": "Fly on Earth!",
+    "5585682": "Special Fabric Designs (7,000+ designs!)",
+    "6316501": "Crystal Ball Power",
+    "10111433": "Sticker Packs Pass!",
+    "785128363": "Upload Custom Fabrics Pass!",
+    "982344484": "Materials Pass!"
+  },
+  "badges": {
+    "2124428491": "Pumpkin Contest 2018",
+    "2124428509": "Halloween 2018",
+    "2124487935": "Halloween 2019 Designer Event Completionist!",
+    "2124490533": "Royale High Halloween 2019!",
+    "2124490534": "Completed Super Hard Maze 2019",
+    "2124498675": "Royale Christmas 2019!",
+    "2124500186": "Happy New Years with Royale High 2020!",
+    "2124509827": "Royale Valentines Day 2020!",
+    "2124459883": "Saint Patrick's Day 2019!",
+    "2124517063": "Saint Patrick's Day 2020!"
+  }
 }

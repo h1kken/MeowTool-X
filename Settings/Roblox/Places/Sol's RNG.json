@@ -1,302 +1,86 @@
 {
-    "Gamepasses": [
-        {
-            "id": 1240677143,
-            "name": "RNG Premium Pass - Season I"
-        },
-        {
-            "id": 705238616,
-            "name": "VIP"
-        },
-        {
-            "id": 952898058,
-            "name": "VIP+"
-        },
-        {
-            "id": 673353863,
-            "name": "Quick Roll"
-        },
-        {
-            "id": 792728808,
-            "name": "Invisible Gear"
-        },
-        {
-            "id": 879770191,
-            "name": "Merchant Teleporter"
-        },
-        {
-            "id": 958699822,
-            "name": "Innovator Pack Vol 1"
-        },
-        {
-            "id": 958340231,
-            "name": "Innovator Pack Vol 2"
-        },
-        {
-            "id": 958598071,
-            "name": "Innovator Pack Vol 3"
-        }
-    ],
-    "Badges": [
-        {
-            "id": 1441130719000460,
-            "name": "I just started Sol's RNG"
-        },
-        {
-            "id": 3622512718465802,
-            "name": "A little bit of rolls"
-        },
-        {
-            "id": 1107034638377762,
-            "name": "I'm addicted to Sol's RNG"
-        },
-        {
-            "id": 846169662502095,
-            "name": "Would You Leave? / Nah I'd Roll"
-        },
-        {
-            "id": 1872289370492358,
-            "name": "Roll, Eat, Sleep, Repeat"
-        },
-        {
-            "id": 1092603390197325,
-            "name": "Take a break"
-        },
-        {
-            "id": 2731678596419900,
-            "name": "I can't stop playing this"
-        },
-        {
-            "id": 4356557421515611,
-            "name": "Waste of time"
-        },
-        {
-            "id": 3336758570255487,
-            "name": "Touch the grass"
-        },
-        {
-            "id": 2925176588215112,
-            "name": "Breakthrough"
-        },
-        {
-            "id": 1356271377596280,
-            "name": "Break the limit"
-        },
-        {
-            "id": 2201290015607347,
-            "name": "Spotted the Sol"
-        },
-        {
-            "id": 1253153057071204,
-            "name": "In-dev"
-        },
-        {
-            "id": 257464335458276,
-            "name": "Finished work for today"
-        },
-        {
-            "id": 1918952643310114,
-            "name": "Good job this week too"
-        },
-        {
-            "id": 3145321935208607,
-            "name": "A sincere person"
-        },
-        {
-            "id": 1496986902550849,
-            "name": "When is payday???"
-        },
-        {
-            "id": 2270659814141729,
-            "name": "Star Egg"
-        },
-        {
-            "id": 559749433012559,
-            "name": "Lock Egg"
-        },
-        {
-            "id": 202360729284337,
-            "name": "There's no way to stop it!"
-        },
-        {
-            "id": 744944723444729,
-            "name": "I give my life..."
-        },
-        {
-            "id": 4072147147623458,
-            "name": "Eternal time..."
-        },
-        {
-            "id": 1858966971108205,
-            "name": "Break the Space"
-        },
-        {
-            "id": 1849903315759188,
-            "name": "Break the Galaxy"
-        },
-        {
-            "id": 3593181263483436,
-            "name": "Break the Reality"
-        },
-        {
-            "id": 3718807305779124,
-            "name": "Perfect Attendance Award"
-        },
-        {
-            "id": 2457971054390553,
-            "name": "-Flaws in the World-"
-        },
-        {
-            "id": 3236492292509665,
-            "name": "-One who stands before God-"
-        },
-        {
-            "id": 1503563480176545,
-            "name": "-The Unknown-"
-        },
-        {
-            "id": 476770132708833,
-            "name": "Achievement Slayer"
-        },
-        {
-            "id": 1201821091232234,
-            "name": "Achievement Master"
-        },
-        {
-            "id": 348376112222987,
-            "name": "Achievement Champion"
-        },
-        {
-            "id": 1896511924362574,
-            "name": "The Stigma"
-        },
-        {
-            "id": 399984649890845,
-            "name": "#DAY100"
-        },
-        {
-            "id": 1105302727042025,
-            "name": "Mission complete!"
-        },
-        {
-            "id": 4319723733895149,
-            "name": "Excellent service"
-        },
-        {
-            "id": 2192515070354146,
-            "name": "Professional helper"
-        },
-        {
-            "id": 3021901927162320,
-            "name": "Quest master"
-        },
-        {
-            "id": 723035340044103,
-            "name": "Quest slayer"
-        },
-        {
-            "id": 2620948537626731,
-            "name": "Secret Trade"
-        },
-        {
-            "id": 4224933102884595,
-            "name": "Biome itself"
-        },
-        {
-            "id": 1605629548712504,
-            "name": "My eternal journey"
-        },
-        {
-            "id": 2460941940564506,
-            "name": "The Lost"
-        },
-        {
-            "id": 4096899752944070,
-            "name": "Famous!"
-        },
-        {
-            "id": 2091741945674306,
-            "name": "Grandmaster"
-        },
-        {
-            "id": 3625566987462442,
-            "name": "A memory to be forgotten"
-        },
-        {
-            "id": 179330822551495,
-            "name": "The Limbo"
-        },
-        {
-            "id": 4370606648952666,
-            "name": "The Zero"
-        },
-        {
-            "id": 978766174460625,
-            "name": "Pre-Sand Worm Slayer"
-        },
-        {
-            "id": 137829805535621,
-            "name": "10,000,000"
-        },
-        {
-            "id": 485557368787476,
-            "name": "15,000,000"
-        },
-        {
-            "id": 1801598389006571,
-            "name": "20,000,000"
-        },
-        {
-            "id": 2295935762202367,
-            "name": "30,000,000"
-        },
-        {
-            "id": 2994269484017383,
-            "name": "50,000,000"
-        },
-        {
-            "id": 1121298629065726,
-            "name": "My first 10M+ finding"
-        },
-        {
-            "id": 3516455555443766,
-            "name": "My first 100M+ finding"
-        },
-        {
-            "id": 1224551724339726,
-            "name": "My first 1B+ finding"
-        },
-        {
-            "id": 734804938884338,
-            "name": "??? 1"
-        },
-        {
-            "id": 807013057656632,
-            "name": "??? 2"
-        },
-        {
-            "id": 1324193838431233,
-            "name": "??? 3"
-        },
-        {
-            "id": 1352157690781028,
-            "name": "??? 4"
-        },
-        {
-            "id": 1956542596523913,
-            "name": "??? 5"
-        },
-        {
-            "id": 3137343012568311,
-            "name": "??? 6"
-        },
-        {
-            "id": 3618488813178695,
-            "name": "??? 7"
-        },
-        {
-            "id": 4100206722227429,
-            "name": "??? 8"
-        }
-    ]
+  "id": 15532962292,
+  "names": {
+    "default": "Sol's RNG",
+    "clean": "Sol's RNG",
+    "short": "SRNG"
+  },
+  "gamepasses": {
+    "1240677143": "RNG Premium Pass - Season I",
+    "705238616": "VIP",
+    "952898058": "VIP+",
+    "673353863": "Quick Roll",
+    "792728808": "Invisible Gear",
+    "879770191": "Merchant Teleporter",
+    "958699822": "Innovator Pack Vol 1",
+    "958340231": "Innovator Pack Vol 2",
+    "958598071": "Innovator Pack Vol 3"
+  },
+  "badges": {
+    "1441130719000460": "I just started Sol's RNG",
+    "3622512718465802": "A little bit of rolls",
+    "1107034638377762": "I'm addicted to Sol's RNG",
+    "846169662502095": "Would You Leave? / Nah I'd Roll",
+    "1872289370492358": "Roll, Eat, Sleep, Repeat",
+    "1092603390197325": "Take a break",
+    "2731678596419900": "I can't stop playing this",
+    "4356557421515611": "Waste of time",
+    "3336758570255487": "Touch the grass",
+    "2925176588215112": "Breakthrough",
+    "1356271377596280": "Break the limit",
+    "2201290015607347": "Spotted the Sol",
+    "1253153057071204": "In-dev",
+    "257464335458276": "Finished work for today",
+    "1918952643310114": "Good job this week too",
+    "3145321935208607": "A sincere person",
+    "1496986902550849": "When is payday???",
+    "2270659814141729": "Star Egg",
+    "559749433012559": "Lock Egg",
+    "202360729284337": "There's no way to stop it!",
+    "744944723444729": "I give my life...",
+    "4072147147623458": "Eternal time...",
+    "1858966971108205": "Break the Space",
+    "1849903315759188": "Break the Galaxy",
+    "3593181263483436": "Break the Reality",
+    "3718807305779124": "Perfect Attendance Award",
+    "2457971054390553": "-Flaws in the World-",
+    "3236492292509665": "-One who stands before God-",
+    "1503563480176545": "-The Unknown-",
+    "476770132708833": "Achievement Slayer",
+    "1201821091232234": "Achievement Master",
+    "348376112222987": "Achievement Champion",
+    "1896511924362574": "The Stigma",
+    "399984649890845": "#DAY100",
+    "1105302727042025": "Mission complete!",
+    "4319723733895149": "Excellent service",
+    "2192515070354146": "Professional helper",
+    "3021901927162320": "Quest master",
+    "723035340044103": "Quest slayer",
+    "2620948537626731": "Secret Trade",
+    "4224933102884595": "Biome itself",
+    "1605629548712504": "My eternal journey",
+    "2460941940564506": "The Lost",
+    "4096899752944070": "Famous!",
+    "2091741945674306": "Grandmaster",
+    "3625566987462442": "A memory to be forgotten",
+    "179330822551495": "The Limbo",
+    "4370606648952666": "The Zero",
+    "978766174460625": "Pre-Sand Worm Slayer",
+    "137829805535621": "10,000,000",
+    "485557368787476": "15,000,000",
+    "1801598389006571": "20,000,000",
+    "2295935762202367": "30,000,000",
+    "2994269484017383": "50,000,000",
+    "1121298629065726": "My first 10M+ finding",
+    "3516455555443766": "My first 100M+ finding",
+    "1224551724339726": "My first 1B+ finding",
+    "734804938884338": "??? 1",
+    "807013057656632": "??? 2",
+    "1324193838431233": "??? 3",
+    "1352157690781028": "??? 4",
+    "1956542596523913": "??? 5",
+    "3137343012568311": "??? 6",
+    "3618488813178695": "??? 7",
+    "4100206722227429": "??? 8"
+  }
 }

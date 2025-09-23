@@ -1,16 +1,13 @@
 {
-    "Gamepasses": [
-        {
-            "id": 1227013099,
-            "name": "Admin Commands"
-        },
-        {
-            "id": 1229510262,
-            "name": "VIP"
-        },
-        {
-            "id": 1228591447,
-            "name": "2x Money"
-        }
-    ]
+  "id": 109983668079237,
+  "names": {
+    "default": "Steal a Brainrot",
+    "clean": "Steal a Brainrot",
+    "short": "SaB"
+  },
+  "gamepasses": {
+    "1227013099": "Admin Commands",
+    "1229510262": "VIP",
+    "1228591447": "2x Money"
+  }
 }

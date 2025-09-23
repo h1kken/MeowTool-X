@@ -1,44 +1,20 @@
 {
-    "Gamepasses": [
-        {
-            "id": 952453152,
-            "name": "VIP"
-        },
-        {
-            "id": 957906237,
-            "name": "Anime Emotes"
-        },
-        {
-            "id": 958185291,
-            "name": "Toxic Emotes"
-        },
-        {
-            "id": 965195377,
-            "name": "Skip Spins"
-        },
-        {
-            "id": 1034038790,
-            "name": "Awakening Outfits"
-        },
-        {
-            "id": 1045871823,
-            "name": "Goal Sound"
-        },
-        {
-            "id": 1046171023,
-            "name": "Ankle Breaker Sound"
-        },
-        {
-            "id": 1054209537,
-            "name": "Privacy Servers+"
-        },
-        {
-            "id": 924321836,
-            "name": "Slot 2"
-        },
-        {
-            "id": 924345504,
-            "name": "Slot 3"
-        }
-    ]
+  "id": 18668065416,
+  "names": {
+    "default": "Blue Lock: Rivals",
+    "clean": "Blue Lock Rivals",
+    "short": "BLR"
+  },
+  "gamepasses": {
+    "952453152": "VIP",
+    "957906237": "Anime Emotes",
+    "958185291": "Toxic Emotes",
+    "965195377": "Skip Spins",
+    "1034038790": "Awakening Outfits",
+    "1045871823": "Goal Sound",
+    "1046171023": "Ankle Breaker Sound",
+    "1054209537": "Privacy Servers+",
+    "924321836": "Slot 2",
+    "924345504": "Slot 3"
+  }
 }

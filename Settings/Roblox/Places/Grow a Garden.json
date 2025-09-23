@@ -1,82 +1,31 @@
 {
-    "Gamepasses": [
-        {
-            "id": 1239020110,
-            "name": "Premium Seed Pack"
-        }
-    ],
-    "Badges": [
-        {
-            "id": 3181581226889239,
-            "name": "G"
-        },
-        {
-            "id": 2432009301742310,
-            "name": "A"
-        },
-        {
-            "id": 3495711621999816,
-            "name": "R"
-        },
-        {
-            "id": 3310355054544865,
-            "name": "D"
-        },
-        {
-            "id": 3195330021311033,
-            "name": "E"
-        },
-        {
-            "id": 34852060037844,
-            "name": "N"
-        },
-        {
-            "id": 4330691652818014,
-            "name": "Purchased Basic Sprinkler!"
-        },
-        {
-            "id": 3602894446235962,
-            "name": "Purchased Advanced Sprinkler!"
-        },
-        {
-            "id": 2213702621912050,
-            "name": "Purchased Godly Sprinkler!"
-        },
-        {
-            "id": 397821235877805,
-            "name": "Spikey!"
-        },
-        {
-            "id": 3966694991137927,
-            "name": "Your first carrot!"
-        },
-        {
-            "id": 674039989298417,
-            "name": "SHINY!"
-        },
-        {
-            "id": 3833249137800902,
-            "name": "God apple!"
-        },
-        {
-            "id": 3046817076424642,
-            "name": "GIANT TOMATO"
-        },
-        {
-            "id": 1013473936180275,
-            "name": "Carrot connoisseur"
-        },
-        {
-            "id": 4429839651101981,
-            "name": "Colorful fruit!"
-        },
-        {
-            "id": 393879997365151,
-            "name": "Care taker"
-        },
-        {
-            "id": 2585648043281722,
-            "name": "Melon madness!"
-        }
-    ]
+  "id": 126884695634066,
+  "names": {
+    "default": "Grow a Garden",
+    "clean": "Grow a Garden",
+    "short": "GaG"
+  },
+  "gamepasses": {
+    "1239020110": "Premium Seed Pack"
+  },
+  "badges": {
+    "3181581226889239": "G",
+    "2432009301742310": "A",
+    "3495711621999816": "R",
+    "3310355054544865": "D",
+    "3195330021311033": "E",
+    "34852060037844": "N",
+    "4330691652818014": "Purchased Basic Sprinkler!",
+    "3602894446235962": "Purchased Advanced Sprinkler!",
+    "2213702621912050": "Purchased Godly Sprinkler!",
+    "397821235877805": "Spikey!",
+    "3966694991137927": "Your first carrot!",
+    "674039989298417": "SHINY!",
+    "3833249137800902": "God apple!",
+    "3046817076424642": "GIANT TOMATO",
+    "1013473936180275": "Carrot connoisseur",
+    "4429839651101981": "Colorful fruit!",
+    "393879997365151": "Care taker",
+    "2585648043281722": "Melon madness!"
+  }
 }

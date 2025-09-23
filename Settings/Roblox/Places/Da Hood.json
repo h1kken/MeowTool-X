@@ -1,80 +1,29 @@
 {
-    "Gamepasses": [
-        {
-            "id": 6207330,
-            "name": "Boombox"
-        },
-        {
-            "id": 6072006,
-            "name": "Anonymous Calls"
-        },
-        {
-            "id": 6080836,
-            "name": "Custom Ringtone"
-        },
-        {
-            "id": 6412475,
-            "name": "Animation Pack"
-        },
-        {
-            "id": 106912041,
-            "name": "Animation Pack++"
-        },
-        {
-            "id": 6673363,
-            "name": "Flashlight"
-        },
-        {
-            "id": 6217663,
-            "name": "Knife"
-        },
-        {
-            "id": 6407926,
-            "name": "Bat"
-        },
-        {
-            "id": 6813576,
-            "name": "Shovel"
-        },
-        {
-            "id": 103232594,
-            "name": "Mask"
-        },
-        {
-            "id": 6966816,
-            "name": "Pepper Spray"
-        },
-        {
-            "id": 7130657,
-            "name": "House Limit Boost"
-        },
-        {
-            "id": 106911810,
-            "name": "Custom Cursor"
-        },
-        {
-            "id": 916795141,
-            "name": "Hair Glue"
-        },
-        {
-            "id": 1290098254,
-            "name": "Vehicle Lock"
-        },
-        {
-            "id": 6394348,
-            "name": "Undercover officer"
-        },
-        {
-            "id": 7232728,
-            "name": "Pitchfork"
-        },
-        {
-            "id": 79498592,
-            "name": "Pencil"
-        },
-        {
-            "id": 1133680367,
-            "name": "Aim Viewer"
-        }
-    ]
+  "id": 2788229376,
+  "names": {
+    "default": "Da Hood",
+    "clean": "Da Hood",
+    "short": "DH"
+  },
+  "gamepasses": {
+    "6207330": "Boombox",
+    "6072006": "Anonymous Calls",
+    "6080836": "Custom Ringtone",
+    "6412475": "Animation Pack",
+    "106912041": "Animation Pack++",
+    "6673363": "Flashlight",
+    "6217663": "Knife",
+    "6407926": "Bat",
+    "6813576": "Shovel",
+    "103232594": "Mask",
+    "6966816": "Pepper Spray",
+    "7130657": "House Limit Boost",
+    "106911810": "Custom Cursor",
+    "916795141": "Hair Glue",
+    "1290098254": "Vehicle Lock",
+    "6394348": "Undercover officer",
+    "7232728": "Pitchfork",
+    "79498592": "Pencil",
+    "1133680367": "Aim Viewer"
+  }
 }
