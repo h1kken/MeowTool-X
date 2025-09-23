@@ -2,6 +2,11 @@
 # environments
 .env/
 
+# utils
+test*.py
+parser*.py
+MeowTool.py
+
 # paths created MeowTool
 /Proxy/
 /Roblox/
@@ -14,8 +19,8 @@ Logs/
 
 # caches
 __pycache__/
+*.pyc
 
 # other
 .vscode/
-test_*.py
 notepad.txt
