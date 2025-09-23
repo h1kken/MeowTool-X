@@ -1,5 +1,6 @@
 import math
 import random
+from typing import Literal
 from pathlib import Path
 import locale
 from datetime import datetime
@@ -48,12 +49,12 @@ def get_files_from_folder(*path_args: str, only_files: bool = True) -> list[str]
 
     return [p.name for p in path.iterdir() if p.is_file() or not only_files]
 
-def detect_system_locale() -> str:
+def detect_system_locale() -> Literal['ru', 'en']:
     system_locale = locale.getlocale()[0].lower()
     if 'russia' in system_locale:
-        return 'ru'
+        return 'ru_RU'
     else:
-        return 'en'
+        return 'en_US'
 
 def current_time_in_ms() -> int:
     return math.floor((datetime.now() - datetime(1970, 1, 1)).total_seconds() * 1000)
