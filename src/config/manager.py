@@ -39,8 +39,9 @@ class ConfigManager(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             self.save()
         except (FileNotFoundError, json.JSONDecodeError):
             logger.exception(f'Config can\'t be initialized. Using default settings...')
+            config_loader.set('Loader.Config_On_Launch', 'default')
             self._path = self._path.parent / 'default.json'
-            self._data = {} # default_config()
+            self._data = {}
             with open(self._path, 'w', encoding='utf-8') as f:
                 json.dump(self._data, f, indent=2, ensure_ascii=False)
         finally:
