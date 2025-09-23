@@ -3,6 +3,7 @@ import random
 from pathlib import Path
 import locale
 from datetime import datetime
+from urllib.parse import quote
 
 def create_needed_folders_and_files():
     PATHS = [
@@ -39,8 +40,8 @@ def set_nested(data: dict, key: str, value, *, sep='.'):
         current = current[key]
     current[keys[-1]] = value
 
-def get_files_from_folder(*args, only_files: bool = True) -> list[str]:
-    path = Path(*args)
+def get_files_from_folder(*path_args: str, only_files: bool = True) -> list[str]:
+    path = Path(*path_args)
     
     if not (path.exists() or path.is_dir()):
         return []
@@ -72,3 +73,6 @@ async def convert_date(input_date: str, output_format: str):
             return date_formatted.strftime(output_format)
         except ValueError:
             continue
+        
+def encode_string_to_url(string: str) -> str:
+    return quote(string)
