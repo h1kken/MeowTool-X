@@ -5,7 +5,7 @@
 # utils
 test*.py
 parser*.py
-reference/
+/reference/
 
 # paths created MeowTool
 /Proxy/
@@ -24,3 +24,8 @@ __pycache__/
 # other
 .vscode/
 notepad.txt
+
+
+
+# temporairy ignored
+/src/uis/
