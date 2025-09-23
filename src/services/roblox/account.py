@@ -13,7 +13,6 @@ class RobloxAccount:
         self._client = client
         self._cookies = {'.ROBLOSECURITY': cookie.strip()}
         self._account_information: dict = asyncio.run(self.get_complex_account_information()) # not_finished
-        self._account_data = {}
 
     async def get_simple_account_information(self) -> dict:
         return (await self._client.get('https://users.roblox.com/v1/users/authenticated', cookies=self._cookies)).json()
@@ -345,7 +344,7 @@ class RobloxAccount:
     #         'followings': 
     #     }
     
-    async def get_profile_badges(self) -> list[str]:
+    async def get_roblox_badges(self) -> list[str]:
         response: list[dict] = (await self._client.get(f'https://accountinformation.roblox.com/v1/users/{await self.get_id()}/roblox-badges')).json()
         return [robloxBadge.get('name') for robloxBadge in response]
 
