@@ -10,8 +10,6 @@ class GetConfigMixin:
 class SetConfigMixin:
     def set(self, key, value, *, sep='.'):
         set_nested(self._data, key, value, sep=sep)
-        if get_nested(self._data, 'Saver.Auto_Save', default=False):
-            SaveConfigMixin.save()
             
             
 class SaveConfigMixin:

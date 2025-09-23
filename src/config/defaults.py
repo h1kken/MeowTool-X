@@ -13,7 +13,7 @@ DEFAULT_CONFIG_LOADER = {
     }
 }
 
-def get_default_config_loader():
+def default_config_loader():
     return deepcopy(DEFAULT_CONFIG_LOADER)
 
 DEFAULT_CONFIG = {
@@ -102,5 +102,5 @@ DEFAULT_CONFIG = {
     }
 }
 
-def get_default_config():
+def default_config():
     return deepcopy(DEFAULT_CONFIG)

@@ -2,7 +2,7 @@ import os
 import json
 from pathlib import Path
 from ..utils.logger import logger
-from .defaults import get_default_config
+from .defaults import default_config
 from .validators import validate_config
 from .mixin import GetConfigMixin, SetConfigMixin, SaveConfigMixin
 from .loader import config_loader
@@ -35,12 +35,12 @@ class ConfigManager(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         
         try:
             with open(self._path, 'r', encoding='utf-8', errors='ignore') as f:
-                self._data = validate_config(json.load(f), get_default_config())
+                self._data = validate_config(json.load(f), default_config())
             self.save()
         except (FileNotFoundError, json.JSONDecodeError):
             logger.exception(f'Config can\'t be initialized. Using default settings...')
             self._path = self._path.parent / 'default.json'
-            self._data = get_default_config()
+            self._data = default_config()
             with open(self._path, 'w', encoding='utf-8') as f:
                 json.dump(self._data, f, indent=2, ensure_ascii=False)
         finally:
@@ -50,7 +50,7 @@ class ConfigManager(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
     def reset(self, filename: str):
         self._path.parent.mkdir(parents=True, exist_ok=True)
         with open(self._path.parent / f'{filename}.json', 'w', encoding='utf-8') as f:
-            json.dump(get_default_config(), f, indent=2, ensure_ascii=False)
+            json.dump(default_config(), f, indent=2, ensure_ascii=False)
             
     def delete(self, filename: str):
         if self._path.exists():
