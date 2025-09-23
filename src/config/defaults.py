@@ -2,7 +2,7 @@ from copy import deepcopy
 
 DEFAULT_CONFIG_LOADER = {
     'Loader': {
-        'Load_On_Launch': 'default'
+        'Config_On_Launch': 'default'
     },
     'Saver': {
         'Auto_Save': False
