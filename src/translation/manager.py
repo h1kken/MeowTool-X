@@ -1,7 +1,9 @@
 import json
 from pathlib import Path
 from PyQt6.QtCore import QObject, pyqtSignal
-from utils.logger import logger
+from src.utils.logger import logger
+from src.config import config
+from src.utils.helpers import detect_system_locale
 
 
 class TranslationManager(QObject):
@@ -9,7 +11,6 @@ class TranslationManager(QObject):
 
     def __init__(self, lang: str='en'):
         super().__init__()
-        self.lang = lang
         self.translations = {}
         self.load_language(lang)
 
@@ -19,8 +20,8 @@ class TranslationManager(QObject):
         try:
             with open(path, 'r', encoding='utf-8', errors='ignore') as f:
                 self.translations = json.load(f)
-            self.lang = lang
             self.language_changed.emit()
+            logger.info(f'Translation initialized')
         except (FileNotFoundError, json.JSONDecodeError):
             logger.exception(f'Translation can\'t be initialized. Using default translate...')
 
@@ -28,4 +29,4 @@ class TranslationManager(QObject):
         return self.translations.get(key, key)
 
 
-translator = TranslationManager()
+translator = TranslationManager(config.get('General.Language', default=detect_system_locale()))

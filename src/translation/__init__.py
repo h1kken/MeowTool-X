@@ -1,5 +1,5 @@
 from .manager import TranslationManager
-from .widgets import TranslatableMixin
+from .mixin import TranslatableMixin
 
 __all__ = [
     'TranslationManager',
