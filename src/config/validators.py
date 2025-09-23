@@ -10,7 +10,5 @@ def validate_config(user_config: dict, default_config: dict) -> dict:
                 validated_config[key] = default_value
             else:
                 validated_config[key] = user_value
-        else:
-            validated_config[key] = default_value
                 
     return validated_config
