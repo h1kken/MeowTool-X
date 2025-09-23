@@ -47,6 +47,11 @@ class ConfigManager(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             logger.info(f'Config initialized')
             self.config_loaded.emit()
         
+    def set(self, key, value, *, sep='.'):
+        super().set(key, value, sep=sep)
+        if config_loader.get('Loader.Auto_Save', default=False):
+            self.save()
+        
     def reset(self, filename: str):
         self._path.parent.mkdir(parents=True, exist_ok=True)
         with open(self._path.parent / f'{filename}.json', 'w', encoding='utf-8') as f:

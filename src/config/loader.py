@@ -22,6 +22,9 @@ class ConfigLoader(GetConfigMixin, SetConfigMixin, SaveConfigMixin):
                 json.dump(self._data, f, indent=2, ensure_ascii=False)
         finally:
             logger.info('Loader initialized')
-        
-
+            
+    def set(self, key, value, *, sep='.'):
+        super().set(key, value, sep=sep)
+        self.save()
+            
 config_loader = ConfigLoader()
