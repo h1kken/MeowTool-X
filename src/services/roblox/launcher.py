@@ -1,5 +1,6 @@
-from src.utils.helpers import current_time_in_ms, generate_browser_tracker_id, encode_string_to_url
+from src.utils import current_time_in_ms, generate_browser_tracker_id, encode_string_to_url
 from .account import RobloxAccount
+
 
 class RobloxLauncher:
     def __init__(self):

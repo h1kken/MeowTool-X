@@ -2,17 +2,16 @@ import re
 import asyncio
 from typing import Literal
 from src.exceptions import InvalidCookie
-from src.utils.regular_patterns import COOKIE_PATTERN
-from src.utils.helpers import convert_date
+from src.utils import COOKIE_PATTERN, convert_date
 from src.http.manager import AsyncRequestManager
 from src.config import config
 
 
 class RobloxAccount:
-    def __init__(self, client: AsyncRequestManager, cookie: str):
+    def __init__(self, client: AsyncRequestManager, cookie: str, account_information: dict):
         self._client = client
         self._cookies = {'.ROBLOSECURITY': cookie.strip()}
-        self._account_information: dict = asyncio.run(self.get_complex_account_information()) # not_finished
+        self._account_information = account_information # asyncio.run(self.get_complex_account_information()) # not_finished
 
     async def get_simple_account_information(self) -> dict:
         return (await self._client.get('https://users.roblox.com/v1/users/authenticated', cookies=self._cookies)).json()
