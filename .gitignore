@@ -1,4 +1,3 @@
-
 # environments
 .env/
 
@@ -24,8 +23,3 @@ __pycache__/
 # other
 .vscode/
 notepad.txt
-
-
-
-# temporairy ignored
-/src/uis/
