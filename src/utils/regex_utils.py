@@ -7,3 +7,7 @@ COOKIE_PATTERN = compile(
 STRING_100_PLUS_SYMBOLS = compile(
     r'\S{100,}'
 )
+
+FILENAME_SPECIAL_CHARS = compile(
+    r'[\\/*?:"<>|]'
+)
