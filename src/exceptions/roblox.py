@@ -9,3 +9,6 @@ class AccountBanned(RobloxException):
 
 class AccountDuplicate(RobloxException):
     ...
+    
+class RegisteredEarlier(RobloxException):
+    ...
