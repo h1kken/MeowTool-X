@@ -3,7 +3,7 @@ from pathlib import Path
 from ..utils.logger import logger
 from .mixin import GetConfigMixin, SetConfigMixin, SaveConfigMixin
 from .defaults import default_config_loader
-from .validators import validate_config
+from .utils import validate_config
 
 
 class ConfigLoader(GetConfigMixin, SetConfigMixin, SaveConfigMixin):

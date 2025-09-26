@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from ..utils.logger import logger
 from .defaults import default_config
-from .validators import validate_config
+from .utils import validate_config
 from .mixin import GetConfigMixin, SetConfigMixin, SaveConfigMixin
 from .loader import config_loader
 from PyQt6.QtCore import QObject, pyqtSignal

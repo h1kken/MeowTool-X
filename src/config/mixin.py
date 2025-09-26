@@ -1,5 +1,5 @@
 import json
-from ..utils.helpers import get_nested, set_nested
+from ..utils.file_utils import get_nested, set_nested
 
 
 class GetConfigMixin:
