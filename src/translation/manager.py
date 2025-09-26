@@ -1,9 +1,8 @@
 import json
 from pathlib import Path
 from PyQt6.QtCore import QObject, pyqtSignal
-from src.utils.logger import logger
-from src.config import config
-from src.utils.helpers import detect_system_locale
+from ..config import config
+from ..utils import logger, detect_system_locale
 
 
 class TranslationManager(QObject):
