@@ -12,7 +12,7 @@ from .file_utils import (
 )
 from .string_utils import (
     remove_brackets_and_in,
-    remove_special_chars,
+    remove_filename_special_chars,
     remove_emojies,
     encode_string_to_url
 )
@@ -36,7 +36,7 @@ __all__ = [
     'set_nested',
     'get_files_from_folder',
     'remove_brackets_and_in',
-    'remove_special_chars',
+    'remove_filename_special_chars',
     'remove_emojies',
     'encode_string_to_url',
     'detect_system_locale',

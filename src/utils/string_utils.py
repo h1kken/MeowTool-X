@@ -15,7 +15,7 @@ def remove_brackets_and_in(string: str, *, round: bool = True, square: bool = Tr
             new_string += char
     return new_string
 
-def remove_special_chars(string: str, *, replace: str = '') -> str:
+def remove_filename_special_chars(string: str, *, replace: str = '') -> str:
     return sub(FILENAME_SPECIAL_CHARS, replace, string)
 
 def remove_emojies(string: str, *, replace: str = ' ') -> str:
