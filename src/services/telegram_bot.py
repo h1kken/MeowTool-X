@@ -16,9 +16,13 @@ ERRORS = {
     )
 }
 
-class TelegramBot:
+class TGBot:
     def __init__(self, token: str):
         self.bot = Bot(token=token)
+    
+    def close(self):
+        if self.bot:
+            self.bot.close()
         
     async def send(self, chat_id: int, *, message: str = None, path_to_file: str | Path = None, separate_sends: bool = True):
         try:
@@ -26,7 +30,7 @@ class TelegramBot:
                 await self.send_message(chat_id, message=message)
                 await self.send_file(chat_id, path_to_file=path_to_file)
             else:        
-                await self.bot.send_message(
+                await self.bot.send_document(
                     chat_id=chat_id,
                     text=message,
                     document=FSInputFile(path_to_file) if path_to_file else None,
@@ -47,7 +51,3 @@ class TelegramBot:
             chat_id=chat_id,
             document=FSInputFile(path_to_file),
         )
-    
-    def close(self):
-        if self.bot:
-            self.bot.close()
