@@ -21,7 +21,7 @@ def create_needed_folders_and_files() -> None:
         if path.suffix and not path.exists():
             path.touch(exist_ok=True)
 
-def get_nested(data: dict, key: str, *, sep='.', default=None):
+def get_nested(data: dict, key: str, *, sep='>', default=None):
     keys = key.split(sep)
     current = data
     for key in keys:
@@ -30,7 +30,7 @@ def get_nested(data: dict, key: str, *, sep='.', default=None):
         current = current[key]
     return current
 
-def set_nested(data: dict, key: str, value, *, sep='.') -> None:
+def set_nested(data: dict, key: str, value, *, sep='>') -> None:
     keys = key.split(sep)
     current = data
     for key in keys[:-1]:
