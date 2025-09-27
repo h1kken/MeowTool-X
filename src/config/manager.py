@@ -1,9 +1,8 @@
 import os
-import json
 from pathlib import Path
 from ..utils.logger import logger
 from .defaults import default_config
-from .utils import validate_config
+from .utils import parse_config, validate_config
 from .mixin import GetConfigMixin, SetConfigMixin, SaveConfigMixin
 from .loader import config_loader
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -14,53 +13,51 @@ class ConfigManager(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
     
     def __init__(self, filename: str = 'default'):
         super().__init__()
-        self._path = Path('Settings', 'Configs', f'{filename}.json')
+        self._path = Path('Settings', 'Configs', f'{filename}.txt')
         self._data = {}
         self.load(filename)
     
     def create(self, filename: str):
-        if (self._path.parent / f'{filename}.json').exists():
+        if (self._path.parent / f'{filename}.txt').exists():
             return
         
+        self._path = self._path.parent / f'{filename}.txt'
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self._path.parent / f'{filename}.json', 'w', encoding='utf-8') as f:
-            json.dump(self._data, f, indent=2, ensure_ascii=False)
+        self.save()
         logger.info(f'Created config: {filename}')
         self.load(filename)
     
     def load(self, filename: str):
         logger.info(f'Initializing config: {filename}')
-        self._path = Path('Settings', 'Configs', f'{filename}.json')
+        self._path = Path('Settings', 'Configs', f'{filename}.txt')
         self._path.parent.mkdir(parents=True, exist_ok=True)
         
         try:
             with open(self._path, 'r', encoding='utf-8', errors='ignore') as f:
-                self._data = validate_config(json.load(f), default_config())
+                parsed_config = parse_config(f.read())
+                self._data = validate_config(parsed_config, default_config())
             self.save()
-        except (FileNotFoundError, json.JSONDecodeError):
-            logger.exception(f'Config can\'t be initialized. Using default settings...')
-            config_loader.set('Loader.Config_On_Launch', 'default')
-            self._path = self._path.parent / 'default.json'
-            self._data = {}
-            with open(self._path, 'w', encoding='utf-8') as f:
-                json.dump(self._data, f, indent=2, ensure_ascii=False)
+        except FileNotFoundError:
+            logger.exception(f'Config not found. Creating...')
+            open(self._path, 'w').close()
         finally:
-            logger.info(f'Config initialized')
+            logger.info(f'Config initialized: {self._path.stem}')
             self.config_loaded.emit()
         
-    def set(self, key, value, *, sep='.'):
+    def set(self, key, value, *, sep='>'):
         super().set(key, value, sep=sep)
-        if config_loader.get('Saver.Auto_Save', default=False):
+        if config_loader.get('Saver>Auto Save Changes', default=False):
             self.save()
         
     def reset(self, filename: str):
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self._path.parent / f'{filename}.json', 'w', encoding='utf-8') as f:
-            json.dump({}, f, indent=2, ensure_ascii=False)
+        open(self._path.parent / f'{filename}.txt', 'w').close()
+        if self._path.stem == filename:
+            self.load(filename)
             
     def delete(self, filename: str):
         if self._path.exists():
-            os.remove(self._path.parent / f'{filename}.json')
+            os.remove(self._path.parent / f'{filename}.txt')
             if self._path.stem == filename:
                 self.load('default')
                 
@@ -69,4 +66,4 @@ class ConfigManager(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         return self._path.stem
     
     
-config = ConfigManager(config_loader.get('Loader.Load_On_Launch', default='default'))
+config = ConfigManager(config_loader.get('Loader>Config On Launch', default='default'))

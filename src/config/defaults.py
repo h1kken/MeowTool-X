@@ -1,19 +1,20 @@
 from copy import deepcopy
+from ..utils.other_utils import detect_system_locale
 
 DEFAULT_CONFIG_LOADER = {
-  'loader': {
-    'config_on_launch': 'default'
+  'Loader': {
+    'Config On Launch': 'default'
   },
-  'saver': {
-    'auto_save': False
+  'Saver': {
+    'Auto Save Changes': False
   },
-  'updater': {
-    'check_updates': True,
-    'save_old_versions': True
+  'Updater': {
+    'Check Updates': True,
+    'Save Old Versions': True
   },
-  'meowtool': {
-    'first_launch': True,
-    'username': ''
+  'MeowTool': {
+    'First Launch': True,
+    'Username': ''
   }
 }
 
@@ -21,261 +22,257 @@ def default_config_loader():
     return deepcopy(DEFAULT_CONFIG_LOADER)
 
 DEFAULT_CONFIG = {
-  'general': {
-    'language': 'ru_RU',
-    'program_name': 'MeowTool... Meow :3',
-    'disable_warnings_for_links': False,
-    'disable_warnings_for_dangerous_actions': False
+  'General': {
+    'Language': detect_system_locale(),
+    'Program Name': 'MeowTool... Meow :3',
+    'Disable Warnings For Links': False,
+    'Disable Warnings For Dangerous Actions': False
   },
-  'outputs': {
-    'play_sound_when_work_finished': False,
-    'telegram_bot': {
-      'token': '',
-      'chat_id': '',
-      'send_results_to_telegram_bot': False
+  'Outputs': {
+    'Play Sound When Work Finished': False,
+    'Telegram Bot': {
+      'Token': '',
+      'Chat ID': '',
+      'Send Results To Telegram Bot': False
     },
-    'discord_webhook': {
-      'url': '',
-      'send_results_to_discord_webhook': False
+    'Discord Webhook': {
+      'URL': '',
+      'Wend Results To Discord Webhook': False
     }
   },
-  'proxy': {
-    'checker': {
-      'number_of_threads_for_checker': (50, 1, 1000),
-      'timeout': (10, 1, 60),
-      'save_good_in_custom_file': False,
-      'save_without_protocol': False
+  'Proxy': {
+    'Checker': {
+      'Main Threads': (50, 1, 1000),
+      'Maximum Wait Response': (10, 1, 60),
+      'Save Good In Custom File': False,
+      'Save Without Protocol': False
     }
   },
-  'roblox': {
-    'general': {
-      'add_symbols_between_warning_and_cookie': False,
-      'symbols_between_warning_and_cookie': 'CAEaAhAB.',
-      'proxy': {
-        'use_proxy': False,
-        'auto_protocol_if_not_specified': 'http'
+  'Roblox': {
+    'General': {
+      'Add Symbols Between Warning And Cookie': False,
+      'Symbols Between Warning And Cookie': 'CAEaAhAB.',
+      'Proxy': {
+        'Use Proxy': False,
+        'Auto Protocol If Not Specified': 'http'
       }
     },
-    'cookie_sorter': {
-      'output_filename': 'output'
+    'Cookie Sorter': {
+      'Output Filename': 'output'
     },
-    'cookie_checker': {
-      'firstly_check_for_valid': False,
-      'number_of_threads_for_valid_checker': (50, 1, 1000),
-      'number_of_threads_for_main_checker': (25, 1, 100),
-      'name_output_file_the_same_as_input_file': False,
-      'output_filename': 'output',
-      'move_cookie_to_the_next_line': False,
-      'main': {},
-      'sorting': {
-        'enabled': False,
-        'categories': {}
+    'Cookie Checker': {
+      'Firstly Check For Valid': False,
+      'Valid Threads': (50, 1, 1000),
+      'Main Threads': (25, 1, 100),
+      'Output Filename Like Input': False,
+      'Output Filename': 'output',
+      'Move Cookie To The Next Line': False,
+      'Main': {},
+      'Sorting': {
+        'Enabled': False,
+        'Categories': {}
       }
     },
-    'cookie_refresher': {
-      'break_old_cookies': False,
-      'single_mode': {
-        'cookie_save_mode': [1]
-      },
-      'mass_mode': {
-        'cookie_save_mode': [1]
+    'Cookie Refresher': {
+      'Break Old Cookies': False,
+    },
+    'Transaction Analysis': {
+      'Firstly Check For Valid': False,
+      'Valid Threads': (50, 1, 1000),
+      'Main Threads': (25, 1, 250),
+      'Indent By The Longest Name': False
+    },
+    'Time Booster': {
+      'Maximum Launchers': 10,
+      'Minimum Days After Registration': 0,
+      'Random Server ID': True,
+      'Force Server ID': '',
+      'Avoid Servers IDs': [],
+      'Auto Retry': {
+        'Enabled': False,
+        'Retry After Seconds': 30,
       }
     },
-    'transaction_analysis': {
-      'first_check_all_cookies_for_valid': False,
-      'number_of_threads_for_valid_checker': (50, 1, 1000),
-      'number_of_threads_for_transaction_analysis': (25, 1, 250),
-      'indent_by_the_longest_name': False
-    },
-    'time_booster': {
-      'maximum_launchers': 10,
-      'minimum_age_in_days': 0,
-      'auto_retry': True,
-      'auto_retry_time': 30,
-      'random_server_id': True,
-      'server_id': '',
-      'avoid_servers_ids': []
-    },
-    'misc': {
-      'gamepasses_parser': {
-        'remove_emojies_from_name': False,
-        'remove_round_brackets_and_in_from_name': False,
-        'remove_square_brackets_and_in_from_name': False
-      },
-      'badges_parser': {
-        'remove_emojies_from_name': False,
-        'remove_round_brackets_and_in_from_name': False,
-        'remove_square_brackets_and_in_from_name': False
-      }
-    }
+    'Misc': {}
   }
 }
 
-# Generating [roblox.cookie_checker.main]
+# Generating [Roblox > Cookie Checker > Main]
 MAIN_KEYS = [
-    'link',
-    'country_registration',
-    'id',
-    'name',
-    'display_name',
-    'registration_date_dmy',
-    'registration_date_in_days',
-    'robux',
-    'billing',
-    'pending',
-    'donate_1_year',
-    'donate_all_time',
-    'rap',
-    'card',
-    'premium',
-    'gamepasses',
-    'custom_gamepasses',
-    'badges',
-    'favorite_places',
-    'bundles',
-    'inventory_privacy',
-    'trade_privacy',
-    'can_trade',
-    'sessions',
-    'email',
-    'phone',
-    '2fa',
-    'pin',
-    'groups_owned',
-    'groups_members',
-    'groups_pending',
-    'groups_funds',
-    'age_group',
-    'verified_age',
-    'verified_voice',
-    'friends',
-    'followers',
-    'followings',
-    'roblox_badges'
+    'Link',
+    'Country Registration',
+    'ID',
+    'Name',
+    'Display Name',
+    'Registration Date (DMY)',
+    'Registration Date (In Days)',
+    'Robux',
+    'Billing',
+    'Pending',
+    'Donate (1 Year)',
+    'Donate (All Time)',
+    'Rap',
+    'Card',
+    'Premium',
+    'Gamepasses',
+    'Custom Gamepasses',
+    'Badges',
+    'Favorite Places',
+    'Bundles',
+    'Inventory Privacy',
+    'Trade Privacy',
+    'Can Trade',
+    'Sessions',
+    'Email',
+    'Phone',
+    '2FA',
+    'Pin',
+    'Groups Owned',
+    'Groups Members',
+    'Groups Pending',
+    'Groups Funds',
+    'Age Group',
+    'Verified Age',
+    'Verified Voice',
+    'Friends',
+    'Followers',
+    'Followings',
+    'Roblox Badges'
 ]
 for key in MAIN_KEYS:
-    DEFAULT_CONFIG['roblox']['cookie_checker']['main'][key] = {'enabled': False}
+    DEFAULT_CONFIG['Roblox']['Cookie Checker']['Main'][key] = {'Enabled': False}
 
-    if key in ('donate_all_time', 'rap', 'gamepasses', 'badges', 'custom_gamepasses', 'favorite_places', 'bundles'):
-        DEFAULT_CONFIG['roblox']['cookie_checker']['main'][key]['max_page'] = -1
+    if key in ('Donate (All Time)', 'Rap', 'Gamepasses', 'Badges', 'Custom Gamepasses', 'Favorite Places', 'Bundles'):
+        DEFAULT_CONFIG['Roblox']['Cookie Checker']['Main'][key]['Max Page'] = -1
 
-    if key in ('gamepasses', 'badges'):
-        DEFAULT_CONFIG['roblox']['cookie_checker']['main'][key]['output_mode'] = 'PlaceNames'
-    elif key == 'custom_gamepasses':
-        DEFAULT_CONFIG['roblox']['cookie_checker']['main'][key]['output_mode'] = 'NameNumber'
-        DEFAULT_CONFIG['roblox']['cookie_checker']['main'][key]['items'] = {
+    if key in ('Gamepasses', 'Badges'):
+        DEFAULT_CONFIG['Roblox']['Cookie Checker']['Main'][key]['Output Mode'] = 'Place (Names)'
+    elif key == 'Custom Gamepasses':
+        DEFAULT_CONFIG['Roblox']['Cookie Checker']['Main'][key]['Output Mode'] = 'Name (Number)'
+        DEFAULT_CONFIG['Roblox']['Cookie Checker']['Main'][key]['Items'] = {
           custom_gamepass_name: {
-            'enabled': False
+            'Enabled': False
           } for custom_gamepass_name in [
               'Fly A Pet Potion',
               'Ride-A-Pet Potion'
           ]
         }
-    elif key in ('favorite_places', 'bundles', 'groups_owned', 'roblox_badges'):
-        DEFAULT_CONFIG['roblox']['cookie_checker']['main'][key]['output_mode'] = 'Names'
-        if key == 'favorite_places':
-            DEFAULT_CONFIG['roblox']['cookie_checker']['main'][key]['items'] = {
+    elif key in ('Favorite Places', 'Bundles', 'Groups Owned', 'Roblox Badges'):
+        DEFAULT_CONFIG['Roblox']['Cookie Checker']['Main'][key]['Output Mode'] = 'Names'
+        if key == 'Favorite Places':
+            DEFAULT_CONFIG['Roblox']['Cookie Checker']['Main'][key]['Items'] = {
               favorite_place_id: {
-                'enabled': False,
-                'name': favorite_place_name
+                'Enabled': False,
+                'Name': favorite_place_name
               } for favorite_place_id, favorite_place_name in [
                   ('920587237', 'Adopt Me'),
                   ('142823291', 'Murder Mystery 2'),
                   ('8737899170', 'Pet Simulator 99')
               ]
             }
-        elif key == 'bundles':
-            DEFAULT_CONFIG['roblox']['cookie_checker']['main'][key]['items'] = {
+        elif key == 'Bundles':
+            DEFAULT_CONFIG['Roblox']['Cookie Checker']['Main'][key]['Items'] = {
               bundle_id: {
-                'enabled': False,
-                'name': bundle_name
+                'Enabled': False,
+                'Name': bundle_name
               } for bundle_id, bundle_name in [
                   ('192', 'Korblox Deathspeaker'),
                   ('201', 'Headless Horseman')
               ]
             }
-    elif key == 'sessions':
-        DEFAULT_CONFIG['roblox']['cookie_checker']['main'][key]['max_page'] = 1
+    elif key == 'Sessions':
+        DEFAULT_CONFIG['Roblox']['Cookie Checker']['Main'][key]['Max Page'] = 1
     
-# Generating [roblox.cookie_checker.sorting]
+# Generating [Roblox > Cookie Checker > Sorting]
 SORT_KEYS = {
-    'country_registration': str,
-    'id': str,
-    'name': str,
-    'display_name': str,
-    'registration_date_dmy': str,
-    'registration_date_in_days': int,
-    'robux': int,
-    'billing': int,
-    'pending': int,
-    'donate_1_year': int,
-    'donate_all_time': int,
-    'rap': int,
-    'card': int,
-    'premium': str,
-    'gamepasses': int,
-    'custom_gamepasses': int,
-    'badges': int,
-    'favorite_places': int,
-    'bundles': int,
-    'inventory_privacy': str,
-    'trade_privacy': str,
-    'can_trade': str,
-    'sessions': int,
-    'email': str,
-    'phone': str,
-    '2fa': str,
-    'pin': str,
-    'groups_owned': int,
-    'groups_members': int,
-    'groups_pending': int,
-    'groups_funds': int,
-    'age_group': str,
-    'verified_age': str,
-    'verified_voice': str,
-    'friends': int,
-    'followers': int,
-    'followings': int,
-    'roblox_badges': int
+    'Country Registration': str,
+    'ID': str,
+    'Name': str,
+    'Display Name': str,
+    'Registration Date (DMY)': str,
+    'Registration Date (In Days)': int,
+    'Robux': int,
+    'Billing': int,
+    'Pending': int,
+    'Donate (1 Year)': int,
+    'Donate (All Time)': int,
+    'Rap': int,
+    'Card': int,
+    'Premium': str,
+    'Gamepasses': int,
+    'Custom Gamepasses': int,
+    'Badges': int,
+    'Favorite Places': int,
+    'Bundles': int,
+    'Inventory Privacy': str,
+    'Trade Privacy': str,
+    'Can Trade': str,
+    'Sessions': int,
+    'Email': str,
+    'Phone': str,
+    '2FA': str,
+    'Pin': str,
+    'Groups Owned': int,
+    'Groups Members': int,
+    'Groups Pending': int,
+    'Groups Funds': int,
+    'Age Group': str,
+    'Verified Age': str,
+    'Verified Voice': str,
+    'Friends': int,
+    'Followers': int,
+    'Followings': int,
+    'Roblox Badges': int
 }
-for key, type in SORT_KEYS.items():
-    if type == str:
-        DEFAULT_CONFIG['roblox']['cookie_checker']['sorting']['categories'][key] = {
-          'enabled': False,
-          'options': {
-            'positive': {'enabled': True},
-            'negative': {'enabled': True}
+for key, key_type in SORT_KEYS.items():
+    if key_type == str:
+        DEFAULT_CONFIG['Roblox']['Cookie Checker']['Sorting']['Categories'][key] = {
+          'Enabled': False,
+          'Options': {
+            'Positives': True,
+            'Negatives': True
           }
         }
-    elif type == int:
-        DEFAULT_CONFIG['roblox']['cookie_checker']['sorting']['categories'][key] = {
-          'enabled': False,
-          'options': {
-            'zero': {'enabled': False},
-            'from': {
-              'enabled': False,
-              'items': []
+    elif key_type == int:
+        DEFAULT_CONFIG['Roblox']['Cookie Checker']['Sorting']['Categories'][key] = {
+          'Enabled': False,
+          'Options': {
+            'Zero': False,
+            'From': {
+              'Enabled': False,
+              'Items': []
             },
-            'from_to': {
-              'enabled': False,
-              'items': []
+            'From To': {
+              'Enabled': False,
+              'Items': []
             }
           }
         }
 
-        if key in ('gamepasses', 'badges', 'custom_gamepasses', 'favorite_places', 'bundles', 'groups_owned', 'roblox_badges'):
-            DEFAULT_CONFIG['roblox']['cookie_checker']['sorting']['categories'][key]['names'] = False
-            if key in ('gamepasses', 'badges'):
-              DEFAULT_CONFIG['roblox']['cookie_checker']['sorting']['categories'][key]['places'] = False
+        if key in ('Gamepasses', 'Badges', 'Custom Gamepasses', 'Favorite Places', 'Bundles', 'Groups Owned', 'Roblox Badges'):
+            DEFAULT_CONFIG['Roblox']['Cookie Checker']['Sorting']['Categories'][key]['Names'] = False
+            if key in ('Gamepasses', 'Badges'):
+              DEFAULT_CONFIG['Roblox']['Cookie Checker']['Sorting']['Categories'][key]['Places'] = False
 
-# Generating [roblox.cookie_refresher]
+# Generating [Roblox > Cookie Refresher > Single Mode & Mass Mode]
 REFRESHER_KEYS = [
-  'single',
-  'mass'
+  'Single Mode',
+  'Mass Mode'
 ]
 for key in REFRESHER_KEYS:
-  DEFAULT_CONFIG['roblox']['cookie_refresher'][f'{key}_mode'] = {
-    'cookie_save_mode': [1]
+  DEFAULT_CONFIG['Roblox']['Cookie Refresher'][key] = {
+    'Cookie Save Mode': [1]
+  }
+
+# Generating [Misc > Gamepasses Parser & Badges Parser]
+MISC_KEYS = {'Gamepasses Parser', 'Badges Parser'}
+for key in MISC_KEYS:
+  DEFAULT_CONFIG['Roblox']['Misc'][key] = {
+    'Removes From Name': {
+      'Emojies': False,
+      'Round Brackets And In': False,
+      'Square Brackets And In': False
+    }
   }
 
 def default_config():
