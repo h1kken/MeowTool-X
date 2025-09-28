@@ -14,7 +14,7 @@ class TranslationManager(QObject):
 
     def load_language(self, filename: str):
         logger.info(f'[Translation] Initializing: {filename}')
-        path = Path(__file__).parent / 'Settings' / 'Translates' / f'{filename}.mtl'
+        path = Path(__file__).parent / 'Settings' / 'Translates' / f'{filename}.axis'
         try:
             with open(path, 'r', encoding='utf-8', errors='ignore') as f:
                 for line in f:
@@ -35,4 +35,4 @@ class TranslationManager(QObject):
         return self.translations.get(key, key)
 
 
-translator = TranslationManager(config.get('General.Language', default=detect_system_locale()))
+translator = TranslationManager(config.get('General>Language', default=detect_system_locale()))
