@@ -68,6 +68,7 @@ DEFAULT_CONFIG = {
       'Output Filename': 'output',
       'Move Cookie To The Next Line': False,
       'Main': {},
+      'Places': {},
       'Sorting': {
         'Enabled': False,
         'Categories': {}
@@ -87,7 +88,7 @@ DEFAULT_CONFIG = {
       'Minimum Days After Registration': 0,
       'Random Server ID': True,
       'Force Server ID': '',
-      'Avoid Servers IDs': [],
+      'Avoid Servers IDs': {},
       'Auto Retry': {
         'Enabled': False,
         'Retry After Seconds': 30,
@@ -183,7 +184,7 @@ for key in MAIN_KEYS:
     elif key == 'Sessions':
         DEFAULT_CONFIG['Roblox']['Cookie Checker']['Main'][key]['Max Page'] = 1
     
-# Generating [Roblox > Cookie Checker > Sorting]
+# Generating [Roblox > Cookie Checker > Sorting > Categories]
 SORT_KEYS = {
     'Country Registration': str,
     'ID': str,
@@ -239,12 +240,12 @@ for key, key_type in SORT_KEYS.items():
           'Options': {
             'Zero': False,
             'From': {
-              'Enabled': False,
-              'Items': []
+              'Enabled': False
+              # 'Items': {}
             },
             'From To': {
-              'Enabled': False,
-              'Items': []
+              'Enabled': False
+              # 'Items': {}
             }
           }
         }
