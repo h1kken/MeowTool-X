@@ -37,7 +37,7 @@ DEFAULT_CONFIG = {
     },
     'Discord Webhook': {
       'URL': '',
-      'Wend Results To Discord Webhook': False
+      'Send Results To Discord Webhook': False
     }
   },
   'Proxy': {
