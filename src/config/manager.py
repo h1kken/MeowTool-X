@@ -38,7 +38,7 @@ class ConfigManager(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
                 self._data = validate_config(parsed_config, default_config())
             self.save()
         except FileNotFoundError:
-            logger.exception(f'Config not found. Creating...')
+            logger.warning(f'Config not found. Creating...')
             open(self._path, 'w').close()
         finally:
             logger.info(f'Config initialized: {self._path.stem}')
