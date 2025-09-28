@@ -1,3 +1,5 @@
+import ast
+
 def parse_config(text: str) -> dict:
     parsed_config = {}
     stack = [(parsed_config, -1)]
@@ -11,7 +13,7 @@ def parse_config(text: str) -> dict:
         
         if ':' in line:
             key, value = map(str.strip, line.split(':', 1))
-            stack[-1][0][key] = value
+            stack[-1][0][key] = literal_eval(value)
         else:
             while stack and stack[-1][1] >= indent:
                 stack.pop()
@@ -39,6 +41,12 @@ def validate_config(user_config: dict, default_config: dict, *, recovery_missing
                 validated_config[key] = convert_value(user_value)
             
     return validated_config
+
+def literal_eval(value: str):
+    try:
+        return ast.literal_eval(value)
+    except (ValueError, SyntaxError):
+        return value
 
 def convert_to_bool(user_value: str):
     low = user_value.strip().lower()
