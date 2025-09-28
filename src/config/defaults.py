@@ -240,12 +240,12 @@ for key, key_type in SORT_KEYS.items():
           'Options': {
             'Zero': False,
             'From': {
-              'Enabled': False
-              # 'Items': {}
+              'Enabled': False,
+              'Items': {}
             },
             'From To': {
-              'Enabled': False
-              # 'Items': {}
+              'Enabled': False,
+              'Items': {}
             }
           }
         }
