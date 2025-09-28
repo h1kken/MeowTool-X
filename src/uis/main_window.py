@@ -19,7 +19,7 @@ from ..utils import logger
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(config.get('General.Program_Name', default='MeowTool... Meow :3'))
+        self.setWindowTitle(config.get('General>Program_Name', default='MeowTool... Meow :3'))
         self.resize(900, 500)
 
         central_widget = QWidget()
@@ -33,11 +33,11 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.stack, 5)
 
         PAGES = [
-            ('page_proxy_checker', ProxyChecker),
-            ('page_roblox_cookie_sorter', RobloxCookieSorter),
-            ('page_roblox_cookie_checker', RobloxCookieChecker),
-            ('page_roblox_cookie_refresher', RobloxCookieRefresher),
-            ('page_roblox_time_booster', RobloxTimeBooster)
+            ('PRX_CHCKR', ProxyChecker),
+            ('RBX_C_SRTR', RobloxCookieSorter),
+            ('RBX_C_CHCKR', RobloxCookieChecker),
+            ('RBX_C_RFRSHR', RobloxCookieRefresher),
+            ('RBX_TM_BSTR', RobloxTimeBooster)
         ]
 
         for index, (title, page) in enumerate(PAGES):
@@ -56,7 +56,7 @@ class MainWindow(QMainWindow):
         sidebar.addWidget(btn3)
         sidebar.addWidget(btn4)
         sidebar.addStretch()
-        btn1.clicked.connect(lambda: t.load_language('ru_RU'))
-        btn2.clicked.connect(lambda: t.load_language('en_US'))
-        btn3.clicked.connect(lambda: config_loader.set('Loader.Config_On_Load', '123'))
-        btn4.clicked.connect(lambda: config_loader.set('Loader.Config_On_Load', '234'))
+        btn1.clicked.connect(lambda: t.load_language('ru'))
+        btn2.clicked.connect(lambda: t.load_language('en'))
+        btn3.clicked.connect(lambda: config_loader.set('Loader>Config On Load', '123'))
+        btn4.clicked.connect(lambda: config_loader.set('Loader>Config On Load', '234'))

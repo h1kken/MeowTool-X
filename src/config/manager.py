@@ -23,7 +23,7 @@ class ConfigManager(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         
         self._path = self._path.parent / f'{filename}.txt'
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self.save()
+        open(self._path, 'w').close()
         logger.info(f'Created config: {filename}')
         self.load(filename)
     
@@ -37,16 +37,17 @@ class ConfigManager(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
                 parsed_config = parse_config(f.read())
                 self._data = validate_config(parsed_config, default_config())
             self.save()
-        except FileNotFoundError:
-            logger.warning(f'Config not found. Creating...')
-            open(self._path, 'w').close()
-        finally:
             logger.info(f'Config initialized: {self._path.stem}')
             self.config_loaded.emit()
+        except FileNotFoundError:
+            logger.warning(f'Config not found. Creating...')
+            self.create(filename)
+        except Exception:
+            logger.exception('Config can\'t be initialized. Unknown error:')
         
-    def set(self, key, value, *, sep='>'):
+    def set(self, key, value, *, sep='>', force_save: bool = False):
         super().set(key, value, sep=sep)
-        if config_loader.get('Saver>Auto Save Changes', default=False):
+        if config_loader.get('Saver>Auto Save Changes', default=False) or force_save:
             self.save()
         
     def reset(self, filename: str):
