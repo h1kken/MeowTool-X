@@ -22,6 +22,8 @@ class SaveConfigMixin:
                 lines.append(f'{'\t' * indent}{key}')
                 lines.extend(self._dump_dict(value, indent + 1))
             else:
+                if type(value) is bool:
+                    value = 'Yes' if value else 'No'
                 lines.append(f'{'\t' * indent}{key}: {value}')
         return lines
     
