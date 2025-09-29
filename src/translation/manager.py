@@ -2,7 +2,7 @@ from pathlib import Path
 from PyQt6.QtCore import QObject, pyqtSignal
 from ..config import config
 from ..utils import logger, detect_system_locale
-
+import shutil
 
 class TranslationManager(QObject):
     language_changed = pyqtSignal()
@@ -14,20 +14,20 @@ class TranslationManager(QObject):
 
     def find_language_path(self, filename: str) -> Path:
         for path in (
-            Path(__file__).parent / '..' / '..' / 'Settings' / 'Translates' / f'{filename}.axis',
+            Path(__file__).parent / '..' / '..' / 'Settings' / 'Translations' / f'{filename}.axis',
             Path(__file__).parent / 'translations' / f'{filename}.axis'
         ):
             if path.exists():
                 return path
             
         logger.warning('Translation not found. Using other...')
+        config.set('General>Language', self._path.stem)
         return path.parent / f'{detect_system_locale()}.axis'
 
     def load_language(self, filename: str):
         logger.info(f'Initializing translation: {filename}')
         
         self._path = self.find_language_path(filename)
-        config.set('General>Language', self._path.stem)
             
         try:
             with open(self._path, 'r', encoding='utf-8', errors='ignore') as f:
@@ -45,8 +45,14 @@ class TranslationManager(QObject):
         except Exception:
             logger.exception('Translation can\'t be initialized. Unknown error:')
 
-    def create_language():
-        ...
+    def create_my_own_language(self, filename: str):
+        to_file = Path(__file__).parent / '..' / '..' / 'Settings' / 'Translations' / f'{filename}.axis'
+        if to_file.exists():
+            return
+        
+        from_file =  Path(__file__).parent / 'translations' / 'en.axis'
+        to_file.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(str(from_file), str(to_file))
 
     def tr(self, key: str) -> str:
         return self._translations.get(key, key)
