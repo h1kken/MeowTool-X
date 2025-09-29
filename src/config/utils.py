@@ -1,5 +1,4 @@
 import ast
-from typing import Literal
 
 def parse_config(text: str) -> dict:
     parsed = {}
@@ -70,13 +69,6 @@ def convert_value(user_value, default_value=None):
             if isinstance(default_value[0], int) and len(default_value) == 3:
                 if not (isinstance(user_value, int) and (default_value[1] <= user_value <= default_value[2])):
                     return default_value[0]
-            # elif isinstance(default_value[0], str):
-            #     if isinstance(default_value[1], Literal):
-            #         if any(char in user_value for char in ['<', '>', '|', '^', '&']):
-            #             return default_value[0]
-            #     elif isinstance(default_value[1], list):
-            #         if isinstance(user_value, str) and user_value.strip().lower() not in default_value[1]:
-            #             return default_value[0]
         elif isinstance(default_value, bool):
             if isinstance(user_value, str):
                 return convert_to_bool(user_value)
