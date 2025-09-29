@@ -60,3 +60,17 @@ class MainWindow(QMainWindow):
         btn2.clicked.connect(lambda: t.load_language('en'))
         btn3.clicked.connect(lambda: config_loader.set('Loader>Config On Load', '123'))
         btn4.clicked.connect(lambda: config_loader.set('Loader>Config On Load', '234'))
+        
+        btn5 = MTButton('Create My Own Language 1')
+        sidebar.addWidget(btn5)
+        btn5.clicked.connect(lambda: t.create_my_own_language('1'))
+        btn6 = MTButton('Create My Own Language 2')
+        sidebar.addWidget(btn6)
+        btn6.clicked.connect(lambda: t.create_my_own_language('2'))
+        btn7 = MTButton('Create My Own Language 3')
+        sidebar.addWidget(btn7)
+        btn7.clicked.connect(lambda: t.create_my_own_language('3'))
+        
+        config.set('General>Language', 'en')
+        config.set('Proxy>Checker>Main Threads', 20)
+        config_loader.set('Saver>Auto Save Changes', True)
