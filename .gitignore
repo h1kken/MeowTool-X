@@ -3,6 +3,7 @@
 
 # utils
 test*.py
+/tests/
 parser*.py
 /reference/
 
@@ -10,6 +11,7 @@ parser*.py
 /Proxy/
 /Roblox/
 /Settings/Configs/
+/Settings/Translations/
 /Versions/
 
 # logs
