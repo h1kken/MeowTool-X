@@ -15,9 +15,32 @@ RBX_C_CHCKR=Роблокс Куки Чекер
 RBX_C_RFRSHR=Роблокс Куки Рефрешер
 RBX_TM_BSTR=Роблокс Бустер Времени
 
-!!!!!!!!!!
-!! MISC !!
-!!!!!!!!!!
+!!!!!!!!!!!!
+!! ERRORS !!
+!!!!!!!!!!!!
 
-RUSSIAN=Русский
-ENGLISH=English
+ERR_FL_N_FND=Файл не найден
+
+ERR_INV_CHT_ID=Неверный ID чата
+ERR_INV_BT_TKN=Неверный токен бота
+
+ERR_INV_URL=Неверный URL
+ERR_TP_IN_WBHK_URL=Опечатка в URL вебхука
+ERR_FL_T_BIG=Файл слишком большой
+
+ERR_UNSTBL_INT_CONN=Нестабильное интернет соединение
+
+ERR_UNK=Неизвестная ошибка
+
+!!!!!!!!!!!!!!!
+!! LANGUAGES !! You shouldn't translate it
+!!!!!!!!!!!!!!!
+
+RU=Русский
+EN=English
+
+!!!!!!!!!!!
+!! OTHER !!
+!!!!!!!!!!!
+
+# GOOD=Хорошо

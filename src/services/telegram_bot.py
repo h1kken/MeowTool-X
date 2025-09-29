@@ -5,14 +5,15 @@ from aiogram.types import FSInputFile
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest, TelegramNetworkError, TelegramUnauthorizedError
 from aiogram.utils.token import TokenValidationError
+from ..translation import translator as t
 
 ERRORS = {
-    FileNotFoundError: ..., # file not created
-    TelegramBadRequest: ..., # invalid chat id
-    TelegramNetworkError: ..., # unstable internet
+    FileNotFoundError: t.tr('ERR_FL_N_FND'),
+    TelegramBadRequest: t.tr('ERR_INV_CHT_ID'),
+    TelegramNetworkError: t.tr('ERR_INV_BT_TKN'),
     **dict.fromkeys(
         [TelegramUnauthorizedError, TokenValidationError],
-        ... # invalid bot token
+        t.tr('ERR_UNK')
     )
 }
 
@@ -37,7 +38,7 @@ class TGBot:
                     parse_mode=ParseMode.MARKDOWN_V2
                 )
         except Exception as e:
-            logger.exception(ERRORS.get(type(e), f'{...}: {e}')) # unknown error
+            logger.exception(ERRORS.get(type(e), f'{t.tr('ERR_UNK')}: {e}'))
         
     async def send_message(self, chat_id: int, *, message: str):
         await self.bot.send_message(

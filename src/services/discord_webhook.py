@@ -2,22 +2,23 @@ from discord_webhook import DiscordWebhook, DiscordEmbed
 from pathlib import Path
 from requests.exceptions import InvalidURL, InvalidSchema, MissingSchema
 from ..utils import logger
+from ..translation import translator as t
 
 ERRORS = {
-    FileNotFoundError: ..., # file not found
-    ConnectionError: ..., # unstable internet
+    FileNotFoundError: t.tr('ERR_FL_N_FND'),
+    ConnectionError: t.tr('ERR_UNSTBL_INT_CONN'),
     **dict.fromkeys(
         [InvalidURL, InvalidSchema, MissingSchema],
-        ... # invalid url
+        t.tr('ERR_INV_URL')
     )
 }
 
 RESPONSES = {
     **dict.fromkeys(
         [401, 404],
-        ... # typo in webhook url
+        t.tr('ERR_TP_IN_WBHK_URL')
     ),
-    413: ... # file is too big
+    413: t.tr('ERR_FL_T_BIG')
 }
 
 class DSWebhook:
@@ -48,8 +49,8 @@ class DSWebhook:
             status = response.status_code
 
             if status == 200:
-                logger.info(...) # good
+                logger.info(t.tr('GOOD'))
             else:
-                logger.warning(RESPONSES.get(status, f'{...}: {status}')) # unknown status
+                logger.warning(RESPONSES.get(status, f'{t.tr('ERR_STTS')}: {status}'))
         except Exception as e:
-            logger.exception(ERRORS.get(type(e), f'{...}: {e}')) # unknown error
+            logger.exception(ERRORS.get(type(e), f'{t.tr('ERR_UNK')}: {e}'))

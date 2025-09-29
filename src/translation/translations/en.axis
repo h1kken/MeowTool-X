@@ -15,9 +15,32 @@ RBX_C_CHCKR=Roblox Cookie Checker
 RBX_C_RFRSHR=Roblox Cookie Refresher
 RBX_TM_BSTR=Roblox Time Booster
 
-!!!!!!!!!!
-!! MISC !!
-!!!!!!!!!!
+!!!!!!!!!!!!
+!! ERRORS !!
+!!!!!!!!!!!!
 
-RUSSIAN=Русский
-ENGLISH=English
+ERR_FL_N_FND=File not found
+
+ERR_INV_CHT_ID=Invalid chat ID
+ERR_INV_BT_TKN=Invalid bot token
+
+ERR_INV_URL=Invalid URL
+ERR_TP_IN_WBHK_URL=Typo in webhook URL
+ERR_FL_T_BIG=File is too big
+
+ERR_UNSTBL_INT_CONN=Unstable internet connection
+
+ERR_UNK=Unknown error
+
+!!!!!!!!!!!!!!!
+!! LANGUAGES !! You shouldn't translate it
+!!!!!!!!!!!!!!!
+
+RU=Русский
+EN=English
+
+!!!!!!!!!!!
+!! OTHER !!
+!!!!!!!!!!!
+
+GOOD=Good
