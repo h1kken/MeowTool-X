@@ -1,7 +1,7 @@
-from .manager import TranslationManager
+from .manager import translator
 from .mixin import TranslatableMixin
 
 __all__ = [
-    'TranslationManager',
+    'translator',
     'TranslatableMixin'
 ]
