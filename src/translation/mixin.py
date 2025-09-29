@@ -1,4 +1,4 @@
-from src.translation.manager import translator as t
+from .manager import translator as t
 
 
 class TranslatableMixin:
