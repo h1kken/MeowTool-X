@@ -8,7 +8,7 @@ class Logger:
     def __init__(self, name: str, *, stream=False, level=logging.DEBUG):
         self._logger = logging.getLogger(name)
         self._logger.setLevel(level)
-        self._path = Path('Logs', f'{name} ({current_date(output_format='%d.%m.%Y %H.%M.%S')}).log')
+        self._path = Path('Logs', f'{name} ({current_date('%d.%m.%Y %H.%M.%S')}).log')
         self._path.parent.mkdir(parents=True, exist_ok=True)
         
         if not self._logger.handlers:

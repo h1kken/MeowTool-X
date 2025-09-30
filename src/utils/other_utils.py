@@ -6,12 +6,12 @@ import locale
 def cls() -> None:
     os.system('cls' if os.name == 'nt' else 'clear')
 
-def detect_system_locale() -> Literal['ru', 'en']:
+def detect_system_locale() -> Literal['RU', 'EN']:
     system_locale = locale.getlocale()[0].lower()
     if 'russia' in system_locale:
-        return 'ru'
+        return 'RU'
     else:
-        return 'en'
+        return 'EN'
 
 def generate_browser_tracker_id() -> str:
     return str(random.randint(100000, 175000)) + str(random.randint(100000, 900000))
