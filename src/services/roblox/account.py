@@ -38,10 +38,10 @@ class RobloxAccount:
         ]
     ) -> dict:
         json = {
-            'profileId': str(await self.get_id()),
-            'profileType': 'User',
             'components': [{'component': component} for component in components],
-            'includeComponentOrdering': True
+            'includeComponentOrdering': True,
+            'profileId': str(await self.get_id()),
+            'profileType': 'User'
         }
         return (await self._client.post('https://apis.roblox.com/profile-platform-api/v1/profiles/get', json=json)).json()
 
