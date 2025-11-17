@@ -1,12 +1,16 @@
 import asyncio
-from httpx import AsyncClient
+from aiohttp import TCPConnector, ClientSession, ClientTimeout, ClientResponse, ClientOSError, ServerDisconnectedError
+from aiohttp.http_exceptions import TransferEncodingError
+from aiohttp.client_exceptions import ClientPayloadError, SocketTimeoutError
+from aiohttp_socks import ProxyConnector, ProxyError
+from typing import Optional
 from src.utils.logger import logger
 from src.exceptions.roblox import InvalidCookie, AccountBanned
 
 
 class AsyncRequestManager:
     def __init__(self):
-        self._client = AsyncClient()
+        self._session = ClientSession()
     
     async def __aenter__(self):
         return self
@@ -15,28 +19,22 @@ class AsyncRequestManager:
         await self.close()
         
     async def close(self):
-        await self._client.aclose()
-    
-    def update_headers(self, headers: dict):
-        self._client.headers.update(headers)
-    
-    def update_cookies(self, cookies: dict):
-        self._client.cookies.update(cookies)
+        await self._session.close()
     
     async def _request(
         self,
         method: str,
         url: str,
         *,
-        data: dict = None,
-        json: dict = None,
-        params: dict = None,
-        headers: dict = None,
-        cookies: dict = None,
+        data: Optional[dict] = None,
+        json: Optional[dict] = None,
+        params: Optional[dict] = None,
+        headers: Optional[dict] = None,
+        cookies: Optional[dict] = None,
         follow_redirects: bool = False
     ):
         while True:
-            response = await self._client.request(
+            response: ClientResponse = await self._session.request(
                 method,
                 url,
                 params=params,
@@ -46,7 +44,8 @@ class AsyncRequestManager:
                 cookies=cookies,
                 follow_redirects=follow_redirects
             )
-            match response.status_code:
+            status = response.status
+            match status:
                 case 200:
                     return response
                 case 403 if method == 'post':
@@ -58,16 +57,16 @@ class AsyncRequestManager:
                 case 403:
                     raise AccountBanned
                 case _:
-                    logger.debug(f'[{response.status_code}] URL: {url}')
+                    logger.debug(f'[{status}] URL: {url}')
                     await asyncio.sleep(10)
     
     async def get(
         self,
         url: str,
         *,
-        params: dict = None,
-        headers: dict = None,
-        cookies: dict = None,
+        params: Optional[dict] = None,
+        headers: Optional[dict] = None,
+        cookies: Optional[dict] = None,
         follow_redirects: bool = False
     ):
         return await self._request(
@@ -83,11 +82,11 @@ class AsyncRequestManager:
         self,
         url: str,
         *,
-        params: dict = None,
-        data: dict = None,
-        json: dict = None,
-        headers: dict = None,
-        cookies: dict = None
+        params: Optional[dict] = None,
+        data: Optional[dict] = None,
+        json: Optional[dict] = None,
+        headers: Optional[dict] = None,
+        cookies: Optional[dict] = None
     ):
         return await self._request(
             'post',
