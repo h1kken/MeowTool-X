@@ -23,19 +23,19 @@ def parse_config(text: str) -> dict:
             
     return parsed
 
-def validate_config(user_config: dict, default_config: dict, *, recovery_missing: bool = False) -> dict:
+def validate_config(user_config: dict, default_config: dict, *, recovery_not_changed: bool = False) -> dict:
     validated = {}
     
     for key, default_value in default_config.items():
         if key in user_config:
             if type(user_config[key]) is dict:
-                validated[key] = validate_config(user_config[key], default_value, recovery_missing=recovery_missing)
+                validated[key] = validate_config(user_config[key], default_value, recovery_not_changed=recovery_not_changed)
             else:
                 validated[key] = convert_value(user_config[key], default_value)
         else:
-            if recovery_missing:
+            if recovery_not_changed:
                 if type(default_value) is dict:
-                    validated[key] = validate_config({}, default_value, recovery_missing=True)
+                    validated[key] = validate_config({}, default_value, recovery_not_changed=True)
                 else:
                     validated[key] = default_value[0] if isinstance(default_value, tuple) else default_value
 

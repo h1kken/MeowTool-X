@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QLabel, QPushButton
-from ..translation.mixin import TranslatableMixin
+from src.translation.mixin import TranslatableMixin
 
 
 class MTLabel(TranslatableMixin, QLabel):

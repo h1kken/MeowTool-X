@@ -1,8 +1,8 @@
 from discord_webhook import DiscordWebhook, DiscordEmbed
 from pathlib import Path
 from requests.exceptions import InvalidURL, InvalidSchema, MissingSchema
-from ..utils import logger
-from ..translation import translator as t
+from src.utils.logger import logger
+from src.translation.manager import translator as t
 
 ERRORS = {
     FileNotFoundError: t.tr('ERR_FL_N_FND'),

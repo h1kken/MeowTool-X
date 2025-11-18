@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QObject, pyqtSignal
-from utils.logger import logger
+from src.utils.logger import logger
 
 
 class ProcessManager(QObject):

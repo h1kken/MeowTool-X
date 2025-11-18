@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from ..utils.logger import logger
+from src.utils.logger import logger
 from .defaults import default_config
 from .utils import parse_config, validate_config
 from .mixin import GetConfigMixin, SetConfigMixin, SaveConfigMixin
@@ -16,6 +16,10 @@ class ConfigManager(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         self._path = Path('Settings', 'Configs', f'{filename}.txt')
         self._data = {}
         self.load(filename)
+        
+    @property
+    def name(self):
+        return self._path.stem
     
     def create(self, filename: str):
         if (self._path.parent / f'{filename}.txt').exists():
@@ -61,10 +65,6 @@ class ConfigManager(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             os.remove(self._path.parent / f'{filename}.txt')
             if self._path.stem == filename:
                 self.load('default')
-                
-    @property
-    def name(self):
-        return self._path.stem
     
     
 config = ConfigManager(config_loader.get('Loader>Config On Launch', default='default'))

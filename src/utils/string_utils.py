@@ -1,3 +1,4 @@
+import random
 from re import sub
 from emoji import replace_emoji
 from urllib.parse import quote
@@ -20,6 +21,9 @@ def remove_filename_special_chars(string: str, *, replace: str = '') -> str:
 
 def remove_emojies(string: str, *, replace: str = ' ') -> str:
     return replace_emoji(string, replace=replace)
+
+def generate_browser_tracker_id() -> str:
+    return str(random.randint(100000, 175000)) + str(random.randint(100000, 900000))
 
 def encode_string_to_url(string: str) -> str:
     return quote(string)

@@ -1,5 +1,5 @@
 from pathlib import Path
-from ..utils.logger import logger
+from src.utils.logger import logger
 from .mixin import GetConfigMixin, SetConfigMixin, SaveConfigMixin
 from .defaults import default_config_loader
 from .utils import parse_config, validate_config

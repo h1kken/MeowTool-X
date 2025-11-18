@@ -4,16 +4,14 @@ from PyQt6.QtWidgets import (
 )
 
 from .custom_widgets import MTButton
-from .proxy import ProxyChecker
-from .roblox import (
-    RobloxCookieSorter,
-    RobloxCookieChecker,
-    RobloxCookieRefresher,
-    RobloxTimeBooster
-)
-from ..config.manager import config, config_loader
-from ..translation.manager import translator as t
-from ..utils import logger
+from .proxy.checker import ProxyChecker
+from .roblox.cookie_checker import RobloxCookieChecker
+from .roblox.cookie_sorter import RobloxCookieSorter
+from .roblox.cookie_refresher import RobloxCookieRefresher
+from .roblox.time_booster import RobloxTimeBooster
+from src.config.manager import config, config_loader
+from src.translation.manager import translator as t
+from src.utils.logger import logger
 
 
 class MainWindow(QMainWindow):

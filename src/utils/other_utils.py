@@ -1,5 +1,4 @@
 import os
-import random
 from typing import Literal
 import locale
 
@@ -12,6 +11,3 @@ def detect_system_locale() -> Literal['RU', 'EN']:
         return 'RU'
     else:
         return 'EN'
-
-def generate_browser_tracker_id() -> str:
-    return str(random.randint(100000, 175000)) + str(random.randint(100000, 900000))

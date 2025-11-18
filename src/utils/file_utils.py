@@ -1,7 +1,9 @@
-from zipfile import ZipFile, ZIP_DEFLATED
+from typing import Optional, Any
+import zipfile
 from pathlib import Path
+from src.utils.logger import logger
 
-def create_needed_folders_and_files() -> None:
+def create_start_folders_and_files() -> None:
     PATHS = [
         ('Proxy', 'Checker', 'proxies.txt'),
         ('Roblox', 'proxies.txt'),
@@ -11,7 +13,7 @@ def create_needed_folders_and_files() -> None:
         # ('Roblox', 'Game Checker', 'cookies.txt'),
         ('Roblox', 'Cookie Refresher', 'Mass Mode', 'cookies.txt'),
         ('Roblox', 'Transaction Analysis', 'cookies.txt'),
-        ('Roblox', 'Time Booster', 'cookies.txt'),
+        # ('Roblox', 'Time Booster', 'cookies.txt'),
         # ('Roblox', 'Robux Transfer', 'cookies.txt)
     ]
 
@@ -21,7 +23,7 @@ def create_needed_folders_and_files() -> None:
         if path.suffix and not path.exists():
             path.touch(exist_ok=True)
 
-def get_nested(data: dict, key: str, *, sep='>', default=None):
+def get_nested(data: dict, key: str, *, sep: str = '>', default: Optional[Any] = None):
     keys = key.split(sep)
     current = data
     for key in keys:
@@ -30,41 +32,39 @@ def get_nested(data: dict, key: str, *, sep='>', default=None):
         current = current[key]
     return current
 
-def set_nested(data: dict, key: str, value, *, sep='>') -> None:
+def set_nested(data: dict, key: str, value: Any, *, sep: str = '>') -> None:
     keys = key.split(sep)
     current = data
     for key in keys[:-1]:
-        if key not in current or not isinstance(current[key], dict):
+        if not isinstance(current[key], dict) or key not in current:
             current[key] = {}
         current = current[key]
     current[keys[-1]] = value
 
 def get_files_from_folder(*path_args: str, only_files: bool = True) -> list[str]:
-    PATH = Path(*path_args)
-    
-    if not (PATH.exists() or PATH.is_dir()):
+    path = Path(*path_args)
+    if not (path.is_dir() and path.exists()):
         return []
-
-    return [p.name for p in PATH.iterdir() if p.is_file() or not only_files]
+    return [dir.name for dir in path.iterdir() if dir.is_file() or not only_files]
 
 def amount_of_lines(*path_args: str) -> str:
-    PATH = Path(*path_args)
+    path = Path(*path_args)
     try:
-        with open(PATH, 'r', encoding='UTF-8', errors='ignore') as file:
+        with open(path, 'r', encoding='UTF-8', errors='ignore') as file:
             amount = sum(1 for _ in file)
         return f'{amount} line{'s' if amount != 1 else ''}'
     except FileNotFoundError:
         return '0 lines'
     
-async def make_archive(*path_args: str) -> None:
+async def make_archive(*path_args: str) -> None: 
     path = Path(*path_args)
     if path.exists():
-        path.mkdir(path.parent / 'archives', parents=True, exist_ok=True)
         path = path.parent / 'archives' / path.name
-        with ZipFile(path, 'w', ZIP_DEFLATED) as zipf:
-            path_length = len(path) + 1
-            for root, _, files in path.walk():
-                for file in files:
-                    file_path = Path(root, file)
-                    arcname = file_path[path_length:]
-                    zipf.write(file_path, arcname)
+        path.mkdir(parents=True, exist_ok=True)
+        try:
+            with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for file_path in path.rglob('*'):
+                    if file_path.is_file():
+                        zipf.write(file_path, file_path.relative_to(path))
+        except Exception as e:
+            logger.exception(f'< [MAKE_ARCHIVE] > {...}: {e}')

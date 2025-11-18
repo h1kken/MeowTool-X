@@ -1,20 +1,22 @@
 import re
 import asyncio
 from typing import Literal
-from src.exceptions import InvalidCookie
-from src.utils import COOKIE_PATTERN, convert_date
-from src.http.manager import AsyncRequestManager
-from src.config import config
+from src.exceptions.roblox import InvalidCookie
+from src.utils.regex_utils import COOKIE_PATTERN
+from src.utils.date_utils import convert_date
+from src.http.manager import RobloxRequestManager
+from src.config.manager import config
 
 
 class RobloxAccount:
-    def __init__(self, client: AsyncRequestManager, cookie: str, account_information: dict):
-        self._client = client
+    def __init__(self, session: RobloxRequestManager, cookie: str, account_information: dict):
+        self._session = session
         self._cookies = {'.ROBLOSECURITY': cookie.strip()}
         self._account_information = account_information # asyncio.run(self.get_complex_account_information()) # not_finished
+        self._user_data = {}
 
     async def get_simple_account_information(self) -> dict:
-        return (await self._client.get('https://users.roblox.com/v1/users/authenticated', cookies=self._cookies)).json()
+        return await (await self._session.get('https://users.roblox.com/v1/users/authenticated', cookies=self._cookies)).json()
 
     async def get_profile_information(
         self,
@@ -43,16 +45,19 @@ class RobloxAccount:
             'profileId': str(await self.get_id()),
             'profileType': 'User'
         }
-        return (await self._client.post('https://apis.roblox.com/profile-platform-api/v1/profiles/get', json=json)).json()
+        return await (await self._session.post('https://apis.roblox.com/profile-platform-api/v1/profiles/get', json=json)).json()
 
     async def get_complex_account_information(self) -> dict:
-        return (await self._client.get('https://www.roblox.com/my/settings/json')).json()
+        response: dict = await (await self._session.get('https://www.roblox.com/my/settings/json')).json()
+        if not self._user_data:
+            self._user_data = {}
+        return response
     
     async def get_link(self) -> str:
         return f'https://www.roblox.com/users/{await self.get_id()}'
     
     async def get_country_registration(self) -> str:
-        response: dict = (await self._client.get('https://users.roblox.com/v1/users/authenticated/country-code')).json()
+        response: dict = await (await self._session.get('https://users.roblox.com/v1/users/authenticated/country-code')).json()
         return response.get('countryCode')
     
     async def get_id(self) -> int:
@@ -65,18 +70,18 @@ class RobloxAccount:
         return self._account_information.get('DisplayName')
     
     async def get_registration_date_dd_mm_yyyy(self) -> str:
-        response: dict = (await self._client.get(f'https://users.roblox.com/v1/users/{await self.get_id()}')).json()
+        response: dict = await (await self._session.get(f'https://users.roblox.com/v1/users/{await self.get_id()}')).json()
         return await convert_date(response.get('created'), '%d.%m.%Y')
     
     async def get_registration_date_in_days(self) -> int:
         return self._account_information.get('AccountAgeInDays')
     
     async def get_robux(self) -> int:
-        response: dict = (await self._client.get(f'https://economy.roblox.com/v1/users/{await self.get_id()}/currency')).json()
+        response: dict = await (await self._session.get(f'https://economy.roblox.com/v1/users/{await self.get_id()}/currency')).json()
         return response.get('robux')
     
     async def get_billing(self) -> int:
-        response: dict = (await self._client.get('https://billing.roblox.com/v1/credit')).json()
+        response: dict = await (await self._session.get('https://billing.roblox.com/v1/credit')).json()
         return response.get('robuxAmount')
     
     async def get_transactions_in_time(self, time_frame: Literal['Day', 'Week', 'Month', 'Year'] = 'Year') -> dict:
@@ -84,7 +89,7 @@ class RobloxAccount:
             'timeFrame': time_frame,
             'transactionType': 'Summary'
         }
-        response: dict = await self._client.get(f'https://economy.roblox.com/v2/users/{await self.get_id()}/transaction-totals', params=params)
+        response: dict = await (await self._session.get(f'https://economy.roblox.com/v2/users/{await self.get_id()}/transaction-totals', params=params)).json()
         return {
             'pending': response.get('pendingRobuxTotal'),
             'donate': abs(response.get('outgoingRobuxTotal'))
@@ -126,14 +131,14 @@ class RobloxAccount:
             'cursor': ''
         }
         while params.get('cursor') is not None and cur_page != max_page:
-            response: dict[str, list[dict]] = (await self._client.get(f'https://inventory.roblox.com/v1/users/{await self.get_id()}/assets/collectibles', params=params, cookies=self._cookies)).json()
+            response: dict[str, list[dict]] = (await self._session.get(f'https://inventory.roblox.com/v1/users/{await self.get_id()}/assets/collectibles', params=params, cookies=self._cookies)).json()
             rap = sum(item for item in response.get('data', []) if type(item.get('recentAveragePrice')) is int)
             params['cursor'] = response.get('nextPageCursor')
             cur_page += 1
         return rap
     
     async def get_cards(self) -> int:
-        response: dict = (await self._client.get(f'https://apis.roblox.com/payments-gateway/v1/payment-profiles', cookies=self._cookies)).json()
+        response: dict = await (await self._session.get(f'https://apis.roblox.com/payments-gateway/v1/payment-profiles', cookies=self._cookies)).json()
         return len(response)
     
     async def get_premium(self) -> bool:
@@ -173,7 +178,7 @@ class RobloxAccount:
             'cursor': ''
         }
         while (params.get('cursor') is not None and cur_page != max_page and found_badges_amount != check_list_badges_amount):
-            response: dict[str, list[dict]] = (await self._client.get(f'https://badges.roblox.com/v1/users/{await self.get_id()}/badges', params=params, cookies=self._cookies)).json()
+            response: dict[str, list[dict]] = (await self._session.get(f'https://badges.roblox.com/v1/users/{await self.get_id()}/badges', params=params, cookies=self._cookies)).json()
             for badge in response.get('data', []):
                 badge_id = str(badge.get('id'))
                 if badge_id in check_list_badges:
@@ -235,12 +240,12 @@ class RobloxAccount:
         }
     
     async def get_inventory_privacy(self) -> str:
-        response: dict = (await self._client.get(f'https://apis.roblox.com/user-settings-api/v1/user-settings/settings-and-options', cookies=self._cookies)).json()
+        response: dict = await (await self._session.get(f'https://apis.roblox.com/user-settings-api/v1/user-settings/settings-and-options', cookies=self._cookies)).json()
         who_can_see_inventory: dict = response.get('whoCanSeeMyInventory')
         return who_can_see_inventory.get('currentValue')
     
     async def get_trade_privacy(self) -> str:
-        response: dict = (await self._client.get('https://accountsettings.roblox.com/v1/trade-privacy', cookies=self._cookies)).json()
+        response: dict = await (await self._session.get('https://accountsettings.roblox.com/v1/trade-privacy', cookies=self._cookies)).json()
         return response['tradePrivacy']
     
     async def get_can_trade(self) -> bool:
@@ -254,7 +259,7 @@ class RobloxAccount:
             'nextCursor': ''
         }
         while params.get('nextCursor') is not None and cur_page != max_page:
-            response = await self._client.get(f'https://apis.roblox.com/token-metadata-service/v1/sessions', params=params, cookies=self._cookies)
+            response = await (await self._session.get(f'https://apis.roblox.com/token-metadata-service/v1/sessions', params=params, cookies=self._cookies)).json()
             sessions_amount += len(response['sessions'])
             params['cursor'] = response['nextCursor']
             cur_page += 1
@@ -268,7 +273,7 @@ class RobloxAccount:
         }
 
     async def get_phone(self) -> bool:
-        response: dict = (await self._client.get('https://accountinformation.roblox.com/v1/phone', cookies=self._cookies)).json()
+        response: dict = await (await self._session.get('https://accountinformation.roblox.com/v1/phone', cookies=self._cookies)).json()
         return response.get('phone')
     
     async def get_2fa(self) -> bool:
@@ -284,7 +289,7 @@ class RobloxAccount:
         params = {
             'includeLocked': True
         }
-        response: dict[str, dict[dict]] = (await self._client.get(f'https://groups.roblox.com/v1/users/{await self.get_id()}/groups/roles', params=params, cookies=self._cookies)).json()
+        response: dict[str, dict[dict]] = await (await self._session.get(f'https://groups.roblox.com/v1/users/{await self.get_id()}/groups/roles', params=params, cookies=self._cookies)).json()
         for group in response.get('data', {}):
             user_role: dict = group.get('role', {})
             if user_role.get('rank') == 255:
@@ -307,7 +312,7 @@ class RobloxAccount:
         groups_pending = 0
         if groups_ids:
             for group_id in groups_ids:
-                response: dict = await self._client.get(f'https://apis.roblox.com/transaction-records/v1/groups/{group_id}/revenue/summary/year', cookies=self._cookies)
+                response: dict = await (await self._session.get(f'https://apis.roblox.com/transaction-records/v1/groups/{group_id}/revenue/summary/year', cookies=self._cookies)).json()
                 groups_pending += response.get('pendingRobux')
         return groups_pending
     
@@ -315,7 +320,7 @@ class RobloxAccount:
         groups_funds = 0
         if groups_ids:
             for group_id in groups_ids:
-                response: dict = (await self._client.get(f'https://economy.roblox.com/v1/groups/{group_id}/currency', cookies=self._cookies)).json()
+                response: dict = await (await self._session.get(f'https://economy.roblox.com/v1/groups/{group_id}/currency', cookies=self._cookies)).json()
                 groups_funds += response.get('robux')
         return groups_funds
     
@@ -323,16 +328,16 @@ class RobloxAccount:
         return self._account_information.get('UserAbove13')
     
     async def get_age_group(self) -> str:
-        response: dict = (await self._client.get(f'https://apis.roblox.com/user-settings-api/v1/account-insights/age-group', cookies=self._cookies)).json()
+        response: dict = await (await self._session.get(f'https://apis.roblox.com/user-settings-api/v1/account-insights/age-group', cookies=self._cookies)).json()
         age_group = response.get('ageGroupTranslationKey')
         return f'{age_group[-2:]}{'-' if 'Under' in age_group else '+' if 'Over' in age_group else ''}'
     
     async def get_verified_age(self) -> bool:
-        response: dict = (await self._client.get('https://apis.roblox.com/age-verification-service/v1/age-verification/verified-age', cookies=self._cookies)).json()
+        response: dict = await (await self._session.get('https://apis.roblox.com/age-verification-service/v1/age-verification/verified-age', cookies=self._cookies)).json()
         return response.get('isVerified')
     
     async def get_verified_voice(self) -> bool:
-        response: dict = (await self._client.get('https://voice.roblox.com/v1/settings', cookies=self._cookies)).json()
+        response: dict = (await self._session.get('https://voice.roblox.com/v1/settings', cookies=self._cookies)).json()
         return response.get('isVerifiedForVoice')
     
     # async def get_friends_amounts(self) -> dict[str, int]:
@@ -344,11 +349,11 @@ class RobloxAccount:
     #     }
     
     async def get_roblox_badges(self) -> list[str]:
-        response: list[dict] = (await self._client.get(f'https://accountinformation.roblox.com/v1/users/{await self.get_id()}/roblox-badges')).json()
+        response: list[dict] = await (await self._session.get(f'https://accountinformation.roblox.com/v1/users/{await self.get_id()}/roblox-badges')).json()
         return [robloxBadge.get('name') for robloxBadge in response]
 
     async def get_x_csrf_token(self) -> str:
-        response = (await self._client.post('https://auth.roblox.com/v2/logout', cookies=self._cookies)).headers
+        response: dict = (await self._session.post('https://auth.roblox.com/v2/logout', cookies=self._cookies)).headers
         return response.get('X-CSRF-Token')
 
     async def get_auth_ticket(self, x_csrf_token: str) -> str:
@@ -356,7 +361,7 @@ class RobloxAccount:
             'X-CSRF-Token': x_csrf_token,
             'referer': 'https://www.roblox.com/hewhewhew'
         }
-        response: dict = (await self._client.post('https://auth.roblox.com/v1/authentication-ticket', headers=headers)).headers
+        response: dict = (await self._session.post('https://auth.roblox.com/v1/authentication-ticket', headers=headers)).headers
         return response.get('rbx-authentication-ticket')
     
     async def break_cookie(self, x_csrf_token: str):
@@ -364,7 +369,7 @@ class RobloxAccount:
             'X-CSRF-Token': x_csrf_token,
             'Set-Cookie': '.ROBLOSECURITY=; Max-Age=0; Path=/;'
         }
-        await self._client.post('https://auth.roblox.com/v2/logout', headers=headers, cookies=self._cookies)
+        await self._session.post('https://auth.roblox.com/v2/logout', headers=headers, cookies=self._cookies)
     
     async def generate_new_cookie(self, auth_ticket: str) -> str:
         headers = {
@@ -373,20 +378,20 @@ class RobloxAccount:
         data = {
             'authenticationTicket': auth_ticket
         }
-        response = (await self._client.post('https://auth.roblox.com/v1/authentication-ticket/redeem', data=data, headers=headers)).headers
+        response = (await self._session.post('https://auth.roblox.com/v1/authentication-ticket/redeem', data=data, headers=headers)).headers
         new_cookie = re.search(COOKIE_PATTERN, str(response))
         if not new_cookie:
             raise InvalidCookie
         return new_cookie.group(0)[:-1]
     
     async def is_achieved_badge(self, badge_id: str) -> bool:
-        return bool(await self._client.get(f'https://badges.roblox.com/v1/users/{await self.get_id()}/badges/{badge_id}/awarded-date'))
+        return bool(await self._session.get(f'https://badges.roblox.com/v1/users/{await self.get_id()}/badges/{badge_id}/awarded-date'))
 
     async def get_place_id_user_in(self) -> int:
         data = {
             'userIds': [await self.get_id()]
         }
-        response: dict = (await self._client.post('https://presence.roblox.com/v1/presence/users', data=data)).json()
+        response: dict = await (await self._session.post('https://presence.roblox.com/v1/presence/users', data=data)).json()
         user_presences: list[dict] = response.get('userPresences', [{}])
         return user_presences[0].get('placeId')
 
@@ -406,5 +411,5 @@ class RobloxAccount:
             'excludeFullGames': exclude_full_servers,
             'limit': items_per_page
         }
-        response: dict = (await self._client.get(f'https://games.roblox.com/v1/games/{place_id}/servers/0', params=params)).json()
+        response: dict = await (await self._session.get(f'https://games.roblox.com/v1/games/{place_id}/servers/0', params=params)).json()
         return response
