@@ -1,5 +1,5 @@
-# environments
-.env/
+# envs
+.env
 
 # utils
 test*.py
@@ -8,20 +8,18 @@ parser*.py
 /reference/
 
 # paths created MeowTool
+/Logs/
 /Proxy/
 /Roblox/
 /Settings/Configs/
 /Settings/Translations/
 /Versions/
 
-# logs
-Logs/
-*.log
-
 # caches
 __pycache__/
 *.pyc
 
-# other
+# trash
 .vscode/
+*.log
 notepad.txt
