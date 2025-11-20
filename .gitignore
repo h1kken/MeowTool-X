@@ -1,12 +1,6 @@
 # envs
 .env
 
-# utils
-test*.py
-/tests/
-parser*.py
-/reference/
-
 # paths created MeowTool
 /Logs/
 /Proxy/
