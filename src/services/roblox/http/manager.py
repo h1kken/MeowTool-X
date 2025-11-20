@@ -1,14 +1,12 @@
 import asyncio
-from aiohttp import TCPConnector, ClientSession, ClientTimeout, ClientResponse, ClientOSError, ServerDisconnectedError
-from aiohttp.http_exceptions import TransferEncodingError
-from aiohttp.client_exceptions import ClientPayloadError, SocketTimeoutError
-from aiohttp_socks import ProxyConnector, ProxyError
+from aiohttp import TCPConnector, ClientSession, ClientTimeout, ClientResponse
+from aiohttp_socks import ProxyConnector
 from typing import Optional
 from src.utils.logger import logger
 from src.exceptions.roblox import InvalidCookie, AccountBanned
 
 
-class RobloxRequestManager:
+class RobloxSessionManager:
     def __init__(self):
         self._session = ClientSession()
     
@@ -32,37 +30,41 @@ class RobloxRequestManager:
         headers: Optional[dict] = None,
         cookies: Optional[dict] = None,
         allow_redirects: bool = False,
-        timeout: int = ClientTimeout(5)
+        timeout: int | ClientTimeout = ClientTimeout(5)
     ):
         while True:
-            response: ClientResponse = await self._session.request(
-                method,
-                url,
-                params=params,
-                data=data,
-                json=json,
-                headers=headers,
-                cookies=cookies,
-                allow_redirects=allow_redirects,
-                timeout=timeout
-            )
-            status = response.status
-            match status:
-                case 200:
-                    return response
-                case 204:
-                    return None
-                case 302 if response.headers.get('Location') == '/not-approved':
-                    raise AccountBanned
-                case 302 | 401:
-                    raise InvalidCookie
-                case 403 if method == 'post':
-                    return response
-                case 403:
-                    raise AccountBanned
-                case _:
-                    logger.debug(f'[{status}] URL: {url}')
-                    await asyncio.sleep(5)
+            try:
+                response: ClientResponse = await self._session.request(
+                    method,
+                    url,
+                    params=params,
+                    data=data,
+                    json=json,
+                    headers=headers,
+                    cookies=cookies,
+                    allow_redirects=allow_redirects,
+                    timeout=timeout
+                )
+                status = response.status
+                match status:
+                    case 200:
+                        return response
+                    case 204:
+                        return None
+                    case 302 if response.headers.get('Location') == '/not-approved':
+                        raise AccountBanned
+                    case 302 | 401:
+                        raise InvalidCookie
+                    case 403 if method == 'post':
+                        return response
+                    case 403:
+                        raise AccountBanned
+                    case _:
+                        logger.debug(f'[{status}] URL: {url}')
+                        await asyncio.sleep(5)
+            except Exception:
+                logger.exception(f'[{method.upper()}:{status}] URL: {url}')
+            
     
     async def get(
         self,
@@ -72,7 +74,7 @@ class RobloxRequestManager:
         headers: Optional[dict] = None,
         cookies: Optional[dict] = None,
         allow_redirects: bool = False,
-        timeout: int = ClientTimeout(5)
+        timeout: int | ClientTimeout = ClientTimeout(5)
     ):
         return await self._request(
             'get',
@@ -93,7 +95,7 @@ class RobloxRequestManager:
         json: Optional[dict] = None,
         headers: Optional[dict] = None,
         cookies: Optional[dict] = None,
-        timeout: int = ClientTimeout(5)
+        timeout: int | ClientTimeout = ClientTimeout(5)
     ):
         return await self._request(
             'post',
