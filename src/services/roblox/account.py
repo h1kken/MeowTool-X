@@ -1,19 +1,20 @@
 import re
 import asyncio
+from typing import Optional
 from typing import Literal
 from src.exceptions.roblox import InvalidCookie
 from src.utils.regex_utils import COOKIE_PATTERN
 from src.utils.date_utils import convert_date
-from src.http.manager import RobloxRequestManager
+from src.services.roblox.http.manager import RobloxSessionManager
 from src.config.manager import config
 
 
 class RobloxAccount:
-    def __init__(self, session: RobloxRequestManager, cookie: str, account_information: dict):
+    def __init__(self, session: RobloxSessionManager, cookies: Optional[dict[str, str]], account_information: dict):
         self._session = session
-        self._cookies = {'.ROBLOSECURITY': cookie.strip()}
+        self._cookies = cookies
         self._account_information = account_information # asyncio.run(self.get_complex_account_information()) # not_finished
-        self._user_data = {}
+        self._account_data = {}
 
     async def get_simple_account_information(self) -> dict:
         return await (await self._session.get('https://users.roblox.com/v1/users/authenticated', cookies=self._cookies)).json()
@@ -49,8 +50,8 @@ class RobloxAccount:
 
     async def get_complex_account_information(self) -> dict:
         response: dict = await (await self._session.get('https://www.roblox.com/my/settings/json')).json()
-        if not self._user_data:
-            self._user_data = {}
+        if not self._account_data:
+            self._account_data = {}
         return response
     
     async def get_link(self) -> str:
