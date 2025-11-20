@@ -1,14 +1,21 @@
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from .date_utils import current_date
+from src.utils.date_utils import current_date
+from src.utils.consts import IS_LAUNCHED_IN_CONSOLE, DATE_LOGGER
 
 
 class Logger:
-    def __init__(self, name: str, *, stream: bool = False, level: int = logging.DEBUG):
+    def __init__(
+        self,
+        name: str,
+        *,
+        stream: bool = IS_LAUNCHED_IN_CONSOLE,
+        level: int = logging.DEBUG
+    ):
         self._logger = logging.getLogger(name)
         self._logger.setLevel(level)
-        self._path = Path('Logs', f'{name} ({current_date('%d.%m.%Y %H.%M.%S')}).log')
+        self._path = Path('Logs', f'{name} ({current_date(DATE_LOGGER)}).log')
         self._path.parent.mkdir(parents=True, exist_ok=True)
         
         if not self._logger.handlers:
@@ -19,6 +26,7 @@ class Logger:
                 console_handler.setLevel(logging.DEBUG)
                 console_handler.setFormatter(formatter)
                 self._logger.addHandler(console_handler)
+                self._logger.debug('[!] PROGRAM IS LAUNCHED IN TESTING MODE [!]')
             
             file_handler = RotatingFileHandler(
                 filename=self._path,
@@ -29,21 +37,12 @@ class Logger:
             file_handler.setFormatter(formatter)
             file_handler.setLevel(logging.DEBUG)
             self._logger.addHandler(file_handler)
-                
-    def debug(self, message: str = '') -> None:
-        self._logger.debug(message)
-    
-    def info(self, message: str = '') -> None:
-        self._logger.info(message)
-    
-    def warning(self, message: str = '') -> None:
-        self._logger.warning(message)
-    
-    def error(self, message: str = '') -> None:
-        self._logger.error(message)
-    
-    def exception(self, message: str = '') -> None:
-        self._logger.exception(message)
+
+    def debug(self, message: str = '') -> None: self._logger.debug(message)
+    def info(self, message: str = '') -> None: self._logger.info(message)
+    def warning(self, message: str = '') -> None: self._logger.warning(message)
+    def error(self, message: str = '') -> None: self._logger.error(message)
+    def exception(self, message: str = '') -> None: self._logger.exception(message)
 
 
-logger = Logger('MeowTool', stream=True)
+logger = Logger('MeowTool')
