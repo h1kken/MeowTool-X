@@ -4,7 +4,7 @@ from requests.exceptions import InvalidURL, InvalidSchema, MissingSchema
 from src.utils.logger import logger
 from src.translation.manager import translator as t
 
-ERRORS = {
+DISCORD_WEBHOOK_ERRORS = {
     FileNotFoundError: t.tr('ERR_FL_N_FND'),
     ConnectionError: t.tr('ERR_UNSTBL_INT_CONN'),
     **dict.fromkeys(
@@ -13,7 +13,7 @@ ERRORS = {
     )
 }
 
-RESPONSES = {
+DISCORD_WEBHOOK_RESPONSES = {
     **dict.fromkeys(
         [401, 404],
         t.tr('ERR_TP_IN_WBHK_URL')
@@ -51,6 +51,6 @@ class DSWebhook:
             if status == 200:
                 logger.info(t.tr('GOOD'))
             else:
-                logger.warning(RESPONSES.get(status, f'{t.tr('ERR_STTS')}: {status}'))
+                logger.warning(DISCORD_WEBHOOK_RESPONSES.get(status, f'{t.tr('ERR_STTS')}: {status}'))
         except Exception as e:
-            logger.exception(ERRORS.get(type(e), f'{t.tr('ERR_UNK')}: {e}'))
+            logger.exception(DISCORD_WEBHOOK_ERRORS.get(type(e), f'{t.tr('ERR_UNK')}: {e}'))
