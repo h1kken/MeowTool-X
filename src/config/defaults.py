@@ -1,5 +1,5 @@
 from copy import deepcopy
-from src.utils.other_utils import detect_system_locale
+from src.utils.consts import SYSTEM_LOCALE
 
 
 DEFAULT_CONFIG_LOADER = {
@@ -32,7 +32,7 @@ def default_config_loader():
 
 DEFAULT_CONFIG = {
   'General': {
-    'Language': detect_system_locale(),
+    'Language': SYSTEM_LOCALE,
     'Program Name': 'MeowTool... Meow :3',
     'Disable Warnings For Links': False,
     'Disable Warnings For Dangerous Actions': False

@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
-from ..custom_widgets import MTLabel, MTButton
+from src.uis.custom_widgets import MTLabel, MTButton
 
 class RobloxTimeBooster(QWidget):
     def __init__(self):

@@ -1,6 +1,6 @@
 from src.utils.date_utils import current_time_in_ms
 from src.utils.string_utils import generate_browser_tracker_id, encode_string_to_url
-from .account import RobloxAccount
+from src.services.roblox.account import RobloxAccount
 
 
 class RobloxLauncher:
