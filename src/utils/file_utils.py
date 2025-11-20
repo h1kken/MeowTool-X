@@ -2,25 +2,19 @@ from typing import Optional, Any
 import zipfile
 from pathlib import Path
 from src.utils.logger import logger
+from src.utils.consts import START_PATHS
 
+
+def create_folder(path: Path, *, parents: bool = True, exist_ok: bool = True) -> None:
+    path.mkdir(parents=parents, exist_ok=exist_ok)
+
+def delete_file(path: Path, *, missing_ok: bool = True) -> None:
+    path.unlink(missing_ok=missing_ok)
+    
 def create_start_folders_and_files() -> None:
-    PATHS = [
-        ('Proxy', 'Checker', 'proxies.txt'),
-        ('Roblox', 'proxies.txt'),
-        ('Roblox', 'Cookie Sorter'),
-        ('Roblox', 'Cookie Checker', 'cookies.txt'),
-        # ('Roblox', 'LogPass Checker', 'LogPasses.txt'),
-        # ('Roblox', 'Game Checker', 'cookies.txt'),
-        ('Roblox', 'Cookie Refresher', 'Mass Mode', 'cookies.txt'),
-        ('Roblox', 'Transaction Analysis', 'cookies.txt'),
-        # ('Roblox', 'Time Booster', 'cookies.txt'),
-        # ('Roblox', 'Robux Transfer', 'cookies.txt)
-    ]
-
-    for args in PATHS:
-        path = Path(*args)
+    for path in START_PATHS:
         path.parent.mkdir(parents=True, exist_ok=True)
-        if path.suffix and not path.exists():
+        if path.suffix:
             path.touch(exist_ok=True)
 
 def get_nested(data: dict, key: str, *, sep: str = '>', default: Optional[Any] = None):
@@ -36,7 +30,7 @@ def set_nested(data: dict, key: str, value: Any, *, sep: str = '>') -> None:
     keys = key.split(sep)
     current = data
     for key in keys[:-1]:
-        if not isinstance(current[key], dict) or key not in current:
+        if key not in current or not isinstance(current[key], dict):
             current[key] = {}
         current = current[key]
     current[keys[-1]] = value
