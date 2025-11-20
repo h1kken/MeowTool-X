@@ -1,10 +1,15 @@
 from pathlib import Path
-import sys
+from typing import Optional
+from src.utils.consts import PATH_FISHSTRAP, PATH_BLOXSTRAP, PATH_ROBLOXPLAYERBETA
+from src.utils.regex_utils import ROBLOX_VERSION_PATH_PATTERN
 
-def get_root() -> Path:
-    if getattr(sys, '_MEIPASS', None):
-        return Path(sys._MEIPASS).resolve()
 
-    return Path(__file__).resolve().parent
+def detect_roblox_path() -> Optional[Path]:
+    if PATH_FISHSTRAP.exists(): return PATH_FISHSTRAP
+    if PATH_BLOXSTRAP.exists(): return PATH_BLOXSTRAP
 
-ROOT = get_root()
+    if PATH_ROBLOXPLAYERBETA.exists():
+        paths = sorted(list(PATH_ROBLOXPLAYERBETA.iterdir()), key=lambda e: e.stat().st_mtime, reverse=True)
+        for path in paths:
+            if ROBLOX_VERSION_PATH_PATTERN.search(str(path)):
+                return path
