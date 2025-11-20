@@ -2,7 +2,7 @@ import random
 from re import sub
 from emoji import replace_emoji
 from urllib.parse import quote
-from .regex_utils import FILENAME_SPECIAL_CHARS
+from src.utils.regex_utils import FILENAME_SPECIAL_CHARS_PATTERN
 
 def remove_brackets_and_in(string: str, *, round: bool = True, square: bool = True) -> str:
     new_string = ''
@@ -17,7 +17,7 @@ def remove_brackets_and_in(string: str, *, round: bool = True, square: bool = Tr
     return new_string
 
 def remove_filename_special_chars(string: str, *, replace: str = '') -> str:
-    return sub(FILENAME_SPECIAL_CHARS, replace, string)
+    return sub(FILENAME_SPECIAL_CHARS_PATTERN, replace, string)
 
 def remove_emojies(string: str, *, replace: str = ' ') -> str:
     return replace_emoji(string, replace=replace)
