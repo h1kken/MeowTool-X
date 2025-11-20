@@ -2,16 +2,15 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QStackedWidget,
     QVBoxLayout, QHBoxLayout
 )
-
-from .custom_widgets import MTButton
-from .proxy.checker import ProxyChecker
-from .roblox.cookie_checker import RobloxCookieChecker
-from .roblox.cookie_sorter import RobloxCookieSorter
-from .roblox.cookie_refresher import RobloxCookieRefresher
-from .roblox.time_booster import RobloxTimeBooster
-from src.config.manager import config, config_loader
+from src.uis.custom_widgets import MTButton
+from src.uis.proxy.checker import ProxyChecker
+from src.uis.roblox.cookie_checker import RobloxCookieChecker
+from src.uis.roblox.cookie_sorter import RobloxCookieSorter
+from src.uis.roblox.cookie_refresher import RobloxCookieRefresher
+from src.uis.roblox.time_booster import RobloxTimeBooster
 from src.translation.manager import translator as t
 from src.utils.logger import logger
+from src.config.manager import config, config_loader
 
 
 class MainWindow(QMainWindow):
@@ -59,15 +58,12 @@ class MainWindow(QMainWindow):
         btn3.clicked.connect(lambda: config_loader.set('Loader>Config On Load', '123'))
         btn4.clicked.connect(lambda: config_loader.set('Loader>Config On Load', '234'))
         
-        btn5 = MTButton('Create My Own Language 1')
+        btn5 = MTButton('Create My Own Language from RU')
         sidebar.addWidget(btn5)
-        btn5.clicked.connect(lambda: t.create_my_own_language('1'))
-        btn6 = MTButton('Create My Own Language 2')
+        btn5.clicked.connect(lambda: t.create_my_own_language('ru2', 'ru'))
+        btn6 = MTButton('Create My Own Language from EN')
         sidebar.addWidget(btn6)
-        btn6.clicked.connect(lambda: t.create_my_own_language('2'))
-        btn7 = MTButton('Create My Own Language 3')
-        sidebar.addWidget(btn7)
-        btn7.clicked.connect(lambda: t.create_my_own_language('3'))
+        btn6.clicked.connect(lambda: t.create_my_own_language('en2', 'en'))
         
         config.set('General>Language', 'en')
         config.set('Proxy>Checker>Main Threads', 20)
