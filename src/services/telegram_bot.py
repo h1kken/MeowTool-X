@@ -1,13 +1,14 @@
 from pathlib import Path
-from ..utils import logger
+from src.utils.logger import logger
 from aiogram import Bot
+from typing import Optional
 from aiogram.types import FSInputFile
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest, TelegramNetworkError, TelegramUnauthorizedError
 from aiogram.utils.token import TokenValidationError
-from ..translation import translator as t
+from src.translation.manager import translator as t
 
-ERRORS = {
+TELEGRAM_BOT_ERRORS = {
     FileNotFoundError: t.tr('ERR_FL_N_FND'),
     TelegramBadRequest: t.tr('ERR_INV_CHT_ID'),
     TelegramNetworkError: t.tr('ERR_INV_BT_TKN'),
@@ -17,6 +18,7 @@ ERRORS = {
     )
 }
 
+
 class TGBot:
     def __init__(self, token: str):
         self.bot = Bot(token=token)
@@ -25,21 +27,15 @@ class TGBot:
         if self.bot:
             self.bot.close()
         
-    async def send(self, chat_id: int, *, message: str = None, path_to_file: str | Path = None, separate_sends: bool = True):
+    async def send(self, chat_id: int, *, message: str = None, path_to_file: Optional[Path] = None):
         try:
-            if separate_sends:
-                await self.send_message(chat_id, message=message)
-                await self.send_file(chat_id, path_to_file=path_to_file)
-            else:        
-                await self.bot.send_document(
-                    chat_id=chat_id,
-                    text=message,
-                    document=FSInputFile(path_to_file) if path_to_file else None,
-                    parse_mode=ParseMode.MARKDOWN_V2
-                )
+            await self.send_message(chat_id, message=message)
+            await self.send_file(chat_id, path_to_file=path_to_file)
         except Exception as e:
-            logger.exception(ERRORS.get(type(e), f'{t.tr('ERR_UNK')}: {e}'))
-        
+            logger.exception(TELEGRAM_BOT_ERRORS.get(type(e), f'{t.tr('ERR_UNK')}: {e}'))
+        finally:
+            self.close()
+
     async def send_message(self, chat_id: int, *, message: str):
         await self.bot.send_message(
             chat_id=chat_id,
