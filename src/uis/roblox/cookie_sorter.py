@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
-from src.uis.custom_widgets import MTLabel, MTButton
+from uis.widgets.custom_widgets import MTLabel, MTButton
 
 class RobloxCookieSorter(QWidget):
     def __init__(self):

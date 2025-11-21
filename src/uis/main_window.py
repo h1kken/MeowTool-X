@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QStackedWidget,
     QVBoxLayout, QHBoxLayout
 )
-from src.uis.custom_widgets import MTButton
+from uis.widgets.custom_widgets import MTButton
 from src.uis.proxy.checker import ProxyChecker
 from src.uis.roblox.cookie_checker import RobloxCookieChecker
 from src.uis.roblox.cookie_sorter import RobloxCookieSorter
