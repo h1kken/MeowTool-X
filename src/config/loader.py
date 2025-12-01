@@ -9,7 +9,6 @@ from src.utils.file_utils import create_folder
 
 class ConfigLoader(GetConfigMixin, SetConfigMixin, SaveConfigMixin):
     def __init__(self) -> None:
-        self._path = PATH_CONFIGS / '.Loader.txt'
         self._data = {}
         self._load()
         
@@ -23,6 +22,7 @@ class ConfigLoader(GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         
     def _load(self) -> None:
         logger.info('Intializing loader...')
+        self._path = PATH_CONFIGS / '.Loader.txt'
         
         try:
             with open(self._path, 'r', encoding='utf-8', errors='ignore') as f:

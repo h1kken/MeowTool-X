@@ -1,4 +1,5 @@
 import ast
+from typing import Optional, Any
 
 def parse_config(text: str) -> dict:
     parsed = {}
@@ -56,17 +57,17 @@ def literal_eval(value: str):
 
 def convert_to_bool(user_value: str) -> bool | str:
     low = user_value.strip().lower()
-    if low in ('true', 'y', 'yes', 'д', 'да', 'on', '+'):
+    if low in ('true', 'yes', 'да', 'on', '+'):
         return True
-    elif low in ('false', 'n', 'no', 'н', 'нет', 'off', '-'):
+    elif low in ('false', 'no', 'нет', 'off', '-'):
         return False
     else:
         return user_value
 
-def convert_value(user_value, default_value=None):
+def convert_value(user_value: Optional[Any] = None, default_value: Optional[Any] = None) -> dict:
     if default_value is not None:
         if isinstance(default_value, tuple):
-            if isinstance(default_value[0], int) and len(default_value) == 3:
+            if len(default_value) == 3 and all(isinstance(v, (int, float)) for v in default_value):
                 if not (isinstance(user_value, int) and (default_value[1] <= user_value <= default_value[2])):
                     return default_value[0]
         elif isinstance(default_value, bool):
