@@ -12,6 +12,10 @@
 # caches
 __pycache__/
 *.pyc
+*cache
+
+# tests
+/tests/
 
 # trash
 .vscode/
