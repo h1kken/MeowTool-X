@@ -32,8 +32,10 @@ class BaseHttpClient:
         headers: Optional[dict] = None,
         cookies: Optional[dict] = None,
         allow_redirects: bool = False,
-        timeout: ClientTimeout = ClientTimeout(5)
+        timeout: ClientTimeout = ClientTimeout(5),
+        ssl: bool = False
     ):
+        response = None
         i = 0
         while i < HTTP_CLIENT_MAX_RETRIES:
             try:
@@ -48,7 +50,8 @@ class BaseHttpClient:
                     cookies=cookies,
                     allow_redirects=allow_redirects,
                     proxy=proxy,
-                    timeout=timeout
+                    timeout=timeout,
+                    ssl=ssl
                 )
                 return await self._handle_response(method, url, response)
             except (InvalidCookie, AccountBanned):
