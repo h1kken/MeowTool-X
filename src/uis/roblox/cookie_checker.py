@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
-from uis.widgets.custom_widgets import MTLabel, MTButton
+from src.uis.widgets.custom_widgets import MTLabel, MTButton
+
 
 class RobloxCookieChecker(QWidget):
     def __init__(self):

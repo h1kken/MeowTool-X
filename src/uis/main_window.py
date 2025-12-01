@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QStackedWidget,
     QVBoxLayout, QHBoxLayout
 )
-from uis.widgets.custom_widgets import MTButton
+from src.uis.widgets.custom_widgets import MTButton
 from src.uis.proxy.checker import ProxyChecker
 from src.uis.roblox.cookie_checker import RobloxCookieChecker
 from src.uis.roblox.cookie_sorter import RobloxCookieSorter
@@ -68,3 +68,27 @@ class MainWindow(QMainWindow):
         config.set('General>Language', 'en')
         config.set('Proxy>Checker>Main Threads', 20)
         config_loader.set('Saver>Auto Save Changes', True)
+        
+        
+        ###
+        import random
+        
+        print(random.randint(-1, 0))
+        print(random.randint(0, 0))
+        print(random.randint(0, 1))
+        
+        
+        ###
+        from src.database.manager import Database
+        from src.database.models.roblox.cookie_checker.account import BaseCookieChecker, Account
+        
+        db = Database('sqlite:///123.db')
+        db.create_tables(BaseCookieChecker)
+        
+        acc1 = Account(p_valid=True, p_id=123123123, p_name='123123123', p_cookie='_||_123123123')
+        acc2 = Account(p_valid=True, p_id=234234234, p_name='234234234', p_cookie='_|_234234234')
+        acc3 = Account(p_valid=True, p_id=345345345, p_name='345345345', p_cookie='_|345|_345345345')
+        
+        with db.session_scope() as session:
+            session.add_all([acc1, acc2, acc3])
+        
