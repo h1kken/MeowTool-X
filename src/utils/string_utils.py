@@ -2,7 +2,33 @@ import random
 from re import sub
 from emoji import replace_emoji
 from urllib.parse import quote
-from src.utils.regex_utils import FILENAME_SPECIAL_CHARS_PATTERN
+from src.utils.regex_utils import FILENAME_SPECIAL_CHARS_PATTERN, ROBLOX_AGE_GROUP_PATTERN
+from typing import Literal
+from src.utils.logger import logger
+
+
+def convert_age_group(string: str) -> str:
+    match = ROBLOX_AGE_GROUP_PATTERN.search(string)
+    if not match:
+        logger.warning(f'< [CONVERT_AGE_GROUP] > Can\'t convert age: {string}')
+        return 'UNK'
+    
+    direction, age, checked = match.groups()
+    return f'{age}{'+' if direction.lower() == 'over' else '-'}{' (Checked)' if checked else ''}'
+
+def format_duration(ms: int, *, sep: str = '. ', end: str = '.', out_units: Literal['d', 'h', 'm', 's', 'ms', 'all'] = 'all') -> str:
+    s, ms = divmod(ms, 1000)
+    m, s  = divmod(s,  60)
+    h, m  = divmod(m,  60)
+    d, h  = divmod(h,  24)
+    units = {'d': d, 'h': h, 'm': m, 's': s, 'ms': ms}
+    
+    parts = []
+    for key, value in units.items():
+        if (value or parts) and (key in out_units or 'all' in out_units):
+            parts.append(f'{value}{...}')
+
+    return f'{sep.join(parts)}{end}'
 
 def remove_brackets_and_in(string: str, *, round: bool = True, square: bool = True) -> str:
     new_string = ''
