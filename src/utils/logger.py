@@ -2,7 +2,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from src.utils.date_utils import current_date
-from src.utils.consts import IS_LAUNCHED_IN_CONSOLE, DATE_LOGGER
+from src.utils.consts import IS_LAUNCHED_IN_CONSOLE, DATE_LOGGER_FORMAT
 
 
 class Logger:
@@ -15,7 +15,7 @@ class Logger:
     ):
         self._logger = logging.getLogger(name)
         self._logger.setLevel(level)
-        self._path = Path('Logs', f'{name} ({current_date(DATE_LOGGER)}).log')
+        self._path = Path('Logs', f'{name} ({current_date(DATE_LOGGER_FORMAT)}).log')
         self._path.parent.mkdir(parents=True, exist_ok=True)
         
         if not self._logger.handlers:
