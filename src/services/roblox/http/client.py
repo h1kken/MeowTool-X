@@ -11,6 +11,7 @@ class RobloxHttpClient(BaseHttpClient):
         super().__init__(proxies=proxies)
         
     async def _handle_response(self, method: str, url: str, response: ClientResponse) -> Optional[ClientResponse]:
+        # status = response.status if locals().get('response') else 'ERR'
         match response.status:
             case 200:
                 return response
@@ -25,6 +26,5 @@ class RobloxHttpClient(BaseHttpClient):
             case 403:
                 raise AccountBanned
             case _:
-                status = response.status if locals().get('response') else 'ERR'
-                logger.debug(f'[{method.upper()}:{status}] URL: {url}')
+                logger.debug(f'[{method.upper()}:{response.status}] URL: {url}')
                 await asyncio.sleep(5)
