@@ -1,17 +1,20 @@
 from typing import Optional, Any
-from src.utils.file_utils import get_nested, set_nested
+from src.utils.file import create_folder, get_safe, set_safe
 from src.utils.consts import PATH_CONFIGS
-from src.utils.file_utils import create_folder
+from src.utils.logger import logger
 
 
 class GetConfigMixin:
     def get(self, key: str, *, sep: str = '>', default: Optional[Any] = None):
-        return get_nested(self._data, key, sep=sep, default=default)
+        value = get_safe(self._data, key, sep=sep, default=default)
+        logger.debug(f'Loaded \'{value}\' from \'{key.replace(sep, ' > ')}\'')
+        return value
 
 
 class SetConfigMixin:
     def set(self, key: str, value: Any, *, sep: str = '>'):
-        set_nested(self._data, key, value, sep=sep)
+        set_safe(self._data, key, value, sep=sep)
+        logger.debug(f'Setted \'{value}\' to \'{key.replace(sep, ' > ')}\'')
 
 
 class SaveConfigMixin:
@@ -32,3 +35,4 @@ class SaveConfigMixin:
         lines = self._dump_dict(self._data)
         with open(self._path, 'w', encoding='utf-8') as f:
             f.write('\n'.join(lines))
+        logger.debug(f'Config \'{self._path.stem}\' is saved')
