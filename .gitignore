@@ -1,13 +1,14 @@
 # envs
 .env
 
-# paths created MeowTool
+# paths and files created MeowTool
 /Logs/
 /Proxy/
 /Roblox/
 /Settings/Configs/
 /Settings/Translations/
 /Versions/
+*.db
 
 # caches
 __pycache__/
