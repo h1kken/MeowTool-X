@@ -55,7 +55,7 @@ def literal_eval(value: str):
     except (ValueError, SyntaxError):
         return value
 
-def convert_to_bool(user_value: str) -> bool | str:
+def convert_to_bool(user_value: str) -> str | bool:
     low = user_value.strip().lower()
     if low in ('true', 'yes', 'да', 'on', '+'):
         return True
@@ -77,5 +77,4 @@ def convert_value(user_value: Optional[Any] = None, default_value: Optional[Any]
     else:
         if isinstance(user_value, str):
             return convert_to_bool(user_value)
-        
     return user_value
