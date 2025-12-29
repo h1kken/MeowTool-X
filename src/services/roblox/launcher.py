@@ -1,5 +1,5 @@
-from src.utils.date_utils import current_time_in_ms
-from src.utils.string_utils import generate_browser_tracker_id, encode_string_to_url
+from utils.date import current_time_in_ms
+from utils.string import generate_browser_tracker_id, encode_string_to_url
 from src.services.roblox.account import RobloxAccount
 
 
