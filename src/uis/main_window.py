@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QMainWindow, QWidget, QStackedWidget,
     QVBoxLayout, QHBoxLayout
 )
@@ -10,18 +10,27 @@ from src.uis.roblox.cookie_refresher import RobloxCookieRefresher
 from src.uis.roblox.time_booster import RobloxTimeBooster
 from src.translation.manager import translator as t
 from src.utils.logger import logger
+from src.utils.consts import WINDOW_X, WINDOW_Y
 from src.config.manager import config, config_loader
+from src.utils.file import create_start_folders_and_files
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(config.get('General>Program_Name', default='MeowTool... Meow :3'))
-        self.resize(900, 500)
+        
+        window_title = config.get('General>Program Name', default='MeowTool... Meow :3')
+        self.setWindowTitle(window_title)
+        logger.info(f'Setted window title to: {window_title}')
+        
+        self.resize(WINDOW_X, WINDOW_Y)
+        logger.info(f'Setted window resolution to: {WINDOW_X}x{WINDOW_Y}')
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QHBoxLayout(central_widget)
+
+        create_start_folders_and_files()
 
         sidebar = QVBoxLayout()
         main_layout.addLayout(sidebar, 1)
