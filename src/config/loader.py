@@ -1,10 +1,9 @@
-from pathlib import Path
 from src.utils.logger import logger
 from src.config.mixin import GetConfigMixin, SetConfigMixin, SaveConfigMixin
 from src.config.defaults import default_config_loader
 from src.config.utils import parse_config, validate_config
 from src.utils.consts import PATH_CONFIGS
-from src.utils.file_utils import create_folder
+from src.utils.file import create_folder, create_file
 
 
 class ConfigLoader(GetConfigMixin, SetConfigMixin, SaveConfigMixin):
@@ -12,16 +11,17 @@ class ConfigLoader(GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         self._data = {}
         self._load()
         
-    def _create(self) -> None:
-        if self._path.exists(): return
+    def _create_loader(self) -> None:
+        if self._path.exists():
+            return
         
         create_folder(PATH_CONFIGS)
-        self._path.touch()
+        create_file(self._path)
         logger.info('Loader created')
         self._load()
         
     def _load(self) -> None:
-        logger.info('Intializing loader...')
+        logger.info('Initializing loader...')
         self._path = PATH_CONFIGS / '.Loader.txt'
         
         try:
@@ -33,9 +33,9 @@ class ConfigLoader(GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             logger.info('Loader initialized')
         except FileNotFoundError:
             logger.warning('Loader not found. Creating...')
-            self._create()
-        except Exception:
-            logger.exception('Loader can\'t be initialized. Unknown error:')
+            self._create_loader()
+        except Exception as e:
+            logger.exception(f'Loader can\'t be initialized. Error: {e}')
             
     def set(self, key, value, *, sep='>') -> None:
         super().set(key, value, sep=sep)
