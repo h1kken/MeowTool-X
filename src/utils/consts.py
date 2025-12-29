@@ -2,10 +2,13 @@ import os
 import sys
 import locale
 from pathlib import Path
+from src.utils.date import current_date
 
 
 # MeowTool
 VERSION = 'v1.0.0'
+PROGRAM_NAME = 'MeowTool'
+WAS_LAUNCHED_IN = current_date()
 
 # window
 WINDOW_X = 900
@@ -330,6 +333,7 @@ CONFIG_COMMENT_SYMBOLS = ('!', '#')
 
 # logger
 DATE_LOGGER_FORMAT = '%d.%m.%Y %H.%M.%S'
+PATH_LOGGER = Path('Logs') / f'{PROGRAM_NAME} ({current_date(DATE_LOGGER_FORMAT)}).log'
 
 # database keymaps
 DATABASE_ROBLOX_COOKIE_CHECKER_KEYMAP = {
