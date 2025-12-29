@@ -9,7 +9,7 @@ from src.utils.consts import HTTP_CLIENT_MAX_RETRIES
 
 class BaseHttpClient:
     def __init__(self, proxies: Optional[list[str]] = None):
-        self._session = ClientSession(TCPConnector(limit=0, ssl=False))
+        self._session = ClientSession(TCPConnector(limit=0))
         self._proxies = proxies
     
     async def __aenter__(self):
@@ -64,12 +64,24 @@ class BaseHttpClient:
                         
     async def _handle_response(self, method: str, url: str, response: ClientResponse) -> Optional[ClientResponse]:
         ...
-                        
+    
+    # async def options(self, url: str, **kwargs: Any):
+    #     return await self._request('options', url, **kwargs)
+        
     async def get(self, url: str, **kwargs: Any):
         return await self._request('get', url, **kwargs)
     
     async def post(self, url: str, **kwargs: Any):
         return await self._request('post', url, **kwargs)
     
-    async def head(self, url: str, **kwargs: Any):
-        return await self._request('head', url, **kwargs)
+    # async def head(self, url: str, **kwargs: Any):
+    #     return await self._request('head', url, **kwargs)
+    
+    # async def put(self, url: str, **kwargs: Any):
+    #     return await self._request('put', url, **kwargs)
+    
+    # async def patch(self, url: str, **kwargs: Any):
+    #     return await self._request('patch', url, **kwargs)
+    
+    # async def delete(self, url: str, **kwargs: Any):
+    #     return await self._request('delete', url, **kwargs)
