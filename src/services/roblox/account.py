@@ -274,7 +274,7 @@ class RobloxAccount:
     ) -> dict:
         found_places_weekly_playtime = {}
         response: dict = await (await self._session.get('https://apis.roblox.com/parental-controls-api/v1/parental-controls/get-top-weekly-screentime-by-universe', cookies=self._cookies)).json()
-        for universe in response.get('universeWeeklyScreentimes', {}):
+        for universe in response.get('universeWeeklyScreentimes', []):
             universe_id = universe.get('universeId')
             if universe_id in check_list_places_weekly_playtime:
                 found_places_weekly_playtime[universe_id] = {check_list_places_weekly_playtime[universe_id]: format_duration(universe.get('weeklyMinutes') * 60 * 1000, out_units=set('d', 'h', 'm'))}
