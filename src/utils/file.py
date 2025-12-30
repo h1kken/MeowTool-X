@@ -11,14 +11,16 @@ def log_action(action: str):
         def log_action_wrapper(path: Path, *args, **kwargs):
             try:
                 return func(path, *args, **kwargs)
+            except FileExistsError:
+                logger.info(f'Can\'t {action} \'{path.name}\' that already exists')
             except Exception as e:
-                logger.warning(f'Can\'t {action}: {path.name}. Error: {type(e).__name__}')
+                logger.exception(f'Can\'t {action}: {path.name}. Error: {type(e).__name__}')
         return log_action_wrapper
     return log_action_decorator
 
 @log_action('create folder')
 def create_folder(path: Path, *, parents: bool = True, exist_ok: bool = True) -> None:
-    path.mkdir(parents=parents, exist_ok=False)
+    path.mkdir(parents=parents, exist_ok=exist_ok)
 
 @log_action('delete folder') 
 def delete_folder(path: Path, *, ignore_errors: bool = True) -> None:
@@ -26,7 +28,7 @@ def delete_folder(path: Path, *, ignore_errors: bool = True) -> None:
 
 @log_action('create file')
 def create_file(path: Path, *, exist_ok: bool = True) -> None:
-    path.touch(exist_ok=False)
+    path.touch(exist_ok=exist_ok)
 
 @log_action('create clean file')
 def create_clean_file(path: Path, *, overwrite: bool = True) -> None:
@@ -36,11 +38,24 @@ def create_clean_file(path: Path, *, overwrite: bool = True) -> None:
 @log_action('copy file')
 def copy_file(src: Path, dest: Path, *, overwrite: bool = True) -> None:
     if overwrite or not dest.exists():
-        shutil.copy(src, dest, ignore_errors=True)
+        shutil.copy(src, dest)
 
 @log_action('delete file')
 def delete_file(path: Path, *, missing_ok: bool = True) -> None:
     path.unlink(missing_ok=missing_ok)
+    
+@log_action('create archive')
+def create_archive(path: Path, *, overwrite: bool = True) -> None:
+    if not (overwrite or path.exists()):
+        return
+    
+    path = path.parent / 'archives' / path.name
+    path.mkdir(parents=True, exist_ok=True)
+
+    with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for file_path in path.rglob('*'):
+            if file_path.is_file():
+                zipf.write(file_path, file_path.relative_to(path))
     
 def create_start_folders_and_files() -> None:
     for path in START_PATHS:
@@ -81,17 +96,3 @@ def amount_of_lines(path: Path) -> str:
         return f'{amount} line{'s' if amount != 1 else ''}'
     except Exception:
         return '0 lines'
-    
-async def make_archive(path: Path) -> None:
-    if not path.exists():
-        return
-    
-    path = path.parent / 'archives' / path.name
-    path.mkdir(parents=True, exist_ok=True)
-    try:
-        with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for file_path in path.rglob('*'):
-                if file_path.is_file():
-                    zipf.write(file_path, file_path.relative_to(path))
-    except Exception:
-        logger.warning(f'Can\'t create archive for: {path}')
