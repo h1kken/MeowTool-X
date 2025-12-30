@@ -78,15 +78,6 @@ class MainWindow(QMainWindow):
         config.set('Proxy>Checker>Main Threads', 20)
         config_loader.set('Saver>Auto Save Changes', True)
         
-        
-        ###
-        import random
-        
-        print(random.randint(-1, 0))
-        print(random.randint(0, 0))
-        print(random.randint(0, 1))
-        
-        
         ###
         from src.database.manager import Database
         from src.database.models.roblox.cookie_checker.account import BaseCookieChecker, Account
