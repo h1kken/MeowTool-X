@@ -8,6 +8,7 @@ from src.utils.file import create_folder, create_file
 
 class ConfigLoader(GetConfigMixin, SetConfigMixin, SaveConfigMixin):
     def __init__(self) -> None:
+        self._path = None
         self._data = {}
         self._load()
         

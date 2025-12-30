@@ -14,6 +14,7 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
     
     def __init__(self, filename: str = 'default'):
         super().__init__()
+        self._path = None
         self._data = {}
         self.load(filename)
         
