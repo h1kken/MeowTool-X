@@ -1,7 +1,5 @@
 import sys
 import loguru
-from datetime import datetime
-from pathlib import Path
 from src.utils.consts import IS_LAUNCHED_WITH_CONSOLE, PATH_LOGGER
 from src.utils.ansi import (
     RED,
