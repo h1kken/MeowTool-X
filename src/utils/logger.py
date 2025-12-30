@@ -1,6 +1,8 @@
 import sys
 import loguru
-from src.utils.consts import IS_LAUNCHED_WITH_CONSOLE, PATH_LOGGER
+from pathlib import Path
+from datetime import datetime
+from src.utils.consts import PROGRAM_NAME, IS_LAUNCHED_WITH_CONSOLE, DATE_LOGGER_FORMAT
 from src.utils.ansi import (
     RED,
     YELLOW,
@@ -20,6 +22,7 @@ def patcher(record: dict):
 class Logger:
     def __init__(
         self,
+        name: str = PROGRAM_NAME,
         *,
         stream: bool = IS_LAUNCHED_WITH_CONSOLE,
         level: str = 'DEBUG'
@@ -29,7 +32,7 @@ class Logger:
         
         self._logger.configure(patcher=patcher)
         
-        self._path = PATH_LOGGER
+        self._path = Path('Logs') / f'{name} ({datetime.now().strftime(DATE_LOGGER_FORMAT)}).log'
         self._path.parent.mkdir(parents=True, exist_ok=True)
 
         if stream:
