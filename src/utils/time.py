@@ -1,4 +1,4 @@
-from collections.abc import Collection
+from typing import Collection
 
 
 def format_duration(
