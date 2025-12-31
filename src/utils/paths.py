@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional
 from src.utils.logger import logger
 from src.utils.consts import PATH_FISHSTRAP, PATH_BLOXSTRAP, PATH_ROBLOXPLAYERBETA
-from utils.regex import ROBLOX_VERSION_PATH_PATTERN
+from src.utils.regex import ROBLOX_VERSION_PATH_PATTERN
 
 
 def detect_roblox_path() -> Optional[Path]:
