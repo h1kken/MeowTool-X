@@ -12,8 +12,12 @@ PROGRAM_NAME = 'MeowTool X'
 WINDOW_X = 900
 WINDOW_Y = 500
 
+# special chars
+PROGRAM_NAME_CHARS = {'<', '>', '|', '^', '&'}
+FILENAME_CHARS = {'\\', '/', ':', '*', '?', '"', '<', '>', '|'}
+
 # start paths
-START_PATHS = [
+START_PATHS = [ # TODO: All-In-One
     Path('Proxy', 'Checker', 'proxies.txt'),
     Path('Roblox', 'proxies.txt'),
     Path('Roblox', 'Cookie Sorter'),
@@ -25,6 +29,10 @@ START_PATHS = [
     # Path('Roblox', 'Time Booster', 'cookies.txt'),
     # Path('Roblox', 'Robux Transfer', 'cookies.txt)
 ]
+
+# date formats
+DATE_FORMAT = '%d.%m.%Y'
+DATE_TIME_FORMAT = '%d.%m.%Y %H:%M:%S'
 
 # system paths
 ROOT = Path(sys._MEIPASS).resolve() if getattr(sys, '_MEIPASS', None) else Path(__file__).resolve().parents[2]
@@ -54,6 +62,7 @@ ITEMS_PER_PAGE_PLACE_SERVER_IDS = 50
 BADGES_COUNT_LIMIT = 100
 
 # roblox
+ROBLOX_COOKIE_START = '_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|_'
 ROBLOX_REG_DATE_FORMAT = '%d.%m.%Y'
 ROBLOX_DATE_FORMATS = [
     '%Y-%m-%dT%H:%M:%S.%fZ',
@@ -63,7 +72,6 @@ ROBLOX_AGE_GROUP_MAPPING = {
     'over'  : '+',
     'under' : '-'
 }
-
 ROBLOX_PRIVACY_MAPPING = {
     'AllUsers'                     : 'Everyone',
     'FriendsFollowingAndFollowers' : 'Friends & Followings & Followers',
@@ -88,7 +96,7 @@ COUNTRY_CODES = {
     'AU': 'Australia',
     'AT': 'Austria',
     'AZ': 'Azerbaijan',
-    'BS': 'Bahamas (the)',
+    'BS': 'Bahamas',
     'BH': 'Bahrain',
     'BD': 'Bangladesh',
     'BB': 'Barbados',
@@ -104,7 +112,7 @@ COUNTRY_CODES = {
     'BW': 'Botswana',
     'BV': 'Bouvet Island',
     'BR': 'Brazil',
-    'IO': 'British Indian Ocean Territory (the)',
+    'IO': 'British Indian Ocean Territory',
     'BN': 'Brunei Darussalam',
     'BG': 'Bulgaria',
     'BF': 'Burkina Faso',
@@ -113,18 +121,18 @@ COUNTRY_CODES = {
     'KH': 'Cambodia',
     'CM': 'Cameroon',
     'CA': 'Canada',
-    'KY': 'Cayman Islands (the)',
-    'CF': 'Central African Republic (the)',
+    'KY': 'Cayman Islands',
+    'CF': 'Central African Republic',
     'TD': 'Chad',
     'CL': 'Chile',
     'CN': 'China',
     'CX': 'Christmas Island',
-    'CC': 'Cocos (Keeling) Islands (the)',
+    'CC': 'Cocos (Keeling) Islands',
     'CO': 'Colombia',
-    'KM': 'Comoros (the)',
+    'KM': 'Comoros',
     'CD': 'Congo (the Democratic Republic of the)',
-    'CG': 'Congo (the)',
-    'CK': 'Cook Islands (the)',
+    'CG': 'Congo',
+    'CK': 'Cook Islands',
     'CR': 'Costa Rica',
     'HR': 'Croatia',
     'CU': 'Cuba',
@@ -135,7 +143,7 @@ COUNTRY_CODES = {
     'DK': 'Denmark',
     'DJ': 'Djibouti',
     'DM': 'Dominica',
-    'DO': 'Dominican Republic (the)',
+    'DO': 'Dominican Republic',
     'EC': 'Ecuador',
     'EG': 'Egypt',
     'SV': 'El Salvador',
@@ -144,16 +152,16 @@ COUNTRY_CODES = {
     'EE': 'Estonia',
     'SZ': 'Eswatini',
     'ET': 'Ethiopia',
-    'FK': 'Falkland Islands (the) [Malvinas]',
-    'FO': 'Faroe Islands (the)',
+    'FK': 'Falkland Islands [Malvinas]',
+    'FO': 'Faroe Islands',
     'FJ': 'Fiji',
     'FI': 'Finland',
     'FR': 'France',
     'GF': 'French Guiana',
     'PF': 'French Polynesia',
-    'TF': 'French Southern Territories (the)',
+    'TF': 'French Southern Territories',
     'GA': 'Gabon',
-    'GM': 'Gambia (the)',
+    'GM': 'Gambia',
     'GE': 'Georgia',
     'DE': 'Germany',
     'GH': 'Ghana',
@@ -170,7 +178,7 @@ COUNTRY_CODES = {
     'GY': 'Guyana',
     'HT': 'Haiti',
     'HM': 'Heard Island and McDonald Islands',
-    'VA': 'Holy See (the)',
+    'VA': 'Holy See',
     'HN': 'Honduras',
     'HK': 'Hong Kong',
     'HU': 'Hungary',
@@ -193,7 +201,7 @@ COUNTRY_CODES = {
     'KR': 'Korea (the Republic of)',
     'KW': 'Kuwait',
     'KG': 'Kyrgyzstan',
-    'LA': 'Lao People\'s Democratic Republic (the)',
+    'LA': 'Lao People\'s Democratic Republic',
     'LV': 'Latvia',
     'LB': 'Lebanon',
     'LS': 'Lesotho',
@@ -209,7 +217,7 @@ COUNTRY_CODES = {
     'MV': 'Maldives',
     'ML': 'Mali',
     'MT': 'Malta',
-    'MH': 'Marshall Islands (the)',
+    'MH': 'Marshall Islands',
     'MQ': 'Martinique',
     'MR': 'Mauritania',
     'MU': 'Mauritius',
@@ -227,15 +235,15 @@ COUNTRY_CODES = {
     'NA': 'Namibia',
     'NR': 'Nauru',
     'NP': 'Nepal',
-    'NL': 'Netherlands (the)',
+    'NL': 'Netherlands',
     'NC': 'New Caledonia',
     'NZ': 'New Zealand',
     'NI': 'Nicaragua',
-    'NE': 'Niger (the)',
+    'NE': 'Niger',
     'NG': 'Nigeria',
     'NU': 'Niue',
     'NF': 'Norfolk Island',
-    'MP': 'Northern Mariana Islands (the)',
+    'MP': 'Northern Mariana Islands',
     'NO': 'Norway',
     'OM': 'Oman',
     'PK': 'Pakistan',
@@ -245,7 +253,7 @@ COUNTRY_CODES = {
     'PG': 'Papua New Guinea',
     'PY': 'Paraguay',
     'PE': 'Peru',
-    'PH': 'Philippines (the)',
+    'PH': 'Philippines',
     'PN': 'Pitcairn',
     'PL': 'Poland',
     'PT': 'Portugal',
@@ -253,7 +261,7 @@ COUNTRY_CODES = {
     'QA': 'Qatar',
     'MK': 'Republic of North Macedonia',
     'RO': 'Romania',
-    'RU': 'Russian Federation (the)',
+    'RU': 'Russian Federation',
     'RW': 'Rwanda',
     'RE': 'Réunion',
     'BL': 'Saint Barthélemy',
@@ -282,7 +290,7 @@ COUNTRY_CODES = {
     'SS': 'South Sudan',
     'ES': 'Spain',
     'LK': 'Sri Lanka',
-    'SD': 'Sudan (the)',
+    'SD': 'Sudan',
     'SR': 'Suriname',
     'SJ': 'Svalbard and Jan Mayen',
     'SE': 'Sweden',
@@ -300,14 +308,14 @@ COUNTRY_CODES = {
     'TN': 'Tunisia',
     'TR': 'Turkey',
     'TM': 'Turkmenistan',
-    'TC': 'Turks and Caicos Islands (the)',
+    'TC': 'Turks and Caicos Islands',
     'TV': 'Tuvalu',
     'UG': 'Uganda',
     'UA': 'Ukraine',
-    'AE': 'United Arab Emirates (the)',
-    'GB': 'United Kingdom of Great Britain and Northern Ireland (the)',
-    'UM': 'United States Minor Outlying Islands (the)',
-    'US': 'United States of America (the)',
+    'AE': 'United Arab Emirates',
+    'GB': 'United Kingdom of Great Britain and Northern Ireland',
+    'UM': 'United States Minor Outlying Islands',
+    'US': 'United States of America',
     'UY': 'Uruguay',
     'UZ': 'Uzbekistan',
     'VU': 'Vanuatu',
