@@ -2,10 +2,11 @@ import sys
 import loguru
 from pathlib import Path
 from datetime import datetime
-from src.utils.consts import PROGRAM_NAME, IS_LAUNCHED_WITH_CONSOLE, DATE_LOGGER_FORMAT
+from src.utils.consts import PROGRAM_NAME, ASCII_MEOWTOOL, IS_LAUNCHED_WITH_CONSOLE, DATE_LOGGER_FORMAT
 from src.utils.ansi import (
     RED,
     YELLOW,
+    PINK,
     LIGHTGREEN,
     LIGHTYELLOW,
     LIGHTCYAN,
@@ -57,7 +58,7 @@ class Logger:
                 format=_logger_console_format,
                 colorize=True
             )
-            self._logger.debug(f'{RED}[!] PROGRAM IS LAUNCHED IN TESTING MODE [!]{CLEAR}')
+            self._logger.debug(f'{RED}[!] PROGRAM IS LAUNCHED IN TESTING MODE [!]\n{PINK}{ASCII_MEOWTOOL}{CLEAR}')
 
         _logger_file_format = (
             '{time:HH:mm:ss.SSS} | '
