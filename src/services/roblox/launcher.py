@@ -1,5 +1,5 @@
-from utils.date import current_time_in_ms
-from utils.string import generate_browser_tracker_id, encode_string_to_url
+from src.utils.date import current_date_timestamp
+from src.utils.string import generate_browser_tracker_id, encode_string_to_url
 from src.services.roblox.account import RobloxAccount
 
 
@@ -8,7 +8,7 @@ class RobloxLauncher:
         self._launchers = {}
         
     def launch(self, auth_ticket: str, place_id: str, server_id: str):
-        launch_time = current_time_in_ms()
+        launch_time = current_date_timestamp()
         browser_tracker_id = generate_browser_tracker_id()
         
         launch_url =  f'https://assetgame.roblox.com/game/PlaceLauncher.ashx?request=RequestGame&placeId={place_id}&gameId={server_id}&isPlayTogetherGame=false&isTeleport=true'
