@@ -87,9 +87,9 @@ def amount_of_lines(path: Path) -> str:
 
 def validate_filename(path: Path, black_list: Collection[str], default: str) -> Path:
     if (
-        not path.stem or
-        any(name == path.stem for name in black_list) or
-        any(char in path.stem for char in FILENAME_CHARS)
+        not path.stem
+        or any(name == path.stem for name in black_list)
+        or any(char in path.stem for char in FILENAME_CHARS)
     ):
         return path.parent / default
     return path
