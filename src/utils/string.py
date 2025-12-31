@@ -2,7 +2,7 @@ import random
 import re
 import emoji
 from urllib.parse import quote
-from utils.regex import FILENAME_SPECIAL_CHARS_PATTERN, ROBLOX_AGE_GROUP_PATTERN
+from src.utils.regex import FILENAME_SPECIAL_CHARS_PATTERN, ROBLOX_AGE_GROUP_PATTERN
 from src.utils.consts import ROBLOX_AGE_GROUP_MAPPING
 from src.utils.logger import logger
 
