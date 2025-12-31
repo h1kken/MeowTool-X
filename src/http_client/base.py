@@ -5,6 +5,7 @@ from typing import Any, Optional
 from src.utils.logger import logger
 from src.exceptions.roblox import InvalidCookie, AccountBanned
 from src.utils.consts import HTTP_CLIENT_MAX_RETRIES
+from src.utils.decorators import log_network_request
 
 
 class BaseHttpClient:
@@ -65,23 +66,30 @@ class BaseHttpClient:
     async def _handle_response(self, method: str, url: str, response: ClientResponse) -> Optional[ClientResponse]:
         ...
     
+    # @log_network_request()
     # async def options(self, url: str, **kwargs: Any):
     #     return await self._request('options', url, **kwargs)
         
+    @log_network_request()
     async def get(self, url: str, **kwargs: Any):
         return await self._request('get', url, **kwargs)
     
+    @log_network_request()
     async def post(self, url: str, **kwargs: Any):
         return await self._request('post', url, **kwargs)
     
+    # @log_network_request()
     # async def head(self, url: str, **kwargs: Any):
     #     return await self._request('head', url, **kwargs)
     
+    # @log_network_request()
     # async def put(self, url: str, **kwargs: Any):
     #     return await self._request('put', url, **kwargs)
     
+    # @log_network_request()
     # async def patch(self, url: str, **kwargs: Any):
     #     return await self._request('patch', url, **kwargs)
     
+    # @log_network_request()
     # async def delete(self, url: str, **kwargs: Any):
     #     return await self._request('delete', url, **kwargs)
