@@ -1,22 +1,10 @@
 import shutil
-from typing import Optional, Any
+from typing import Collection, Optional, Any
 import zipfile
 from pathlib import Path
-from src.utils.consts import START_PATHS
-from src.utils.logger import logger
+from src.utils.consts import FILENAME_CHARS, START_PATHS
+from src.utils.decorators import log_action
 
-
-def log_action(action: str):
-    def log_action_decorator(func):
-        def log_action_wrapper(path: Path, *args, **kwargs):
-            try:
-                return func(path, *args, **kwargs)
-            except FileExistsError:
-                logger.info(f'Can\'t {action} \'{path.name}\' that already exists')
-            except Exception as e:
-                logger.exception(f'Can\'t {action}: {path.name}. Error: {type(e).__name__}')
-        return log_action_wrapper
-    return log_action_decorator
 
 @log_action('create folder')
 def create_folder(path: Path, *, parents: bool = True, exist_ok: bool = True) -> None:
@@ -96,3 +84,12 @@ def amount_of_lines(path: Path) -> str:
         return f'{amount} line{'s' if amount != 1 else ''}'
     except Exception:
         return '0 lines'
+
+def validate_filename(path: Path, black_list: Collection[str], default: str) -> Path:
+    if (
+        not path.stem or
+        any(name == path.stem for name in black_list) or
+        any(char in path.stem for char in FILENAME_CHARS)
+    ):
+        return path.parent / default
+    return path
