@@ -1,9 +1,9 @@
 import time
 import functools
 from pathlib import Path
-from aiohttp import ClientResponse
-from src.utils.logger import logger
 from typing import Callable, Awaitable, Any
+from aiohttp import ClientResponse
+from src.utils.logging import logger
 
 
 def log_action(action: str):
@@ -13,11 +13,12 @@ def log_action(action: str):
             try:
                 return func(path, *args, **kwargs)
             except FileExistsError:
-                logger.info(f'Can\'t {action} \'{path.name}\' that already exists')
+                logger.debug(f'Can\'t {action} \'{path}\' that already exists')
             except Exception as e:
-                logger.exception(f'Can\'t {action}: {path.name}. Error: {type(e).__name__}')
+                logger.exception(f'Can\'t {action}: {path}. Error: {type(e).__name__}')
         return log_action_wrapper
     return log_action_decorator
+
 
 def log_network_request(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
     @functools.wraps(func)
