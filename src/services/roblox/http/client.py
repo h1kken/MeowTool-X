@@ -1,7 +1,7 @@
 import asyncio
 from typing import Optional
 from aiohttp import ClientResponse
-from src.utils.logger import logger
+from src.utils.logging import logger
 from src.http_client.base import BaseHttpClient
 from src.exceptions.roblox import InvalidCookie, AccountBanned
 
