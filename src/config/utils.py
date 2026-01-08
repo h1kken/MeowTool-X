@@ -1,5 +1,6 @@
-import ast
 from typing import Optional, Any
+from src.utils.string import safe_literal_eval
+
 
 def parse_config(text: str) -> dict:
     parsed = {}
@@ -14,7 +15,7 @@ def parse_config(text: str) -> dict:
 
         if ':' in line:
             key, value = map(str.strip, line.split(':', 1))
-            stack[-1][0][key] = literal_eval(value)
+            stack[-1][0][key] = safe_literal_eval(value)
         else:
             while stack and stack[-1][1] >= indent:
                 stack.pop()
@@ -23,6 +24,7 @@ def parse_config(text: str) -> dict:
             stack.append((new_dict, indent))
             
     return parsed
+
 
 def validate_config(user_config: dict, default_config: dict, *, recovery_not_changed: bool = False) -> dict:
     validated = {}
@@ -49,13 +51,8 @@ def validate_config(user_config: dict, default_config: dict, *, recovery_not_cha
 
     return validated
 
-def literal_eval(value: str):
-    try:
-        return ast.literal_eval(value)
-    except (ValueError, SyntaxError):
-        return value
 
-def convert_to_bool(user_value: str) -> str | bool:
+def convert_to_bool(user_value: str) -> bool | str:
     low = user_value.strip().lower()
     if low in ('true', 'yes', 'да', 'on', '+'):
         return True
@@ -63,6 +60,7 @@ def convert_to_bool(user_value: str) -> str | bool:
         return False
     else:
         return user_value
+
 
 def convert_value(user_value: Optional[Any] = None, default_value: Optional[Any] = None) -> dict:
     if default_value is not None:

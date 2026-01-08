@@ -4,9 +4,9 @@ from src.config.utils import parse_config, validate_config
 from src.config.mixin import GetConfigMixin, SetConfigMixin, SaveConfigMixin
 from src.config.loader import config_loader
 from src.utils.pyside6 import emit
-from src.utils.logger import logger
+from src.utils.logging import logger
 from src.utils.consts import PATH_CONFIGS
-from src.utils.file import create_folder, create_file, create_clean_file, delete_file
+from src.utils.filesystem import create_folder, create_file, create_clean_file, delete_file
 
 
 class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
