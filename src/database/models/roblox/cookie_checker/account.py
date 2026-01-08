@@ -57,5 +57,6 @@ class Account(BaseCookieChecker):
     def __repr__(self) -> str:
         return f'<Account[{self.id}]: {self.p_id} | {self.p_display_name} (@{self.p_name}) | {self.p_valid}>'
 
+
 Index('idx_p_id', Account.p_id)
 Index('idx_p_name', Account.p_name)
