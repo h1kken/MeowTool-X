@@ -1,14 +1,18 @@
 class RobloxException(Exception):
     ...
-    
+
+
 class InvalidCookie(RobloxException):
     ...
+
 
 class AccountBanned(RobloxException):
     ...
 
+
 class AccountDuplicate(RobloxException):
     ...
-    
+
+
 class RegisteredEarlier(RobloxException):
     ...

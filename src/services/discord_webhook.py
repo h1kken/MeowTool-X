@@ -1,7 +1,7 @@
 from discord_webhook import DiscordWebhook, DiscordEmbed
 from pathlib import Path
 from requests.exceptions import InvalidURL, InvalidSchema, MissingSchema
-from src.utils.logger import logger
+from src.utils.logging import logger
 from src.translation.manager import translator as t
 
 DISCORD_WEBHOOK_ERRORS = {

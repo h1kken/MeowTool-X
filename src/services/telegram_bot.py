@@ -1,5 +1,5 @@
 from pathlib import Path
-from src.utils.logger import logger
+from src.utils.logging import logger
 from aiogram import Bot
 from typing import Optional
 from aiogram.types import FSInputFile
