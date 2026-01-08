@@ -2,7 +2,7 @@ import re
 
 
 ROBLOX_COOKIE_PATTERN = re.compile(
-    r'_\|(?:_|[^\s\r\n]*?\|_)\S{100,}'
+    r'_\|(?:_|[^\s\r\n]*\|_)\S{100,}'
 )
 
 ROBLOX_VERSION_PATH_PATTERN = re.compile(
