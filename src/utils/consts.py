@@ -9,14 +9,14 @@ VERSION = 'v1.0.0'
 PROGRAM_NAME = 'MeowTool X'
 
 # ASCII MeowTool art
-COUNT_UPPER_LINE = 124
-COUNT_LOWER_LINE = 103
+COUNT_UPPER_LINE = 125
+COUNT_LOWER_LINE = 104
 ASCII_MEOWTOOL = rf'''
 {'‾' * COUNT_UPPER_LINE}
     __    __     ______     ______     __     __     ______    ______     ______     __            __  __
    ╱╲ "─.╱  ╲   ╱╲  ___╲   ╱╲  __ ╲   ╱╲ ╲  _ ╲ ╲   ╱╲__  _╲  ╱╲  __ ╲   ╱╲  __ ╲   ╱╲ ╲          ╱╲_╲_╲_╲
    ╲ ╲ ╲─.╱╲ ╲  ╲ ╲  __╲   ╲ ╲ ╲ ╲ ╲  ╲ ╲ ╲╱ ".╲ ╲  ╲╱_╱╲ ╲╱  ╲ ╲ ╲ ╲ ╲  ╲ ╲ ╲ ╲ ╲  ╲ ╲ ╲         ╲╱_╱╲_╲╱
-    ╲ ╲ ╲ ╲ ╲ ╲  ╲ ╲    ‾╲  ╲ ╲ ‾‾  ╲  ╲ ╲ _╱".~╲ ╲    ╲ ╲ ╲   ╲ ╲ ‾‾  ╲  ╲ ╲ ‾‾  ╲  ╲ ╲ ‾‾‾‾╲      ╱╲‾╲╱╲‾╲
+    ╲ ╲ ╲ ╲ ╲ ╲  ╲ ╲    ‾╲  ╲ ╲ ‾‾  ╲  ╲ ╲ .╱".~╲ ╲    ╲ ╲ ╲   ╲ ╲ ‾‾  ╲  ╲ ╲ ‾‾  ╲  ╲ ╲ ‾‾‾‾╲      ╱╲‾╲╱╲‾╲
      ╲╱‾╱  ╲╱‾╱   ╲╱‾‾‾‾‾╱   ╲╱‾‾‾‾‾╱   ╲╱‾╱   ╲╱‾╱     ╲╱‾╱    ╲╱‾‾‾‾‾╱   ╲╱‾‾‾‾‾╱   ╲╱‾‾‾‾‾╱      ╲╱‾╱╲╱‾╱
       ‾‾    ‾‾     ‾‾‾‾‾‾     ‾‾‾‾‾‾     ‾‾     ‾‾       ‾‾      ‾‾‾‾‾‾     ‾‾‾‾‾‾     ‾‾‾‾‾‾        ‾‾  ‾‾
 {'_' * COUNT_LOWER_LINE}
@@ -27,21 +27,21 @@ WINDOW_X = 900
 WINDOW_Y = 500
 
 # special chars
-PROGRAM_NAME_CHARS = {'<', '>', '|', '^', '&'}
-FILENAME_CHARS = {'\\', '/', ':', '*', '?', '"', '<', '>', '|'}
+PROGRAM_NAME_SPECIAL_CHARS = {'<', '>', '|', '^', '&'}
+FILENAME_SPECIAL_CHARS = {'\\', '/', ':', '*', '?', '"', '<', '>', '|'}
 
 # start paths
 START_PATHS = [ # TODO: All-In-One
-    Path('Proxy', 'Checker', 'proxies.txt'),
-    Path('Roblox', 'proxies.txt'),
-    Path('Roblox', 'Cookie Sorter'),
-    Path('Roblox', 'Cookie Checker', 'cookies.txt'),
-    # Path('Roblox', 'LogPass Checker', 'LogPasses.txt'),
-    # Path('Roblox', 'Game Checker', 'cookies.txt'),
-    Path('Roblox', 'Cookie Refresher', 'Mass Mode', 'cookies.txt'),
-    Path('Roblox', 'Transaction Analysis', 'cookies.txt'),
-    # Path('Roblox', 'Time Booster', 'cookies.txt'),
-    # Path('Roblox', 'Robux Transfer', 'cookies.txt)
+    (Path('Proxy', 'Checker', 'proxies.txt'), 'file'),
+    (Path('Roblox', 'proxies.txt'), 'file'),
+    (Path('Roblox', 'Cookie Sorter'), 'dir'),
+    (Path('Roblox', 'Cookie Checker', 'cookies.txt'), 'file'),
+    # (Path('Roblox', 'LogPass Checker', 'LogPasses.txt'), 'file'),
+    # (Path('Roblox', 'Game Checker', 'cookies.txt'), 'file'),
+    (Path('Roblox', 'Cookie Refresher', 'Mass Mode', 'cookies.txt'), 'file'),
+    (Path('Roblox', 'Transaction Analysis', 'cookies.txt'), 'file'),
+    # (Path('Roblox', 'Time Booster', 'cookies.txt'), 'file'),
+    # (Path('Roblox', 'Robux Transfer', 'cookies.txt'), 'file'),
 ]
 
 # date formats
@@ -82,11 +82,11 @@ ROBLOX_DATE_FORMATS = [
     '%Y-%m-%dT%H:%M:%S.%fZ',
     '%Y-%m-%dT%H:%M:%SZ'
 ]
-ROBLOX_AGE_GROUP_MAPPING = {
+ROBLOX_AGE_GROUP_KEYMAP = {
     'over'  : '+',
     'under' : '-'
 }
-ROBLOX_PRIVACY_MAPPING = {
+ROBLOX_PRIVACY_KEYMAP = {
     'AllUsers'                     : 'Everyone',
     'FriendsFollowingAndFollowers' : 'Friends & Followings & Followers',
     'FriendsAndFollowing'          : 'Friends & Followings',
@@ -94,7 +94,7 @@ ROBLOX_PRIVACY_MAPPING = {
     'NoOne'                        : 'No One'
 }
 
-COUNTRY_CODES = {
+COUNTRY_CODES_KEYMAP = {
     'AF': 'Afghanistan',
     'AL': 'Albania',
     'DZ': 'Algeria',
@@ -364,3 +364,7 @@ HTTP_CLIENT_MAX_RETRIES = 5
 
 # other
 IS_LAUNCHED_WITH_CONSOLE = sys.stdout.isatty()
+
+
+
+DATE_ROBLOX_COOKIE_SORTER_FORMAT = '%d.%m.%Y %H.%M.%S'
