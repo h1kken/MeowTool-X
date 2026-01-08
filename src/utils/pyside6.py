@@ -1,5 +1,5 @@
 import re
-from src.utils.logger import logger
+from src.utils.logging import logger
 from src.utils.regex import SIGNAL_NAME_PATTERN
 
 
