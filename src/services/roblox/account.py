@@ -5,12 +5,11 @@ from aiohttp import ClientResponse
 from src.services.roblox.http.client import RobloxHttpClient
 from src.exceptions.roblox import InvalidCookie
 from src.utils.regex import ROBLOX_COOKIE_PATTERN
-from src.utils.time import format_duration
-from src.utils.date import convert_date, timestamp_to_local_date
+from src.utils.datetime import convert_date, timestamp_to_local_date, format_duration
 from src.utils.string import convert_age_group
 from src.utils.other import chunked
 from src.utils.consts import (
-    COUNTRY_CODES,
+    COUNTRY_CODES_KEYMAP,
     DATE_TIME_FORMAT,
     ROBLOX_REG_DATE_FORMAT,
     TIME_FRAME_TRANSACTIONS,
@@ -96,7 +95,7 @@ class RobloxAccount:
         return {
             'Country Registration': {
                 'code': country_code,
-                'name': COUNTRY_CODES.get(country_code)
+                'name': COUNTRY_CODES_KEYMAP.get(country_code)
             }
         }
     
@@ -108,7 +107,7 @@ class RobloxAccount:
         return {'Registration Date (In Days)': self._account_information.get('AccountAgeInDays')}
 
     async def get_robux(self) -> int:
-        response: dict = await (await self._session.get(f'{RobloxAPI.ECONOMY}/v1/users/{self._player_id}/currency')).json()
+        response: dict = await (await self._session.get(f'{RobloxAPI.ECONOMY}/v1/user/currency')).json()
         return {'Robux': response.get('robux')}
     
     async def get_billing(self) -> int:
@@ -128,14 +127,16 @@ class RobloxAccount:
         
     # async def get_transactions_all_time( # TODO
     #     self,
-    #     check_list_custom_gamepasses: dict[str, int],
-    #     max_page_donate_all_time: int,
-    #     max_page_custom_gamepasses: int,
+    #     check_list_custom_gamepasses: Collection[str],
+    #     max_page_donate_all_time: int = -1,
+    #     max_page_custom_gamepasses: int = -1,
     #     *,
     #     items_per_page: Literal[5, 10, 25, 50, 100] = ITEMS_PER_PAGE_TRANSACTIONS_ALL_TIME
     # ) -> dict:
+    #     is_check_donate_all_time = config.get('Roblox>Cookie Checker>Main>Donate (All Time)')
+    #     is_check_custom_gamepasses = config.get('Roblox>Cookie Checker>Main>Custom Gamepasses')
     #     donate_all_time = 0
-    #     found_custom_gamepasses = deepcopy(check_list_custom_gamepasses)
+    #     found_custom_gamepasses = {name: 0 for name in check_list_custom_gamepasses}
     #     max_page = max(max_page_donate_all_time, max_page_custom_gamepasses)
     #     cur_page = 0
     #     params = {
@@ -143,19 +144,27 @@ class RobloxAccount:
     #         'limit': items_per_page,
     #         'cursor': ''
     #     }
-    #     while params.get('cursor') is not None and cur_page != max_page:
-    #         response: dict = (await self._session.get(f'https://economy.roblox.com/v2/users/{self._player_id}/transactions', params=params, cookies=self._cookies)).json()
+    #     while params['cursor'] is not None and cur_page != max_page:
+    #         response: dict = (await self._session.get(f'{RobloxAPI.ECONOMY}/v2/users/{self._player_id}/transactions', params=params, cookies=self._cookies)).json()
     #         for transaction in response.get('data', []):
-    #             if config.get('Roblox.Cookie_Checker.Main.Donate_All_Time') and (max_page_donate_all_time == -1 or cur_page < max_page_donate_all_time):
+    #             if (
+    #                 is_check_donate_all_time
+    #                 and (max_page_donate_all_time == -1 or cur_page < max_page_donate_all_time)
+    #             ):
     #                 donate_all_time += transaction.get('currency', {}).get('amount', 0)
-    #             if config.get('Roblox.Cookie_Checker.Main.Custom_Gamepasses') and 'name' in transaction['details'] and transaction['details']['name'] in ... and (max_page_custom_gamepasses == -1 or cur_page < max_page_custom_gamepasses):
+
+    #             if (
+    #                 is_check_custom_gamepasses
+    #                 and transaction.get('details', {}).get('name') in found_custom_gamepasses
+    #                 and (max_page_custom_gamepasses == -1 or cur_page < max_page_custom_gamepasses)
+    #             ):
     #                 check_list_custom_gamepasses[transaction['details']['name']] += 1
     #         params['cursor'] = response.get('nextPageCursor')
     #         cur_page += 1
             
     #     return {
-    #         'donate_all_time': abs(donate_all_time),
-    #         'custom_gamepasses': check_list_custom_gamepasses
+    #         'Donate (All Time)': abs(donate_all_time),
+    #         'Custom Gamepasses': check_list_custom_gamepasses
     #     }
     
     async def get_rap(
