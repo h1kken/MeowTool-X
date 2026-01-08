@@ -2,14 +2,14 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal
 from src.config.manager import config
 from src.utils.pyside6 import emit
-from src.utils.logger import logger
+from src.utils.logging import logger
 from src.utils.consts import (
     PATH_TRANSLATIONS_USER,
     PATH_TRANSLATIONS_SOURCE,
     SYSTEM_LOCALE,
     CONFIG_COMMENT_SYMBOLS
 )
-from src.utils.file import create_folder, copy_file
+from src.utils.filesystem import create_folder, copy_file
 
 
 class TranslationManager(QObject):
@@ -35,7 +35,6 @@ class TranslationManager(QObject):
                 return path
             
         logger.warning(f'Translation not found. Using default: {SYSTEM_LOCALE}')
-        # config.set('General>Language', SYSTEM_LOCALE)
         return PATH_TRANSLATIONS_SOURCE / f'{SYSTEM_LOCALE.lower()}.axis'
 
     def load_language(self, filename: str) -> None:
@@ -45,7 +44,8 @@ class TranslationManager(QObject):
         try:
             with open(self._path, 'r', encoding='utf-8', errors='ignore') as file:
                 for line in file:
-                    if line and line[0] not in CONFIG_COMMENT_SYMBOLS and '=' in line:
+                    line = line.strip()
+                    if line and not line.startswith(CONFIG_COMMENT_SYMBOLS) and '=' in line:
                         key, label = line.split('=', 1)
                         self._translations[key.strip()] = label.strip()
             emit(self.language_changed)
@@ -55,7 +55,7 @@ class TranslationManager(QObject):
         except Exception as e:
             logger.exception(f'Translation can\'t be initialized. Error: {e}')
 
-    def create_my_own_language(self, to_language: str, from_language: str) -> None:
+    def create_language(self, to_language: str, from_language: str) -> None:
         new_path = PATH_TRANSLATIONS_USER / f'{to_language}.axis'
         if new_path.exists():
             return
