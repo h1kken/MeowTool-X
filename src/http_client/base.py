@@ -2,7 +2,7 @@ import random
 import asyncio
 from aiohttp import TCPConnector, ClientSession, ClientTimeout, ClientResponse
 from typing import Any, Optional
-from src.utils.logger import logger
+from src.utils.logging import logger
 from src.exceptions.roblox import InvalidCookie, AccountBanned
 from src.utils.consts import HTTP_CLIENT_MAX_RETRIES
 from src.utils.decorators import log_network_request
