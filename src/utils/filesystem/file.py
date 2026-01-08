@@ -1,8 +1,9 @@
+import mmap
 import shutil
-from typing import Collection, Optional, Any
 import zipfile
 from pathlib import Path
-from src.utils.consts import FILENAME_CHARS, START_PATHS
+from typing import Collection, Optional, Any
+from src.utils.consts import FILENAME_SPECIAL_CHARS, START_PATHS
 from src.utils.decorators import log_action
 
 
@@ -10,28 +11,34 @@ from src.utils.decorators import log_action
 def create_folder(path: Path, *, parents: bool = True, exist_ok: bool = True) -> None:
     path.mkdir(parents=parents, exist_ok=exist_ok)
 
+
 @log_action('delete folder') 
 def delete_folder(path: Path, *, ignore_errors: bool = True) -> None:
     shutil.rmtree(path, ignore_errors=ignore_errors)
 
+
 @log_action('create file')
 def create_file(path: Path, *, exist_ok: bool = True) -> None:
     path.touch(exist_ok=exist_ok)
+
 
 @log_action('create clean file')
 def create_clean_file(path: Path, *, overwrite: bool = True) -> None:
     if overwrite or not path.exists():
         open(path, 'w').close()
 
+
 @log_action('copy file')
 def copy_file(src: Path, dest: Path, *, overwrite: bool = True) -> None:
     if overwrite or not dest.exists():
         shutil.copy(src, dest)
 
+
 @log_action('delete file')
 def delete_file(path: Path, *, missing_ok: bool = True) -> None:
     path.unlink(missing_ok=missing_ok)
-    
+
+
 @log_action('create archive')
 def create_archive(path: Path, *, overwrite: bool = True) -> None:
     if not (overwrite or path.exists()):
@@ -44,12 +51,17 @@ def create_archive(path: Path, *, overwrite: bool = True) -> None:
         for file_path in path.rglob('*'):
             if file_path.is_file():
                 zipf.write(file_path, file_path.relative_to(path))
-    
+
+
 def create_start_folders_and_files() -> None:
-    for path in START_PATHS:
-        create_folder(path.parent)
-        if path.suffix:
-            create_file(path)
+    for path, kind in START_PATHS:
+        match kind:
+            case 'dir':
+                create_folder(path, exist_ok=False)
+            case 'file':
+                create_folder(path.parent, exist_ok=False)
+                create_file(path, exist_ok=False)
+
 
 def get_safe(data: dict, key: str, *, sep: str = '>', default: Optional[Any] = None):
     keys = key.split(sep)
@@ -60,6 +72,7 @@ def get_safe(data: dict, key: str, *, sep: str = '>', default: Optional[Any] = N
         current = current[key]
     return current
 
+
 def set_safe(data: dict, key: str, value: Any, *, sep: str = '>') -> None:
     keys = key.split(sep)
     current = data
@@ -69,27 +82,46 @@ def set_safe(data: dict, key: str, value: Any, *, sep: str = '>') -> None:
         current = current[key]
     current[keys[-1]] = value
 
+
 def get_files_from_folder(path: Path, *, only_files: bool = True) -> list[str]:
     if not path.is_dir():
-        raise NotADirectoryError(f'Path is not a directory: {path}')
+        raise NotADirectoryError
     if not path.exists():
-        return []
+        raise FileExistsError
     
     return [dir.name for dir in path.iterdir() if dir.is_file() or not only_files]
 
-def amount_of_lines(path: Path) -> str:
-    try:
-        with open(path, 'r', encoding='UTF-8', errors='ignore') as file:
-            amount = sum(1 for _ in file)
-        return f'{amount} line{'s' if amount != 1 else ''}'
-    except Exception:
-        return '0 lines'
 
-def validate_filename(path: Path, black_list: Collection[str], default: str) -> Path:
+def count_lines_in_file(path: Path) -> int:
+    with open(path, 'rb') as f:
+        if f.seek(0, 2) == 0:
+            return 0
+        f.seek(0)
+        
+        with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mm:
+            count = 0
+            pos = 0
+
+            while True:
+                pos = mm.find(b'\n', pos)
+                if pos == -1:
+                    break
+                count += 1
+                pos += 1
+                
+        if count > 0:
+            f.seek(-1, 2)
+            if f.read(1) != b'\n':
+                count += 1
+
+    return count
+
+
+def validate_filename(filename: str, *, black_list: Collection[str] = [], default: str = 'output') -> str:
     if (
-        not path.stem
-        or any(name == path.stem for name in black_list)
-        or any(char in path.stem for char in FILENAME_CHARS)
+        not filename
+        or filename in black_list
+        or any(char in filename for char in FILENAME_SPECIAL_CHARS)
     ):
-        return path.parent / default
-    return path
+        return default
+    return filename

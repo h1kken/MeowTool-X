@@ -15,7 +15,7 @@ def format_duration(
     
     parts = {}
     for key in units.keys():
-        if key in out_units or (isinstance(out_units, str) and 'all' == out_units):
+        if key in out_units or (isinstance(out_units, str) and 'all' == out_units.lower()):
             parts[key] = units[key]
 
     return parts

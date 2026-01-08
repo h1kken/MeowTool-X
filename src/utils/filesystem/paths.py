@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Optional
-from src.utils.logger import logger
+from src.utils.logging import logger
 from src.utils.consts import PATH_FISHSTRAP, PATH_BLOXSTRAP, PATH_ROBLOXPLAYERBETA
 from src.utils.regex import ROBLOX_VERSION_PATH_PATTERN
 

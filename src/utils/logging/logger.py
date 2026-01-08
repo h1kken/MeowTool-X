@@ -12,6 +12,7 @@ from src.utils.ansi import (
     LIGHTCYAN,
     CLEAR
 )
+from src.utils.logging.enums import LogLevel
 
 
 def patcher(record: dict):
@@ -26,14 +27,17 @@ class Logger:
         name: str = PROGRAM_NAME,
         *,
         stream: bool = IS_LAUNCHED_WITH_CONSOLE,
-        level: str = 'DEBUG'
+        console_level: LogLevel = LogLevel.DEBUG,
+        file_level: LogLevel = LogLevel.DEBUG
     ):
         self._logger = loguru.logger
         self._logger.remove()
-        
         self._logger.configure(patcher=patcher)
         
-        self._path = Path('Logs') / f'{name} ({datetime.now().strftime(DATE_LOGGER_FORMAT)}).log'
+        self._path = Path(
+            'Logs',
+            f'{name} ({datetime.now().strftime(DATE_LOGGER_FORMAT)}).log'
+        )
         self._path.parent.mkdir(parents=True, exist_ok=True)
 
         if stream:
@@ -47,32 +51,35 @@ class Logger:
                 f' {YELLOW}| {LIGHTYELLOW}'
                 '{function:<20}'
                 f' {YELLOW}| {CLEAR}'
-                '<level>{level:<7}</level>'
+                '<level>{level:<8}</level>'
                 f' {YELLOW}| {CLEAR}'
                 '<level>{message}</level>'
             )
             
             self._logger.add(
                 sink=sys.stdout,
-                level=level,
+                level=console_level,
                 format=_logger_console_format,
                 colorize=True
             )
-            self._logger.debug(f'{RED}[!] PROGRAM IS LAUNCHED IN TESTING MODE [!]\n{PINK}{ASCII_MEOWTOOL}{CLEAR}')
+            self._logger.debug(
+                f'{RED}[!] PROGRAM IS LAUNCHED IN TESTING MODE [!]\n'
+                f'{PINK}{ASCII_MEOWTOOL}{CLEAR}'
+            )
 
         _logger_file_format = (
             '{time:HH:mm:ss.SSS} | '
             '{name:>25}:{line:<4} | '
             '{function:>20} | '
-            '{level:<7} | '
+            '{level:<8} | '
             '{message}'
         )
         
         self._logger.add(
             self._path,
-            level=level,
+            level=file_level,
             format=_logger_file_format,
-            rotation='5 MB',
+            rotation='10 MB',
             retention=3,
             encoding='utf-8',
             enqueue=True
