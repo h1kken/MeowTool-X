@@ -1,0 +1,6 @@
+class JSONException(Exception):
+    ...
+
+
+class NotADictionaryError(JSONException):
+    ...
