@@ -22,7 +22,7 @@ FILENAME_SPECIAL_CHARS_PATTERN = re.compile(
 )
 
 SIGNAL_NAME_PATTERN = re.compile(
-    r'SignalInstance (\w+)\(\)'
+    r'SignalInstance (\w+)\('
 )
 
 PROXY_PROTOCOL_PATTERN = re.compile(
@@ -49,4 +49,8 @@ PROXY_PROTOCOL_IP_PORT_PATTERN = re.compile(
     r'(?i)^(?:(?P<protocol>https?|socks[45])://)?'
     r'(?P<ip>[^:]+):'
     r'(?P<port>\d{1,5})$'
+)
+
+NORMALIZE_QT_KEY_PATTERN = re.compile(
+    r'[^a-zA-Z0-9_]'
 )
