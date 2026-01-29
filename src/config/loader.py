@@ -1,3 +1,4 @@
+from PySide6.QtCore import QObject, Signal
 from src.utils.logging import logger
 from src.config.mixin import GetConfigMixin, SetConfigMixin, SaveConfigMixin
 from src.config.defaults import default_config_loader
@@ -6,8 +7,11 @@ from src.utils.consts import PATH_CONFIGS
 from src.utils.filesystem import create_folder, create_file
 
 
-class ConfigLoader(GetConfigMixin, SetConfigMixin, SaveConfigMixin):
+class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
+    config_loaded = Signal()
+    
     def __init__(self) -> None:
+        super().__init__()
         self._path = None
         self._data = {}
         self._load()
