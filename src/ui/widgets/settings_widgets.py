@@ -60,7 +60,7 @@ class CollapsibleContainer(QWidget):
         self._label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
         self._toggle_button = MTButton('▼', checkable=True, checked=True, obj_name=f'{obj_name}_Toggle_Button')
-        connect(self._toggle_button.toggled, func=self.toggle_collapsed)
+        connect(self._toggle_button.toggled, func=self._toggle_collapsed)
 
         self._content_widget = MTWidget(obj_name=f'{obj_name}_Content_Widget')
         self._content_layout = create_layout(LayoutType.VBOX, parent=self._content_widget)
@@ -73,7 +73,7 @@ class CollapsibleContainer(QWidget):
         for widget in widgets:
             self._content_layout.addWidget(widget)
 
-    def toggle_collapsed(self, checked: bool) -> None:
+    def _toggle_collapsed(self, checked: bool) -> None:
         self._content_widget.setVisible(checked)
         self._toggle_button.setText('▼' if checked else '▶')
 
