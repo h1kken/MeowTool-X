@@ -2,14 +2,16 @@ import sys
 import loguru
 from pathlib import Path
 from datetime import datetime
-from src.utils.consts import PROGRAM_NAME, ASCII_MEOWTOOL, IS_LAUNCHED_WITH_CONSOLE, DATE_LOGGER_FORMAT
+from src.utils.consts import (
+    PROGRAM_NAME, ASCII_MEOWTOOL,
+    IS_LAUNCHED_WITH_CONSOLE,
+    DATE_LOGGER_FORMAT,
+    LOGGER_INDENT_NAME, LOGGER_INDENT_LINE,
+    LOGGER_INDENT_FUNCTION, LOGGER_INDENT_LEVEL,
+)
 from src.utils.ansi import (
-    RED,
-    YELLOW,
-    PINK,
-    LIGHTGREEN,
-    LIGHTYELLOW,
-    LIGHTCYAN,
+    RED, YELLOW, PINK,
+    LIGHTGREEN, LIGHTYELLOW, LIGHTCYAN,
     CLEAR
 )
 from src.utils.logging.enums import LogLevel
@@ -42,18 +44,21 @@ class Logger:
 
         if stream:
             _logger_console_format = (
-                f'{LIGHTGREEN}'
-                '{time:HH:mm:ss.SSS}'
-                f' {YELLOW}| {LIGHTCYAN}'
-                '{name:>25}'
-                f'{CLEAR}:{LIGHTCYAN}'
-                '{line:<4}'
-                f' {YELLOW}| {LIGHTYELLOW}'
-                '{function:<20}'
-                f' {YELLOW}| {CLEAR}'
-                '<level>{level:<8}</level>'
-                f' {YELLOW}| {CLEAR}'
-                '<level>{message}</level>'
+                '{lg}{{time:HH:mm:ss.SSS}} {yl}|{cl} '
+                '{lc}{{name:>{name_i}}}:{{line:<{line_i}}} {yl}|{cl} '
+                '{ly}{{function:<{function_i}}} {yl}|{cl} '
+                '<level>{{level:<{level_i}}}</level> {yl}|{cl} '
+                '<level>{{message}}</level>{cl}'
+            ).format(
+                lg = LIGHTGREEN,
+                yl = YELLOW,
+                lc = LIGHTCYAN,
+                ly = LIGHTYELLOW,
+                cl = CLEAR,
+                name_i = LOGGER_INDENT_NAME,
+                line_i = LOGGER_INDENT_LINE,
+                function_i = LOGGER_INDENT_FUNCTION,
+                level_i = LOGGER_INDENT_LEVEL
             )
             
             self._logger.add(
@@ -68,11 +73,16 @@ class Logger:
             )
 
         _logger_file_format = (
-            '{time:HH:mm:ss.SSS} | '
-            '{name:>25}:{line:<4} | '
-            '{function:>20} | '
-            '{level:<8} | '
-            '{message}'
+            '{{time:HH:mm:ss.SSS}} | '
+            '{{name:>{name_i}}}:{{line:<{line_i}}} | '
+            '{{function:>{function_i}}} | '
+            '{{level:<{level_i}}} | '
+            '{{message}}'
+        ).format(
+            name_i = LOGGER_INDENT_NAME,
+            line_i = LOGGER_INDENT_LINE,
+            function_i = LOGGER_INDENT_FUNCTION,
+            level_i = LOGGER_INDENT_LEVEL
         )
         
         self._logger.add(
