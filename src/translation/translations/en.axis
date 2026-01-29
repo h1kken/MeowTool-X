@@ -1,19 +1,48 @@
 ! Thanks for helping with the translation of MeowTool into your language!
 
+
+
+!!!!!!!!!!!!!
+!! GENERAL !!
+!!!!!!!!!!!!!
+
+GNRL=General
+
+CHCKR=Checker
+
+
 !!!!!!!!!!!
 !! PROXY !!
 !!!!!!!!!!!
 
+PRX=Proxy
+
 PRX_CHCKR=Proxy Checker
+
 
 !!!!!!!!!!!!
 !! ROBLOX !!
 !!!!!!!!!!!!
 
+RBX=Roblox
+
 RBX_C_SRTR=Roblox Cookie Sorter
 RBX_C_CHCKR=Roblox Cookie Checker
 RBX_C_RFRSHR=Roblox Cookie Refresher
 RBX_TM_BSTR=Roblox Time Booster
+
+C_SRTR=Cookie Sorter
+C_CHCKR=Cookie Checker
+C_RFRSHR=Cookie Refresher
+TM_BSTR=Time Booster
+
+
+!!!!!!!!!!!!!!
+!! SETTINGS !!
+!!!!!!!!!!!!!!
+
+STNGS=Settings
+
 
 !!!!!!!!!!!!
 !! ERRORS !!
@@ -32,6 +61,7 @@ ERR_UNSTBL_INT_CONN=Unstable internet connection
 
 ERR_UNK=Unknown error
 
+
 !!!!!!!!!!!!!!!
 !! LANGUAGES !!
 !!!!!!!!!!!!!!!
@@ -39,8 +69,11 @@ ERR_UNK=Unknown error
 RU=Русский
 EN=English
 
+
 !!!!!!!!!!!
 !! OTHER !!
 !!!!!!!!!!!
 
+MISC=Misc
 GOOD=Good
+ABT=About
