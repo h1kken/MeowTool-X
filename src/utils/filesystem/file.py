@@ -1,3 +1,4 @@
+import json
 import mmap
 import shutil
 import zipfile
@@ -5,6 +6,8 @@ from pathlib import Path
 from typing import Collection, Optional, Any
 from src.utils.consts import FILENAME_SPECIAL_CHARS, START_PATHS
 from src.utils.decorators import log_action
+from src.utils.logging import logger
+from src.exceptions.json import NotADictionaryError
 
 
 @log_action('create folder')
@@ -61,6 +64,27 @@ def create_start_folders_and_files() -> None:
             case 'file':
                 create_folder(path.parent, exist_ok=False)
                 create_file(path, exist_ok=False)
+
+
+def load_json(path: Path):
+    try:
+        with path.open('r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        if not isinstance(data, dict):
+            raise NotADictionaryError
+
+        return data
+    except FileNotFoundError:
+        logger.warning(f'File not found: {path}')
+    except NotADictionaryError:
+        logger.warning(f'File not contains a dictionary data: {path}')
+    except json.JSONDecodeError as e:
+        logger.warning(f'Can\'t decode JSON in {path}: {e}')
+    except UnicodeDecodeError:
+        logger.warning(f'Can\'t decode unicode in {path}')
+    except Exception:
+        logger.exception(f'Error in {path}')
 
 
 def get_safe(data: dict, key: str, *, sep: str = '>', default: Optional[Any] = None):
