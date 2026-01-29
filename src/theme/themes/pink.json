@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "name": "Pink",
+    "version": "1.0.0"
+  },
+  
+  "widgets": [
+    {
+      "targets": [
+        "Sidebar_Proxy_Checker_Button",
+        "Sidebar_Roblox_Cookie_Sorter_Button",
+        "Sidebar_Roblox_Cookie_Checker_Button",
+        "Sidebar_Roblox_Cookie_Refresher_Button",
+        "Sidebar_Roblox_Time_Booster_Button",
+        "Sidebar_Settings_Button"
+      ],
+      "styles": {
+        "background": {
+          "color": "#2d2d2d"
+        },
+        "text": {
+          "color": "#fff"
+        },
+        "border": {
+          "width": "1px",
+          "style": "dotted",
+          "color": "pink",
+          "radius": "5%"
+        }
+      },
+      "animations": {
+        "hover_gradient_enter": {
+          "action": "hover",
+          "property": "gradient",
+          "duration": 200,
+          "direction": "vertical",
+          "start": [
+            { "pos": 0.0, "color": "#2d2d2d" },
+            { "pos": 1.0, "color": "#2a2a2a" }
+          ],
+          "end": [
+            { "pos": 0.0, "color": "#f4adff" },
+            { "pos": 1.0, "color": "#ff4df3" }
+          ]
+        },
+        "hover_gradient_leave": {
+          "action": "leave",
+          "property": "gradient",
+          "duration": 1000,
+          "direction": "vertical",
+          "start": [
+            { "pos": 0.0, "color": "#dd8eff" },
+            { "pos": 1.0, "color": "#dc67ff" }
+          ],
+          "end": [
+            { "pos": 0.0, "color": "#2d2d2d" },
+            { "pos": 1.0, "color": "#2a2a2a" }
+          ]
+        }
+      }
+    },
+    {
+      "targets": [
+        "Sidebar_Roblox_Cookie_Sorter_Button"
+      ],
+      "styles": {
+        "background": {
+          "color": "#2d2d2d"
+        }
+      }
+    },
+    {
+      "targets": [
+        "Sidebar_Roblox_Cookie_Checker_Button"
+      ],
+      "styles": {
+        "background": {
+          "color": "#2d2d2d"
+        }
+      }
+    },
+    {
+      "targets": [
+        "Sidebar_Roblox_Cookie_Refresher_Button"
+      ],
+      "styles": {
+        "background": {
+          "color": "#2d2d2d"
+        }
+      }
+    },
+    {
+      "targets": [
+        "Sidebar_Roblox_Time_Booster_Button"
+      ],
+      "styles": {
+        "background": {
+          "color": "#2d2d2d"
+        }
+      }
+    },
+    {
+      "targets": [
+        "Sidebar_Settings_Button"
+      ],
+      "styles": {
+        "background": {
+          "color": "#2d2d2d"
+        }
+      }
+    }
+  ]
+}
