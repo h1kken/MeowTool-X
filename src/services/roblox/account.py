@@ -7,7 +7,7 @@ from src.exceptions.roblox import InvalidCookie
 from src.utils.regex import ROBLOX_COOKIE_PATTERN
 from src.utils.datetime import convert_date, timestamp_to_local_date, format_duration
 from src.utils.string import convert_age_group
-from src.utils.other import chunked
+from src.utils.generators import chunked
 from src.utils.consts import (
     COUNTRY_CODES_KEYMAP,
     DATE_TIME_FORMAT,
@@ -186,8 +186,8 @@ class RobloxAccount:
             response: dict[str, list[dict]] = (await self._session.get(f'{RobloxAPI.INVENTORY}/v1/users/{self._player_id}/assets/collectibles', params=params, cookies=self._cookies)).json()
             rap += sum(
                 item['recentAveragePrice']
-                for item in response.get('data', [])
-                if isinstance(item.get('recentAveragePrice'), int)
+                    for item in response.get('data', [])
+                        if isinstance(item.get('recentAveragePrice'), int)
             )
             params['cursor'] = response.get('nextPageCursor')
             cur_page += 1
@@ -198,18 +198,14 @@ class RobloxAccount:
         cards = []
         for card in response:
             last_purchase_date = card.get('lastChargeTime')
-            cards.append(
-                {
-                    'lastPurchaseDate': timestamp_to_local_date(last_purchase_date, DATE_TIME_FORMAT) if last_purchase_date else None,
-                    'data': {
-                        "cardNetwork": card.get('CardNetwork'),
-                        'last4Digits': card.get('Last4Digits'),
-                        'expMonth': card.get('ExpMonth'),
-                        'expYear': card.get('ExpYear'),
-                        'paymentType': card.get('paymentProfileType')
-                    }
-                }
-            )
+            cards.append({
+                'lastPurchaseDate': timestamp_to_local_date(last_purchase_date, DATE_TIME_FORMAT) if last_purchase_date else None,
+                'cardNetwork': card.get('CardNetwork'),
+                'last4Digits': card.get('Last4Digits'),
+                'expMonth': card.get('ExpMonth'),
+                'expYear': card.get('ExpYear'),
+                'paymentType': card.get('paymentProfileType')
+            })
         return {'Cards': cards}
     
     async def get_premium(self) -> dict:
