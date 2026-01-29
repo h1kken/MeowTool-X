@@ -19,7 +19,7 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         self.load(filename)
         
     @property
-    def name(self):
+    def name(self) -> str:
         return self._path.stem
     
     def create_config(self, filename: str):
