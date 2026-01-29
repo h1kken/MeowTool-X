@@ -2,6 +2,7 @@ import os
 import sys
 import locale
 from pathlib import Path
+from PySide6.QtCore import QEvent
 
 
 # MeowTool
@@ -9,8 +10,8 @@ VERSION = 'v1.0.0'
 PROGRAM_NAME = 'MeowTool X'
 
 # ASCII MeowTool art
-COUNT_UPPER_LINE = 125
-COUNT_LOWER_LINE = 104
+COUNT_UPPER_LINE = 130
+COUNT_LOWER_LINE = 109
 ASCII_MEOWTOOL = rf'''
 {'‾' * COUNT_UPPER_LINE}
     __    __     ______     ______     __     __     ______    ______     ______     __            __  __
@@ -345,7 +346,7 @@ COUNTRY_CODES_KEYMAP = {
     'AX': 'Åland Islands',
 }
 
-# config paths
+# configs paths
 PATH_CONFIGS = ROOT / 'Settings' / 'Configs'
 
 # config
@@ -353,6 +354,11 @@ CONFIG_COMMENT_SYMBOLS = ('!', '#')
 
 # logger
 DATE_LOGGER_FORMAT = '%d.%m.%Y %H.%M.%S'
+
+LOGGER_INDENT_NAME = 30
+LOGGER_INDENT_LINE = 4
+LOGGER_INDENT_FUNCTION = 20
+LOGGER_INDENT_LEVEL = 8
 
 # database keymaps
 DATABASE_ROBLOX_COOKIE_CHECKER_KEYMAP = {
@@ -368,3 +374,24 @@ IS_LAUNCHED_WITH_CONSOLE = sys.stdout.isatty()
 
 
 DATE_ROBLOX_COOKIE_SORTER_FORMAT = '%d.%m.%Y %H.%M.%S'
+
+# theme
+DEFAULT_THEME = ROOT / 'src' / 'theme' / 'themes' / 'pink.json'
+
+GRADIENT_DIRECTIONS = {
+    'vertical':   (0, 0, 0, 1),
+    'horizontal': (0, 0, 1, 0),
+    'diagonal':   (0, 0, 1, 1),
+    'inverse':    (1, 0, 0, 1),
+}
+
+EVENT_ACTIONS = {
+    QEvent.Type.Enter              : 'hover',
+    QEvent.Type.Leave              : 'leave',
+    
+    QEvent.Type.MouseButtonPress   : 'press',
+    QEvent.Type.MouseButtonRelease : 'release',
+    
+    QEvent.Type.FocusIn            : 'focus',
+    QEvent.Type.FocusOut           : 'blur',
+}
