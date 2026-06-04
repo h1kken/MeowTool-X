@@ -1,14 +1,18 @@
+import faulthandler
+faulthandler.enable()
+
 import sys
+
 from PySide6.QtWidgets import QApplication
-from src.ui.main_window import MainWindow
+
+from src.bootstrap import AppBootstrap
+from src.utils.constants import PROGRAM_NAME
 
 
 def main():
     app = QApplication(sys.argv)
-
-    window = MainWindow()
-    window.show()
-
+    app.setApplicationName(PROGRAM_NAME)
+    AppBootstrap().run()
     sys.exit(app.exec())
 
 if __name__ == '__main__':

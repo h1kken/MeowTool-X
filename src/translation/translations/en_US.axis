@@ -1,0 +1,68 @@
+! Thanks for helping with the translation of MeowTool into your language!
+! Before you begin, I guess you need to know a little about the project so you can work efficiently.
+! # Lines starting with "# LABEL=" need to be translated except for the "LABEL=" part and to indicate that it has been translated, you need to remove the "# ", which might be a bit annoying at first, but this will become practical for updating the translation.
+! There are some things that you shouldn't translate:
+! - The name "MeowTool"
+! - Pairs of curly brackets, e.g. {} or {player}
+! - Folders or files like %appdata%/Stand/Theme
+! - Emojis (unless there's a culturally different meaning)
+! - Technical Terms, i.e. anything that would make less sense if translated
+! Alright, I think you're ready to unleash your powers now! ;D
+
+
+!!!!!!!!!!!!!
+!! PRELOAD !!
+!!!!!!!!!!!!!
+
+# PRELOAD_TARGET_CURRENT=current
+# PRELOAD_STAGE_PREPARING_STARTUP=Preparing startup counters
+# PRELOAD_STAGE_CONFIGURING_MAIN_WINDOW=Configuring main window
+# PRELOAD_STAGE_BUILDING_INTERFACE_SHELL=Building interface shell
+# PRELOAD_STAGE_STARTING_ANIMATION_ENGINE=Starting animation engine
+# PRELOAD_STAGE_STARTING_THEME_ENGINE=Starting theme engine
+# PRELOAD_STAGE_APPLYING_CURRENT_THEME=Applying current theme
+# PRELOAD_STAGE_PREWARMING_SETTINGS_THEME=Prewarming Settings: Config and Theme
+# PRELOAD_STAGE_FINALIZING_STARTUP=Finalizing startup
+# PRELOAD_STAGE_LOADING_PAGE=Loading page: {target}
+# PRELOAD_STAGE_LOADING_SETTINGS=Loading settings: {target}
+# PRELOAD_STAGE_PREWARMING_SETTINGS=Prewarming settings: {target}
+# PRELOAD_STAGE_PREWARMING_GENERIC=Prewarming {target}
+# PRELOAD_STAGE_INDEXING_OBJECTS=Dumping object tree: {target}
+# PRELOAD_STAGE_GENERIC={stage}
+# PRELOAD_COUNTER_WITH_LABEL={current} / {total} · {label}
+# PRELOAD_COUNTER_REMAINING={current} / {total} · {remaining} left
+# PRELOAD_COUNTER_LABEL_STARTUP=starting
+# PRELOAD_COUNTER_LABEL_PREVIEW=preview
+# PRELOAD_STAGE_CREATING_GENERIC=Creating {target}
+# PRELOAD_STAGE_BOOTSTRAPPING_PROGRAM=Bootstrapping {program_name}
+# PRELOAD_STAGE_STARTUP_COMPLETE=Startup complete
+# PRELOAD_COUNTER_LABEL_PAGES=pages
+# PRELOAD_COUNTER_LABEL_SETTINGS_WARMUP=settings warmup
+# PRELOAD_COUNTER_LABEL_OBJECT_TREE=object tree
+# PRELOAD_COUNTER_LABEL_EDITORS=editors
+# PRELOAD_ACTION_PREPARING=Preparing
+# PRELOAD_ACTION_CONFIGURING=Configuring
+# PRELOAD_ACTION_BUILDING=Building
+# PRELOAD_ACTION_STARTING=Starting
+# PRELOAD_ACTION_APPLYING=Applying
+# PRELOAD_ACTION_PREWARMING=Prewarming
+# PRELOAD_ACTION_PREWARMING_SETTINGS=Prewarming settings
+# PRELOAD_ACTION_FINALIZING=Finalizing
+# PRELOAD_ACTION_LOADING_PAGE=Loading page
+# PRELOAD_ACTION_LOADING_SETTINGS=Loading settings
+# PRELOAD_ACTION_CREATING=Creating
+# PRELOAD_ACTION_BOOTSTRAPPING=Bootstrapping
+# PRELOAD_ACTION_INDEXING_OBJECT_TREE=Indexing object tree
+# PRELOAD_ACTION_READY=Ready
+# PRELOAD_ACTION_WORKING_ON=Working on
+# PRELOAD_TARGET_STARTUP_COUNTERS=Startup counters
+# PRELOAD_TARGET_MAIN_WINDOW=Main window
+# PRELOAD_TARGET_INTERFACE_SHELL=Interface shell
+# PRELOAD_TARGET_ANIMATION_ENGINE=Animation engine
+# PRELOAD_TARGET_THEME_ENGINE=Theme engine
+# PRELOAD_TARGET_CURRENT_THEME=Current theme
+# PRELOAD_TARGET_SETTINGS_THEME=Settings: Config and Theme
+# PRELOAD_TARGET_STARTUP=Startup
+
+# ENTER_CONFIG_NAME=Enter config name
+# ENTER_THEME_NAME=Enter theme name

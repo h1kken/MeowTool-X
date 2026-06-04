@@ -1,7 +1,6 @@
-from PySide6.QtCore import QObject, Signal
-from src.utils.logging import logger
+from PySide6.QtCore import QObject
 
 
 class ProcessManager(QObject):
     def __init__(self):
-        ...
+        pass

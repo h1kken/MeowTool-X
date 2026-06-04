@@ -1,11 +1,11 @@
 from pathlib import Path
-from typing import Optional
+
+from src.utils.constants import PATH_BLOXSTRAP, PATH_FISHSTRAP, PATH_ROBLOXPLAYERBETA
 from src.utils.logging import logger
-from src.utils.consts import PATH_FISHSTRAP, PATH_BLOXSTRAP, PATH_ROBLOXPLAYERBETA
-from src.utils.regex import ROBLOX_VERSION_PATH_PATTERN
+from src.utils.regexes import ROBLOX_VERSION_PATH_PATTERN
 
 
-def detect_roblox_path() -> Optional[Path]:
+def detect_roblox_path() -> Path | None:
     if PATH_FISHSTRAP.exists(): return PATH_FISHSTRAP
     if PATH_BLOXSTRAP.exists(): return PATH_BLOXSTRAP
 

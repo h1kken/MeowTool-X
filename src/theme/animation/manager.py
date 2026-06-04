@@ -1,35 +1,53 @@
-from typing import Any, Callable
-from PySide6.QtCore import QObject, QEvent, QAbstractAnimation, QParallelAnimationGroup
-from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QWidget
-from src.utils.consts import EVENT_ACTIONS, GRADIENT_DIRECTIONS
+from __future__ import annotations
 
+import math
+import re
+from copy import deepcopy
+from dataclasses import replace
+from time import monotonic
+from typing import Any
 
-def _l(s: float, e: float, t: float) -> int:
-    return int(s + (e - s) * t)
+from PySide6.QtCore import (
+    QAbstractAnimation,
+    QEvent,
+    QObject,
+    QParallelAnimationGroup,
+    Qt,
+    QTimer,
+)
+from PySide6.QtGui import QColor, QCursor, QMouseEvent, QPalette, QWheelEvent
+from PySide6.QtWidgets import QApplication, QLayout, QSlider, QWidget
 
+from src.theme.colors import normalize_color, to_qcolor
+from src.theme.qss.targets import resolve_target_widgets
+from src.utils.constants import EVENT_ACTIONS
 
-def _interpolate_color(s: QColor, e: QColor, t: float) -> QColor:
-    return QColor(
-        _l(s.red(),   e.red(),   t),
-        _l(s.green(), e.green(), t),
-        _l(s.blue(),  e.blue(),  t),
-        _l(s.alpha(), e.alpha(), t),
-    )
+from .helpers import (
+    _clone_gradient,
+    _gradient_to_qss,
+    _interpolate_color,
+    _interpolate_gradient,
+    _normalize_dash_border,
+    _normalize_gradient,
+)
+from .overlays import DashBorderOverlay
+from .parser import parse_specs
+from .timer import TimerAnimation
+from .types import AnimationSpec
 
-
-class TimerAnimation(QAbstractAnimation):
-    def __init__(self, duration: int, update_fn: Callable[[float], None], parent=None):
-        super().__init__(parent)
-        self._duration = duration
-        self._update_fn = update_fn
-
-    def duration(self) -> int:
-        return self._duration
-
-    def updateCurrentTime(self, msec: int) -> None:
-        t = min(msec / self._duration, 1.0)
-        self._update_fn(t)
+_RAINBOW_HANDLE_STOPS: tuple[tuple[float, str], ...] = (
+    (0.00, '#ff0000'),
+    (0.07, '#ff0000'),
+    (0.18, '#ff8a00'),
+    (0.30, '#fff000'),
+    (0.46, '#00ff66'),
+    (0.62, '#00d5ff'),
+    (0.78, '#4b5cff'),
+    (0.92, '#ff00c8'),
+    (1.00, '#ff0000'),
+)
+_CSS_DECLARATION_PATTERN = re.compile(r'([a-zA-Z-]+)\s*:\s*([^;{}]+)')
+_RUNTIME_BORDER_FADE_STEP = 0.12
 
 
 class AnimationManager(QObject):
@@ -38,152 +56,2711 @@ class AnimationManager(QObject):
         self._root = root
         self._animations: dict[QWidget, dict[str, QParallelAnimationGroup]] = {}
         self._cache: dict[QWidget, dict[str, Any]] = {}
+        self._style_overrides: dict[QWidget, dict[str, str]] = {}
+        self._slider_style_overrides: dict[QWidget, dict[str, dict[str, str]]] = {}
+        self._base_styles: dict[QWidget, str] = {}
+        self._filtered_widgets: set[QWidget] = set()
+        self._viewport_hosts: dict[QWidget, QWidget] = {}
+        self._hovered_widgets: set[QWidget] = set()
+        self._action_property_keys: dict[QWidget, dict[str, set[str]]] = {}
+        self._action_specs: dict[QWidget, dict[str, list[AnimationSpec]]] = {}
+        self._active_property_actions: dict[QWidget, dict[str, str]] = {}
+        self._pending_checkable_reconcile_widgets: set[QWidget] = set()
+        self._pending_hover_exit_widgets: set[QWidget] = set()
+        self._paint_overlays: dict[QWidget, DashBorderOverlay] = {}
+        self._paint_border_profiles: dict[QWidget, dict[str, Any]] = {}
+        self._runtime_filtered_widgets: set[QWidget] = set()
+        self._runtime_rainbow_widgets: set[QWidget] = set()
+        self._runtime_native_border_widgets: dict[QWidget, dict[str, Any]] = {}
+        self._runtime_hover_overlays: dict[QWidget, DashBorderOverlay] = {}
+        self._runtime_hover_overlay_states: dict[QWidget, dict[str, float]] = {}
+        self._runtime_rainbow_duration_ms = 5000
+        self._wheel_event_deltas: dict[QWidget, dict[str, float]] = {}
+        self._locked_tabs: set[QWidget] = set()
+        self._tab_toggle_slots: dict[QWidget, Any] = {}
+        self._toggle_action_slots: dict[QWidget, Any] = {}
+        self._popup_action_slots: dict[QWidget, tuple[Any, Any]] = {}
+        self._shared_rainbow_epoch = monotonic()
+        self._shared_rainbow_bindings: dict[QWidget, tuple[int, float]] = {}
+        self._shared_widget_border_bindings: dict[QWidget, tuple[int, float, float, float]] = {}
+        self._shared_border_color_bindings: dict[DashBorderOverlay, tuple[int, float, float, float]] = {}
+        self._shared_gradient_border_bindings: dict[DashBorderOverlay, tuple[int, float]] = {}
+        self._shared_rainbow_timer = QTimer(self)
+        self._shared_rainbow_timer.setInterval(16)
+        self._shared_rainbow_timer.timeout.connect(self._update_shared_rainbow_widgets)
+        self._hover_reconcile_timer = QTimer(self)
+        self._hover_reconcile_timer.setInterval(16)
+        self._hover_reconcile_timer.timeout.connect(self._reconcile_hover_states)
 
-    def load(self, animations: dict[str, dict[str, dict]]):
-        for anim_groups in self._animations.values():
-            for anim_group in anim_groups.values():
-                anim_group.stop()
-        
-        self._animations.clear()
-        self._cache.clear()
+    def load(self, animations: dict[str, Any], theme_widgets: dict[str, Any] | None = None) -> None:
+        self._clear()
 
-        for obj_name, anim_datas in animations.items():
-            widget: QWidget = self._root.findChild(QWidget, obj_name)
-            if not widget:
+        if not isinstance(animations, dict):
+            return
+
+        theme_widgets = theme_widgets if isinstance(theme_widgets, dict) else {}
+        for target, raw_specs in animations.items():
+            specs = parse_specs(raw_specs)
+            if not specs:
                 continue
 
-            widget.installEventFilter(self)
-            self._animations[widget] = {}
-            self._cache[widget] = {}
-            
-            action_groups: dict[str, QParallelAnimationGroup] = {}
-            
-            for anim_data in anim_datas.values():
-                action = anim_data.get('action')
-                
-                if not action:
-                    continue
-                
-                anim_group = action_groups.setdefault(action, QParallelAnimationGroup(widget))
-                self._build_animation(widget, anim_data, anim_group)
-            
-            for action, anim_group in action_groups.items():
-                self._animations[widget][action] = anim_group
+            widgets = resolve_target_widgets(self._root, target, include_window=True)
+            if not widgets:
+                continue
 
-    def _build_animation(self, widget: QWidget, anim: dict, group: QParallelAnimationGroup):
-        property = anim.get('property')
-        match property:
-            case 'background':
-                group.addAnimation(
-                    TimerAnimation(
-                        duration=anim.get('duration', 300),
-                        update_fn=lambda t, w=widget, a=anim: self._animate_color(w, a, t),
-                        parent=widget
-                    )
+            base_styles = theme_widgets.get(target, {})
+            if not isinstance(base_styles, dict):
+                base_styles = {}
+
+            for widget in widgets:
+                self._register_widget(widget)
+                action_groups = self._animations[widget]
+                effective_specs = [
+                    *specs,
+                    *self._build_auto_leave_specs(widget, specs, base_styles),
+                ]
+                animated_content_height = any(
+                    spec.property_key == 'parts.content.height' and spec.action in {'checked', 'unchecked'}
+                    for spec in effective_specs
                 )
+                animated_arrow_rotation = any(
+                    spec.property_key == 'parts.icon.rotation' and spec.action in {'checked', 'unchecked'}
+                    for spec in effective_specs
+                )
+                widget.setProperty('_themeAnimatedContentHeight', animated_content_height)
+                widget.setProperty('_themeAnimatedArrowRotation', animated_arrow_rotation)
+                for spec in effective_specs:
+                    group = action_groups.setdefault(spec.action, QParallelAnimationGroup(widget))
+                    self._append_animation(widget, spec, group, base_styles)
+
+                popup_close_duration = max(
+                    (
+                        spec.duration
+                        for spec in effective_specs
+                        if spec.action == 'close' and spec.property_key.startswith(('parts.popup.', 'parts.item.'))
+                    ),
+                    default=0,
+                )
+                widget.setProperty('_themePopupCloseDelayMs', int(popup_close_duration))
+
+                always_group = action_groups.get('always')
+                if always_group is not None and always_group.state() != QAbstractAnimation.State.Running:
+                    always_group.start()
+
+                self._sync_initial_state_actions(widget)
+                self._queue_widget_style_refresh(widget)
+
+    def _build_auto_leave_specs(
+        self,
+        widget: QWidget,
+        specs: list[AnimationSpec],
+        base_styles: dict[str, Any],
+    ) -> list[AnimationSpec]:
+        if any(spec.action == 'leave' for spec in specs):
+            return []
+
+        auto_specs: list[AnimationSpec] = []
+        for spec in specs:
+            if spec.action != 'hover':
+                continue
+
+            end_value = self._sample_base_animation_value(widget, base_styles, spec)
+            if end_value is None:
+                continue
+
+            auto_specs.append(
+                replace(
+                    spec,
+                    action='leave',
+                    start=deepcopy(spec.end),
+                    end=end_value,
+                )
+            )
+        return auto_specs
+
+    def _sample_base_animation_value(
+        self,
+        widget: QWidget,
+        base_styles: dict[str, Any],
+        spec: AnimationSpec,
+    ) -> Any | None:
+        match spec.kind:
+            case 'color':
+                color = self._sample_style_color(base_styles, spec.property_key)
+                if isinstance(color, QColor):
+                    return QColor(color)
+                color = self._sample_override_color(widget, spec.css_property)
+                if isinstance(color, QColor):
+                    return QColor(color)
+                return self._sample_color(widget, spec.css_property, fallback=QColor(Qt.GlobalColor.transparent))
+            case 'number':
+                try:
+                    return float(self._sample_number(widget, spec.property_key, fallback=float(spec.start or 0.0)))
+                except (TypeError, ValueError):
+                    return None
             case 'gradient':
-                group.addAnimation(
-                    TimerAnimation(
-                        duration=anim.get('duration', 300),
-                        update_fn=lambda t, w=widget, a=anim: self._animate_gradient(w, a, t),
-                        parent=widget
-                    )
-                )
-            # TODO: добавить geometry и другие свойства
+                fallback = spec.start if isinstance(spec.start, dict) else spec.end
+                if not isinstance(fallback, dict):
+                    return None
+                gradient = self._sample_style_gradient(base_styles, spec.property_key, fallback=fallback)
+                return _clone_gradient(gradient) if isinstance(gradient, dict) else None
+        return None
 
     def eventFilter(self, obj: QObject, event: QEvent):
-        if obj not in self._animations:
+        host_widget = self._viewport_hosts.get(obj) if isinstance(obj, QWidget) else None
+        target_widget = host_widget or obj
+
+        if isinstance(obj, QWidget):
+            if event.type() in (QEvent.Type.Resize, QEvent.Type.Move, QEvent.Type.Show):
+                self._sync_paint_overlay_geometry(obj)
+                self._sync_runtime_overlay_geometry(obj)
+                if event.type() in (QEvent.Type.Resize, QEvent.Type.Show) and self._style_overrides.get(obj):
+                    self._apply_widget_style(obj)
+            elif event.type() == QEvent.Type.Hide:
+                if (overlay := self._paint_overlays.get(obj)) is not None:
+                    overlay.hide()
+                if (overlay := self._runtime_hover_overlays.get(obj)) is not None:
+                    overlay.hide()
+            elif event.type() == QEvent.Type.Enter:
+                self._hovered_widgets.add(obj)
+                if obj in self._runtime_native_border_widgets:
+                    self._runtime_native_border_widgets[obj]['target_opacity'] = 1.0
+                if (overlay := self._runtime_hover_overlays.get(obj)) is not None:
+                    state = self._runtime_hover_overlay_states.setdefault(obj, {'opacity': 0.0, 'target_opacity': 0.0})
+                    state['target_opacity'] = 1.0
+                    if obj.isVisible():
+                        overlay.show()
+            elif event.type() == QEvent.Type.Leave:
+                self._hovered_widgets.discard(obj)
+                if obj in self._runtime_native_border_widgets:
+                    self._runtime_native_border_widgets[obj]['target_opacity'] = 0.0
+                if (overlay := self._runtime_hover_overlays.get(obj)) is not None:
+                    state = self._runtime_hover_overlay_states.setdefault(obj, {'opacity': 0.0, 'target_opacity': 0.0})
+                    state['target_opacity'] = 0.0
+
+        if target_widget not in self._animations:
             return super().eventFilter(obj, event)
-        
+
+        if (
+            isinstance(event, QMouseEvent) and
+            event.type() in {
+                QEvent.Type.MouseButtonPress,
+                QEvent.Type.MouseButtonRelease,
+                QEvent.Type.MouseButtonDblClick,
+            } and
+            event.button() != Qt.MouseButton.LeftButton
+        ):
+            return super().eventFilter(obj, event)
+
+        if event.type() == QEvent.Type.Wheel and isinstance(event, QWheelEvent):
+            if self._handle_wheel_event(target_widget, event):
+                return True
+
         action = EVENT_ACTIONS.get(event.type())
         if action:
-            self._play(obj, action)
-        
+            self._play(target_widget, action)
+            if action in {'hover', 'leave'}:
+                self._start_hover_reconcile_timer()
+            if action in {'hover', 'leave', 'press', 'release'}:
+                self._queue_checkable_reconcile(target_widget)
+        elif event.type() == QEvent.Type.EnabledChange and isinstance(target_widget, QWidget):
+            self._play(target_widget, 'enabled' if target_widget.isEnabled() else 'disabled')
+
+        if event.type() == QEvent.Type.MouseButtonRelease and isinstance(event, QMouseEvent):
+            release_rect_widget = obj if isinstance(obj, QWidget) else target_widget
+            if event.button() == Qt.MouseButton.LeftButton and isinstance(release_rect_widget, QWidget) and release_rect_widget.rect().contains(event.position().toPoint()):
+                self._play(target_widget, 'click')
+            self._queue_checkable_reconcile(target_widget)
+
+        if (
+            event.type() == QEvent.Type.MouseButtonDblClick and
+            isinstance(event, QMouseEvent) and
+            event.button() == Qt.MouseButton.LeftButton
+        ):
+            self._play(target_widget, 'double_click')
+            self._queue_checkable_reconcile(target_widget)
+
         return super().eventFilter(obj, event)
 
-    def _play(self, widget: QWidget, action: str):
-        group: QParallelAnimationGroup = self._animations.get(widget, {}).get(action)
+    def _clear(self) -> None:
+        self._clear_runtime_rainbow_mode()
+        shared_rainbow_widgets = set(self._shared_rainbow_bindings)
+
+        for widget, slot in self._tab_toggle_slots.items():
+            toggled = getattr(widget, 'toggled', None)
+            if toggled is None:
+                continue
+            try:
+                toggled.disconnect(slot)
+            except (RuntimeError, TypeError):
+                pass
+
+        for widget, slot in self._toggle_action_slots.items():
+            toggled = getattr(widget, 'toggled', None)
+            if toggled is None:
+                continue
+            try:
+                toggled.disconnect(slot)
+            except (RuntimeError, TypeError):
+                pass
+
+        for widget, slots in self._popup_action_slots.items():
+            opened = getattr(widget, 'popupOpened', None)
+            closed = getattr(widget, 'popupClosed', None)
+            open_slot, close_slot = slots
+            if opened is not None:
+                try:
+                    opened.disconnect(open_slot)
+                except (RuntimeError, TypeError):
+                    pass
+            if closed is not None:
+                try:
+                    closed.disconnect(close_slot)
+                except (RuntimeError, TypeError):
+                    pass
+
+        for widget, groups in self._animations.items():
+            for group in groups.values():
+                group.stop()
+
+            self._reset_widget_animation_state(widget, had_shared_rainbow=widget in shared_rainbow_widgets)
+            try:
+                widget.setProperty('_themeAnimatedContentHeight', False)
+                widget.setProperty('_themeAnimatedArrowRotation', False)
+                widget.setProperty('_themePopupCloseDelayMs', 0)
+            except RuntimeError:
+                pass
+
+            if widget in self._filtered_widgets:
+                widget.removeEventFilter(self)
+
+            viewport = self._viewport_for_widget(widget)
+            if viewport is not None:
+                viewport.removeEventFilter(self)
+
+            if widget in self._base_styles:
+                widget.setStyleSheet(self._base_styles[widget])
+                widget.setProperty('_themeAnimationStyleManaged', False)
+
+            if (overlay := self._paint_overlays.get(widget)) is not None:
+                overlay.hide()
+                overlay.deleteLater()
+
+        self._animations.clear()
+        self._cache.clear()
+        self._style_overrides.clear()
+        self._slider_style_overrides.clear()
+        self._base_styles.clear()
+        self._filtered_widgets.clear()
+        self._viewport_hosts.clear()
+        self._hovered_widgets.clear()
+        self._action_property_keys.clear()
+        self._action_specs.clear()
+        self._active_property_actions.clear()
+        self._pending_checkable_reconcile_widgets.clear()
+        self._pending_hover_exit_widgets.clear()
+        self._paint_overlays.clear()
+        self._paint_border_profiles.clear()
+        self._hover_reconcile_timer.stop()
+        self._locked_tabs.clear()
+        self._tab_toggle_slots.clear()
+        self._toggle_action_slots.clear()
+        self._popup_action_slots.clear()
+        self._shared_rainbow_bindings.clear()
+        self._shared_border_color_bindings.clear()
+        self._shared_gradient_border_bindings.clear()
+        self._shared_rainbow_timer.stop()
+
+    def set_runtime_rainbow_mode(self, enabled: bool, duration_ms: int | float) -> None:
+        self._clear_runtime_rainbow_mode()
+        if not enabled:
+            return
+
+        duration = max(1, int(round(float(duration_ms))))
+        self._runtime_rainbow_duration_ms = duration
+
+        for widget in resolve_target_widgets(self._root, 'MTSwitch', include_window=True):
+            if widget.property('rainbowBorderExcluded') is True:
+                continue
+            if widget.property('rainbowBorderTarget') is False:
+                continue
+            has_visible_parts_theme = getattr(widget, 'has_visible_parts_theme', None)
+            if callable(has_visible_parts_theme) and not has_visible_parts_theme():
+                self._reset_widget_animation_state(widget, had_shared_rainbow=True)
+                continue
+            self._ensure_runtime_widget_filter(widget)
+            self._runtime_rainbow_widgets.add(widget)
+            is_checked = getattr(widget, 'isChecked', None)
+            if callable(is_checked) and bool(is_checked()):
+                self._set_shared_rainbow_active(widget, duration, 0.0, True)
+            else:
+                self._reset_widget_animation_state(widget, had_shared_rainbow=True)
+
+        for widget in resolve_target_widgets(self._root, 'MTSlider', include_window=True):
+            if widget.property('rainbowBorderExcluded') is True:
+                continue
+            if widget.property('rainbowBorderTarget') is False:
+                continue
+            self._ensure_runtime_widget_filter(widget)
+            self._runtime_rainbow_widgets.add(widget)
+            self._set_shared_rainbow_active(widget, duration, 0.0, True)
+
+        base_color = self._sample_shared_rainbow_color(0.0, brightness=0.9, saturation=0.8)
+        setting_widgets: list[QWidget] = []
+        seen_setting_widgets: set[QWidget] = set()
+        for target in (
+            'MTComboBox',
+            'MTLineEdit',
+            'MTButtonSetting',
+            'MTCheckBoxSetting',
+            'MTSwitchSetting',
+            'MTSwitchRowSetting',
+            'MTPathSetting',
+            'MTSliderSetting',
+        ):
+            for candidate in resolve_target_widgets(self._root, target, include_window=True):
+                if candidate in seen_setting_widgets:
+                    continue
+                if candidate.property('rainbowBorderExcluded') is True:
+                    continue
+                if candidate.property('rainbowBorderTarget') is False:
+                    continue
+                seen_setting_widgets.add(candidate)
+                setting_widgets.append(candidate)
+
+        for widget in setting_widgets:
+            self._ensure_runtime_widget_filter(widget)
+            self._stop_runtime_conflicting_hover_groups(widget)
+            if (paint_overlay := self._paint_overlays.get(widget)) is not None:
+                self._set_shared_border_color_active(paint_overlay, 0, 0.0, False)
+                self._set_shared_gradient_border_active(paint_overlay, 0, 0.0, False)
+                try:
+                    paint_overlay.hide()
+                except RuntimeError:
+                    pass
+            border_config = self._detect_runtime_border_config(widget)
+            if border_config.get('visible'):
+                self._runtime_native_border_widgets[widget] = {
+                    'previous_border_color_override': deepcopy(self._style_overrides.get(widget, {}).get('border-color')),
+                    'base_border_color': str(border_config.get('color_text', '') or ''),
+                    'opacity': 1.0 if self._cursor_over_widget(widget) else 0.0,
+                    'target_opacity': 1.0 if self._cursor_over_widget(widget) else 0.0,
+                }
+                self._set_shared_widget_border_active(widget, duration, 0.0, True, brightness=0.9, saturation=0.8)
+                continue
+
+            overlay = self._runtime_hover_overlays.get(widget)
+            if overlay is None:
+                overlay = DashBorderOverlay(widget)
+                self._runtime_hover_overlays[widget] = overlay
+            self._runtime_hover_overlay_states[widget] = {
+                'opacity': 1.0 if self._cursor_over_widget(widget) else 0.0,
+                'target_opacity': 1.0 if self._cursor_over_widget(widget) else 0.0,
+            }
+            overlay.configure(
+                color=base_color,
+                width=float(border_config.get('width', 1.5)),
+                radius=float(border_config.get('radius', 10.0)),
+                dash_pattern=[9999.0, 1.0],
+                inset=float(border_config.get('inset', 1.0)),
+                pen_style=Qt.PenStyle.SolidLine,
+                opacity=1.0 if self._cursor_over_widget(widget) else 0.0,
+            )
+            self._sync_runtime_overlay_geometry(widget)
+            if widget.isVisible() and self._cursor_over_widget(widget):
+                overlay.show()
+            self._set_shared_border_color_active(
+                overlay,
+                duration,
+                0.0,
+                True,
+                brightness=0.9,
+                saturation=0.8,
+            )
+
+    def _clear_runtime_rainbow_mode(self) -> None:
+        hovered_widgets = {
+            widget
+            for widget in (
+                set(self._runtime_rainbow_widgets)
+                | set(self._runtime_native_border_widgets)
+                | set(self._runtime_hover_overlays)
+            )
+            if self._cursor_over_widget(widget)
+        }
+        for widget in list(self._runtime_rainbow_widgets):
+            self._set_shared_rainbow_active(widget, 0, 0.0, False)
+            self._reset_widget_animation_state(widget, had_shared_rainbow=True)
+        self._runtime_rainbow_widgets.clear()
+
+        for widget in list(self._runtime_native_border_widgets):
+            self._set_shared_widget_border_active(widget, 0, 0.0, False)
+        self._runtime_native_border_widgets.clear()
+
+        for widget, overlay in list(self._runtime_hover_overlays.items()):
+            self._set_shared_border_color_active(overlay, 0, 0.0, False)
+            try:
+                overlay.hide()
+                overlay.deleteLater()
+            except RuntimeError:
+                pass
+        self._runtime_hover_overlays.clear()
+        self._runtime_hover_overlay_states.clear()
+        self._wheel_event_deltas.clear()
+
+        for widget in list(self._runtime_filtered_widgets):
+            if widget in self._filtered_widgets:
+                continue
+            try:
+                widget.removeEventFilter(self)
+            except RuntimeError:
+                pass
+        self._runtime_filtered_widgets.clear()
+        for widget in hovered_widgets:
+            if self._cursor_over_widget(widget) and widget in self._animations:
+                self._play(widget, 'hover')
+        self._stop_shared_rainbow_timer_if_idle()
+
+    def _ensure_runtime_widget_filter(self, widget: QWidget) -> None:
+        if widget in self._filtered_widgets or widget in self._runtime_filtered_widgets:
+            return
+        widget.installEventFilter(self)
+        self._runtime_filtered_widgets.add(widget)
+
+    def _sync_runtime_overlay_geometry(self, widget: QWidget) -> None:
+        overlay = self._runtime_hover_overlays.get(widget)
+        if overlay is None:
+            return
+        was_visible = overlay.isVisible()
+        overlay.setGeometry(widget.rect())
+        overlay.raise_()
+        if was_visible and widget.isVisible():
+            overlay.show()
+
+    def _stop_runtime_conflicting_hover_groups(self, widget: QWidget) -> None:
+        groups = self._animations.get(widget)
+        if not isinstance(groups, dict):
+            return
+        for action in ('hover', 'leave'):
+            group = groups.get(action)
+            if group is None:
+                continue
+            try:
+                group.stop()
+            except RuntimeError:
+                continue
+
+    def _reset_widget_animation_state(self, widget: QWidget, *, had_shared_rainbow: bool = False) -> None:
+        cache = self._cache.get(widget, {})
+        if not had_shared_rainbow and not {'parts.handle.rainbow', 'parts.sub_page.rainbow'} & set(cache):
+            return
+
+        clearer = getattr(widget, 'clear_slider_line_rainbow', None)
+        if not callable(clearer):
+            clearer = getattr(widget, 'clear_handle_rainbow', None)
+        if callable(clearer):
+            try:
+                clearer()
+                widget.update()
+            except RuntimeError:
+                return
+            return
+
+        setter = getattr(widget, 'set_slider_line_rainbow', None)
+        if not callable(setter):
+            setter = getattr(widget, 'set_handle_rainbow', None)
+        if not callable(setter):
+            return
+
+        try:
+            setter(0.0)
+            widget.update()
+        except RuntimeError:
+            return
+
+    def _register_widget(self, widget: QWidget) -> None:
+        self._animations.setdefault(widget, {})
+        self._cache.setdefault(widget, {})
+        self._style_overrides.setdefault(widget, {})
+        self._slider_style_overrides.setdefault(widget, {})
+        base_style = '' if widget.property('_themeAnimationStyleManaged') is True else widget.styleSheet()
+        self._base_styles.setdefault(widget, base_style)
+
+        if widget not in self._filtered_widgets:
+            widget.installEventFilter(self)
+            self._filtered_widgets.add(widget)
+        viewport = self._viewport_for_widget(widget)
+        if viewport is not None and viewport not in self._viewport_hosts:
+            viewport.installEventFilter(self)
+            self._viewport_hosts[viewport] = widget
+
+        self._bind_tab_toggle(widget)
+        self._bind_toggle_action(widget)
+        self._bind_popup_actions(widget)
+        if self._is_locked_tab(widget):
+            self._locked_tabs.add(widget)
+
+    def _viewport_for_widget(self, widget: QWidget) -> QWidget | None:
+        viewport_getter = getattr(widget, 'viewport', None)
+        if not callable(viewport_getter):
+            return None
+        try:
+            viewport = viewport_getter()
+        except RuntimeError:
+            return None
+        return viewport if isinstance(viewport, QWidget) else None
+
+    def _bind_tab_toggle(self, widget: QWidget) -> None:
+        if not bool(widget.property('pageTab')):
+            return
+
+        toggled = getattr(widget, 'toggled', None)
+        if toggled is None or widget in self._tab_toggle_slots:
+            return
+
+        slot = lambda checked, w=widget: self._on_tab_toggled(w, checked)
+        self._tab_toggle_slots[widget] = slot
+        toggled.connect(slot)
+
+    def _bind_toggle_action(self, widget: QWidget) -> None:
+        if bool(widget.property('pageTab')):
+            return
+
+        toggled = getattr(widget, 'toggled', None)
+        is_checkable = getattr(widget, 'isCheckable', None)
+        if toggled is None or not callable(is_checkable):
+            return
+        if not bool(is_checkable()) or widget in self._toggle_action_slots:
+            return
+
+        slot = lambda checked, w=widget: self._on_widget_toggled(w, checked)
+        self._toggle_action_slots[widget] = slot
+        toggled.connect(slot)
+
+    def _bind_popup_actions(self, widget: QWidget) -> None:
+        opened = getattr(widget, 'popupOpened', None)
+        closed = getattr(widget, 'popupClosed', None)
+        if opened is None or closed is None or widget in self._popup_action_slots:
+            return
+
+        open_slot = lambda w=widget: self._play(w, 'open')
+        close_slot = lambda w=widget: self._play(w, 'close')
+        self._popup_action_slots[widget] = (open_slot, close_slot)
+        opened.connect(open_slot)
+        closed.connect(close_slot)
+
+    def _on_widget_toggled(self, widget: QWidget, checked: bool) -> None:
+        self._play_checkable_state(widget, force=True)
+        self._queue_checkable_reconcile(widget)
+        if widget in self._runtime_rainbow_widgets:
+            if checked:
+                self._set_shared_rainbow_active(widget, self._runtime_rainbow_duration_ms, 0.0, True)
+            else:
+                self._set_shared_rainbow_active(widget, 0, 0.0, False)
+                self._reset_widget_animation_state(widget, had_shared_rainbow=True)
+
+    def _on_tab_toggled(self, widget: QWidget, checked: bool) -> None:
+        self._play_checkable_state(widget, force=True)
+        self._queue_checkable_reconcile(widget)
+
+        if checked:
+            self._locked_tabs.add(widget)
+            return
+
+        self._locked_tabs.discard(widget)
+        if 'unchecked' in self._animations.get(widget, {}):
+            return
+
+        if (overrides := self._style_overrides.get(widget)):
+            overrides.clear()
+        self._apply_widget_style(widget)
+
+    def _is_locked_tab(self, widget: QWidget) -> bool:
+        if not bool(widget.property('pageTab')):
+            return False
+
+        is_checkable = getattr(widget, 'isCheckable', None)
+        is_checked = getattr(widget, 'isChecked', None)
+        if callable(is_checkable) and callable(is_checked):
+            return bool(is_checkable() and is_checked())
+        return False
+
+    def _sync_initial_state_actions(self, widget: QWidget) -> None:
+        groups = self._animations.get(widget)
+        if not groups:
+            return
+
+        if not widget.isEnabled() and 'disabled' in groups:
+            self._apply_action_final_state(widget, 'disabled')
+            return
+
+        if widget.isEnabled() and 'enabled' in groups:
+            self._apply_action_final_state(widget, 'enabled')
+
+        is_checkable = getattr(widget, 'isCheckable', None)
+        is_checked = getattr(widget, 'isChecked', None)
+        if not callable(is_checkable) or not callable(is_checked):
+            return
+        if not bool(is_checkable()):
+            return
+
+        action = self._resolve_checkable_state_action(widget, groups)
+        if action is None:
+            return
+
+        self._apply_action_final_state(widget, action)
+
+    def _queue_widget_style_refresh(self, widget: QWidget) -> None:
+        if not self._style_overrides.get(widget) and not self._slider_style_overrides.get(widget):
+            return
+
+        QTimer.singleShot(0, lambda w=widget: self._apply_widget_style(w) if w in self._animations else None)
+
+    def _sync_paint_overlay_geometry(self, widget: QWidget) -> None:
+        overlay = self._paint_overlays.get(widget)
+        if overlay is None:
+            return
+
+        was_visible = overlay.isVisible()
+        overlay.setGeometry(widget.rect())
+        overlay.raise_()
+        if was_visible and widget.isVisible():
+            overlay.show()
+
+    def _shared_rainbow_value(self, duration_ms: int | float, phase_offset: float = 0.0) -> float:
+        try:
+            duration = float(duration_ms)
+        except (TypeError, ValueError):
+            return 0.0
+        if duration <= 0.0:
+            return 0.0
+        elapsed_ms = (monotonic() - self._shared_rainbow_epoch) * 1000.0
+        return float(((elapsed_ms / duration) + float(phase_offset)) % 1.0)
+
+    def _set_shared_rainbow_active(self, widget: QWidget, duration_ms: int | float, phase_offset: float, active: bool) -> None:
+        if active:
+            duration = max(1, int(round(float(duration_ms))))
+            self._shared_rainbow_bindings[widget] = (duration, float(phase_offset))
+            self._update_shared_rainbow_widget(widget, duration, float(phase_offset))
+            self._ensure_shared_rainbow_timer()
+            return
+
+        self._shared_rainbow_bindings.pop(widget, None)
+        self._stop_shared_rainbow_timer_if_idle()
+
+    def _set_shared_widget_border_active(self, widget: QWidget, duration_ms: int | float, phase_offset: float, active: bool, brightness: float = 1.0, saturation: float = 1.0) -> None:
+        if active:
+            duration = max(1, int(round(float(duration_ms))))
+            brightness = max(0.0, min(float(brightness), 1.0))
+            saturation = max(0.0, min(float(saturation), 1.0))
+            self._shared_widget_border_bindings[widget] = (duration, float(phase_offset), brightness, saturation)
+            self._apply_runtime_widget_border_color(
+                widget,
+                self._sample_shared_rainbow_color(self._shared_rainbow_value(duration, phase_offset), brightness=brightness, saturation=saturation),
+            )
+            self._ensure_shared_rainbow_timer()
+            return
+
+        self._shared_widget_border_bindings.pop(widget, None)
+        self._restore_runtime_widget_border(widget)
+        self._stop_shared_rainbow_timer_if_idle()
+
+    def _set_shared_border_color_active(self, overlay: DashBorderOverlay, duration_ms: int | float, phase_offset: float, active: bool, brightness: float = 1.0, saturation: float = 1.0) -> None:
+        if active:
+            duration = max(1, int(round(float(duration_ms))))
+            brightness = max(0.0, min(float(brightness), 1.0))
+            saturation = max(0.0, min(float(saturation), 1.0))
+            self._shared_border_color_bindings[overlay] = (duration, float(phase_offset), brightness, saturation)
+            overlay.set_color(self._sample_shared_rainbow_color(self._shared_rainbow_value(duration, phase_offset), brightness=brightness, saturation=saturation))
+            self._ensure_shared_rainbow_timer()
+            return
+
+        self._shared_border_color_bindings.pop(overlay, None)
+        self._stop_shared_rainbow_timer_if_idle()
+
+    def _set_shared_gradient_border_active(self, overlay: DashBorderOverlay, duration_ms: int | float, phase_offset: float, active: bool) -> None:
+        if active:
+            duration = max(1, int(round(float(duration_ms))))
+            self._shared_gradient_border_bindings[overlay] = (duration, float(phase_offset))
+            overlay.set_gradient_phase(self._shared_rainbow_value(duration, phase_offset))
+            self._ensure_shared_rainbow_timer()
+            return
+
+        self._shared_gradient_border_bindings.pop(overlay, None)
+        self._stop_shared_rainbow_timer_if_idle()
+
+    def _ensure_shared_rainbow_timer(self) -> None:
+        if not self._shared_rainbow_timer.isActive():
+            self._shared_rainbow_timer.start()
+
+    def _stop_shared_rainbow_timer_if_idle(self) -> None:
+        if not self._shared_rainbow_bindings and not self._shared_widget_border_bindings and not self._shared_border_color_bindings and not self._shared_gradient_border_bindings:
+            self._shared_rainbow_timer.stop()
+
+    def _update_shared_rainbow_widget(self, widget: QWidget, duration_ms: int | float, phase_offset: float) -> None:
+        phase = self._shared_rainbow_value(duration_ms, phase_offset)
+        self._set_shared_widget_rainbow_phase(widget, phase)
+
+    def _sample_shared_rainbow_color(self, phase: float, *, brightness: float = 1.0, saturation: float = 1.0) -> QColor:
+        normalized = float(phase) % 1.0
+        previous_offset, previous_color = _RAINBOW_HANDLE_STOPS[0]
+        color = QColor(_RAINBOW_HANDLE_STOPS[-1][1])
+        for next_offset, next_color in _RAINBOW_HANDLE_STOPS[1:]:
+            if normalized <= next_offset:
+                span = max(next_offset - previous_offset, 1e-9)
+                mix = max(0.0, min(1.0, (normalized - previous_offset) / span))
+                start = QColor(previous_color)
+                end = QColor(next_color)
+                color = QColor(
+                    round(start.red() + (end.red() - start.red()) * mix),
+                    round(start.green() + (end.green() - start.green()) * mix),
+                    round(start.blue() + (end.blue() - start.blue()) * mix),
+                    round(start.alpha() + (end.alpha() - start.alpha()) * mix),
+                )
+                break
+            previous_offset, previous_color = next_offset, next_color
+
+        saturation = max(0.0, min(float(saturation), 1.0))
+        if saturation < 0.999:
+            gray = round((color.red() * 0.299) + (color.green() * 0.587) + (color.blue() * 0.114))
+            color = QColor(
+                round(gray + (color.red() - gray) * saturation),
+                round(gray + (color.green() - gray) * saturation),
+                round(gray + (color.blue() - gray) * saturation),
+                color.alpha(),
+            )
+
+        brightness = max(0.0, min(float(brightness), 1.0))
+        if brightness < 0.999:
+            color = QColor(
+                round(color.red() * brightness),
+                round(color.green() * brightness),
+                round(color.blue() * brightness),
+                color.alpha(),
+            )
+        return color
+
+    def _set_shared_widget_rainbow_phase(self, widget: QWidget, phase: float) -> None:
+        slider_setter = getattr(widget, 'set_slider_line_rainbow', None)
+        if callable(slider_setter):
+            slider_setter(float(phase))
+            self._cache.setdefault(widget, {})['parts.sub_page.rainbow'] = float(phase)
+            return
+
+        handle_setter = getattr(widget, 'set_handle_rainbow', None)
+        if callable(handle_setter):
+            handle_setter(float(phase))
+            self._cache.setdefault(widget, {})['parts.handle.rainbow'] = float(phase)
+
+    def _update_shared_rainbow_widgets(self) -> None:
+        stale_widgets: list[QWidget] = []
+        stale_border_widgets: list[QWidget] = []
+        stale_color_overlays: list[DashBorderOverlay] = []
+        stale_overlays: list[DashBorderOverlay] = []
+        phase_cache: dict[tuple[int, float], float] = {}
+        for widget, (duration, phase_offset) in list(self._shared_rainbow_bindings.items()):
+            try:
+                cache_key = (duration, float(phase_offset))
+                phase = phase_cache.get(cache_key)
+                if phase is None:
+                    phase = self._shared_rainbow_value(duration, phase_offset)
+                    phase_cache[cache_key] = phase
+                self._set_shared_widget_rainbow_phase(widget, phase)
+            except RuntimeError:
+                stale_widgets.append(widget)
+        for widget in list(self._shared_widget_border_bindings):
+            if not isinstance(widget, QWidget):
+                stale_border_widgets.append(widget)
+        for overlay, (duration, phase_offset, brightness, saturation) in list(self._shared_border_color_bindings.items()):
+            try:
+                cache_key = (duration, float(phase_offset))
+                phase = phase_cache.get(cache_key)
+                if phase is None:
+                    phase = self._shared_rainbow_value(duration, phase_offset)
+                    phase_cache[cache_key] = phase
+                overlay.set_color(self._sample_shared_rainbow_color(phase, brightness=brightness, saturation=saturation))
+            except RuntimeError:
+                stale_color_overlays.append(overlay)
+        for overlay, (duration, phase_offset) in list(self._shared_gradient_border_bindings.items()):
+            try:
+                cache_key = (duration, float(phase_offset))
+                phase = phase_cache.get(cache_key)
+                if phase is None:
+                    phase = self._shared_rainbow_value(duration, phase_offset)
+                    phase_cache[cache_key] = phase
+                overlay.set_gradient_phase(phase)
+            except RuntimeError:
+                stale_overlays.append(overlay)
+        self._update_runtime_hover_states()
+        for widget in stale_widgets:
+            self._shared_rainbow_bindings.pop(widget, None)
+        for widget in stale_border_widgets:
+            self._shared_widget_border_bindings.pop(widget, None)
+            self._restore_runtime_widget_border(widget)
+        for overlay in stale_color_overlays:
+            self._shared_border_color_bindings.pop(overlay, None)
+        for overlay in stale_overlays:
+            self._shared_gradient_border_bindings.pop(overlay, None)
+        self._stop_shared_rainbow_timer_if_idle()
+
+    def _update_runtime_hover_states(self) -> None:
+        for widget, state in list(self._runtime_native_border_widgets.items()):
+            try:
+                current = float(state.get('opacity', 0.0))
+                target = 1.0 if self._cursor_over_widget(widget) else 0.0
+                state['target_opacity'] = target
+                next_opacity = self._step_runtime_opacity(current, target)
+                state['opacity'] = next_opacity
+                if next_opacity <= 0.001:
+                    self._restore_runtime_widget_border(widget)
+                else:
+                    duration, phase_offset, brightness, saturation = self._shared_widget_border_bindings.get(widget, (self._runtime_rainbow_duration_ms, 0.0, 0.9, 0.8))
+                    phase = self._shared_rainbow_value(duration, phase_offset)
+                    self._apply_runtime_widget_border_color(
+                        widget,
+                        self._sample_shared_rainbow_color(phase, brightness=brightness, saturation=saturation),
+                        opacity=next_opacity,
+                    )
+            except RuntimeError:
+                continue
+
+        for widget, overlay in list(self._runtime_hover_overlays.items()):
+            state = self._runtime_hover_overlay_states.get(widget)
+            if state is None:
+                continue
+            try:
+                current = float(state.get('opacity', 0.0))
+                target = 1.0 if self._cursor_over_widget(widget) else 0.0
+                state['target_opacity'] = target
+                next_opacity = self._step_runtime_opacity(current, target)
+                state['opacity'] = next_opacity
+                overlay.set_opacity(next_opacity)
+                if next_opacity <= 0.001:
+                    overlay.hide()
+                elif widget.isVisible():
+                    overlay.show()
+            except RuntimeError:
+                continue
+
+    def _step_runtime_opacity(self, current: float, target: float) -> float:
+        current = max(0.0, min(float(current), 1.0))
+        target = max(0.0, min(float(target), 1.0))
+        if abs(target - current) <= _RUNTIME_BORDER_FADE_STEP:
+            return target
+        if target > current:
+            return min(1.0, current + _RUNTIME_BORDER_FADE_STEP)
+        return max(0.0, current - _RUNTIME_BORDER_FADE_STEP)
+
+    def _apply_runtime_widget_border_color(self, widget: QWidget, color: QColor, *, opacity: float = 1.0) -> None:
+        base_text = str(self._runtime_native_border_widgets.get(widget, {}).get('base_border_color', '') or '')
+        blended = self._blend_runtime_border_color(base_text, color, opacity)
+        self._set_style_value(widget, 'border-color', blended.name(QColor.NameFormat.HexRgb))
+
+    def _blend_runtime_border_color(self, base_color_text: str, rainbow_color: QColor, opacity: float) -> QColor:
+        mix = max(0.0, min(float(opacity), 1.0))
+        target = QColor(rainbow_color)
+        target.setAlpha(255)
+        if mix <= 0.0:
+            base = to_qcolor(base_color_text)
+            return base if base is not None else target
+        if mix >= 1.0:
+            return target
+
+        base = to_qcolor(base_color_text)
+        if base is None:
+            return target
+
+        return QColor(
+            round(base.red() + (target.red() - base.red()) * mix),
+            round(base.green() + (target.green() - base.green()) * mix),
+            round(base.blue() + (target.blue() - base.blue()) * mix),
+            255,
+        )
+
+    def _restore_runtime_widget_border(self, widget: QWidget) -> None:
+        overrides = self._style_overrides.setdefault(widget, {})
+        previous = self._runtime_native_border_widgets.get(widget, {}).get('previous_border_color_override')
+        changed = False
+        if previous is None:
+            if 'border-color' in overrides:
+                overrides.pop('border-color', None)
+                changed = True
+        else:
+            if overrides.get('border-color') != previous:
+                overrides['border-color'] = str(previous)
+                changed = True
+        if changed:
+            self._apply_widget_style(widget)
+
+    def _detect_runtime_border_config(self, widget: QWidget) -> dict[str, float | bool]:
+        declarations = self._collect_widget_declarations(widget)
+        width_text = declarations.get('border-width')
+        style_text = declarations.get('border-style')
+        color_text = declarations.get('border-color')
+        if (shorthand := declarations.get('border')):
+            short_width, short_style, short_color = self._parse_border_shorthand(shorthand)
+            width_text = width_text or short_width
+            style_text = style_text or short_style
+            color_text = color_text or short_color
+
+        width = self._parse_measure_value(width_text)
+        style = str(style_text or '').strip().lower()
+        radius = self._parse_measure_value(declarations.get('border-radius'))
+        if radius is None:
+            radius = self._parse_measure_value(widget.property('_themeBorderRadius'))
+
+        return {
+            'visible': bool(width and width > 0.0 and style and style != 'none'),
+            'width': max(1.0, float(width)) if width is not None else 1.5,
+            'radius': max(0.0, float(radius)) if radius is not None else 0.0,
+            'inset': max(0.5, (float(width) / 2.0)) if width is not None else 1.0,
+            'color_text': str(color_text).strip() if isinstance(color_text, str) and color_text.strip() else '',
+        }
+
+    def _collect_widget_declarations(self, widget: QWidget) -> dict[str, str]:
+        declarations: dict[str, str] = {}
+        for raw in (
+            widget.property('_themeBorderRule'),
+            widget.property('_themeBorderRadius'),
+            widget.styleSheet(),
+        ):
+            if isinstance(raw, str) and raw.strip():
+                declarations.update(self._extract_css_declarations(raw))
+        return declarations
+
+    def _extract_css_declarations(self, text: str) -> dict[str, str]:
+        result: dict[str, str] = {}
+        for match in _CSS_DECLARATION_PATTERN.finditer(text):
+            key = str(match.group(1)).strip().lower()
+            value = str(match.group(2)).strip()
+            if key and value:
+                result[key] = value
+        return result
+
+    def _parse_border_shorthand(self, value: str) -> tuple[str | None, str | None, str | None]:
+        text = str(value).strip()
+        if not text:
+            return None, None, None
+        match = re.match(r'^(\S+)\s+(\S+)\s+(.+)$', text)
+        if not match:
+            return None, None, None
+        width = str(match.group(1)).strip()
+        style = str(match.group(2)).strip()
+        color = str(match.group(3)).strip()
+        return width or None, style or None, color or None
+
+    def _parse_measure_value(self, value: Any) -> float | None:
+        if isinstance(value, (int, float)):
+            return float(value)
+        if not isinstance(value, str):
+            return None
+        text = value.strip().lower()
+        if not text:
+            return None
+        if text.endswith('%'):
+            return None
+        if text.endswith('px'):
+            text = text[:-2].strip()
+        try:
+            return float(text)
+        except ValueError:
+            return None
+
+    def _ensure_dash_overlay(self, widget: QWidget, config: dict[str, Any]) -> DashBorderOverlay:
+        overlay = self._paint_overlays.get(widget)
+        if overlay is None:
+            overlay = DashBorderOverlay(widget)
+            self._paint_overlays[widget] = overlay
+
+        overlay.configure(
+            color=config['color'],
+            width=config['width'],
+            radius=config['radius'],
+            dash_pattern=config['dash_pattern'],
+            inset=config['inset'],
+            pen_style=config['pen_style'],
+            opacity=config.get('opacity', 1.0),
+        )
+        self._sync_paint_overlay_geometry(widget)
+        return overlay
+
+    def _ensure_gradient_overlay(self, widget: QWidget, config: dict[str, Any]) -> DashBorderOverlay:
+        overlay = self._paint_overlays.get(widget)
+        if overlay is None:
+            overlay = DashBorderOverlay(widget)
+            self._paint_overlays[widget] = overlay
+
+        overlay.configure_gradient(
+            width=config['width'],
+            radius=config['radius'],
+            inset=config['inset'],
+            direction=config['direction'],
+            stops=config['stops'],
+            pen_style=config['pen_style'],
+            dash_pattern=config['dash_pattern'],
+            opacity=config.get('opacity', 1.0),
+        )
+        self._sync_paint_overlay_geometry(widget)
+        return overlay
+
+    def _dash_border_style_defaults(self, styles: dict[str, Any]) -> dict[str, Any] | None:
+        raw: Any = None
+        paint = styles.get('paint') if isinstance(styles.get('paint'), dict) else None
+        if isinstance(paint, dict):
+            raw = paint.get('dash_border') or paint.get('dashBorder') or paint.get('border')
+        if raw is None:
+            raw = styles.get('dash_border') or styles.get('paint_dash_border')
+        if raw is None:
+            return None
+        normalized = _normalize_dash_border(raw)
+        return normalized if isinstance(normalized, dict) else None
+
+    def _merge_dash_border_style_defaults(self, effect: dict[str, Any], styles: dict[str, Any]) -> dict[str, Any]:
+        defaults = self._dash_border_style_defaults(styles)
+        if not defaults:
+            return effect
+
+        merged = deepcopy(effect)
+        provided = set(merged.get('_provided', set()))
+
+        for key in ('offset', 'phase_offset', 'phase_duration', 'opacity', 'brightness', 'saturation', 'width', 'radius', 'inset', 'dash_pattern', 'pen_style', 'seamless'):
+            if key not in provided and key in defaults:
+                merged[key] = deepcopy(defaults[key])
+
+        if 'color' not in provided:
+            if 'color' in defaults:
+                merged['color'] = QColor(defaults['color'])
+            if 'shared_color' in defaults:
+                merged['shared_color'] = bool(defaults['shared_color'])
+
+        return merged
+
+    def _style_handle_rainbow_duration(self, styles: dict[str, Any]) -> int | None:
+        parts = styles.get('parts') if isinstance(styles.get('parts'), dict) else {}
+        handle = parts.get('handle') if isinstance(parts.get('handle'), dict) else {}
+        rainbow = handle.get('rainbow') if isinstance(handle.get('rainbow'), dict) else {}
+        value = rainbow.get('phase_duration', rainbow.get('rainbow_duration', rainbow.get('period')))
+        try:
+            duration = int(round(float(value)))
+        except (TypeError, ValueError):
+            return None
+        return max(1, duration)
+
+    def _rainbow_animation_duration(self, spec: AnimationSpec, styles: dict[str, Any]) -> int:
+        if spec.property_key != 'parts.handle.rainbow':
+            return spec.duration
+        options = spec.options if isinstance(spec.options, dict) else {}
+        if bool(options.get('duration_provided')):
+            return spec.duration
+        return self._style_handle_rainbow_duration(styles) or spec.duration
+
+    def _append_animation(
+        self,
+        widget: QWidget,
+        spec: AnimationSpec,
+        group: QParallelAnimationGroup,
+        base_styles: dict[str, Any],
+    ) -> None:
+        runtime: dict[str, Any] = {}
+        self._remember_action_property(widget, spec)
+
+        match spec.kind:
+            case 'color':
+                if spec.property_key == 'border.color':
+                    border_config = self._detect_runtime_border_config(widget)
+                    if bool(border_config.get('visible')):
+                        border_state: dict[str, Any] = {'previous': None, 'captured': False}
+
+                        def capture_previous_border_override() -> None:
+                            if border_state['captured']:
+                                return
+                            border_state['previous'] = deepcopy(self._style_overrides.get(widget, {}).get('border-color'))
+                            border_state['captured'] = True
+
+                        def restore_previous_border_override() -> None:
+                            overrides = self._style_overrides.setdefault(widget, {})
+                            previous = border_state.get('previous')
+                            changed = False
+                            if previous is None:
+                                if 'border-color' in overrides:
+                                    overrides.pop('border-color', None)
+                                    changed = True
+                            elif overrides.get('border-color') != previous:
+                                overrides['border-color'] = str(previous)
+                                changed = True
+                            if changed:
+                                self._apply_widget_style(widget)
+
+                        def on_start() -> None:
+                            cache = self._cache.setdefault(widget, {})
+                            start_color = self._animation_start_color(widget, spec, base_styles, cache)
+                            runtime['start'] = QColor(start_color)
+                            capture_previous_border_override()
+                            effect = {
+                                'color': QColor(start_color),
+                                'width': float(border_config.get('width', 1.5)),
+                                'radius': float(border_config.get('radius', 10.0)),
+                                'dash_pattern': [9999.0, 1.0],
+                                'inset': 0.0,
+                                'pen_style': Qt.PenStyle.SolidLine,
+                                'opacity': max(0.0, min(QColor(start_color).alphaF(), 1.0)),
+                            }
+                            overlay = self._ensure_dash_overlay(widget, effect)
+                            runtime['overlay'] = overlay
+                            transparent = normalize_color(QColor(Qt.GlobalColor.transparent)) or 'transparent'
+                            self._set_style_value(widget, 'border-color', transparent, source_action=spec.action)
+                            if widget.isVisible() and overlay.opacity() > 0.0:
+                                overlay.show()
+
+                        def on_update(t: float) -> None:
+                            if not self._is_spec_action_active(widget, spec):
+                                return
+                            start_color = runtime.get('start', spec.end)
+                            color = _interpolate_color(start_color, spec.end, t)
+                            overlay = runtime.get('overlay')
+                            if not isinstance(overlay, DashBorderOverlay):
+                                return
+                            opaque = QColor(color)
+                            opaque.setAlpha(255)
+                            overlay.set_color(opaque)
+                            overlay.set_opacity(color.alphaF())
+                            if widget.isVisible() and color.alphaF() > 0.0:
+                                self._sync_paint_overlay_geometry(widget)
+                                overlay.show()
+                            else:
+                                overlay.hide()
+                            self._cache[widget][spec.property_key] = QColor(color)
+
+                        def on_finished() -> None:
+                            if not self._is_spec_action_active(widget, spec):
+                                return
+                            overlay = runtime.get('overlay')
+                            if not isinstance(overlay, DashBorderOverlay):
+                                restore_previous_border_override()
+                                return
+                            if QColor(spec.end).alphaF() <= 0.001:
+                                overlay.hide()
+                                restore_previous_border_override()
+
+                        animation = TimerAnimation(spec.duration, spec.easing, on_start, on_update, parent=widget)
+                        animation.finished.connect(on_finished)
+                        animation.setLoopCount(spec.loop_count)
+                        group.addAnimation(animation)
+                        return
+
+                def on_start() -> None:
+                    cache = self._cache.setdefault(widget, {})
+                    start_color = self._animation_start_color(widget, spec, base_styles, cache)
+                    runtime['start'] = QColor(start_color)
+
+                def on_update(t: float) -> None:
+                    if not self._is_spec_action_active(widget, spec):
+                        return
+                    start_color = runtime.get('start', spec.end)
+                    color = _interpolate_color(start_color, spec.end, t)
+                    self._set_style_value(widget, spec.css_property, normalize_color(color) or color.name(), source_action=spec.action)
+                    self._cache[widget][spec.property_key] = QColor(color)
+
+                animation = TimerAnimation(spec.duration, spec.easing, on_start, on_update, parent=widget)
+                animation.setLoopCount(spec.loop_count)
+                group.addAnimation(animation)
+                return
+
+            case 'gradient':
+                def on_start() -> None:
+                    cache = self._cache.setdefault(widget, {})
+                    start_grad = cache.get(spec.property_key) if spec.action in {'hover', 'leave'} else spec.start
+                    if start_grad is None:
+                        start_grad = spec.start if spec.action in {'hover', 'leave'} else cache.get(spec.property_key)
+                    if not isinstance(start_grad, dict):
+                        start_grad = self._sample_style_gradient(base_styles, spec.property_key, fallback=spec.end)
+                    if not isinstance(start_grad, dict) and spec.property_key.startswith('parts.'):
+                        tokens = spec.property_key.split('.')
+                        if len(tokens) == 4 and tokens[2] == 'background' and tokens[3] == 'gradient':
+                            getter = getattr(widget, 'current_part_gradient', None)
+                            if callable(getter):
+                                start_grad = getter(tokens[1])
+                    if not isinstance(start_grad, dict):
+                        start_grad = _clone_gradient(spec.end)
+                    runtime['start'] = _clone_gradient(start_grad)
+
+                def on_update(t: float) -> None:
+                    if not self._is_spec_action_active(widget, spec):
+                        return
+                    start_grad = runtime.get('start', spec.end)
+                    grad = _interpolate_gradient(start_grad, spec.end, t)
+                    if spec.property_key.startswith('parts.'):
+                        tokens = spec.property_key.split('.')
+                        if len(tokens) == 4 and tokens[2] == 'background' and tokens[3] == 'gradient':
+                            setter = getattr(widget, 'set_part_gradient', None)
+                            if callable(setter) and setter(tokens[1], grad):
+                                self._cache[widget][spec.property_key] = _clone_gradient(grad)
+                                return
+                    self._set_style_value(widget, spec.css_property, _gradient_to_qss(grad), source_action=spec.action)
+                    self._cache[widget][spec.property_key] = _clone_gradient(grad)
+
+                animation = TimerAnimation(spec.duration, spec.easing, on_start, on_update, parent=widget)
+                animation.setLoopCount(spec.loop_count)
+                group.addAnimation(animation)
+                return
+
+            case 'number':
+                animation_ref: dict[str, TimerAnimation] = {}
+
+                def on_start() -> None:
+                    self._notify_part_animation_state(widget, spec.property_key, True)
+                    cache = self._cache.setdefault(widget, {})
+                    start_value = spec.start
+                    if start_value is None:
+                        start_value = cache.get(spec.property_key)
+                    if not isinstance(start_value, (int, float)):
+                        start_value = self._sample_number(widget, spec.property_key, fallback=float(spec.end))
+                    start_value = float(start_value)
+                    runtime['start'] = start_value
+                    if spec.action == 'wheel' and spec.property_key in {'scroll.vertical', 'scroll.horizontal'}:
+                        runtime['delta'] = self._resolve_wheel_scroll_delta(widget, spec)
+                        runtime['end'] = start_value + float(runtime['delta'])
+                    else:
+                        end_value = self._normalize_number_target(widget, spec.property_key, float(spec.end))
+                        runtime['end'] = end_value
+                        runtime['delta'] = end_value - start_value
+
+                def on_update(t: float) -> None:
+                    if not self._is_spec_action_active(widget, spec):
+                        return
+                    start_value = float(runtime.get('start', spec.end))
+                    delta = float(runtime.get('delta', spec.end))
+                    value = start_value + (delta * t)
+                    self._set_number_property(widget, spec.property_key, value)
+                    actual_value = self._sample_number(widget, spec.property_key, fallback=float(value))
+                    self._cache[widget][spec.property_key] = float(actual_value)
+
+                animation = TimerAnimation(
+                    spec.duration,
+                    spec.easing,
+                    on_start,
+                    on_update,
+                    parent=widget,
+                    restart_each_loop=False,
+                )
+                animation_ref['animation'] = animation
+                animation.finished.connect(
+                    lambda w=widget, key=spec.property_key: self._notify_part_animation_state(w, key, False)
+                )
+                animation.setLoopCount(spec.loop_count)
+                group.addAnimation(animation)
+                return
+
+            case 'paint_dash_border':
+                if not isinstance(spec.end, dict):
+                    return
+
+                effect = self._merge_dash_border_style_defaults(spec.end, base_styles)
+                self._paint_border_profiles[widget] = deepcopy(effect)
+                overlay = self._ensure_dash_overlay(widget, effect)
+
+                def on_start() -> None:
+                    cache = self._cache.setdefault(widget, {})
+                    start_offset = spec.start
+                    if start_offset is None:
+                        start_offset = cache.get(spec.property_key, overlay.gradient_phase())
+                    start_offset = float(start_offset)
+                    end_offset = float(effect.get('offset', 0.0))
+
+                    start_opacity = cache.get(f'{spec.property_key}.opacity', overlay.opacity())
+                    try:
+                        start_opacity = float(start_opacity)
+                    except (TypeError, ValueError):
+                        start_opacity = overlay.opacity()
+                    end_opacity = float(effect.get('opacity', 1.0))
+
+                    if spec.loop_count != 1 and bool(effect.get('seamless', True)):
+                        period = sum(float(v) for v in effect.get('dash_pattern', []))
+                        if period > 0.0:
+                            delta = end_offset - start_offset
+                            direction = 1.0 if delta >= 0.0 else -1.0
+                            turns = max(1, int(math.ceil(abs(delta) / period)))
+                            end_offset = start_offset + (direction * period * turns)
+
+                    runtime['start'] = start_offset
+                    runtime['end'] = end_offset
+                    runtime['start_opacity'] = max(0.0, min(start_opacity, 1.0))
+                    runtime['end_opacity'] = max(0.0, min(end_opacity, 1.0))
+                    self._ensure_dash_overlay(widget, effect)
+                    if bool(effect.get('shared_color')):
+                        self._set_shared_border_color_active(
+                            overlay,
+                            effect.get('phase_duration', 5000.0),
+                            effect.get('phase_offset', 0.0),
+                            True,
+                            brightness=effect.get('brightness', 1.0),
+                            saturation=effect.get('saturation', 1.0),
+                        )
+                    else:
+                        self._set_shared_border_color_active(overlay, 0, 0.0, False)
+                    if widget.isVisible():
+                        overlay.show()
+
+                def on_update(t: float) -> None:
+                    if not self._is_spec_action_active(widget, spec):
+                        return
+                    start_opacity = float(runtime.get('start_opacity', overlay.opacity()))
+                    end_opacity = float(runtime.get('end_opacity', effect.get('opacity', 1.0)))
+                    opacity = start_opacity + ((end_opacity - start_opacity) * t)
+                    overlay.set_opacity(opacity)
+                    self._cache[widget][f'{spec.property_key}.opacity'] = float(opacity)
+
+                    start_offset = float(runtime.get('start', 0.0))
+                    end_offset = float(runtime.get('end', effect.get('offset', 0.0)))
+                    offset = start_offset + (end_offset - start_offset) * t
+                    overlay.set_dash_offset(offset)
+                    if widget.isVisible() and not overlay.isVisible() and opacity > 0.0:
+                        self._sync_paint_overlay_geometry(widget)
+                        overlay.show()
+                    self._cache[widget][spec.property_key] = float(offset)
+
+                def on_finished() -> None:
+                    if not self._is_spec_action_active(widget, spec):
+                        return
+                    end_opacity = float(runtime.get('end_opacity', effect.get('opacity', 1.0)))
+                    if end_opacity <= 0.0:
+                        self._set_shared_border_color_active(overlay, 0, 0.0, False)
+                        overlay.hide()
+
+                animation = TimerAnimation(spec.duration, spec.easing, on_start, on_update, parent=widget)
+                animation.finished.connect(on_finished)
+                animation.setLoopCount(spec.loop_count)
+                group.addAnimation(animation)
+                return
+
+            case 'paint_gradient_border':
+                if not isinstance(spec.end, dict):
+                    return
+
+                overlay = self._ensure_gradient_overlay(widget, spec.end)
+
+                def on_start() -> None:
+                    cache = self._cache.setdefault(widget, {})
+                    shared_phase = bool(spec.end.get('shared_phase'))
+                    start_phase = spec.start
+                    if start_phase is None:
+                        start_phase = cache.get(spec.property_key, overlay.gradient_phase())
+                    start_phase = float(start_phase)
+                    end_phase = float(spec.end.get('phase', 1.0))
+
+                    start_opacity = cache.get(f'{spec.property_key}.opacity', overlay.opacity())
+                    try:
+                        start_opacity = float(start_opacity)
+                    except (TypeError, ValueError):
+                        start_opacity = overlay.opacity()
+                    end_opacity = float(spec.end.get('opacity', 1.0))
+
+                    if not shared_phase and spec.loop_count != 1 and bool(spec.end.get('seamless', True)):
+                        delta = end_phase - start_phase
+                        direction = 1.0 if delta >= 0.0 else -1.0
+                        turns = max(1, int(math.ceil(abs(delta)))) if abs(delta) > 1e-6 else 1
+                        end_phase = start_phase + (direction * turns)
+
+                    runtime['start'] = start_phase
+                    runtime['end'] = end_phase
+                    runtime['start_opacity'] = max(0.0, min(start_opacity, 1.0))
+                    runtime['end_opacity'] = max(0.0, min(end_opacity, 1.0))
+                    self._ensure_gradient_overlay(widget, spec.end)
+                    if shared_phase:
+                        self._set_shared_gradient_border_active(
+                            overlay,
+                            spec.end.get('phase_duration', 5000.0),
+                            spec.end.get('phase_offset', 0.0),
+                            True,
+                        )
+                    else:
+                        self._set_shared_gradient_border_active(overlay, 0, 0.0, False)
+                    if widget.isVisible():
+                        overlay.show()
+
+                def on_update(t: float) -> None:
+                    if not self._is_spec_action_active(widget, spec):
+                        return
+                    shared_phase = bool(spec.end.get('shared_phase'))
+                    start_opacity = float(runtime.get('start_opacity', overlay.opacity()))
+                    end_opacity = float(runtime.get('end_opacity', spec.end.get('opacity', 1.0)))
+                    opacity = start_opacity + ((end_opacity - start_opacity) * t)
+                    overlay.set_opacity(opacity)
+                    self._cache[widget][f'{spec.property_key}.opacity'] = float(opacity)
+
+                    if not shared_phase:
+                        start_phase = float(runtime.get('start', 0.0))
+                        end_phase = float(runtime.get('end', spec.end.get('phase', 1.0)))
+                        phase = start_phase + (end_phase - start_phase) * t
+                        overlay.set_gradient_phase(phase)
+                        self._cache[widget][spec.property_key] = float(phase)
+
+                    if widget.isVisible() and not overlay.isVisible() and opacity > 0.0:
+                        self._sync_paint_overlay_geometry(widget)
+                        overlay.show()
+
+                def on_finished() -> None:
+                    if not self._is_spec_action_active(widget, spec):
+                        return
+                    end_opacity = float(runtime.get('end_opacity', spec.end.get('opacity', 1.0)))
+                    if end_opacity <= 0.0:
+                        self._set_shared_gradient_border_active(overlay, 0, 0.0, False)
+                        overlay.hide()
+
+                animation = TimerAnimation(spec.duration, spec.easing, on_start, on_update, parent=widget)
+                animation.finished.connect(on_finished)
+                animation.setLoopCount(spec.loop_count)
+                group.addAnimation(animation)
+
+    def _play(self, widget: QWidget, action: str) -> None:
+        groups = self._animations.get(widget)
+        if not groups:
+            return
+
+        if action in {'hover', 'leave'} and self._play_checkable_state(widget):
+            return
+
+        group = groups.get(action)
         if not group:
             return
 
-        for i in range(group.animationCount()):
-            anim = group.animationAt(i)
-            if hasattr(anim, 'anim'):
-                anim.anim.pop('from', None)
+        self._start_action_group(widget, action, group, groups)
 
-        group.stop()
-        group.start()
+    def _handle_wheel_event(self, widget: QWidget, event: QWheelEvent) -> bool:
+        groups = self._animations.get(widget)
+        if not groups:
+            return False
 
-    def _animate_color(self, widget: QWidget, anim: dict, t: float):
-        cache = self._cache.setdefault(widget, {})
+        group = groups.get('wheel')
+        if group is None:
+            return False
 
-        if 'from' not in anim:
-            anim['from'] = cache.get('background', QColor(anim.get('start', '#000000')))
+        angle_delta = event.angleDelta()
+        pixel_delta = event.pixelDelta()
+        vertical_delta = float(angle_delta.y())
+        horizontal_delta = float(angle_delta.x())
+        if abs(vertical_delta) < 0.001 and abs(horizontal_delta) < 0.001:
+            vertical_delta = float(pixel_delta.y())
+            horizontal_delta = float(pixel_delta.x())
 
-        start: QColor = anim['from']
-        end: QColor = QColor(anim.get('end', '#000000'))
+        if abs(vertical_delta) < 0.001 and abs(horizontal_delta) < 0.001:
+            return False
 
-        color = _interpolate_color(start, end, t)
-
-        widget.setStyleSheet(f'background-color: {color.name(QColor.NameFormat.HexArgb)};')
-
-        cache['background'] = color
-
-
-    def _animate_gradient(self, widget: QWidget, anim: dict, t: float):
-        cache = self._cache.setdefault(widget, {})
-
-        if 'from' not in anim:
-            start = cache.get('gradient', {
-                'direction': anim.get('direction', 'vertical'),
-                'stops': [
-                    {
-                        'pos': s['pos'],
-                        'color': QColor(s['color'])
-                    } for s in anim.get('start', [])
-                ]
-            })
-            anim['from'] = start
-
-        start_grad = anim['from']
-        end_grad = {
-            'direction': anim.get('direction', start_grad['direction']),
-            'stops': [
-                {
-                    'pos': s['pos'],
-                    'color': QColor(e['color'])
-                } for s, e in zip(start_grad['stops'], anim.get('end', []))
-            ]
+        self._wheel_event_deltas[widget] = {
+            'vertical': vertical_delta,
+            'horizontal': horizontal_delta,
         }
+        self._start_action_group(widget, 'wheel', group, groups, force=True, restart_running=True)
+        return True
 
-        new_stops = []
-        for s, e in zip(start_grad['stops'], end_grad['stops']):
-            color = _interpolate_color(s['color'], e['color'], t)
-            new_stops.append({'pos': s['pos'], 'color': color})
+    def _start_action_group(
+        self,
+        widget: QWidget,
+        action: str,
+        group: QParallelAnimationGroup,
+        groups: dict[str, QParallelAnimationGroup],
+        *,
+        force: bool = False,
+        restart_running: bool = False,
+    ) -> None:
+        if not force and self._action_properties_are_active(widget, action):
+            has_running_conflict = any(
+                group_name not in {'always', action} and
+                running_group.state() == QAbstractAnimation.State.Running
+                for group_name, running_group in groups.items()
+            )
+            if not has_running_conflict and self._action_final_state_matches(widget, action):
+                return
 
-        new_grad = {'direction': end_grad['direction'], 'stops': new_stops}
+        self._activate_action_properties(widget, action)
+        for group_name, running_group in groups.items():
+            if group_name in {'always', action}:
+                continue
+            if running_group.state() == QAbstractAnimation.State.Running:
+                running_group.stop()
 
-        self._apply_gradient(widget, new_grad)
+        if restart_running and group.state() == QAbstractAnimation.State.Running:
+            group.stop()
 
-        cache['gradient'] = new_grad
+        if group.state() == QAbstractAnimation.State.Running:
+            return
 
+        group.start()
+        if action in {'hover', 'leave'}:
+            self._start_hover_reconcile_timer()
 
-    def _apply_gradient(self, widget: QWidget, grad: dict):
-        dir = grad['direction']
-        x1, y1, x2, y2 = GRADIENT_DIRECTIONS.get(dir, (0, 0, 0, 1))
+    def _play_checkable_state(self, widget: QWidget, *, force: bool = False) -> bool:
+        groups = self._animations.get(widget)
+        if not groups:
+            return False
 
-        parts = [
-            f"stop:{s['pos']} {s['color'].name(QColor.NameFormat.HexArgb)}"
-            for s in grad['stops']
+        action = self._resolve_checkable_state_action(widget, groups)
+        if action is None:
+            return False
+
+        group = groups.get(action)
+        if group is None:
+            return False
+
+        self._start_action_group(widget, action, group, groups, force=force)
+        return True
+
+    def _resolve_checkable_state_action(self, widget: QWidget, groups: dict[str, QParallelAnimationGroup]) -> str | None:
+        is_checkable = getattr(widget, 'isCheckable', None)
+        is_checked = getattr(widget, 'isChecked', None)
+        if not callable(is_checkable) or not callable(is_checked):
+            return None
+        if not bool(is_checkable()):
+            return None
+
+        if bool(is_checked()) and 'checked' in groups:
+            return 'checked'
+
+        if widget in self._hovered_widgets and 'hover' in groups:
+            return 'hover'
+
+        if 'unchecked' in groups:
+            return 'unchecked'
+        if 'leave' in groups:
+            return 'leave'
+        return None
+
+    def _remember_action_property(self, widget: QWidget, spec: AnimationSpec) -> None:
+        self._action_property_keys.setdefault(widget, {}).setdefault(spec.action, set()).add(spec.property_key)
+        self._action_specs.setdefault(widget, {}).setdefault(spec.action, []).append(spec)
+
+    def _activate_action_properties(self, widget: QWidget, action: str) -> None:
+        property_keys = self._action_property_keys.get(widget, {}).get(action)
+        if not property_keys:
+            return
+
+        active = self._active_property_actions.setdefault(widget, {})
+        for property_key in property_keys:
+            active[property_key] = action
+
+    def _action_properties_are_active(self, widget: QWidget, action: str) -> bool:
+        property_keys = self._action_property_keys.get(widget, {}).get(action)
+        if not property_keys:
+            return False
+
+        active = self._active_property_actions.get(widget, {})
+        return all(active.get(property_key) == action for property_key in property_keys)
+
+    def _is_spec_action_active(self, widget: QWidget, spec: AnimationSpec) -> bool:
+        if spec.action == 'always':
+            return True
+
+        if spec.action == 'hover' and not self._cursor_over_widget(widget):
+            self._hovered_widgets.discard(widget)
+            self._queue_hover_exit(widget)
+            return False
+
+        active_action = self._active_property_actions.get(widget, {}).get(spec.property_key)
+        if active_action is None or active_action == spec.action:
+            return True
+        return self._actions_have_same_end_value(widget, active_action, spec.action, spec.property_key)
+
+    def _has_running_equivalent_action(
+        self,
+        widget: QWidget,
+        action: str,
+        groups: dict[str, QParallelAnimationGroup],
+    ) -> bool:
+        for group_name, running_group in groups.items():
+            if group_name in {'always', action}:
+                continue
+            if running_group.state() != QAbstractAnimation.State.Running:
+                continue
+            if self._actions_are_equivalent(widget, action, group_name):
+                return True
+        return False
+
+    def _actions_are_equivalent(self, widget: QWidget, left: str, right: str) -> bool:
+        left_specs = self._action_specs.get(widget, {}).get(left, [])
+        right_specs = self._action_specs.get(widget, {}).get(right, [])
+        if not left_specs or not right_specs:
+            return False
+
+        right_keys = {spec.property_key for spec in right_specs}
+        left_keys = {spec.property_key for spec in left_specs}
+        if left_keys != right_keys:
+            return False
+
+        return all(
+            self._actions_have_same_end_value(widget, left, right, property_key)
+            for property_key in left_keys
+        )
+
+    def _actions_have_same_end_value(self, widget: QWidget, left: str, right: str, property_key: str) -> bool:
+        left_spec = self._action_spec_for_property(widget, left, property_key)
+        right_spec = self._action_spec_for_property(widget, right, property_key)
+        if left_spec is None or right_spec is None:
+            return False
+        return self._animation_end_signature(left_spec) == self._animation_end_signature(right_spec)
+
+    def _action_spec_for_property(self, widget: QWidget, action: str, property_key: str) -> AnimationSpec | None:
+        for spec in self._action_specs.get(widget, {}).get(action, []):
+            if spec.property_key == property_key:
+                return spec
+        return None
+
+    def _animation_end_signature(self, spec: AnimationSpec) -> tuple[str, Any]:
+        if spec.kind == 'color':
+            color = to_qcolor(spec.end)
+            if color is not None:
+                return spec.kind, color.name(QColor.NameFormat.HexArgb)
+        if spec.kind == 'number':
+            try:
+                return spec.kind, float(spec.end)
+            except (TypeError, ValueError):
+                pass
+        return spec.kind, repr(spec.end)
+
+    def _normalize_number_target(self, widget: QWidget, property_key: str, value: float) -> float:
+        if property_key.startswith('parts.'):
+            tokens = property_key.split('.')
+            normalizer = getattr(widget, 'normalize_part_metric', None)
+            if callable(normalizer) and len(tokens) >= 3:
+                try:
+                    return float(normalizer(tokens[1], tuple(tokens[2:]), float(value)))
+                except (RuntimeError, TypeError, ValueError):
+                    return float(value)
+        return float(value)
+
+    def _notify_part_animation_state(self, widget: QWidget, property_key: str, active: bool) -> None:
+        if not property_key.startswith('parts.'):
+            return
+        tokens = property_key.split('.')
+        if len(tokens) < 3:
+            return
+        handler = getattr(widget, 'handle_part_animation_state', None)
+        if not callable(handler):
+            return
+        try:
+            handler(tokens[1], tuple(tokens[2:]), bool(active))
+        except RuntimeError:
+            return
+
+    def _queue_checkable_reconcile(self, widget: QWidget) -> None:
+        if widget in self._pending_checkable_reconcile_widgets:
+            return
+
+        is_checkable = getattr(widget, 'isCheckable', None)
+        if not callable(is_checkable) or not bool(is_checkable()):
+            return
+        if widget not in self._animations:
+            return
+
+        self._pending_checkable_reconcile_widgets.add(widget)
+        QTimer.singleShot(0, lambda w=widget: self._reconcile_checkable_state(w))
+
+    def _queue_hover_exit(self, widget: QWidget) -> None:
+        if widget in self._pending_hover_exit_widgets:
+            return
+        if widget not in self._animations:
+            return
+
+        self._pending_hover_exit_widgets.add(widget)
+        QTimer.singleShot(0, lambda w=widget: self._reconcile_hover_exit(w))
+
+    def _reconcile_hover_exit(self, widget: QWidget) -> None:
+        self._pending_hover_exit_widgets.discard(widget)
+        if widget not in self._animations:
+            return
+        if self._cursor_over_widget(widget):
+            self._hovered_widgets.add(widget)
+            return
+
+        self._hovered_widgets.discard(widget)
+        if not self._play_checkable_state(widget, force=True):
+            self._play(widget, 'leave')
+        self._start_hover_reconcile_timer()
+
+    def _start_hover_reconcile_timer(self) -> None:
+        if not self._hover_reconcile_timer.isActive():
+            self._hover_reconcile_timer.start()
+
+    def _reconcile_hover_states(self) -> None:
+        should_continue = False
+        widgets = (
+            set(self._animations)
+            | set(self._runtime_native_border_widgets)
+            | set(self._runtime_hover_overlays)
+        )
+
+        for widget in list(widgets):
+            try:
+                is_over = self._cursor_over_widget(widget)
+            except RuntimeError:
+                self._hovered_widgets.discard(widget)
+                continue
+
+            if is_over and widget not in self._hovered_widgets:
+                self._hovered_widgets.add(widget)
+                if widget in self._animations:
+                    self._play(widget, 'hover')
+            elif not is_over and widget in self._hovered_widgets:
+                self._hovered_widgets.discard(widget)
+                if widget in self._animations and not self._play_checkable_state(widget, force=True):
+                    self._play(widget, 'leave')
+
+            groups = self._animations.get(widget, {})
+            if any(
+                name in {'hover', 'leave'} and group.state() == QAbstractAnimation.State.Running
+                for name, group in groups.items()
+            ):
+                should_continue = True
+
+        if should_continue:
+            return
+        self._hover_reconcile_timer.stop()
+
+    def _cursor_over_widget(self, widget: QWidget) -> bool:
+        try:
+            if not widget.isVisible():
+                return False
+            cursor_pos = QCursor.pos()
+            local_pos = widget.mapFromGlobal(cursor_pos)
+            if not widget.rect().contains(local_pos):
+                return False
+
+            top_widget = QApplication.widgetAt(cursor_pos)
+            if top_widget is None:
+                return False
+
+            current: QWidget | None = top_widget
+            while current is not None:
+                if current is widget:
+                    return True
+                current = current.parentWidget()
+            return False
+        except RuntimeError:
+            return False
+
+    def _reconcile_checkable_state(self, widget: QWidget) -> None:
+        self._pending_checkable_reconcile_widgets.discard(widget)
+        groups = self._animations.get(widget)
+        if not groups:
+            return
+
+        action = self._resolve_checkable_state_action(widget, groups)
+        if action is None:
+            return
+
+        if self._action_properties_are_active(widget, action):
+            group = groups.get(action)
+            if group is not None and group.state() == QAbstractAnimation.State.Running:
+                return
+            if self._has_running_equivalent_action(widget, action, groups):
+                return
+            if self._action_final_state_matches(widget, action):
+                return
+            if group is not None:
+                self._start_action_group(widget, action, group, groups, force=True)
+                return
+            self._apply_action_final_state(widget, action)
+            return
+
+        group = groups.get(action)
+        if group is not None:
+            self._start_action_group(widget, action, group, groups)
+
+    def _animation_start_color(
+        self,
+        widget: QWidget,
+        spec: AnimationSpec,
+        base_styles: dict[str, Any],
+        cache: dict[str, Any],
+    ) -> QColor:
+        candidates: list[Any]
+        if spec.action in {'hover', 'leave'}:
+            candidates = [
+                self._sample_override_color(widget, spec.css_property),
+                cache.get(spec.property_key),
+                self._sample_style_color(base_styles, spec.property_key),
+                self._sample_color(widget, spec.css_property, fallback=spec.end),
+                spec.start,
+            ]
+        else:
+            candidates = [
+                spec.start,
+                cache.get(spec.property_key),
+                self._sample_override_color(widget, spec.css_property),
+                self._sample_style_color(base_styles, spec.property_key),
+                self._sample_color(widget, spec.css_property, fallback=spec.end),
+            ]
+
+        for candidate in candidates:
+            if isinstance(candidate, QColor):
+                return QColor(candidate)
+            color = to_qcolor(candidate)
+            if color is not None:
+                return QColor(color)
+
+        return QColor(spec.end)
+
+    def _apply_action_final_state(self, widget: QWidget, action: str) -> None:
+        specs = self._action_specs.get(widget, {}).get(action, [])
+        if not specs:
+            return
+
+        self._activate_action_properties(widget, action)
+        for spec in specs:
+            match spec.kind:
+                case 'color':
+                    value = normalize_color(spec.end) or QColor(spec.end).name()
+                    self._set_style_value(widget, spec.css_property, value, source_action=action)
+                    self._cache.setdefault(widget, {})[spec.property_key] = QColor(spec.end)
+                case 'gradient':
+                    if isinstance(spec.end, dict):
+                        if spec.property_key.startswith('parts.'):
+                            tokens = spec.property_key.split('.')
+                            if len(tokens) == 4 and tokens[2] == 'background' and tokens[3] == 'gradient':
+                                setter = getattr(widget, 'set_part_gradient', None)
+                                if callable(setter) and setter(tokens[1], spec.end):
+                                    self._cache.setdefault(widget, {})[spec.property_key] = _clone_gradient(spec.end)
+                                    continue
+                        self._set_style_value(widget, spec.css_property, _gradient_to_qss(spec.end), source_action=action)
+                        self._cache.setdefault(widget, {})[spec.property_key] = _clone_gradient(spec.end)
+                case 'number':
+                    target_value = self._normalize_number_target(widget, spec.property_key, float(spec.end))
+                    self._set_number_property(widget, spec.property_key, target_value)
+                    self._cache.setdefault(widget, {})[spec.property_key] = float(target_value)
+
+    def _action_final_state_matches(self, widget: QWidget, action: str) -> bool:
+        specs = self._action_specs.get(widget, {}).get(action, [])
+        if not specs:
+            return False
+
+        return all(self._spec_final_state_matches(widget, spec) for spec in specs)
+
+    def _spec_final_state_matches(self, widget: QWidget, spec: AnimationSpec) -> bool:
+        match spec.kind:
+            case 'color':
+                expected = to_qcolor(spec.end)
+                if expected is None:
+                    return False
+                current = self._sample_override_color(widget, spec.css_property)
+                if current is None:
+                    cached = self._cache.get(widget, {}).get(spec.property_key)
+                    current = QColor(cached) if isinstance(cached, QColor) else None
+                return current is not None and self._colors_are_close(current, expected)
+            case 'number':
+                try:
+                    expected = self._normalize_number_target(widget, spec.property_key, float(spec.end))
+                    current = self._sample_number(widget, spec.property_key, fallback=float(expected))
+                    return abs(float(current) - float(expected)) <= 0.5
+                except (TypeError, ValueError):
+                    return False
+        return False
+
+    def _colors_are_close(self, left: QColor, right: QColor) -> bool:
+        return (
+            abs(left.red() - right.red()) <= 1 and
+            abs(left.green() - right.green()) <= 1 and
+            abs(left.blue() - right.blue()) <= 1 and
+            abs(left.alpha() - right.alpha()) <= 1
+        )
+
+    def _set_style_value(self, widget: QWidget, css_property: str, value: str, *, source_action: str | None = None) -> None:
+        if css_property.startswith('slider.'):
+            self._set_slider_style_value(widget, css_property, value)
+            return
+        if css_property.startswith('parts.'):
+            if self._set_parts_style_value(widget, css_property, value):
+                return
+
+        if self._is_locked_tab(widget) and source_action != 'checked':
+            self._locked_tabs.add(widget)
+            return
+
+        self._locked_tabs.discard(widget)
+        if self._set_box_style_value(widget, css_property, value):
+            return
+        if self._set_text_style_value(widget, css_property, value):
+            return
+
+        overrides = self._style_overrides.setdefault(widget, {})
+        changed = False
+        if css_property == 'background':
+            if 'background-color' in overrides:
+                overrides.pop('background-color', None)
+                changed = True
+        elif css_property == 'background-color':
+            if 'background' in overrides:
+                overrides.pop('background', None)
+                changed = True
+
+        border_related_property = css_property == 'border' or css_property == 'border-color' or css_property.startswith('border-')
+        if border_related_property and bool(widget.property('_rainbowRuntimeBorderTarget')):
+            return
+
+        if css_property == 'border':
+            if 'border-color' in overrides:
+                overrides.pop('border-color', None)
+                changed = True
+        elif css_property == 'border-color':
+            if 'border' in overrides:
+                overrides.pop('border', None)
+                changed = True
+
+        if overrides.get(css_property) != value:
+            overrides[css_property] = value
+            changed = True
+
+        if changed:
+            self._apply_widget_style(widget)
+
+    def _set_box_style_value(self, widget: QWidget, css_property: str, value: str) -> bool:
+        if not isinstance(getattr(widget, '_box_theme', None), dict):
+            return False
+
+        if css_property in {'background', 'background-color'}:
+            setter = getattr(widget, 'set_box_background_color', None)
+            return bool(setter(value)) if callable(setter) else False
+
+        if css_property == 'border-color':
+            setter = getattr(widget, 'set_box_border_color', None)
+            return bool(setter(value)) if callable(setter) else False
+
+        if css_property == 'border-width':
+            setter = getattr(widget, 'set_box_border', None)
+            return bool(setter(width=value)) if callable(setter) else False
+
+        if css_property == 'border-radius':
+            setter = getattr(widget, 'set_box_border', None)
+            return bool(setter(radius=value)) if callable(setter) else False
+
+        return False
+
+    def _set_text_style_value(self, widget: QWidget, css_property: str, value: str) -> bool:
+        if css_property == 'text.border-color':
+            setter = getattr(widget, 'set_text_border_color', None)
+            return bool(setter(value)) if callable(setter) else False
+
+        if css_property == 'text.border-width':
+            setter = getattr(widget, 'set_text_border_width', None)
+            return bool(setter(value)) if callable(setter) else False
+
+        return False
+
+    def _set_parts_style_value(self, widget: QWidget, css_property: str, value: str) -> bool:
+        if self._is_runtime_handle_rainbow_active(widget, css_property):
+            return True
+
+        parts = css_property.split('.', 2)
+        if len(parts) == 3 and parts[0] == 'parts':
+            _, part, css_name = parts
+            if css_name.startswith('states.'):
+                return self._set_nested_part_style_value(widget, part, css_name, value)
+            if css_name in {'color', 'background-color', 'border-color'}:
+                if self._set_part_color(widget, part, css_name, value):
+                    return True
+
+        mapped = self._map_parts_css_property(widget, css_property)
+        if mapped.startswith('slider.'):
+            self._set_slider_style_value(widget, mapped, value)
+            return True
+
+        parts = mapped.split('.', 2)
+        if len(parts) != 3:
+            return False
+
+        _, part, css_name = parts
+        if css_name.startswith('states.'):
+            return self._set_nested_part_style_value(widget, part, css_name, value)
+        if css_name in {'color', 'background-color', 'border-color'}:
+            return self._set_part_color(widget, part, css_name, value)
+        return False
+
+    def _set_nested_part_style_value(self, widget: QWidget, part: str, css_name: str, value: str) -> bool:
+        setter = getattr(widget, 'set_part_style_value', None)
+        if not callable(setter):
+            return False
+
+        path = self._nested_part_style_path(css_name)
+        return bool(path and setter(part, path, value))
+
+    def _nested_part_style_path(self, css_name: str) -> tuple[str, ...] | None:
+        chunks = css_name.split('.')
+        if len(chunks) != 3 or chunks[0] != 'states':
+            return None
+
+        prefix = ('states', chunks[1])
+        match chunks[2]:
+            case 'background-color':
+                return (*prefix, 'background', 'color')
+            case 'background':
+                return (*prefix, 'background', 'gradient')
+            case 'color':
+                return (*prefix, 'text', 'color')
+            case 'border-color':
+                return (*prefix, 'border', 'color')
+            case _:
+                return None
+
+    def _set_part_color(self, widget: QWidget, part: str, css_name: str, value: str) -> bool:
+        setter = getattr(widget, 'set_part_style_value', None)
+        if callable(setter):
+            if css_name == 'color' and setter(part, ('color',), value):
+                return True
+            if css_name == 'background-color' and setter(part, ('background', 'color'), value):
+                return True
+            if css_name == 'border-color' and setter(part, ('border', 'color'), value):
+                return True
+
+        legacy_setter = getattr(widget, 'set_part_color', None)
+        if not callable(legacy_setter):
+            return False
+
+        try:
+            return bool(legacy_setter(part, value, css_name))
+        except TypeError:
+            if css_name in {'color', 'background-color'}:
+                return bool(legacy_setter(part, value))
+        return False
+
+    def _is_runtime_handle_rainbow_active(self, widget: QWidget, css_property: str) -> bool:
+        if not css_property.startswith('parts.handle.'):
+            return False
+
+        css_name = css_property.rsplit('.', 1)[-1]
+        if css_name not in {'color', 'background-color'}:
+            return False
+
+        getter = getattr(widget, 'current_handle_rainbow', None)
+        if not callable(getter):
+            return False
+
+        try:
+            return float(getter()) > 0.0
+        except (RuntimeError, TypeError, ValueError):
+            return False
+
+    def _map_parts_css_property(self, widget: QWidget, css_property: str) -> str:
+        if not css_property.startswith('parts.'):
+            return css_property
+
+        parts = css_property.split('.', 2)
+        if len(parts) != 3:
+            return css_property
+
+        _, part, css_name = parts
+        if isinstance(widget, QSlider) and part in {'groove', 'sub_page', 'add_page', 'handle'}:
+            slider_part = 'sub-page' if part == 'sub_page' else 'add-page' if part == 'add_page' else part
+            return f'slider.{slider_part}.{css_name}'
+        return css_property
+
+    def _set_slider_style_value(self, widget: QWidget, css_property: str, value: str) -> None:
+        parts = css_property.split('.', 2)
+        if len(parts) != 3:
+            return
+
+        _, part, css_name = parts
+        overrides = self._slider_style_overrides.setdefault(widget, {})
+        part_overrides = overrides.setdefault(part, {})
+        if part_overrides.get(css_name) == value:
+            return
+
+        part_overrides[css_name] = value
+        self._apply_widget_style(widget)
+
+    def _apply_widget_style(self, widget: QWidget) -> None:
+        base_style = self._base_styles.get(widget, '')
+        overrides = self._style_overrides.get(widget, {})
+        slider_overrides = self._slider_style_overrides.get(widget, {})
+
+        blocks: list[str] = []
+        if overrides:
+            effective_overrides = dict(overrides)
+            if (
+                any(name in effective_overrides for name in {'background', 'background-color'})
+                and 'border-radius' not in effective_overrides
+            ):
+                if (radius := self._current_theme_border_radius(widget)):
+                    has_border_override = self._has_border_override(effective_overrides)
+                    if not self._has_theme_border(widget) and not has_border_override:
+                        effective_overrides['border'] = 'none'
+                    effective_overrides['border-radius'] = radius
+
+            decl = ' '.join(f'{name}: {value};' for name, value in effective_overrides.items())
+            obj_name = widget.objectName().strip()
+            blocks.append(f'#{obj_name} {{ {decl} }}' if obj_name else decl)
+
+        blocks.extend(self._build_slider_override_blocks(widget, slider_overrides))
+
+        if not blocks:
+            if widget.styleSheet() != base_style:
+                widget.setStyleSheet(base_style)
+            widget.setProperty('_themeAnimationStyleManaged', False)
+            return
+
+        style = f'{base_style}\n' + '\n'.join(blocks) if base_style else '\n'.join(blocks)
+        if widget.styleSheet() != style:
+            widget.setStyleSheet(style)
+        widget.setProperty('_themeAnimationStyleManaged', True)
+
+    def _current_theme_border_radius(self, widget: QWidget) -> str:
+        radius = widget.property('_themeBorderRadius')
+        if not isinstance(radius, str) or not radius.strip():
+            return ''
+
+        radius_value = self._parse_measure_value(radius)
+        if radius_value is None:
+            return radius.strip()
+
+        width = float(widget.width())
+        height = float(widget.height())
+        if width <= 0.0 or height <= 0.0:
+            return radius.strip()
+
+        max_radius = self._safe_background_radius(min(width, height))
+        return f'{max(0.0, min(float(radius_value), max_radius)):g}px'
+
+    def _safe_background_radius(self, base_size: float) -> float:
+        max_radius = max(0.0, float(base_size) / 2.0)
+        if max_radius <= 1.0:
+            return max_radius
+        return max(0.0, max_radius - 1.0)
+
+    def _has_theme_border(self, widget: QWidget) -> bool:
+        declarations = self._collect_widget_declarations(widget)
+        width_text = declarations.get('border-width')
+        style_text = declarations.get('border-style')
+        if border_text := declarations.get('border'):
+            short_width, short_style, _short_color = self._parse_border_shorthand(border_text)
+            width_text = width_text or short_width
+            style_text = style_text or short_style
+
+        width = self._parse_measure_value(width_text)
+        style = str(style_text or '').strip().lower()
+        return bool(width and width > 0.0 and style and style != 'none')
+
+    def _has_border_override(self, overrides: dict[str, str]) -> bool:
+        return any(name == 'border' or name.startswith('border-') for name in overrides)
+
+    def _build_slider_override_blocks(self, widget: QWidget, overrides: dict[str, dict[str, str]]) -> list[str]:
+        if not overrides:
+            return []
+
+        obj_name = widget.objectName().strip()
+        if not obj_name:
+            return []
+
+        blocks: list[str] = []
+        for part, rules in overrides.items():
+            if not rules:
+                continue
+            for orientation in ('horizontal', 'vertical'):
+                decls: list[str] = []
+                for name, raw_value in rules.items():
+                    value = str(raw_value).strip()
+                    if not value:
+                        continue
+                    if name == 'size':
+                        metric = 'height' if orientation == 'horizontal' else 'width'
+                        decls.append(f'{metric}: {value};')
+                    else:
+                        decls.append(f'{name}: {value};')
+                if decls:
+                    blocks.append(f'#{obj_name}::{part}:{orientation} {{ ' + ' '.join(decls) + ' }')
+        return blocks
+
+    def _sample_color(self, widget: QWidget, css_property: str, fallback: QColor) -> QColor:
+        role = QPalette.ColorRole.WindowText if css_property == 'color' else QPalette.ColorRole.Window
+        color = widget.palette().color(role)
+        if color.isValid():
+            return color
+        return QColor(fallback)
+
+    def _sample_override_color(self, widget: QWidget, css_property: str) -> QColor | None:
+        box_color = self._sample_box_theme_color(widget, css_property)
+        if isinstance(box_color, QColor):
+            return box_color
+
+        if css_property.startswith('parts.'):
+            mapped = self._map_parts_css_property(widget, css_property)
+            if mapped.startswith('slider.'):
+                css_property = mapped
+            else:
+                parts = css_property.split('.', 2)
+                if len(parts) == 3:
+                    _, part, css_name = parts
+                    if css_name in {'color', 'background-color', 'border-color'} or css_name.startswith('states.'):
+                        getter = getattr(widget, 'current_part_color', None)
+                        if callable(getter):
+                            try:
+                                color = getter(part, css_name)
+                            except TypeError:
+                                color = getter(part)
+                            if isinstance(color, QColor) and color.isValid():
+                                return color
+                return None
+        if css_property.startswith('slider.'):
+            parts = css_property.split('.', 2)
+            if len(parts) != 3:
+                return None
+            _, part, css_name = parts
+            raw = self._slider_style_overrides.get(widget, {}).get(part, {}).get(css_name)
+        else:
+            raw = self._style_overrides.get(widget, {}).get(css_property)
+        if not isinstance(raw, str):
+            return None
+
+        return to_qcolor(raw)
+
+    def _sample_box_theme_color(self, widget: QWidget, css_property: str) -> QColor | None:
+        state = None
+        box_theme_state = getattr(widget, 'box_theme_state', None)
+        if callable(box_theme_state):
+            try:
+                state = box_theme_state()
+            except RuntimeError:
+                state = None
+        if not isinstance(state, dict):
+            return None
+
+        match css_property:
+            case 'background' | 'background-color':
+                background = state.get('background')
+                color = background.get('color') if isinstance(background, dict) else None
+            case 'border-color':
+                border = state.get('border')
+                color = border.get('color') if isinstance(border, dict) else None
+            case _:
+                return None
+
+        return QColor(color) if isinstance(color, QColor) and color.isValid() else None
+
+    def _sample_style_color(self, styles: dict[str, Any], property_key: str) -> QColor | None:
+        raw: Any = None
+        if property_key.startswith('parts.'):
+            raw = self._get_parts_style_color(styles, property_key)
+        match property_key:
+            case 'background.color':
+                background = styles.get('background')
+                if isinstance(background, dict):
+                    raw = background.get('color')
+            case 'color':
+                text = styles.get('text')
+                if isinstance(text, dict):
+                    raw = text.get('color')
+            case 'text.border.color':
+                text = styles.get('text')
+                if isinstance(text, dict):
+                    border = text.get('border') if isinstance(text.get('border'), dict) else {}
+                    raw = border.get('color')
+            case 'border.color':
+                border = styles.get('border')
+                if isinstance(border, dict):
+                    raw = border.get('color')
+            case 'slider.groove.background.color':
+                raw = self._get_slider_style_value(styles, 'groove', 'background', 'color')
+            case 'slider.sub_page.background.color':
+                raw = self._get_slider_style_value(styles, 'sub_page', 'background', 'color')
+            case 'slider.add_page.background.color':
+                raw = self._get_slider_style_value(styles, 'add_page', 'background', 'color')
+            case 'slider.handle.background.color':
+                raw = self._get_slider_style_value(styles, 'handle', 'background', 'color')
+            case 'slider.groove.border.color':
+                raw = self._get_slider_style_value(styles, 'groove', 'border', 'color')
+            case 'slider.sub_page.border.color':
+                raw = self._get_slider_style_value(styles, 'sub_page', 'border', 'color')
+            case 'slider.add_page.border.color':
+                raw = self._get_slider_style_value(styles, 'add_page', 'border', 'color')
+            case 'slider.handle.border.color':
+                raw = self._get_slider_style_value(styles, 'handle', 'border', 'color')
+
+        if not isinstance(raw, str):
+            return None
+
+        return to_qcolor(raw)
+
+    def _get_parts_style_color(self, styles: dict[str, Any], property_key: str) -> Any:
+        parts_theme = styles.get('parts') if isinstance(styles.get('parts'), dict) else {}
+        tokens = property_key.split('.')
+        if len(tokens) < 3:
+            return None
+        part = tokens[1]
+        suffix = tokens[2:]
+
+        if suffix == ['color']:
+            part_data = parts_theme.get(part) if isinstance(parts_theme.get(part), dict) else {}
+            if isinstance(part_data, dict):
+                return part_data.get('color')
+        if suffix == ['background', 'color']:
+            if part in {'groove', 'sub_page', 'add_page', 'handle'}:
+                return self._get_slider_style_value(styles, part, 'background', 'color')
+            part_data = parts_theme.get(part) if isinstance(parts_theme.get(part), dict) else {}
+            if isinstance(part_data, dict):
+                bg = part_data.get('background') if isinstance(part_data.get('background'), dict) else {}
+                return bg.get('color')
+        if suffix == ['text', 'color']:
+            part_data = parts_theme.get(part) if isinstance(parts_theme.get(part), dict) else {}
+            if isinstance(part_data, dict):
+                text = part_data.get('text') if isinstance(part_data.get('text'), dict) else {}
+                return text.get('color')
+        if suffix == ['border', 'color']:
+            if part in {'groove', 'sub_page', 'add_page', 'handle'}:
+                return self._get_slider_style_value(styles, part, 'border', 'color')
+            part_data = parts_theme.get(part) if isinstance(parts_theme.get(part), dict) else {}
+            if isinstance(part_data, dict):
+                border = part_data.get('border') if isinstance(part_data.get('border'), dict) else {}
+                return border.get('color')
+        return None
+
+    def _get_slider_style_value(self, styles: dict[str, Any], part: str, group: str, key: str) -> Any:
+        parts_theme = styles.get('parts') if isinstance(styles.get('parts'), dict) else {}
+        part_data = parts_theme.get(part) if isinstance(parts_theme.get(part), dict) else {}
+        if not isinstance(part_data, dict):
+            return None
+        group_data = part_data.get(group) if isinstance(part_data.get(group), dict) else {}
+        if not isinstance(group_data, dict):
+            return None
+        return group_data.get(key)
+
+    def _sample_style_gradient(
+        self,
+        styles: dict[str, Any],
+        property_key: str,
+        *,
+        fallback: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        if property_key == 'background.gradient':
+            background = styles.get('background')
+            if not isinstance(background, dict):
+                return None
+
+            color_data = background.get('color')
+            if isinstance(color_data, dict):
+                if (gradient := _normalize_gradient(color_data)) is not None:
+                    return gradient
+
+            if isinstance(color_data, str):
+                color = to_qcolor(color_data)
+                if color is not None:
+                    return self._build_solid_start_gradient(color, fallback)
+            return None
+
+        if property_key.startswith('parts.'):
+            tokens = property_key.split('.')
+            if len(tokens) == 4 and tokens[2] == 'background' and tokens[3] == 'gradient':
+                part = tokens[1]
+                parts_theme = styles.get('parts') if isinstance(styles.get('parts'), dict) else {}
+                part_data = parts_theme.get(part) if isinstance(parts_theme.get(part), dict) else {}
+                background = part_data.get('background') if isinstance(part_data.get('background'), dict) else {}
+                gradient_data = background.get('gradient') if isinstance(background.get('gradient'), dict) else None
+                if isinstance(gradient_data, dict):
+                    if (gradient := _normalize_gradient(gradient_data)) is not None:
+                        return gradient
+                color_data = background.get('color')
+                if isinstance(color_data, str):
+                    color = to_qcolor(color_data)
+                    if color is not None:
+                        return self._build_solid_start_gradient(color, fallback)
+        return None
+
+    def _build_solid_start_gradient(self, color: QColor, template: dict[str, Any]) -> dict[str, Any]:
+        gradient = _clone_gradient(template)
+        gradient['stops'] = [
+            (float(pos), QColor(color))
+            for pos, _ in gradient.get('stops', [])
         ]
+        return gradient
 
-        style = f'''
-            background-color: qlineargradient(
-                x1:{x1}, y1:{y1},
-                x2:{x2}, y2:{y2},
-                {', '.join(parts)}
-            );
-        '''
+    def _sample_number(self, widget: QWidget, property_key: str, *, fallback: float) -> float:
+        match property_key:
+            case 'border.width':
+                return self._sample_border_width(widget, fallback=fallback)
+            case 'border.radius':
+                return self._sample_border_radius(widget, fallback=fallback)
+            case 'text.border.width':
+                return self._sample_text_border_width(widget, fallback=fallback)
+            case 'text.spacing':
+                getter = getattr(widget, '_text_spacing_value', None)
+                if callable(getter):
+                    return float(getter())
+                return float(fallback)
+            case 'padding.left' | 'padding.top' | 'padding.right' | 'padding.bottom':
+                return float(self._padding_box(widget)[self._box_side_index(property_key.rsplit('.', 1)[-1])])
+            case 'layout.spacing':
+                layout = widget.layout()
+                return float(layout.spacing()) if isinstance(layout, QLayout) else float(fallback)
+            case 'layout.margin.left' | 'layout.margin.top' | 'layout.margin.right' | 'layout.margin.bottom':
+                layout = widget.layout()
+                if isinstance(layout, QLayout):
+                    margins = layout.contentsMargins()
+                    side = property_key.rsplit('.', 1)[-1]
+                    return float((margins.left(), margins.top(), margins.right(), margins.bottom())[self._box_side_index(side)])
+                return float(fallback)
+            case 'widget.width':
+                return float(widget.width())
+            case 'widget.minimum_width':
+                return float(widget.minimumWidth())
+            case 'widget.maximum_width':
+                maximum_width = widget.maximumWidth()
+                if maximum_width >= 16777215:
+                    return float(widget.width())
+                return float(maximum_width)
+            case 'widget.height':
+                return float(widget.height())
+            case 'widget.minimum_height':
+                return float(widget.minimumHeight())
+            case 'widget.maximum_height':
+                maximum_height = widget.maximumHeight()
+                if maximum_height >= 16777215:
+                    return float(widget.height())
+                return float(maximum_height)
+            case 'widget.x':
+                return float(widget.x())
+            case 'widget.y':
+                return float(widget.y())
+            case 'scroll.vertical':
+                scrollbar_getter = getattr(widget, 'verticalScrollBar', None)
+                if callable(scrollbar_getter) and (scrollbar := scrollbar_getter()) is not None:
+                    return float(scrollbar.value())
+                return float(fallback)
+            case 'scroll.horizontal':
+                scrollbar_getter = getattr(widget, 'horizontalScrollBar', None)
+                if callable(scrollbar_getter) and (scrollbar := scrollbar_getter()) is not None:
+                    return float(scrollbar.value())
+                return float(fallback)
+            case 'parts.groove.size':
+                return self._sample_slider_metric(widget, 'groove', fallback=fallback)
+            case 'parts.handle.width':
+                return self._sample_slider_metric(widget, 'handle_width', fallback=fallback)
+            case 'parts.handle.height':
+                return self._sample_slider_metric(widget, 'handle_height', fallback=fallback)
+        if property_key.startswith('parts.'):
+            tokens = property_key.split('.')
+            if len(tokens) >= 3:
+                getter = getattr(widget, 'current_part_metric', None)
+                if callable(getter):
+                    try:
+                        return float(getter(tokens[1], tuple(tokens[2:]), fallback))
+                    except (RuntimeError, TypeError, ValueError):
+                        return float(fallback)
+        return float(fallback)
 
-        widget.setStyleSheet(style)
+    def _sample_border_width(self, widget: QWidget, *, fallback: float) -> float:
+        state = self._safe_box_theme_state(widget)
+        border = state.get('border') if isinstance(state.get('border'), dict) else {}
+        if isinstance(border, dict):
+            width = border.get('width')
+            if isinstance(width, (int, float)):
+                return float(width)
 
+        declarations = self._collect_widget_declarations(widget)
+        width_text = declarations.get('border-width')
+        if not width_text and (border_text := declarations.get('border')):
+            width_text, _style, _color = self._parse_border_shorthand(border_text)
+        return self._parse_measure_value(width_text) or float(fallback)
+
+    def _sample_border_radius(self, widget: QWidget, *, fallback: float) -> float:
+        state = self._safe_box_theme_state(widget)
+        radius = state.get('radius') if isinstance(state, dict) else None
+        value = self._parse_measure_value(radius)
+        if value is not None:
+            return float(value)
+
+        value = self._parse_measure_value(widget.property('_themeBorderRadius'))
+        if value is not None:
+            return float(value)
+
+        declarations = self._collect_widget_declarations(widget)
+        return self._parse_measure_value(declarations.get('border-radius')) or float(fallback)
+
+    def _sample_text_border_width(self, widget: QWidget, *, fallback: float) -> float:
+        getter = getattr(widget, 'text_border_state', None)
+        state = getter() if callable(getter) else None
+        if isinstance(state, dict):
+            width = state.get('width')
+            if isinstance(width, (int, float)):
+                return float(width)
+        return float(fallback)
+
+    def _safe_box_theme_state(self, widget: QWidget) -> dict[str, Any]:
+        getter = getattr(widget, 'box_theme_state', None)
+        if not callable(getter):
+            return {}
+        try:
+            state = getter()
+        except RuntimeError:
+            return {}
+        return state if isinstance(state, dict) else {}
+
+    def _sample_slider_metric(self, widget: QWidget, metric: str, *, fallback: float) -> float:
+        option_factory = getattr(widget, '_create_option_slider', None)
+        handle_rect_getter = getattr(widget, '_handle_rect', None)
+        groove_rect_getter = getattr(widget, '_groove_rect', None)
+        orientation_getter = getattr(widget, 'orientation', None)
+        if not callable(option_factory) or not callable(handle_rect_getter) or not callable(groove_rect_getter):
+            return float(fallback)
+
+        try:
+            option = option_factory()
+            handle_rect = handle_rect_getter(option)
+            groove_rect = groove_rect_getter(option)
+        except Exception:
+            return float(fallback)
+
+        orientation = orientation_getter() if callable(orientation_getter) else None
+        horizontal = orientation == 1
+        if metric == 'groove':
+            return float(groove_rect.height() if horizontal else groove_rect.width())
+        if metric == 'handle_width':
+            return float(handle_rect.width())
+        if metric == 'handle_height':
+            return float(handle_rect.height())
+        return float(fallback)
+
+    def _resolve_wheel_scroll_delta(self, widget: QWidget, spec: AnimationSpec) -> float:
+        deltas = self._wheel_event_deltas.get(widget, {})
+        axis = 'vertical' if spec.property_key == 'scroll.vertical' else 'horizontal'
+        delta = float(deltas.get(axis, 0.0))
+        if abs(delta) < 0.001:
+            return 0.0
+
+        distance = abs(float(spec.end))
+        scrollbar_getter_name = 'verticalScrollBar' if axis == 'vertical' else 'horizontalScrollBar'
+        scrollbar_getter = getattr(widget, scrollbar_getter_name, None)
+        scrollbar = scrollbar_getter() if callable(scrollbar_getter) else None
+
+        if abs(delta) >= 1.0:
+            steps = delta / 120.0
+            if abs(steps) >= 0.001:
+                resolved_delta = -(steps * distance)
+                if scrollbar is not None:
+                    current = float(scrollbar.value())
+                    target = max(float(scrollbar.minimum()), min(float(scrollbar.maximum()), current + resolved_delta))
+                    return target - current
+                return resolved_delta
+
+        resolved_delta = -math.copysign(distance, delta)
+        if scrollbar is not None:
+            current = float(scrollbar.value())
+            target = max(float(scrollbar.minimum()), min(float(scrollbar.maximum()), current + resolved_delta))
+            return target - current
+        return resolved_delta
+
+    def _set_number_property(self, widget: QWidget, property_key: str, value: float) -> None:
+        rounded = int(round(value))
+
+        match property_key:
+            case 'border.width':
+                if not self._set_box_style_value(widget, 'border-width', f'{max(0.0, value):g}px'):
+                    self._set_style_value(widget, 'border-width', f'{max(0.0, value):g}px')
+            case 'border.radius':
+                if not self._set_box_style_value(widget, 'border-radius', f'{max(0.0, value):g}px'):
+                    widget.setProperty('_themeBorderRadius', f'{max(0.0, value):g}px')
+                    self._set_style_value(widget, 'border-radius', f'{max(0.0, value):g}px')
+            case 'text.border.width':
+                if not self._set_text_style_value(widget, 'text.border-width', f'{max(0.0, value):g}px'):
+                    return
+            case 'text.spacing':
+                setter = getattr(widget, 'set_text_spacing', None)
+                if callable(setter):
+                    setter(float(value))
+            case 'padding.left' | 'padding.top' | 'padding.right' | 'padding.bottom':
+                self._set_padding_side(widget, property_key.rsplit('.', 1)[-1], max(0, rounded))
+            case 'layout.spacing':
+                layout = widget.layout()
+                if isinstance(layout, QLayout):
+                    layout.setSpacing(max(0, rounded))
+                    widget.updateGeometry()
+            case 'layout.margin.left' | 'layout.margin.top' | 'layout.margin.right' | 'layout.margin.bottom':
+                self._set_layout_margin_side(widget, property_key.rsplit('.', 1)[-1], max(0, rounded))
+            case 'widget.width':
+                widget.resize(max(0, rounded), widget.height())
+            case 'widget.minimum_width':
+                target = max(0, rounded)
+                max_width = widget.maximumWidth()
+                if max_width < target:
+                    widget.setMaximumWidth(target)
+                widget.setMinimumWidth(target)
+            case 'widget.maximum_width':
+                target = max(0, rounded)
+                min_width = widget.minimumWidth()
+                if min_width > target:
+                    widget.setMinimumWidth(target)
+                widget.setMaximumWidth(target)
+            case 'widget.height':
+                widget.resize(widget.width(), max(0, rounded))
+            case 'widget.minimum_height':
+                target = max(0, rounded)
+                max_height = widget.maximumHeight()
+                if max_height < target:
+                    widget.setMaximumHeight(target)
+                widget.setMinimumHeight(target)
+            case 'widget.maximum_height':
+                target = max(0, rounded)
+                min_height = widget.minimumHeight()
+                if min_height > target:
+                    widget.setMinimumHeight(target)
+                widget.setMaximumHeight(target)
+            case 'widget.x':
+                widget.move(rounded, widget.y())
+            case 'widget.y':
+                widget.move(widget.x(), rounded)
+            case 'scroll.vertical':
+                scrollbar_getter = getattr(widget, 'verticalScrollBar', None)
+                if callable(scrollbar_getter) and (scrollbar := scrollbar_getter()) is not None:
+                    scrollbar.setValue(max(scrollbar.minimum(), min(scrollbar.maximum(), rounded)))
+            case 'scroll.horizontal':
+                scrollbar_getter = getattr(widget, 'horizontalScrollBar', None)
+                if callable(scrollbar_getter) and (scrollbar := scrollbar_getter()) is not None:
+                    scrollbar.setValue(max(scrollbar.minimum(), min(scrollbar.maximum(), rounded)))
+            case 'parts.groove.size':
+                setter = getattr(widget, 'set_part_metric', None)
+                if callable(setter) and setter('groove', 'size', float(max(0, rounded))):
+                    return
+                self._set_style_value(widget, 'parts.groove.size', f'{max(0, rounded)}px')
+            case 'parts.handle.width':
+                setter = getattr(widget, 'set_part_metric', None)
+                if callable(setter) and setter('handle', 'width', float(max(0, rounded))):
+                    return
+                self._set_style_value(widget, 'parts.handle.width', f'{max(0, rounded)}px')
+            case 'parts.handle.height':
+                setter = getattr(widget, 'set_part_metric', None)
+                if callable(setter) and setter('handle', 'height', float(max(0, rounded))):
+                    return
+                self._set_style_value(widget, 'parts.handle.height', f'{max(0, rounded)}px')
+            case _ if property_key.startswith('parts.'):
+                tokens = property_key.split('.')
+                setter = getattr(widget, 'set_part_metric', None)
+                if callable(setter) and len(tokens) >= 3 and setter(tokens[1], tuple(tokens[2:]), float(max(0, value))):
+                    return
+
+    def _box_side_index(self, side: str) -> int:
+        return {'left': 0, 'top': 1, 'right': 2, 'bottom': 3}.get(side, 0)
+
+    def _padding_box(self, widget: QWidget) -> tuple[int, int, int, int]:
+        raw = widget.property('_themePaddingBox')
+        if isinstance(raw, (list, tuple)) and len(raw) == 4:
+            values: list[int] = []
+            for value in raw:
+                try:
+                    values.append(max(0, int(round(float(value)))))
+                except (TypeError, ValueError):
+                    values.append(0)
+            return tuple(values)  # type: ignore[return-value]
+        return (0, 0, 0, 0)
+
+    def _set_padding_side(self, widget: QWidget, side: str, value: int) -> None:
+        values = list(self._padding_box(widget))
+        values[self._box_side_index(side)] = max(0, int(value))
+        widget.setProperty('_themePaddingBox', tuple(values))
+        widget.updateGeometry()
+        widget.update()
+
+    def _set_layout_margin_side(self, widget: QWidget, side: str, value: int) -> None:
+        layout = widget.layout()
+        if not isinstance(layout, QLayout):
+            self._set_padding_side(widget, side, value)
+            return
+
+        margins = layout.contentsMargins()
+        values = [margins.left(), margins.top(), margins.right(), margins.bottom()]
+        values[self._box_side_index(side)] = max(0, int(value))
+        layout.setContentsMargins(*values)
+        widget.updateGeometry()

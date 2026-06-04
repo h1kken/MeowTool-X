@@ -1,0 +1,1043 @@
+import json
+from copy import deepcopy
+from pathlib import Path
+from typing import Any, Callable
+
+from PySide6.QtCore import QEvent, QSize, Qt, QTimer
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QMainWindow, QSizePolicy, QWidget
+
+from src.config.loader import config_loader
+from src.config.manager import config
+from src.services.discord_presence import DiscordPresenceManager
+from src.theme.animation.manager import AnimationManager
+from src.theme.manager import ThemeManager
+from src.theme.rainbow.runtime import RainbowRuntimeController
+from src.theme.storage.io import (
+    find_theme_file_by_name,
+    load_theme_payload,
+    theme_output_path,
+    write_theme_payload,
+)
+from src.theme.storage.loader import resolve_theme_path
+from src.ui.controllers import PageController
+from src.ui.layouts.factory import LayoutType, create_layout
+from src.ui.pages import (
+    ProxyCheckerPage,
+    RobloxCookieSorterPage,
+    RobloxCookieCheckerPage,
+    RobloxCookieRefresherPage,
+    # RobloxGameCheckerPage,
+    # RobloxLogPassCheckerPage,
+    # RobloxAutoReggerPage,
+    # RobloxTimeBoosterPage,
+    SettingsPage,
+)
+from src.ui.widgets import MTButton, MTWidget, SidebarMediaWidget
+from src.ui.windows.window_header import apply_frameless_window_header
+from src.utils.constants import (
+    DEFAULT_THEME,
+    MAIN_WINDOW_PAGE_LABEL_FALLBACK,
+    PATH_APP_ICON,
+    PATH_SIDEBAR_ICONS,
+    PATH_THEMES_USER,
+    PROGRAM_NAME,
+    THEME_AUTOLOAD_FALLBACK,
+    THEME_AUTO_SAVE_DEBOUNCE_MS,
+    THEME_RUNTIME_RAINBOW_DURATION_FALLBACK,
+    THEME_RUNTIME_RAINBOW_ENABLED_FALLBACK,
+    THEME_RUNTIME_RAINBOW_PALETTE_FALLBACK,
+    WINDOW_X,
+    WINDOW_Y,
+)
+from src.utils.filesystem import FS
+
+type _PageSpec = tuple[str, str, type[QWidget]]
+type _SidebarSectionSpec = tuple[
+    str | None, str | None, list[_PageSpec] | type[QWidget] | None, dict[str, Any] | None
+]
+_QT_MAX_SIZE = 16_777_215
+
+
+def _repolish(widget: QWidget) -> None:
+    style = widget.style()
+    if style is None:
+        widget.update()
+        return
+
+    if not widget.testAttribute(Qt.WidgetAttribute.WA_WState_Polished):
+        widget.update()
+        return
+
+    style.unpolish(widget)
+    style.polish(widget)
+    widget.update()
+
+
+class _SidebarNavButton(MTButton):
+    def __init__(
+        self, *, tr_key: str, obj_name: str, parent: QWidget | None = None
+    ) -> None:
+        self._sidebar_full_text = ""
+        self._expanded_alignment = (
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        super().__init__(tr_key=tr_key, obj_name=obj_name, parent=parent)
+        self.setAlignment(self._expanded_alignment)
+
+    def setText(self, text: str) -> None:
+        self._sidebar_full_text = str(text)
+        super().setText(self._sidebar_full_text)
+        self.setToolTip("")
+        self.updateGeometry()
+        self.update()
+
+
+class _SidebarCategorySection(MTWidget):
+    def __init__(
+        self,
+        *,
+        category_name: str,
+        obj_name: str,
+        collapsible: bool = False,
+        show_separator: bool = True,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(obj_name=f"{obj_name}_Category_Widget", parent=parent)
+        self._category_name = str(category_name).strip()
+        self._collapsible = bool(collapsible)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+        self.setProperty("collapsible", self._collapsible)
+
+        self._main_layout = create_layout(LayoutType.VBOX, parent=self)
+        self._main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        self._header_button = MTButton(
+            tr_key="",
+            obj_name=f"{obj_name}_Category_Header_Button",
+            checkable=self._collapsible,
+            checked=True,
+            parent=self,
+        )
+        self._header_button.setProperty("rainbowBorderTarget", False)
+        self._header_button.setProperty("rainbowBorderExcluded", True)
+        self._header_button.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+        self._header_button.setProperty("collapsible", self._collapsible)
+
+        self._header_separator = MTWidget(
+            obj_name=f"{obj_name}_Category_Separator_Widget", parent=self
+        )
+        self._header_separator.setFixedHeight(1)
+        self._header_separator.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+        self._header_separator.setVisible(bool(show_separator))
+
+        self._content_widget = MTWidget(
+            obj_name=f"{obj_name}_Category_Content_Widget", parent=self
+        )
+        self._content_widget.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum
+        )
+        self._content_widget.setProperty("collapsible", self._collapsible)
+        self._content_layout = create_layout(
+            LayoutType.VBOX, parent=self._content_widget
+        )
+        self._content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        self._main_layout.addWidget(self._header_button)
+        self._main_layout.addWidget(self._header_separator)
+        self._main_layout.addWidget(self._content_widget)
+
+        if self._collapsible:
+            self._header_button.toggled.connect(self.set_expanded)
+            self.set_expanded(self._header_button.isChecked())
+        else:
+            self.set_expanded(True)
+
+    def add_button(self, button: QWidget) -> None:
+        self._content_layout.addWidget(button)
+        if self.is_expanded():
+            self._content_widget.setMaximumHeight(_QT_MAX_SIZE)
+        self.updateGeometry()
+
+    def is_expanded(self) -> bool:
+        return True if not self._collapsible else self._header_button.isChecked()
+
+    def set_expanded(self, expanded: bool) -> None:
+        if not self._collapsible:
+            expanded = True
+        expanded = bool(expanded)
+        if self._header_button.isChecked() != expanded:
+            self._header_button.setChecked(expanded)
+            return
+
+        self.setProperty("expanded", expanded)
+        self._header_button.setProperty("expanded", expanded)
+        self._content_widget.setProperty("expanded", expanded)
+
+        self._content_widget.setVisible(expanded)
+        self._content_widget.setMaximumHeight(_QT_MAX_SIZE if expanded else 0)
+        self.updateGeometry()
+        self._content_widget.updateGeometry()
+
+        _repolish(self)
+        _repolish(self._header_button)
+        _repolish(self._header_separator)
+        _repolish(self._content_widget)
+
+    def header_button(self) -> MTButton:
+        return self._header_button
+
+    def content_widget(self) -> MTWidget:
+        return self._content_widget
+
+
+class MainWindow(QMainWindow):
+    _MAIN_PAGE_SPECS: list[_SidebarSectionSpec] = [
+        (
+            "PRX",
+            "Sidebar_Proxy",
+            [
+                ("Proxy_Checker", "CHCKR", ProxyCheckerPage),
+            ],
+            {
+                "collapsible": False,
+                "show_separator": True,
+            },
+        ),
+        (
+            "RBX",
+            "Sidebar_Roblox",
+            [
+                ("Roblox_Cookie_Sorter", "CK_SRTR", RobloxCookieSorterPage),
+                ("Roblox_Cookie_Checker", "CK_CHCKR", RobloxCookieCheckerPage),
+                ("Roblox_Cookie_Refresher", "CK_RFRSHR", RobloxCookieRefresherPage),
+                # ('Roblox_Game_Checker', 'GM_CHCKR', RobloxGameCheckerPage),
+                # ('Roblox_LogPass_Checker', 'LP_CHCKR', RobloxLogPassCheckerPage),
+                # ('Roblox_Auto_Regger', 'AT_RGGR', RobloxAutoReggerPage),
+                # ('Roblox_Time_Booster', 'TM_BSTR', RobloxTimeBoosterPage),
+            ],
+            {
+                "collapsible": False,
+                "show_separator": True,
+            },
+        ),
+        (None, None, None, None),
+        ("Settings", "STNGS", SettingsPage, None),
+    ]
+    _SIDEBAR_CATEGORY_ICON_NAMES: dict[str, str] = {
+        "Sidebar_Proxy": "proxy.svg",
+        "Sidebar_Roblox": "roblox.svg",
+    }
+    _SIDEBAR_ICON_NAMES: dict[str, str] = {
+        "Proxy_Checker": "checker.svg",
+        "Roblox_Cookie_Sorter": "sorter.svg",
+        "Roblox_Cookie_Checker": "checker.svg",
+        "Roblox_Cookie_Refresher": "refresher.svg",
+        "Settings": "settings.svg",
+    }
+
+    def __init__(self):
+        super().__init__()
+        self._theme_auto_save_timer = QTimer(self)
+        self._theme_auto_save_timer.setSingleShot(True)
+        self._theme_auto_save_timer.setInterval(THEME_AUTO_SAVE_DEBOUNCE_MS)
+        self._theme_auto_save_timer.timeout.connect(
+            self.auto_save_current_theme_if_enabled
+        )
+
+        self._window_move_idle_timer = QTimer(self)
+        self._window_move_idle_timer.setSingleShot(True)
+        self._window_move_idle_timer.setInterval(160)
+        self._window_move_idle_timer.timeout.connect(self._on_window_move_idle)
+
+        self._deferred_theme_auto_save = False
+        self._settings_page: SettingsPage | None = None
+        self._discord_presence_manager: DiscordPresenceManager | None = None
+        self._animation_manager: AnimationManager | None = None
+        self._rainbow_runtime: RainbowRuntimeController | None = None
+        self._theme_manager: ThemeManager | None = None
+        self._discord_presence_page = "Startup"
+        self._settings_presence_label = "Settings"
+
+        self._current_theme_name = ""
+
+        self._sidebar_widget: MTWidget | None = None
+        self._sidebar_media: SidebarMediaWidget | None = None
+        self._sidebar_buttons: list[_SidebarNavButton] = []
+        self._sidebar_categories: list[_SidebarCategorySection] = []
+        self._sidebar_width_locked = False
+
+        self._runtime_theme_preferences_cache: tuple[bool, int, str] | None = None
+        self._runtime_theme_post_show_pending = True
+        self._pages_built = False
+
+        self._initial_theme_name = self.theme_on_load_name()
+
+        self.setObjectName("Main_Window")
+        self.setWindowTitle(PROGRAM_NAME)
+        if PATH_APP_ICON.exists():
+            self.setWindowIcon(QIcon(str(PATH_APP_ICON)))
+        self.resize(WINDOW_X, WINDOW_Y)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+
+        self._build_window_shell()
+
+        config.config_loaded.connect(self._on_config_loaded)
+        config.value_changed.connect(self._on_config_value_changed)
+
+        FS.create_folder(PATH_THEMES_USER)
+
+    def _resolve_theme_path(self, theme_name: str) -> Path | None:
+        return resolve_theme_path(theme_name)
+
+    def resolve_theme_path(self, theme_name: str) -> Path | None:
+        return self._resolve_theme_path(theme_name)
+
+    def moveEvent(self, event) -> None:
+        super().moveEvent(event)
+        self._window_move_idle_timer.start()
+        self._defer_theme_related_activity_for_window_motion()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self.repaint()
+        if (central_widget := self.centralWidget()) is not None:
+            central_widget.repaint()
+
+    def _defer_theme_related_activity_for_window_motion(self) -> None:
+        if self._theme_auto_save_timer.isActive():
+            self._theme_auto_save_timer.stop()
+            self._deferred_theme_auto_save = True
+
+    def _on_window_move_idle(self) -> None:
+        if self._deferred_theme_auto_save and getattr(
+            config_loader, "auto_save_theme", False
+        ):
+            self._deferred_theme_auto_save = False
+            self._theme_auto_save_timer.start()
+            return
+        self._deferred_theme_auto_save = False
+
+    def closeEvent(self, event) -> None:
+        if self._discord_presence_manager is not None:
+            self._discord_presence_manager.shutdown()
+        super().closeEvent(event)
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if not self._runtime_theme_post_show_pending:
+            return
+        self._runtime_theme_post_show_pending = False
+        QTimer.singleShot(0, self.reapply_runtime_theme_preferences)
+        QTimer.singleShot(32, self.reapply_runtime_theme_preferences)
+
+    def _create_main_page(
+        self,
+        obj_name: str,
+        tr_key: str,
+        page_class: type[QWidget],
+        *,
+        settings_startup_progress: Callable[[int, int, str], None] | None = None,
+    ) -> QWidget:
+        if tr_key == "STNGS":
+            page = page_class(
+                startup_progress=settings_startup_progress,
+                current_theme_name=self._initial_theme_name,
+            )
+            if isinstance(page, SettingsPage):
+                self._settings_page = page
+                page.presence_path_changed.connect(
+                    self._on_settings_presence_path_changed
+                )
+            return page
+
+        return page_class()
+
+    def _register_page(
+        self,
+        obj_name: str,
+        tr_key: str,
+        page_class: type[QWidget],
+        *,
+        settings_startup_progress: Callable[[int, int, str], None] | None = None,
+    ) -> tuple[QWidget, str]:
+        page_label = obj_name.replace("_", " ") if isinstance(obj_name, str) else "Page"
+        page = self._create_main_page(
+            obj_name,
+            tr_key,
+            page_class,
+            settings_startup_progress=settings_startup_progress,
+        )
+        self._page_controller.add_page(
+            tr_key, page, object_name=f"Main_{obj_name}_Page"
+        )
+        return page, page_label
+
+    def _create_sidebar_button(
+        self, obj_name: str, tr_key: str, page_label: str
+    ) -> _SidebarNavButton:
+        button = _SidebarNavButton(tr_key=tr_key, obj_name=f"Sidebar_{obj_name}_Button")
+        self._apply_default_sidebar_button_icon(button, obj_name)
+        self._page_controller.bind_tab(tr_key, button)
+        button.clicked.connect(
+            lambda _=False, label=page_label, key=tr_key: self._set_discord_presence_page(
+                self._settings_discord_presence_label() if key == "STNGS" else label
+            )
+        )
+        self._sidebar_buttons.append(button)
+        return button
+
+    @staticmethod
+    def _pick_first_page(
+        current_key: str | None,
+        current_label: str | None,
+        next_key: str,
+        next_label: str,
+    ) -> tuple[str | None, str | None]:
+        if current_key is not None:
+            return current_key, current_label
+        return next_key, next_label
+
+    def _build_standalone_sidebar_page(
+        self,
+        sidebar_layout,
+        obj_name: str,
+        tr_key: str,
+        page_class: type[QWidget],
+        *,
+        settings_startup_progress: Callable[[int, int, str], None] | None = None,
+    ) -> tuple[str, str]:
+        _page, page_label = self._register_page(
+            obj_name,
+            tr_key,
+            page_class,
+            settings_startup_progress=settings_startup_progress,
+        )
+        button = self._create_sidebar_button(obj_name, tr_key, page_label)
+        sidebar_layout.addWidget(button)
+        return tr_key, page_label
+
+    def _build_category_sidebar_pages(
+        self,
+        category_name: str,
+        category_obj_name: str,
+        page_specs: list[_PageSpec],
+        options: dict[str, Any] | None,
+        *,
+        parent: QWidget,
+        sidebar_layout,
+    ) -> tuple[_SidebarCategorySection, str | None, str | None]:
+        category = _SidebarCategorySection(
+            category_name=category_name,
+            obj_name=category_obj_name,
+            collapsible=bool((options or {}).get("collapsible", False)),
+            show_separator=bool((options or {}).get("show_separator", True)),
+            parent=parent,
+        )
+        self._apply_default_sidebar_category_icon(category, category_obj_name)
+        sidebar_layout.addWidget(category)
+        self._sidebar_categories.append(category)
+
+        first_key: str | None = None
+        first_label: str | None = None
+
+        for obj_name, tr_key, page_class in page_specs:
+            _page, page_label = self._register_page(obj_name, tr_key, page_class)
+            button = self._create_sidebar_button(obj_name, tr_key, page_label)
+            category.add_button(button)
+            first_key, first_label = self._pick_first_page(
+                first_key, first_label, tr_key, page_label
+            )
+
+        return category, first_key, first_label
+
+    def _build_window_shell(self) -> None:
+        central_widget = MTWidget(obj_name="Central_Widget")
+        self.setCentralWidget(central_widget)
+
+        root_layout = create_layout(LayoutType.VBOX, parent=central_widget)
+        self._window_header = apply_frameless_window_header(
+            self,
+            root_layout,
+            allow_minimize=True,
+            allow_maximize=True,
+            obj_name="Main_Window_Header",
+        )
+
+        body_widget = MTWidget(obj_name="Window_Body_Widget")
+        root_layout.addWidget(body_widget, stretch=1)
+        self._popup_modal_host = body_widget
+
+        main_layout = create_layout(LayoutType.HBOX, parent=body_widget)
+
+        sidebar_widget = MTWidget(obj_name="Sidebar_Widget")
+        sidebar_widget.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding
+        )
+        self._sidebar_widget = sidebar_widget
+        main_layout.addWidget(sidebar_widget)
+
+        sidebar_buttons_layout = create_layout(LayoutType.VBOX, parent=sidebar_widget)
+        self._sidebar_buttons_layout = sidebar_buttons_layout
+
+        self._sidebar_media = SidebarMediaWidget(sidebar_widget)
+        sidebar_buttons_layout.addWidget(self._sidebar_media)
+
+        main_content = MTWidget(obj_name="Main_Content_Widget")
+        main_layout.addWidget(main_content)
+
+        pages_layout = create_layout(LayoutType.VBOX, parent=main_content)
+        self._page_controller = PageController(pages_layout)
+
+    def build_pages(
+        self,
+        *,
+        progress_callback: Callable[[int, int, str], None] | None = None,
+    ) -> None:
+        if self._pages_built:
+            return
+
+        self._pages_built = True
+
+        first_key: str | None = None
+        first_page_label: str | None = None
+        total_pages = self.startup_page_total()
+        pages_done = 0
+
+        def emit_progress(current: int, label: str) -> None:
+            if callable(progress_callback):
+                progress_callback(current, total_pages, label)
+
+        for category_name, category_obj_name, page_specs, options in self._MAIN_PAGE_SPECS:
+            if category_name is None or category_obj_name is None or page_specs is None:
+                self._sidebar_buttons_layout.addStretch()
+                continue
+
+            if not isinstance(page_specs, list):
+                settings_offset = pages_done
+                settings_progress = None
+                if category_obj_name == "STNGS":
+                    def settings_progress(current: int, total: int, stage: str) -> None:
+                        emit_progress(settings_offset + current, stage)
+
+                next_key, next_label = self._build_standalone_sidebar_page(
+                    self._sidebar_buttons_layout,
+                    category_name,
+                    category_obj_name,
+                    page_specs,
+                    settings_startup_progress=settings_progress,
+                )
+                pages_done += (
+                    len(SettingsPage.PAGE_SPECS) + 1
+                    if category_obj_name == "STNGS"
+                    else 1
+                )
+                emit_progress(pages_done, f"Loading page: {next_label}")
+                first_key, first_page_label = self._pick_first_page(
+                    first_key,
+                    first_page_label,
+                    next_key,
+                    next_label,
+                )
+                continue
+
+            _category, next_key, next_label = self._build_category_sidebar_pages(
+                category_name,
+                category_obj_name,
+                page_specs,
+                options,
+                parent=self._sidebar_widget,
+                sidebar_layout=self._sidebar_buttons_layout,
+            )
+            pages_done += len(page_specs)
+            emit_progress(pages_done, f"Loading page: {next_label or category_name}")
+            if next_key is not None and next_label is not None:
+                first_key, first_page_label = self._pick_first_page(
+                    first_key,
+                    first_page_label,
+                    next_key,
+                    next_label,
+                )
+
+        if first_key is not None:
+            self._page_controller.show(first_key)
+            self._set_discord_presence_page(
+                first_page_label or MAIN_WINDOW_PAGE_LABEL_FALLBACK
+            )
+
+    def _apply_default_sidebar_button_icon(
+        self, button: MTButton, obj_name: str
+    ) -> None:
+        icon_name = self._SIDEBAR_ICON_NAMES.get(obj_name)
+        if not isinstance(icon_name, str) or not icon_name.strip():
+            return
+
+        icon_path = PATH_SIDEBAR_ICONS / icon_name.strip()
+        if not icon_path.exists():
+            return
+
+        button.set_text_icon(
+            source=str(icon_path),
+            align="left",
+            size=QSize(16, 16),
+            spacing=3.0,
+        )
+
+    def _apply_default_sidebar_category_icon(
+        self, category: _SidebarCategorySection, category_obj_name: str
+    ) -> None:
+        icon_name = self._SIDEBAR_CATEGORY_ICON_NAMES.get(category_obj_name)
+        if not isinstance(icon_name, str) or not icon_name.strip():
+            return
+
+        icon_path = PATH_SIDEBAR_ICONS / icon_name.strip()
+        if not icon_path.exists():
+            return
+
+        category.header_button().set_text_icon(
+            source=str(icon_path),
+            align="top" if category.header_button().text() == "" else "left",
+            size=QSize(14, 14),
+            spacing=3.0,
+        )
+
+    def _lock_sidebar_width_once(self) -> None:
+        if self._sidebar_width_locked:
+            return
+        if self._sidebar_widget is None:
+            return
+
+        self._sidebar_widget.ensurePolished()
+
+        width_candidates: list[int] = []
+        for category in self._sidebar_categories:
+            category.ensurePolished()
+            header_button = category.header_button()
+            header_button.ensurePolished()
+            width_candidates.append(header_button.sizeHint().width())
+
+        for button in self._sidebar_buttons:
+            button.ensurePolished()
+            width_candidates.append(button.sizeHint().width())
+
+        target_width = max(
+            width_candidates, default=self._sidebar_widget.sizeHint().width()
+        )
+        if target_width <= 0:
+            return
+
+        target_width = max(target_width, self._sidebar_widget.minimumSizeHint().width())
+        self._sidebar_widget.setFixedWidth(target_width)
+        self._sidebar_width_locked = True
+
+    @classmethod
+    def _page_spec_count(cls) -> int:
+        total = 0
+        for _category_name, _category_obj_name, pages, _options in cls._MAIN_PAGE_SPECS:
+            if pages is None:
+                continue
+            if isinstance(pages, list):
+                total += len(pages)
+            else:
+                total += 1
+        return total
+
+    @classmethod
+    def startup_page_total(cls) -> int:
+        return cls._page_spec_count() + len(SettingsPage.PAGE_SPECS)
+
+    @classmethod
+    def startup_settings_prewarm_total(cls) -> int:
+        return len(SettingsPage.HEAVY_TAB_KEYS)
+
+    def toggle_maximize_restore(self) -> None:
+        if self.isMaximized():
+            self.showNormal()
+            return
+
+        self.showMaximized()
+
+    def changeEvent(self, event: QEvent) -> None:
+        super().changeEvent(event)
+
+    def setWindowIcon(self, icon: QIcon) -> None:
+        super().setWindowIcon(icon)
+
+    def setWindowTitle(self, title: str) -> None:
+        super().setWindowTitle(title)
+
+    def _set_discord_presence_page(self, page_label: str) -> None:
+        normalized = str(page_label).strip() or MAIN_WINDOW_PAGE_LABEL_FALLBACK
+        self._discord_presence_page = normalized
+        if self._discord_presence_manager is not None:
+            self._discord_presence_manager.set_page(normalized)
+
+    def _settings_discord_presence_label(self) -> str:
+        if isinstance(self._settings_page, SettingsPage):
+            label = str(self._settings_page.current_presence_path()).strip()
+            if label:
+                self._settings_presence_label = label
+        return self._settings_presence_label or "Settings"
+
+    def _on_settings_presence_path_changed(self, label: str) -> None:
+        normalized = str(label).strip() or "Settings"
+        self._settings_presence_label = normalized
+        current_key = getattr(self._page_controller, "current_key", lambda: None)()
+        if current_key == "STNGS":
+            self._set_discord_presence_page(normalized)
+
+    def initialize_runtime_controllers(self) -> None:
+        if self._animation_manager is None:
+            self._animation_manager = AnimationManager(self.centralWidget())
+
+        if self._rainbow_runtime is None:
+            self._rainbow_runtime = RainbowRuntimeController(self.centralWidget())
+
+        self._rainbow_runtime.bind_animation_manager(self._animation_manager)
+
+    def initialize_theme_manager(
+        self,
+        *,
+        default_payload: dict[str, Any] | None = None,
+    ) -> None:
+        if self._theme_manager is not None:
+            return
+
+        payload = (
+            deepcopy(default_payload)
+            if isinstance(default_payload, dict)
+            else self._load_default_theme_payload()
+        )
+        self._theme_manager = ThemeManager(self, payload)
+        self._theme_manager.suppress_theme_changed()
+
+    def apply_startup_theme(self, theme_name: str | None = None) -> str:
+        target_theme = str(theme_name or self._initial_theme_name).strip() or DEFAULT_THEME.stem
+        if not self.set_theme(target_theme, persist=False):
+            self.set_theme(DEFAULT_THEME.stem, persist=False)
+        self._lock_sidebar_width_once()
+        return self.current_theme_name()
+
+    def preload_settings_pages(
+        self,
+        *,
+        progress_callback: Callable[[int, int, str], None] | None = None,
+    ) -> None:
+        if self._settings_page is None:
+            return
+        self._settings_page.preload_heavy_tabs(progress_callback=progress_callback)
+
+    def start_discord_presence(self) -> None:
+        if self._discord_presence_manager is not None:
+            self._discord_presence_manager.set_page(self._discord_presence_page)
+            return
+
+        self._discord_presence_manager = DiscordPresenceManager(self)
+        self._discord_presence_manager.set_page(self._discord_presence_page)
+        self._discord_presence_manager.start()
+
+    def resume_theme_events(self) -> None:
+        if self._theme_manager is None:
+            return
+        self._theme_manager.resume_theme_changed(flush=True)
+
+    def current_theme_name(self) -> str:
+        current = str(getattr(self, "_current_theme_name", "")).strip()
+        if current:
+            return current
+        initial = str(getattr(self, "_initial_theme_name", "")).strip()
+        return initial or DEFAULT_THEME.stem
+
+    def theme_on_load_name(self) -> str:
+        if not self._theme_autoload_enabled():
+            return DEFAULT_THEME.stem
+        configured = str(
+            config.get("General>Theme", default=DEFAULT_THEME.stem)
+        ).strip()
+        return configured or DEFAULT_THEME.stem
+
+    def _theme_autoload_enabled(self) -> bool:
+        return bool(
+            config.get("Theme>Autoload Selected Theme", default=THEME_AUTOLOAD_FALLBACK)
+        )
+
+    def _on_config_loaded(self) -> None:
+        self._invalidate_runtime_theme_preferences_cache()
+        self.reapply_runtime_theme_preferences()
+
+    def _on_config_value_changed(self, key: str, _value: object) -> None:
+        normalized = str(key).strip().replace(" ", "")
+        if normalized in {
+            "Misc>RainbowMode>Enabled",
+            "Misc>RainbowMode>CycleDuration",
+            "Misc>RainbowMode>Palette",
+        }:
+            self._invalidate_runtime_theme_preferences_cache()
+            self.reapply_runtime_theme_preferences()
+
+    def set_theme(self, theme_name: str, *, persist: bool = True) -> bool:
+        if self._theme_manager is None:
+            return False
+        theme_path = self.resolve_theme_path(theme_name)
+        if theme_path is None:
+            return False
+
+        raw_payload = load_theme_payload(theme_path)
+        if not isinstance(raw_payload, dict):
+            return False
+
+        self._theme_manager.load(theme_path, merge_with_default=False)
+        self._current_theme_name = theme_path.stem
+        self._theme_manager.apply()
+        self._reload_main_animations_from_theme()
+        self._apply_runtime_theme_preferences_for_controller(
+            getattr(self, "_rainbow_runtime", None)
+        )
+
+        if persist:
+            current = str(config.get("General>Theme", default=""))
+            if current != theme_path.stem:
+                config.set("General>Theme", theme_path.stem)
+
+        return True
+
+    def save_current_theme_as(self, theme_name: str) -> Path | None:
+        if self._theme_manager is None:
+            return None
+
+        name = Path(str(theme_name).strip()).stem.strip()
+        if not name or name.startswith("."):
+            return None
+
+        payload = self._theme_payload_for_save()
+
+        output_path = find_theme_file_by_name(
+            PATH_THEMES_USER, name
+        ) or theme_output_path(PATH_THEMES_USER, name)
+        FS.create_folder(PATH_THEMES_USER)
+        try:
+            write_theme_payload(output_path, payload)
+        except OSError:
+            return None
+
+        return output_path
+
+    def _theme_payload_for_save(self) -> dict[str, Any]:
+        current_theme = deepcopy(self._build_theme_payload_from_manager())
+        if not isinstance(current_theme, dict):
+            return {"widgets": []}
+
+        widgets = current_theme.get("widgets")
+        if isinstance(widgets, list):
+            return current_theme
+
+        widgets_payload = self._widgets_dict_to_payload(
+            widgets if isinstance(widgets, dict) else {}
+        )
+        payload: dict[str, Any] = {
+            key: deepcopy(value)
+            for key, value in current_theme.items()
+            if key != "widgets"
+        }
+        payload["widgets"] = widgets_payload
+        return payload
+
+    def _load_default_theme_payload(self) -> dict[str, Any]:
+        payload = load_theme_payload(DEFAULT_THEME)
+        return payload if isinstance(payload, dict) else {}
+
+    def _widgets_dict_to_payload(
+        self, widgets: dict[str, dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        grouped: dict[str, dict[str, Any]] = {}
+        order: list[str] = []
+
+        for target, data in widgets.items():
+            if not (isinstance(target, str) and target and isinstance(data, dict)):
+                continue
+
+            styles = {
+                key: deepcopy(value)
+                for key, value in data.items()
+                if key != "animations"
+            }
+
+            animations_present = "animations" in data
+            animations_payload: Any = None
+            if "animations" in data:
+                animations_payload = deepcopy(data.get("animations"))
+
+            if not styles and not animations_present:
+                continue
+
+            grouping_key = json.dumps(
+                {
+                    "styles": styles if styles else None,
+                    "animations": animations_payload if animations_present else None,
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            if target == "*":
+                grouping_key = f"__global__::{target}"
+
+            if grouping_key not in grouped:
+                entry: dict[str, Any] = {"targets": [target]}
+                if styles:
+                    entry["styles"] = styles
+                if animations_present:
+                    entry["animations"] = animations_payload
+                grouped[grouping_key] = entry
+                order.append(grouping_key)
+                continue
+
+            grouped[grouping_key]["targets"].append(target)
+
+        return [grouped[key] for key in order]
+
+    def request_auto_save_current_theme_if_enabled(self) -> None:
+        if not getattr(config_loader, "auto_save_theme", False):
+            return
+
+        if self._window_move_idle_timer.isActive():
+            self._deferred_theme_auto_save = True
+            return
+
+        self._theme_auto_save_timer.start()
+
+    def auto_save_current_theme_if_enabled(self) -> Path | None:
+        if not getattr(config_loader, "auto_save_theme", False):
+            return None
+
+        return self.save_current_theme_as(self.current_theme_name())
+
+    def _reload_main_animations_from_theme(self) -> None:
+        if self._theme_manager is None or self._animation_manager is None:
+            return
+
+        current_theme = getattr(self._theme_manager, "_current_theme", {})
+        widgets = (
+            current_theme.get("widgets", {}) if isinstance(current_theme, dict) else {}
+        )
+        if not isinstance(widgets, dict):
+            widgets = {}
+
+        animations = {
+            target: deepcopy(item.get("animations"))
+            for target, item in widgets.items()
+            if isinstance(item, dict) and item.get("animations")
+        }
+        self._animation_manager.load(animations, widgets)
+
+    def _apply_runtime_theme_preferences_for_controller(
+        self,
+        controller: RainbowRuntimeController | None,
+        preferences: tuple[bool, int, str] | None = None,
+    ) -> None:
+        if controller is None:
+            return
+        enabled, duration, palette = preferences or self._runtime_theme_preferences()
+        controller.set_enabled(enabled, duration, palette=palette)
+
+    def _apply_runtime_theme_preferences_to_children(self) -> None:
+        preferences = self._runtime_theme_preferences()
+        enabled, duration, palette = preferences
+        if hasattr(self, "_window_header") and self._window_header is not None:
+            self._window_header.set_title_rainbow(enabled, duration, palette=palette)
+
+        self._apply_runtime_theme_preferences_for_controller(
+            getattr(self, "_rainbow_runtime", None), preferences
+        )
+
+    def _build_theme_payload_from_manager(self) -> dict[str, Any]:
+        if self._theme_manager is None:
+            return {"widgets": []}
+
+        current_theme = deepcopy(getattr(self._theme_manager, "_current_theme", {}))
+        widgets = (
+            current_theme.get("widgets", {}) if isinstance(current_theme, dict) else {}
+        )
+        payload = (
+            {
+                key: deepcopy(value)
+                for key, value in current_theme.items()
+                if key != "widgets"
+            }
+            if isinstance(current_theme, dict)
+            else {}
+        )
+        payload["widgets"] = self._widgets_dict_to_payload(
+            widgets if isinstance(widgets, dict) else {}
+        )
+        return payload
+
+    def _payload_widgets_dict(
+        self, payload: dict[str, Any]
+    ) -> dict[str, dict[str, Any]]:
+        if not isinstance(payload, dict):
+            return {}
+
+        parser = ThemeManager(self, emit_theme_changed=False)
+        parser.load(payload, merge_with_default=False)
+        widgets = getattr(parser, "_current_theme", {}).get("widgets", {})
+        return deepcopy(widgets) if isinstance(widgets, dict) else {}
+
+    def _rainbow_mode_enabled(self) -> bool:
+        return self._runtime_theme_preferences()[0]
+
+    def _rainbow_cycle_duration(self) -> int:
+        return self._runtime_theme_preferences()[1]
+
+    def _rainbow_palette(self) -> str:
+        return self._runtime_theme_preferences()[2]
+
+    def _runtime_theme_preferences(self) -> tuple[bool, int, str]:
+        if self._runtime_theme_preferences_cache is not None:
+            return self._runtime_theme_preferences_cache
+
+        enabled = bool(
+            config.get(
+                "Misc>Rainbow Mode>Enabled",
+                default=THEME_RUNTIME_RAINBOW_ENABLED_FALLBACK,
+            )
+        )
+        try:
+            duration = max(
+                1000,
+                int(
+                    config.get(
+                        "Misc>Rainbow Mode>Cycle Duration",
+                        default=THEME_RUNTIME_RAINBOW_DURATION_FALLBACK,
+                    )
+                ),
+            )
+        except (TypeError, ValueError):
+            duration = THEME_RUNTIME_RAINBOW_DURATION_FALLBACK
+
+        palette = (
+            str(
+                config.get(
+                    "Misc>Rainbow Mode>Palette",
+                    default=THEME_RUNTIME_RAINBOW_PALETTE_FALLBACK,
+                )
+            ).strip()
+            or THEME_RUNTIME_RAINBOW_PALETTE_FALLBACK
+        )
+        self._runtime_theme_preferences_cache = (enabled, duration, palette)
+        return self._runtime_theme_preferences_cache
+
+    def _invalidate_runtime_theme_preferences_cache(self) -> None:
+        self._runtime_theme_preferences_cache = None
+
+    def _effective_theme_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if not isinstance(payload, dict):
+            return {"widgets": []}
+        return deepcopy(payload)
+
+    def reapply_runtime_theme_preferences(self) -> None:
+        self._apply_runtime_theme_preferences_to_children()

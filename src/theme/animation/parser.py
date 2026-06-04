@@ -1,0 +1,624 @@
+from __future__ import annotations
+
+import re
+from copy import deepcopy
+from typing import Any
+
+from .helpers import (
+    _normalize_gradient,
+    _normalize_token,
+    _parse_easing,
+    _parse_loop_count,
+    _to_color,
+)
+from .types import AnimationSpec
+
+_NUMBER_VALUE_PATTERN = re.compile(r'^\s*([-+]?\d+(?:[.,]\d+)?)\s*(?:px)?\s*$', re.IGNORECASE)
+
+
+def parse_specs(raw: Any) -> list[AnimationSpec]:
+    specs: list[AnimationSpec] = []
+    for payload in normalize_specs_payload(raw):
+        if (spec := _build_spec(payload)) is not None:
+            specs.append(spec)
+    return specs
+
+
+def normalize_specs_payload(raw: Any) -> list[dict[str, Any]]:
+    payloads: list[dict[str, Any]] = []
+
+    if isinstance(raw, list):
+        for item in raw:
+            _collect_payload_specs(payloads, item, default_action=None)
+        return payloads
+
+    if isinstance(raw, dict):
+        if _looks_like_spec(raw):
+            _collect_payload_specs(payloads, raw, default_action=None)
+            return payloads
+
+        for action, payload in raw.items():
+            _collect_payload_specs(payloads, payload, default_action=action)
+
+    return payloads
+
+
+def _collect_payload_specs(output: list[dict[str, Any]], payload: Any, default_action: str | None) -> None:
+    if isinstance(payload, list):
+        for item in payload:
+            _collect_payload_specs(output, item, default_action)
+        return
+
+    if isinstance(payload, dict):
+        if default_action and not any(key in payload for key in ('on', 'action', 'state', 'event')):
+            candidate = {'on': default_action, **deepcopy(payload)}
+        else:
+            candidate = deepcopy(payload)
+
+        spec_payloads = _normalize_raw_specs(candidate)
+        if spec_payloads:
+            output.extend(spec_payloads)
+            return
+
+        actions = _normalize_actions(_action_value(candidate, default_action))
+        if not actions:
+            return
+
+        common: dict[str, Any] = {}
+        if 'duration' in candidate or 'duration_ms' in candidate:
+            common['duration'] = candidate.get('duration', candidate.get('duration_ms'))
+        if 'easing' in candidate or 'curve' in candidate:
+            common['easing'] = candidate.get('easing', candidate.get('curve'))
+        if 'from' in candidate or 'start' in candidate:
+            common['from'] = candidate.get('from', candidate.get('start'))
+        if 'loop' in candidate or 'loops' in candidate or 'iterations' in candidate:
+            common['loop'] = candidate.get('loop', candidate.get('loops', candidate.get('iterations')))
+
+        skip_keys = {
+            'on', 'action', 'state', 'event',
+            'duration', 'duration_ms', 'easing', 'curve',
+            'from', 'start', 'to', 'end', 'value',
+            'loop', 'loops', 'iterations',
+        }
+
+        for action in actions:
+            for prop, value in candidate.items():
+                if prop in skip_keys:
+                    continue
+
+                for expanded in _expand_shorthand(action, prop, deepcopy(value), common):
+                    output.extend(_normalize_raw_specs(expanded))
+        return
+
+    if default_action is not None and payload is not None:
+        output.extend(_normalize_raw_specs({'on': default_action, 'property': 'background.color', 'to': deepcopy(payload)}))
+
+
+def _action_value(raw: dict[str, Any], default_action: str | None = None) -> Any:
+    for key in ('on', 'action', 'state', 'event'):
+        if key in raw:
+            return raw.get(key)
+    return default_action
+
+
+def _normalize_raw_specs(raw: dict[str, Any]) -> list[dict[str, Any]]:
+    specs: list[dict[str, Any]] = []
+    for action in _normalize_actions(_action_value(raw)):
+        candidate = deepcopy(raw)
+        candidate['on'] = action
+        if (spec := _normalize_raw_spec(candidate)) is not None:
+            specs.append(spec)
+    return specs
+
+
+def _normalize_raw_spec(raw: dict[str, Any]) -> dict[str, Any] | None:
+    action = _normalize_action(_action_value(raw))
+    if not action:
+        return None
+
+    prop = raw.get('property', raw.get('prop'))
+    if not isinstance(prop, str):
+        return None
+
+    property_data = _normalize_property(prop)
+    if property_data is None:
+        return None
+
+    property_key, _, _ = property_data
+    end_raw = raw.get('to', raw.get('end', raw.get('value')))
+    if end_raw is None:
+        return None
+
+    normalized: dict[str, Any] = {
+        'on': action,
+        'property': property_key,
+        'to': deepcopy(end_raw),
+    }
+
+    start_raw = raw.get('from', raw.get('start'))
+    if start_raw is not None:
+        normalized['from'] = deepcopy(start_raw)
+
+    if 'duration' in raw or 'duration_ms' in raw:
+        normalized['duration'] = deepcopy(raw.get('duration', raw.get('duration_ms')))
+
+    if 'easing' in raw or 'curve' in raw:
+        normalized['easing'] = deepcopy(raw.get('easing', raw.get('curve')))
+
+    if 'loop' in raw or 'loops' in raw or 'iterations' in raw:
+        normalized['loop'] = deepcopy(raw.get('loop', raw.get('loops', raw.get('iterations'))))
+
+    return normalized
+
+
+def _expand_shorthand(action: str, prop: str, value: Any, common: dict[str, Any]) -> list[dict[str, Any]]:
+    key = _normalize_token(prop)
+    specs: list[dict[str, Any]] = []
+
+    if isinstance(value, dict):
+        match key:
+            case 'background' | 'bg':
+                if 'color' in value:
+                    specs.append({'on': action, 'property': 'background.color', 'to': value['color'], **common})
+                if 'gradient' in value:
+                    specs.append({'on': action, 'property': 'background.gradient', 'to': value['gradient'], **common})
+            case 'text':
+                if 'color' in value:
+                    specs.append({'on': action, 'property': 'color', 'to': value['color'], **common})
+                if 'spacing' in value:
+                    specs.append({'on': action, 'property': 'text.spacing', 'to': value['spacing'], **common})
+                if 'letter_spacing' in value:
+                    specs.append({'on': action, 'property': 'text.spacing', 'to': value['letter_spacing'], **common})
+                if 'letter-spacing' in value:
+                    specs.append({'on': action, 'property': 'text.spacing', 'to': value['letter-spacing'], **common})
+                border = value.get('border') if isinstance(value.get('border'), dict) else {}
+                if 'color' in border:
+                    specs.append({'on': action, 'property': 'text.border.color', 'to': border['color'], **common})
+                if 'width' in border:
+                    specs.append({'on': action, 'property': 'text.border.width', 'to': border['width'], **common})
+            case 'border':
+                if 'color' in value:
+                    specs.append({'on': action, 'property': 'border.color', 'to': value['color'], **common})
+                if 'width' in value:
+                    specs.append({'on': action, 'property': 'border.width', 'to': value['width'], **common})
+                if 'radius' in value:
+                    specs.append({'on': action, 'property': 'border.radius', 'to': value['radius'], **common})
+            case 'padding':
+                for side in ('left', 'top', 'right', 'bottom'):
+                    if side in value:
+                        specs.append({'on': action, 'property': f'padding.{side}', 'to': value[side], **common})
+            case 'layout':
+                if 'spacing' in value:
+                    specs.append({'on': action, 'property': 'layout.spacing', 'to': value['spacing'], **common})
+                margin = value.get('margin', value.get('margins'))
+                if isinstance(margin, dict):
+                    for side in ('left', 'top', 'right', 'bottom'):
+                        if side in margin:
+                            specs.append({'on': action, 'property': f'layout.margin.{side}', 'to': margin[side], **common})
+                for side in ('left', 'top', 'right', 'bottom'):
+                    for key_name in (f'margin_{side}', f'margin-{side}'):
+                        if key_name in value:
+                            specs.append({'on': action, 'property': f'layout.margin.{side}', 'to': value[key_name], **common})
+            case 'parts':
+                specs.extend(_expand_parts_shorthand(action, value, common))
+        return specs
+
+    specs.append({'on': action, 'property': prop, 'to': value, **common})
+    return specs
+
+
+def _expand_parts_shorthand(action: str, value: dict[str, Any], common: dict[str, Any]) -> list[dict[str, Any]]:
+    specs: list[dict[str, Any]] = []
+    for part, part_data in value.items():
+        part_name = _normalize_token(part)
+        if not isinstance(part_data, dict) or not part_name:
+            continue
+
+        if 'color' in part_data:
+            specs.append({'on': action, 'property': f'parts.{part_name}.color', 'to': part_data['color'], **common})
+        for metric in ('width', 'height', 'size', 'rotation'):
+            if metric in part_data:
+                specs.append({'on': action, 'property': f'parts.{part_name}.{metric}', 'to': part_data[metric], **common})
+
+        background = part_data.get('background') if isinstance(part_data.get('background'), dict) else {}
+        if 'color' in background:
+            specs.append({'on': action, 'property': f'parts.{part_name}.background.color', 'to': background['color'], **common})
+        if 'gradient' in background:
+            specs.append({'on': action, 'property': f'parts.{part_name}.background.gradient', 'to': background['gradient'], **common})
+
+        border = part_data.get('border') if isinstance(part_data.get('border'), dict) else {}
+        if 'color' in border:
+            specs.append({'on': action, 'property': f'parts.{part_name}.border.color', 'to': border['color'], **common})
+        if 'width' in border:
+            specs.append({'on': action, 'property': f'parts.{part_name}.border.width', 'to': border['width'], **common})
+        if 'radius' in border:
+            specs.append({'on': action, 'property': f'parts.{part_name}.border.radius', 'to': border['radius'], **common})
+
+        text = part_data.get('text') if isinstance(part_data.get('text'), dict) else {}
+        if 'color' in text:
+            specs.append({'on': action, 'property': f'parts.{part_name}.text.color', 'to': text['color'], **common})
+
+        states = part_data.get('states') if isinstance(part_data.get('states'), dict) else {}
+        for state, state_data in states.items():
+            state_name = _normalize_token(state)
+            if not isinstance(state_data, dict) or not state_name:
+                continue
+
+            state_background = state_data.get('background') if isinstance(state_data.get('background'), dict) else {}
+            if 'color' in state_background:
+                specs.append({
+                    'on': action,
+                    'property': f'parts.{part_name}.states.{state_name}.background.color',
+                    'to': state_background['color'],
+                    **common,
+                })
+            if 'gradient' in state_background:
+                specs.append({
+                    'on': action,
+                    'property': f'parts.{part_name}.states.{state_name}.background.gradient',
+                    'to': state_background['gradient'],
+                    **common,
+                })
+
+            state_text = state_data.get('text') if isinstance(state_data.get('text'), dict) else {}
+            if 'color' in state_text:
+                specs.append({
+                    'on': action,
+                    'property': f'parts.{part_name}.states.{state_name}.text.color',
+                    'to': state_text['color'],
+                    **common,
+                })
+
+            state_border = state_data.get('border') if isinstance(state_data.get('border'), dict) else {}
+            if 'color' in state_border:
+                specs.append({
+                    'on': action,
+                    'property': f'parts.{part_name}.states.{state_name}.border.color',
+                    'to': state_border['color'],
+                    **common,
+                })
+    return specs
+
+
+def _build_spec(raw: dict[str, Any]) -> AnimationSpec | None:
+    action = _normalize_action(_action_value(raw))
+    if not action:
+        return None
+
+    prop = raw.get('property', raw.get('prop'))
+    if not isinstance(prop, str):
+        return None
+
+    property_data = _normalize_property(prop)
+    if property_data is None:
+        return None
+
+    property_key, kind, css_property = property_data
+    loop_count = _parse_loop_count(
+        raw.get('loop', raw.get('loops', raw.get('iterations'))),
+        default=-1 if action == 'always' else 1,
+    )
+
+    end_raw = raw.get('to', raw.get('end', raw.get('value')))
+    if end_raw is None:
+        return None
+
+    start_raw = raw.get('from', raw.get('start'))
+
+    if kind == 'color':
+        end_color = _to_color(end_raw)
+        if end_color is None:
+            return None
+
+        start_color = _to_color(start_raw) if start_raw is not None else None
+
+        return AnimationSpec(
+            action=action,
+            property_key=property_key,
+            css_property=css_property,
+            kind=kind,
+            duration=_resolve_duration(raw, default=220),
+            loop_count=loop_count,
+            easing=_parse_easing(raw.get('easing', raw.get('curve'))),
+            start=start_color,
+            end=end_color,
+        )
+
+    if kind == 'number':
+        end_number = _to_number(end_raw)
+        if end_number is None:
+            return None
+
+        start_number = _to_number(start_raw) if start_raw is not None else None
+
+        return AnimationSpec(
+            action=action,
+            property_key=property_key,
+            css_property=css_property,
+            kind=kind,
+            duration=_resolve_duration(raw, default=220),
+            loop_count=loop_count,
+            easing=_parse_easing(raw.get('easing', raw.get('curve'))),
+            start=start_number,
+            end=end_number,
+            options={'duration_provided': 'duration' in raw or 'duration_ms' in raw},
+        )
+
+    end_grad = _normalize_gradient(end_raw)
+    if end_grad is None:
+        return None
+
+    start_grad = _normalize_gradient(start_raw) if start_raw is not None else None
+
+    return AnimationSpec(
+        action=action,
+        property_key=property_key,
+        css_property=css_property,
+        kind=kind,
+        duration=_resolve_duration(raw, default=220),
+        loop_count=loop_count,
+        easing=_parse_easing(raw.get('easing', raw.get('curve'))),
+        start=start_grad,
+        end=end_grad,
+    )
+
+
+def _resolve_duration(raw: dict[str, Any], *, default: int) -> int:
+    value = raw.get('duration', raw.get('duration_ms', default))
+    try:
+        duration = int(value)
+    except (TypeError, ValueError):
+        duration = default
+    return max(duration, 1)
+
+
+def _to_number(value: Any) -> float | None:
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value)
+
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+
+        if match := _NUMBER_VALUE_PATTERN.fullmatch(text):
+            token = str(match.group(1)).replace(',', '.')
+            try:
+                return float(token)
+            except ValueError:
+                return None
+
+        try:
+            return float(text.replace(',', '.'))
+        except ValueError:
+            return None
+
+    return None
+
+
+def _looks_like_spec(data: Any) -> bool:
+    if not isinstance(data, dict):
+        return False
+
+    if 'property' in data or 'prop' in data:
+        return True
+
+    if any(key in data for key in ('to', 'end', 'value')) and any(key in data for key in ('on', 'action', 'state', 'event')):
+        return True
+
+    return False
+
+
+def _normalize_actions(action: Any) -> list[str]:
+    if isinstance(action, str):
+        values = [part.strip() for part in re.split(r'[,|]', action) if part.strip()]
+    elif isinstance(action, (list, tuple, set)):
+        values = list(action)
+    else:
+        values = [action]
+
+    actions: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        normalized = _normalize_action(value)
+        if normalized and normalized not in seen:
+            actions.append(normalized)
+            seen.add(normalized)
+    return actions
+
+
+def _normalize_action(action: Any) -> str:
+    if not isinstance(action, str):
+        return ''
+
+    key = _normalize_token(action)
+    aliases = {
+        'hover': 'hover',
+        'enter': 'hover',
+        'leave': 'leave',
+        'out': 'leave',
+        'press': 'press',
+        'down': 'press',
+        'mousedown': 'press',
+        'release': 'release',
+        'up': 'release',
+        'mouseup': 'release',
+        'focus': 'focus',
+        'focusin': 'focus',
+        'blur': 'blur',
+        'focusout': 'blur',
+        'click': 'click',
+        'clicked': 'click',
+        'doubleclick': 'double_click',
+        'dblclick': 'double_click',
+        'double_click': 'double_click',
+        'open': 'open',
+        'opened': 'open',
+        'popupopen': 'open',
+        'popup_open': 'open',
+        'close': 'close',
+        'closed': 'close',
+        'popupclose': 'close',
+        'popup_close': 'close',
+        'wheel': 'wheel',
+        'scroll': 'wheel',
+        'mousewheel': 'wheel',
+        'enabled': 'enabled',
+        'enable': 'enabled',
+        'disabled': 'disabled',
+        'disable': 'disabled',
+        'checked': 'checked',
+        'check': 'checked',
+        'on': 'checked',
+        'toggle_on': 'checked',
+        'unchecked': 'unchecked',
+        'uncheck': 'unchecked',
+        'off': 'unchecked',
+        'toggle_off': 'unchecked',
+        'always': 'always',
+        'idle': 'always',
+        'persistent': 'always',
+    }
+    return aliases.get(key, '')
+
+
+def _normalize_property(prop: str) -> tuple[str, str, str] | None:
+    key = _normalize_token(prop)
+    aliases = {
+        'background': 'background.color',
+        'bg': 'background.color',
+        'background_color': 'background.color',
+        'color': 'color',
+        'text': 'color',
+        'text_color': 'color',
+        'text_border_color': 'text.border.color',
+        'text_border_width': 'text.border.width',
+        'text_spacing': 'text.spacing',
+        'letter_spacing': 'text.spacing',
+        'border_color': 'border.color',
+        'border_width': 'border.width',
+        'border_radius': 'border.radius',
+        'radius': 'border.radius',
+        'padding_left': 'padding.left',
+        'padding_top': 'padding.top',
+        'padding_right': 'padding.right',
+        'padding_bottom': 'padding.bottom',
+        'margin_left': 'layout.margin.left',
+        'margin_top': 'layout.margin.top',
+        'margin_right': 'layout.margin.right',
+        'margin_bottom': 'layout.margin.bottom',
+        'layout_spacing': 'layout.spacing',
+        'spacing': 'layout.spacing',
+        'gradient': 'background.gradient',
+        'background_gradient': 'background.gradient',
+        'bg_gradient': 'background.gradient',
+        'width': 'widget.maximum_width',
+        'max_width': 'widget.maximum_width',
+        'maximum_width': 'widget.maximum_width',
+        'min_width': 'widget.minimum_width',
+        'minimum_width': 'widget.minimum_width',
+        'fixed_width': 'widget.width',
+        'height': 'widget.maximum_height',
+        'max_height': 'widget.maximum_height',
+        'maximum_height': 'widget.maximum_height',
+        'min_height': 'widget.minimum_height',
+        'minimum_height': 'widget.minimum_height',
+        'fixed_height': 'widget.height',
+        'x': 'widget.x',
+        'pos_x': 'widget.x',
+        'position_x': 'widget.x',
+        'y': 'widget.y',
+        'pos_y': 'widget.y',
+        'position_y': 'widget.y',
+        'scroll_y': 'scroll.vertical',
+        'scroll_vertical': 'scroll.vertical',
+        'vertical_scroll': 'scroll.vertical',
+        'viewport_scroll_y': 'scroll.vertical',
+        'scroll_x': 'scroll.horizontal',
+        'scroll_horizontal': 'scroll.horizontal',
+        'horizontal_scroll': 'scroll.horizontal',
+        'viewport_scroll_x': 'scroll.horizontal',
+    }
+
+    canonical = aliases.get(key)
+    if canonical is None and '.' in prop:
+        parts = [_normalize_token(p) for p in prop.split('.') if p]
+        canonical = '.'.join(parts)
+
+    match canonical:
+        case 'background.color':
+            return canonical, 'color', 'background-color'
+        case 'color':
+            return canonical, 'color', 'color'
+        case 'border.color':
+            return canonical, 'color', 'border-color'
+        case 'text.border.color':
+            return canonical, 'color', 'text.border-color'
+        case 'text.border.width':
+            return canonical, 'number', ''
+        case 'text.spacing':
+            return canonical, 'number', ''
+        case 'border.width':
+            return canonical, 'number', ''
+        case 'border.radius':
+            return canonical, 'number', ''
+        case 'background.gradient':
+            return canonical, 'gradient', 'background'
+        case 'padding.left' | 'padding.top' | 'padding.right' | 'padding.bottom':
+            return canonical, 'number', ''
+        case 'layout.spacing':
+            return canonical, 'number', ''
+        case 'layout.margin.left' | 'layout.margin.top' | 'layout.margin.right' | 'layout.margin.bottom':
+            return canonical, 'number', ''
+        case 'widget.width':
+            return canonical, 'number', ''
+        case 'widget.minimum_width':
+            return canonical, 'number', ''
+        case 'widget.maximum_width':
+            return canonical, 'number', ''
+        case 'widget.height':
+            return canonical, 'number', ''
+        case 'widget.minimum_height':
+            return canonical, 'number', ''
+        case 'widget.maximum_height':
+            return canonical, 'number', ''
+        case 'widget.x':
+            return canonical, 'number', ''
+        case 'widget.y':
+            return canonical, 'number', ''
+        case 'scroll.vertical':
+            return canonical, 'number', ''
+        case 'scroll.horizontal':
+            return canonical, 'number', ''
+
+    if isinstance(canonical, str) and canonical.startswith('parts.'):
+        parts = canonical.split('.')
+        if len(parts) == 6 and parts[2] == 'states':
+            if parts[4] == 'background' and parts[5] == 'color':
+                return canonical, 'color', f'parts.{parts[1]}.states.{parts[3]}.background-color'
+            if parts[4] == 'background' and parts[5] == 'gradient':
+                return canonical, 'gradient', f'parts.{parts[1]}.states.{parts[3]}.background'
+            if parts[4] == 'text' and parts[5] == 'color':
+                return canonical, 'color', f'parts.{parts[1]}.states.{parts[3]}.color'
+            if parts[4] == 'border' and parts[5] == 'color':
+                return canonical, 'color', f'parts.{parts[1]}.states.{parts[3]}.border-color'
+        if len(parts) == 3 and parts[2] == 'color':
+            return canonical, 'color', f'parts.{parts[1]}.color'
+        if len(parts) == 4 and parts[2] == 'background' and parts[3] == 'color':
+            return canonical, 'color', f'parts.{parts[1]}.background-color'
+        if len(parts) == 4 and parts[2] == 'background' and parts[3] == 'gradient':
+            return canonical, 'gradient', f'parts.{parts[1]}.background'
+        if len(parts) == 4 and parts[2] == 'text' and parts[3] == 'color':
+            return canonical, 'color', f'parts.{parts[1]}.color'
+        if len(parts) == 4 and parts[2] == 'border' and parts[3] == 'color':
+            return canonical, 'color', f'parts.{parts[1]}.border-color'
+        if len(parts) == 4 and parts[2] == 'border' and parts[3] in {'width', 'radius'}:
+            return canonical, 'number', ''
+        if len(parts) == 3 and parts[2] in {'width', 'height', 'size', 'rotation'}:
+            return canonical, 'number', ''
+        if len(parts) == 3 and parts[1] == 'groove' and parts[2] == 'size':
+            return canonical, 'number', ''
+        if len(parts) == 3 and parts[1] == 'handle' and parts[2] in {'width', 'height'}:
+            return canonical, 'number', ''
+
+    return None

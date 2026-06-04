@@ -1,24 +1,23 @@
-from typing import Literal, Optional, overload
+from typing import Literal, overload
+
+from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLayout, QVBoxLayout, QWidget
+
 from src.ui.layouts.enums import LayoutType
-from PySide6.QtWidgets import (
-    QLayout, QWidget, QVBoxLayout,
-    QHBoxLayout, QGridLayout
-)
 
 
 @overload
-def create_layout(layout_type: Literal[LayoutType.HBOX], *, margins: tuple[int, int, int, int] = (0, 0, 0, 0), spacing: int = 0, parent: Optional[QWidget] = None) -> QHBoxLayout: ...
+def create_layout(layout_type: Literal[LayoutType.HBOX], *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0, parent: QWidget | None = None) -> QHBoxLayout: ...
 @overload
-def create_layout(layout_type: Literal[LayoutType.VBOX], *, margins: tuple[int, int, int, int] = (0, 0, 0, 0), spacing: int = 0, parent: Optional[QWidget] = None) -> QVBoxLayout: ...
+def create_layout(layout_type: Literal[LayoutType.VBOX], *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0, parent: QWidget | None = None) -> QVBoxLayout: ...
 @overload
-def create_layout(layout_type: Literal[LayoutType.GRID], *, margins: tuple[int, int, int, int] = (0, 0, 0, 0), spacing: int = 0, parent: Optional[QWidget] = None) -> QGridLayout: ...
+def create_layout(layout_type: Literal[LayoutType.GRID], *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0, parent: QWidget | None = None) -> QGridLayout: ...
 
 def create_layout(
     layout_type: LayoutType,
     *,
-    margins: tuple[int, int, int, int] = (0, 0, 0, 0),
+    margins: int | tuple[int, int, int, int] = 0,
     spacing: int = 0,
-    parent: Optional[QWidget] = None,
+    parent: QWidget | None = None,
 ) -> QLayout:
     match layout_type:
         case LayoutType.HBOX: layout = QHBoxLayout(parent)
@@ -27,7 +26,7 @@ def create_layout(
         case _:
             raise ValueError(f'Unknown layout type: {layout_type}')
 
-    layout.setContentsMargins(*margins)
+    layout.setContentsMargins(*(margins, margins, margins, margins) if isinstance(margins, int) else margins)
     layout.setSpacing(spacing)
 
     return layout

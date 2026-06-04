@@ -1,16 +1,15 @@
-import asyncio
-from typing import Optional
 from aiohttp import ClientResponse
+
+from src.exceptions.roblox import AccountBanned, InvalidCookie
+from src.http.base_client import BaseHttpClient
 from src.utils.logging import logger
-from src.http_client.base import BaseHttpClient
-from src.exceptions.roblox import InvalidCookie, AccountBanned
 
 
 class RobloxHttpClient(BaseHttpClient):
-    def __init__(self, proxies: Optional[list[str]] = None):
+    def __init__(self, proxies: list[str] | None = None):
         super().__init__(proxies=proxies)
         
-    async def _handle_response(self, method: str, url: str, response: ClientResponse) -> Optional[ClientResponse]:
+    async def _handle_response(self, method: str, url: str, response: ClientResponse) -> ClientResponse | None:
         # status = response.status if locals().get('response') else 'ERR'
         match response.status:
             case 200:
@@ -18,7 +17,7 @@ class RobloxHttpClient(BaseHttpClient):
             case 403 if method == 'post':
                 return response
             case 204:
-                return None
+                return response
             case 302 if response.headers.get('Location') == '/not-approved':
                 raise AccountBanned
             case 302 | 401:
@@ -27,4 +26,4 @@ class RobloxHttpClient(BaseHttpClient):
                 raise AccountBanned
             case _:
                 logger.debug(f'[{method.upper()}:{response.status}] URL: {url}')
-                await asyncio.sleep(5)
+                raise RuntimeError(f'Unexpected HTTP status {response.status} for {method.upper()} {url}')

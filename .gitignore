@@ -1,24 +1,41 @@
+# beta
+.beta/
+native/
+*.whl
+*.dll
+
 # envs
 .env
+.venv/
+
+# docs
+docs/
+
+# bats
+run.bat
 
 # paths and files created MeowTool
 /Logs/
 /Proxy/
 /Roblox/
 /Settings/Configs/
+/Settings/Themes/
+/Settings/Fonts/
 /Settings/Translations/
 /Versions/
-*.db
-
-# caches
-__pycache__/
-*.pyc
-*cache
 
 # tests
 /tests/
+*.db
 
 # trash
 .vscode/
+__pycache__/
+*cache
+*.py[cod]
 *.log
+
+build/
+dist/
+
 notepad.txt

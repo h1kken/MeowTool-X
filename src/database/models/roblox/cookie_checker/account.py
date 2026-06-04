@@ -1,9 +1,51 @@
-from sqlalchemy import Column, Integer, String, Boolean, JSON, Index
+from __future__ import annotations
+
+import json
+from typing import Iterable
+
+from sqlalchemy import JSON, Boolean, Column, Integer, String
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.types import TypeDecorator
 
 
 class BaseCookieChecker(DeclarativeBase):
-    ...
+    pass
+
+
+class StringSetJSON(TypeDecorator):
+    impl = String
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return '[]'
+        if isinstance(value, str):
+            return json.dumps([value], ensure_ascii=False)
+        if isinstance(value, (set, list, tuple)):
+            normalized = sorted({str(item) for item in value if item})
+            return json.dumps(normalized, ensure_ascii=False)
+        raise TypeError(f'Unsupported value for StringSetJSON: {type(value)!r}')
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return set()
+        if isinstance(value, (list, tuple, set)):
+            return {str(item) for item in value if item}
+
+        raw = str(value).strip()
+        if not raw:
+            return set()
+
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return {raw}
+
+        if isinstance(parsed, str):
+            return {parsed}
+        if isinstance(parsed, (list, tuple, set)):
+            return {str(item) for item in parsed if item}
+        return set()
 
 
 class Account(BaseCookieChecker):
@@ -52,11 +94,47 @@ class Account(BaseCookieChecker):
     p_followers                 = Column(Integer)
     p_followings                = Column(Integer)
     p_roblox_badges             = Column(JSON, default=dict)
-    p_cookie                    = Column(String, nullable=False)
+    p_cookie                    = Column(StringSetJSON, default=set, nullable=False)
+
+    def cookies(self) -> set[str]:
+        value = self.p_cookie
+        if isinstance(value, set):
+            return set(value)
+        if isinstance(value, str):
+            return {value}
+        if isinstance(value, (list, tuple)):
+            return {str(item) for item in value if item}
+        return set()
+
+    def set_cookies(self, cookies: Iterable[str] | None) -> set[str]:
+        normalized = {
+            str(cookie).strip()
+                for cookie in (cookies or [])
+                    if str(cookie).strip()
+        }
+        self.p_cookie = normalized
+        return normalized
+
+    def add_cookie(self, cookie: str) -> bool:
+        cookie = str(cookie).strip()
+        if not cookie:
+            return False
+
+        current = self.cookies()
+        before = len(current)
+        current.add(cookie)
+        self.p_cookie = current
+        return len(current) > before
+
+    def merge_cookies(self, cookies: Iterable[str] | None) -> int:
+        if not cookies:
+            return 0
+
+        current = self.cookies()
+        before = len(current)
+        current.update(str(cookie).strip() for cookie in cookies if str(cookie).strip())
+        self.p_cookie = current
+        return len(current) - before
 
     def __repr__(self) -> str:
-        return f'<Account[{self.id}]: {self.p_id} | {self.p_display_name} (@{self.p_name}) | {self.p_valid}>'
-
-
-Index('idx_p_id', Account.p_id)
-Index('idx_p_name', Account.p_name)
+        return f'<Account[{self.id}]: {self.p_id} | {self.p_display_name} (@{self.p_name}) | {self.p_valid} | cookies={len(self.cookies())}>'

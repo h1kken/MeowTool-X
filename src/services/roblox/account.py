@@ -1,41 +1,46 @@
-import re
 import asyncio
-from typing import Literal, Collection, Optional
+import re
+from typing import Collection, Literal
+
 from aiohttp import ClientResponse
-from src.services.roblox.http.client import RobloxHttpClient
+
+import src.services.roblox.apis as RobloxAPI
 from src.exceptions.roblox import InvalidCookie
-from src.utils.regex import ROBLOX_COOKIE_PATTERN
-from src.utils.datetime import convert_date, timestamp_to_local_date, format_duration
-from src.utils.string import convert_age_group
-from src.utils.generators import chunked
-from src.utils.consts import (
+from src.services.roblox.http.client import RobloxHttpClient
+from src.utils.constants import (
+    BADGES_COUNT_LIMIT,
     COUNTRY_CODES_KEYMAP,
     DATE_TIME_FORMAT,
+    ITEMS_PER_PAGE_BUNDLES,
+    ITEMS_PER_PAGE_FAVORITE_PLACES,
+    ITEMS_PER_PAGE_GAMEPASSES,
+    ITEMS_PER_PAGE_PLACE_SERVER_IDS,
+    ITEMS_PER_PAGE_RAP,
     ROBLOX_REG_DATE_FORMAT,
     TIME_FRAME_TRANSACTIONS,
-    ITEMS_PER_PAGE_TRANSACTIONS_ALL_TIME,
-    ITEMS_PER_PAGE_RAP,
-    ITEMS_PER_PAGE_GAMEPASSES,
-    ITEMS_PER_PAGE_FAVORITE_PLACES,
-    ITEMS_PER_PAGE_BUNDLES,
-    ITEMS_PER_PAGE_PLACE_SERVER_IDS,
-    BADGES_COUNT_LIMIT
 )
-import src.services.roblox.apis as RobloxAPI
+from src.utils.datetime import (
+    convert_datetime,
+    format_duration,
+    timestamp_to_local_date,
+)
+from src.utils.generators import chunked
+from src.utils.regexes import ROBLOX_COOKIE_PATTERN
+from src.utils.string import convert_age_group
 
 
 class RobloxAccount:
     def __init__(
         self,
         session: RobloxHttpClient,
-        cookies: Optional[dict[str, str]] = None,
-        account_information: Optional[dict] = None
+        cookies: dict[str, str] | None = None,
+        account_information: dict | None = None
     ):
         self._session = session
         self._cookies = cookies
         self._account_information = account_information or {}
-        self._player_id: Optional[int] = self._account_information.get('UserId')
-        # self._player_name: Optional[str] = self._account_information.get('Name')
+        self._player_id: int | None = self._account_information.get('UserId')
+        # self._player_name: str | None = self._account_information.get('Name')
         self.data = {}
 
     @property
@@ -101,7 +106,7 @@ class RobloxAccount:
     
     async def get_reg_date_dmy(self) -> dict:
         response: dict = await (await self._session.get(f'{RobloxAPI.USERS}/v1/users/{self._player_id}')).json()
-        return {'Registration Date (DMY)': convert_date(response.get('created'), ROBLOX_REG_DATE_FORMAT)}
+        return {'Registration Date (DMY)': convert_datetime(response.get('created'), ROBLOX_REG_DATE_FORMAT)}
 
     async def get_reg_date_in_days(self) -> dict:
         return {'Registration Date (In Days)': self._account_information.get('AccountAgeInDays')}
@@ -125,7 +130,8 @@ class RobloxAccount:
             f'Donate (1 {time_frame})': abs(response.get('outgoingRobuxTotal'))
         }
         
-    # async def get_transactions_all_time( # TODO
+    # TODO
+    # async def get_transactions_all_time(
     #     self,
     #     check_list_custom_gamepasses: Collection[str],
     #     max_page_donate_all_time: int = -1,
@@ -183,7 +189,7 @@ class RobloxAccount:
             params.get('cursor') is not None
             and cur_page != max_page
         ):
-            response: dict[str, list[dict]] = (await self._session.get(f'{RobloxAPI.INVENTORY}/v1/users/{self._player_id}/assets/collectibles', params=params, cookies=self._cookies)).json()
+            response: dict[str, list[dict]] = await (await self._session.get(f'{RobloxAPI.INVENTORY}/v1/users/{self._player_id}/assets/collectibles', params=params, cookies=self._cookies)).json()
             rap += sum(
                 item['recentAveragePrice']
                     for item in response.get('data', [])
@@ -218,8 +224,8 @@ class RobloxAccount:
         *,
         max_page: int = -1,
         items_per_page: Literal[5, 10, 25, 50, 100] = ITEMS_PER_PAGE_GAMEPASSES
-    ) -> list:
-        found_gamepasses = {place: {} for place in check_list_places}
+    ) -> dict[str, dict]:
+        found_gamepasses = {place: {'data': {}} for place in check_list_places}
         cur_page = 0
         params = {
             'count': items_per_page,
@@ -230,13 +236,17 @@ class RobloxAccount:
             and cur_page != max_page
             and len(found_gamepasses) != len(check_list_gamepasses)
         ):
-            response: dict = (await self._session.get(f'{RobloxAPI.APIS}/game-passes/v1/users/{self._player_id}/game-passes', params=params, cookies=self._cookies)).json()
+            response: dict = await (await self._session.get(f'{RobloxAPI.APIS}/game-passes/v1/users/{self._player_id}/game-passes', params=params, cookies=self._cookies)).json()
             gamepasses = response.get('gamePasses', [])
             for gamepass in gamepasses:
                 gamepass_id = gamepass.get('gamePassId')
-                if gamepass_id in check_list_gamepasses:
-                    gamepass_data = check_list_gamepasses[gamepass_id]
-                    found_gamepasses[gamepass_data['placeId']]['data'][gamepass_id] = {gamepass_data['gamepassName']}
+                gamepass_data = check_list_gamepasses.get(gamepass_id)
+                if gamepass_data:
+                    place_id = gamepass_data.get('placeId')
+                    gamepass_name = gamepass_data.get('gamepassName')
+                    if not place_id or not gamepass_name:
+                        continue
+                    found_gamepasses.setdefault(place_id, {}).setdefault('data', {})[gamepass_id] = {gamepass_name}
             params['exclusiveStartId'] = gamepass_id if len(gamepasses) >= params['count'] else None
             cur_page += 1
         return {'Gamepasses': found_gamepasses}
@@ -245,8 +255,8 @@ class RobloxAccount:
         self,
         check_list_places: Collection[str],
         check_list_badges: dict[int, dict],
-    ) -> list:
-        found_badges = {place: {} for place in check_list_places}
+    ) -> dict[str, dict]:
+        found_badges = {place: {'data': {}} for place in check_list_places}
         tasks = [
             self._session.get(
                 f'{RobloxAPI.BADGES}/v1/users/{self._player_id}/badges/awarded-dates',
@@ -263,7 +273,11 @@ class RobloxAccount:
                 badge_id = badge.get('badgeId')
                 if badge_id in check_list_badges:
                     badge_data = check_list_badges[badge_id]
-                    found_badges[badge_data['placeId']]['data'][badge_id] = {badge_data['badgeName']}
+                    place_id = badge_data.get('placeId')
+                    badge_name = badge_data.get('badgeName')
+                    if not place_id or not badge_name:
+                        continue
+                    found_badges.setdefault(place_id, {}).setdefault('data', {})[badge_id] = {badge_name}
         return {'Badges': found_badges}
     
     async def get_favorite_places(
@@ -284,7 +298,7 @@ class RobloxAccount:
             and cur_page != max_page
             and len(found_favorite_places) != len(check_list_favorite_places)
         ):
-            response: dict = (await self._session.get(f'{RobloxAPI.GAMES}/v2/users/{self._player_id}/favorite/games', params=params, cookies=self._cookies)).json()
+            response: dict = await (await self._session.get(f'{RobloxAPI.GAMES}/v2/users/{self._player_id}/favorite/games', params=params, cookies=self._cookies)).json()
             for place in response.get('data', []):
                 place_id = place.get('rootPlace', {}).get('id')
                 if place_id in check_list_favorite_places:
@@ -302,7 +316,10 @@ class RobloxAccount:
         for universe in response.get('universeWeeklyScreentimes', []):
             universe_id = universe.get('universeId')
             if universe_id in check_list_places_weekly_playtime:
-                found_places_weekly_playtime[universe_id] = {check_list_places_weekly_playtime[universe_id]: format_duration(universe.get('weeklyMinutes') * 60 * 1000, out_units=set('d', 'h', 'm'))}
+                found_places_weekly_playtime[universe_id] = {
+                    check_list_places_weekly_playtime[universe_id]:
+                    format_duration(universe.get('weeklyMinutes') * 60 * 1000, out_units={'d', 'h', 'm'})
+                }
         return {'Places Weekly Playtime': found_places_weekly_playtime}
     
     async def get_bundles(
@@ -323,7 +340,7 @@ class RobloxAccount:
             and cur_page != max_page
             and len(found_bundles) != len(check_list_bundles)
         ):
-            response: dict = (await self._session.get(f'{RobloxAPI.CATALOG}/v1/users/{self._player_id}/bundles/1', params=params, cookies=self._cookies)).json()
+            response: dict = await (await self._session.get(f'{RobloxAPI.CATALOG}/v1/users/{self._player_id}/bundles/1', params=params, cookies=self._cookies)).json()
             for bundle in response.get('data', []):
                 bundle_id = bundle.get('id')
                 if bundle_id in check_list_bundles:
@@ -370,7 +387,7 @@ class RobloxAccount:
             cur_page += 1
         return {'Sessions': sessions}
     
-    async def get_email(self) -> Optional[dict]:
+    async def get_email(self) -> dict | None:
         security_model: dict = self._account_information.get('MyAccountSecurityModel', {})
         return {
             'Email': {
@@ -389,7 +406,8 @@ class RobloxAccount:
     async def get_pin(self) -> dict[str, bool]:
         return {'Pin': self._account_information.get('IsAccountPinEnabled')}
     
-    # async def get_groups_information(self) -> list: # TODO
+    # TODO
+    # async def get_groups_information(self) -> list:
     #     groups_owned: dict = {}
     #     groups_members: int = 0
     #     params = {
@@ -414,7 +432,8 @@ class RobloxAccount:
     #         'funds': groups_funds
     #     }
     
-    # async def get_groups_pending(self, groups_ids: set[int]) -> int: # TODO
+    # TODO
+    # async def get_groups_pending(self, groups_ids: set[int]) -> int:
     #     groups_pending = 0
     #     if groups_ids:
     #         for group_id in groups_ids:
@@ -422,7 +441,8 @@ class RobloxAccount:
     #             groups_pending += response.get('pendingRobux')
     #     return groups_pending
     
-    # async def get_groups_funds(self, groups_ids: set[int]) -> int: # TODO
+    # TODO
+    # async def get_groups_funds(self, groups_ids: set[int]) -> int:
     #     groups_funds = 0
     #     if groups_ids:
     #         for group_id in groups_ids:
@@ -458,11 +478,11 @@ class RobloxAccount:
 
 
     # advanced getters
-    async def get_x_csrf_token(self) -> Optional[str]:
+    async def get_x_csrf_token(self) -> str | None:
         response: dict = (await self._session.post(f'{RobloxAPI.AUTH}/v2/logout', cookies=self._cookies)).headers
         return response.get('X-CSRF-Token')
 
-    async def get_auth_ticket(self, x_csrf_token: str) -> Optional[str]:
+    async def get_auth_ticket(self, x_csrf_token: str) -> str | None:
         headers = {
             'X-CSRF-Token': x_csrf_token
         }
@@ -492,7 +512,7 @@ class RobloxAccount:
     async def is_achieved_badge(self, badge_id: int) -> bool:
         return bool(await self._session.get(f'{RobloxAPI.BADGES}/v1/users/{self._player_id}/badges/{badge_id}/awarded-date'))
 
-    async def get_place_id_user_in(self) -> Optional[int]:
+    async def get_place_id_user_in(self) -> int | None:
         data = { 'userIds': [self._player_id] }
         response: dict = await (await self._session.post(f'{RobloxAPI.PRESENCE}/v1/presence/users', data=data)).json()
         user_presences: dict = response.get('userPresences', [{}])[0]

@@ -3,70 +3,91 @@ import mmap
 import shutil
 import zipfile
 from pathlib import Path
-from typing import Collection, Optional, Any
-from src.utils.consts import FILENAME_SPECIAL_CHARS, START_PATHS
+from typing import Any, Collection
+
+from src.exceptions.json import NotADictionaryError
+from src.utils.constants import APP_ROOT, FILENAME_SPECIAL_CHARS, START_PATHS
 from src.utils.decorators import log_action
 from src.utils.logging import logger
-from src.exceptions.json import NotADictionaryError
 
 
-@log_action('create folder')
-def create_folder(path: Path, *, parents: bool = True, exist_ok: bool = True) -> None:
-    path.mkdir(parents=parents, exist_ok=exist_ok)
+class FS:
+    @staticmethod
+    @log_action('create folder')
+    def create_folder(path: Path, *, parents: bool = True, exist_ok: bool = True) -> None:
+        path.mkdir(parents=parents, exist_ok=exist_ok)
 
+    @staticmethod
+    @log_action('delete folder') 
+    def delete_folder(path: Path, *, ignore_errors: bool = True) -> None:
+        shutil.rmtree(path, ignore_errors=ignore_errors)
 
-@log_action('delete folder') 
-def delete_folder(path: Path, *, ignore_errors: bool = True) -> None:
-    shutil.rmtree(path, ignore_errors=ignore_errors)
+    @staticmethod
+    @log_action('create file')
+    def create_file(path: Path, *, exist_ok: bool = True) -> None:
+        path.touch(exist_ok=exist_ok)
 
+    @staticmethod
+    @log_action('create clean file')
+    def create_clean_file(path: Path, *, overwrite: bool = True) -> None:
+        if overwrite or not path.exists():
+            open(path, 'w').close()
 
-@log_action('create file')
-def create_file(path: Path, *, exist_ok: bool = True) -> None:
-    path.touch(exist_ok=exist_ok)
+    @staticmethod
+    @log_action('copy file')
+    def copy_file(src: Path, dest: Path, *, overwrite: bool = True) -> None:
+        if overwrite or not dest.exists():
+            shutil.copy(src, dest)
 
+    @staticmethod
+    @log_action('replace file', re_raise=True)
+    def replace_file(src: Path, dest: Path) -> None:
+        src.replace(dest)
 
-@log_action('create clean file')
-def create_clean_file(path: Path, *, overwrite: bool = True) -> None:
-    if overwrite or not path.exists():
-        open(path, 'w').close()
+    @staticmethod
+    @log_action('delete file')
+    def delete_file(path: Path, *, missing_ok: bool = True) -> None:
+        path.unlink(missing_ok=missing_ok)
 
+    @staticmethod
+    @log_action('create archive')
+    def create_archive(path: Path, *, overwrite: bool = True) -> None:
+        source_path = Path(path)
+        if not source_path.exists():
+            return
 
-@log_action('copy file')
-def copy_file(src: Path, dest: Path, *, overwrite: bool = True) -> None:
-    if overwrite or not dest.exists():
-        shutil.copy(src, dest)
+        archive_dir = source_path.parent / 'archives'
+        archive_path = archive_dir / f'{source_path.stem}.zip'
+        if archive_path.exists() and not overwrite:
+            return
 
+        archive_dir.mkdir(parents=True, exist_ok=True)
 
-@log_action('delete file')
-def delete_file(path: Path, *, missing_ok: bool = True) -> None:
-    path.unlink(missing_ok=missing_ok)
+        with zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            if source_path.is_file():
+                zipf.write(source_path, source_path.name)
+                return
 
-
-@log_action('create archive')
-def create_archive(path: Path, *, overwrite: bool = True) -> None:
-    if not (overwrite or path.exists()):
-        return
-    
-    path = path.parent / 'archives' / path.name
-    path.mkdir(parents=True, exist_ok=True)
-
-    with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for file_path in path.rglob('*'):
-            if file_path.is_file():
-                zipf.write(file_path, file_path.relative_to(path))
+            for file_path in source_path.rglob('*'):
+                if not file_path.is_file():
+                    continue
+                if archive_dir in file_path.parents:
+                    continue
+                zipf.write(file_path, file_path.relative_to(source_path))
 
 
 def create_start_folders_and_files() -> None:
     for path, kind in START_PATHS:
+        target_path = APP_ROOT / path
         match kind:
             case 'dir':
-                create_folder(path, exist_ok=False)
+                FS.create_folder(target_path, exist_ok=False)
             case 'file':
-                create_folder(path.parent, exist_ok=False)
-                create_file(path, exist_ok=False)
+                FS.create_folder(target_path.parent, exist_ok=False)
+                FS.create_file(target_path, exist_ok=False)
 
 
-def load_json(path: Path):
+def load_json(path: Path) -> dict | None:
     try:
         with path.open('r', encoding='utf-8') as f:
             data = json.load(f)
@@ -87,7 +108,7 @@ def load_json(path: Path):
         logger.exception(f'Error in {path}')
 
 
-def get_safe(data: dict, key: str, *, sep: str = '>', default: Optional[Any] = None):
+def get_safe(data: dict, key: str, *, sep: str = '>', default: Any | None = None):
     keys = key.split(sep)
     current = data
     for key in keys:
@@ -107,11 +128,38 @@ def set_safe(data: dict, key: str, value: Any, *, sep: str = '>') -> None:
     current[keys[-1]] = value
 
 
+def del_safe(data: dict, key: str, *, sep: str = '>') -> bool:
+    keys = key.split(sep)
+    current = data
+    stack: list[tuple[dict, str]] = []
+
+    for part in keys[:-1]:
+        if not isinstance(current, dict) or part not in current or not isinstance(current[part], dict):
+            return False
+        stack.append((current, part))
+        current = current[part]
+
+    leaf = keys[-1]
+    if not isinstance(current, dict) or leaf not in current:
+        return False
+    del current[leaf]
+
+    while stack:
+        parent, part = stack.pop()
+        child = parent.get(part)
+        if isinstance(child, dict) and not child:
+            del parent[part]
+            continue
+        break
+
+    return True
+
+
 def get_files_from_folder(path: Path, *, only_files: bool = True) -> list[str]:
+    if not path.exists():
+        raise FileNotFoundError
     if not path.is_dir():
         raise NotADirectoryError
-    if not path.exists():
-        raise FileExistsError
     
     return [dir.name for dir in path.iterdir() if dir.is_file() or not only_files]
 
@@ -141,7 +189,8 @@ def count_lines_in_file(path: Path) -> int:
     return count
 
 
-def validate_filename(filename: str, *, black_list: Collection[str] = [], default: str = 'output') -> str:
+def validate_filename(filename: str, *, black_list: Collection[str] = (), default: str = 'output') -> str:
+    filename = str(filename).strip()
     if (
         not filename
         or filename in black_list
@@ -149,3 +198,4 @@ def validate_filename(filename: str, *, black_list: Collection[str] = [], defaul
     ):
         return default
     return filename
+
