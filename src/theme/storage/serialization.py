@@ -4,7 +4,7 @@ import json
 import re
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 _INDENT = '  '
 _ANIMATION_EVENT_KEYS = {'on', 'action', 'state', 'event'}
@@ -12,10 +12,20 @@ _EOF_COMMENT_ANCHOR = ('__eof__', 0)
 _LINE_COMMENT_PATTERN = re.compile(r'//|/\*')
 
 
+def _empty_str_list() -> list[str]:
+    return []
+
+
 @dataclass(slots=True)
 class _CommentBundle:
-    leading: list[str] = field(default_factory=list)
+    leading: list[str] = field(default_factory=_empty_str_list)
     inline: str = ''
+
+
+@dataclass(slots=True)
+class _AnimationGroup:
+    events: list[str] = field(default_factory=_empty_str_list)
+    payload: Any = None
 
 
 def format_theme_json(payload: Any, *, existing_text: str | None = None) -> str:
@@ -56,8 +66,12 @@ def preserve_json5_comments(source_text: str, target_text: str) -> str:
 
 def compact_theme_payload(payload: Any) -> Any:
     if isinstance(payload, dict):
+        payload_dict = cast(dict[Any, Any], payload)
+        source: dict[str, Any] = {
+            str(key): value for key, value in payload_dict.items()
+        }
         compacted: dict[str, Any] = {}
-        for key, value in payload.items():
+        for key, value in source.items():
             if key == 'animations':
                 compacted[key] = compact_animations(value)
             else:
@@ -65,7 +79,8 @@ def compact_theme_payload(payload: Any) -> Any:
         return compacted
 
     if isinstance(payload, list):
-        return [compact_theme_payload(item) for item in payload]
+        items: list[Any] = list(cast(list[Any], payload))
+        return [compact_theme_payload(item) for item in items]
 
     return deepcopy(payload)
 
@@ -74,42 +89,51 @@ def compact_animations(raw: Any) -> Any:
     if not isinstance(raw, list):
         return compact_theme_payload(raw)
 
-    grouped: dict[str, dict[str, Any]] = {}
+    items: list[Any] = list(cast(list[Any], raw))
+    grouped: dict[str, _AnimationGroup] = {}
     order: list[str] = []
-    for item in raw:
+    for item in items:
         if not isinstance(item, dict):
             order_key = f'__raw__:{len(order)}'
-            grouped[order_key] = {'events': [], 'payload': compact_theme_payload(item)}
+            grouped[order_key] = _AnimationGroup(payload=compact_theme_payload(item))
             order.append(order_key)
             continue
 
+        item_dict = cast(dict[Any, Any], item)
+        source_item: dict[str, Any] = {
+            str(key): value for key, value in item_dict.items()
+        }
         payload = {
             key: compact_theme_payload(value)
-            for key, value in item.items()
+            for key, value in source_item.items()
             if key not in _ANIMATION_EVENT_KEYS
         }
-        events = _animation_events(item)
+        events = _animation_events(source_item)
         grouping_key = _stable_json_key(payload)
         if grouping_key not in grouped:
-            grouped[grouping_key] = {'events': [], 'payload': payload}
+            grouped[grouping_key] = _AnimationGroup(payload=payload)
             order.append(grouping_key)
 
+        group = grouped[grouping_key]
         for event in events:
-            if event not in grouped[grouping_key]['events']:
-                grouped[grouping_key]['events'].append(event)
+            if event not in group.events:
+                group.events.append(event)
 
     compacted: list[Any] = []
     for key in order:
         item = grouped[key]
-        payload = item['payload']
+        payload = item.payload
         if not isinstance(payload, dict):
             compacted.append(payload)
             continue
 
-        events = item['events']
+        events = item.events
         if events:
-            output = {'on': events[0] if len(events) == 1 else events}
-            output.update(payload)
+            payload_dict = cast(dict[str, Any], payload)
+            output: dict[str, Any] = {
+                'on': events[0] if len(events) == 1 else events
+            }
+            output.update(payload_dict)
             compacted.append(output)
         else:
             compacted.append(payload)
@@ -124,9 +148,9 @@ def _animation_events(item: dict[str, Any]) -> list[str]:
 
         raw = item.get(key)
         if isinstance(raw, str):
-            values = [raw]
+            values: list[Any] = [raw]
         elif isinstance(raw, (list, tuple, set)):
-            values = list(raw)
+            values = list(cast(list[Any] | tuple[Any, ...] | set[Any], raw))
         else:
             values = [raw]
 
@@ -148,11 +172,17 @@ def _serialize_theme_value(value: Any, *, level: int = 0, parent_key: str | None
             if not value:
                 return '{}'
 
+            value_dict = cast(dict[Any, Any], value)
+            mapping: dict[str, Any] = {
+                str(key): child for key, child in value_dict.items()
+            }
             child_indent = _INDENT * (level + 1)
             lines: list[str] = []
-            for key, child in value.items():
-                encoded_key = json.dumps(str(key), ensure_ascii=False)
-                encoded_child = _serialize_theme_value(child, level=level + 1, parent_key=str(key))
+            for key, child in mapping.items():
+                encoded_key = json.dumps(key, ensure_ascii=False)
+                encoded_child = _serialize_theme_value(
+                    child, level=level + 1, parent_key=key
+                )
                 lines.append(f'{child_indent}{encoded_key}: {encoded_child}')
             closing_indent = _INDENT * level
             return '{\n' + ',\n'.join(lines) + f'\n{closing_indent}' + '}'
@@ -161,10 +191,11 @@ def _serialize_theme_value(value: Any, *, level: int = 0, parent_key: str | None
             if not value:
                 return '[]'
 
+            items: list[Any] = list(cast(list[Any], value))
             child_indent = _INDENT * (level + 1)
             closing_indent = _INDENT * level
             lines: list[str] = []
-            for child in value:
+            for child in items:
                 if parent_key == 'stops':
                     encoded_child = _serialize_stop_inline(child)
                 else:
@@ -178,9 +209,11 @@ def _serialize_theme_value(value: Any, *, level: int = 0, parent_key: str | None
 
 def _serialize_stop_inline(value: Any) -> str:
     if isinstance(value, list):
-        return json.dumps(value, ensure_ascii=False, separators=(', ', ': '))
+        list_value = cast(list[Any], value)
+        return json.dumps(list_value, ensure_ascii=False, separators=(', ', ': '))
     if isinstance(value, tuple):
-        return json.dumps(list(value), ensure_ascii=False, separators=(', ', ': '))
+        tuple_value = cast(tuple[Any, ...], value)
+        return json.dumps(list(tuple_value), ensure_ascii=False, separators=(', ', ': '))
     return _serialize_theme_value(value)
 
 

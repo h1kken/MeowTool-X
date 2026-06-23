@@ -5,11 +5,11 @@ This module provides support for additional CSS-like properties
 that can be used in theme definitions for enhanced visual effects.
 """
 
-from typing import Any
+from typing import Any, Mapping, Sequence, cast
 
 
 # CSS Properties that can be used in theme definitions
-CSS_PROPERTIES = {
+CSS_PROPERTIES: dict[str, str] = {
     # Standard properties
     'background_color': 'background-color',
     'text_color': 'color',
@@ -207,7 +207,7 @@ class TransformBuilder:
     """Builder for CSS transform values."""
     
     @staticmethod
-    def build(operations: list[dict[str, Any]]) -> str:
+    def build(operations: Sequence[Mapping[str, Any]]) -> str:
         """
         Build a CSS transform value from operations.
         
@@ -218,7 +218,7 @@ class TransformBuilder:
         Returns:
             CSS transform value string
         """
-        transforms = []
+        transforms: list[str] = []
         
         for op in operations:
             if 'rotate' in op:
@@ -234,20 +234,32 @@ class TransformBuilder:
                 scale = op['scale']
                 if isinstance(scale, (int, float)):
                     transforms.append(f'scale({scale})')
-                else:
-                    transforms.append(f'scale({scale[0]}, {scale[1]})')
+                elif isinstance(scale, (list, tuple)):
+                    scale_values = cast(list[Any] | tuple[Any, ...], scale)
+                    if len(scale_values) >= 2:
+                        transforms.append(
+                            f'scale({scale_values[0]}, {scale_values[1]})'
+                        )
             elif 'translate' in op:
                 trans = op['translate']
                 if isinstance(trans, (int, float)):
                     transforms.append(f'translate({trans}px)')
-                else:
-                    transforms.append(f'translate({trans[0]}px, {trans[1]}px)')
+                elif isinstance(trans, (list, tuple)):
+                    trans_values = cast(list[Any] | tuple[Any, ...], trans)
+                    if len(trans_values) >= 2:
+                        transforms.append(
+                            f'translate({trans_values[0]}px, {trans_values[1]}px)'
+                        )
             elif 'skew' in op:
                 skew = op['skew']
                 if isinstance(skew, (int, float)):
                     transforms.append(f'skew({skew}deg)')
-                else:
-                    transforms.append(f'skew({skew[0]}deg, {skew[1]}deg)')
+                elif isinstance(skew, (list, tuple)):
+                    skew_values = cast(list[Any] | tuple[Any, ...], skew)
+                    if len(skew_values) >= 2:
+                        transforms.append(
+                            f'skew({skew_values[0]}deg, {skew_values[1]}deg)'
+                        )
             elif 'perspective' in op:
                 transforms.append(f'perspective({op["perspective"]}px)')
         
@@ -261,7 +273,7 @@ class TransformBuilder:
         Returns:
             List of transform operations
         """
-        operations = []
+        operations: list[dict[str, Any]] = []
         
         funcs = ['rotate', 'rotateX', 'rotateY', 'rotateZ', 'scale', 'translate', 'skew', 'perspective']
         
@@ -276,7 +288,7 @@ class FilterBuilder:
     """Builder for CSS filter values."""
     
     @staticmethod
-    def build(filters: list[dict[str, Any]]) -> str:
+    def build(filters: Sequence[Mapping[str, Any]]) -> str:
         """
         Build a CSS filter value from filter operations.
         
@@ -287,7 +299,7 @@ class FilterBuilder:
         Returns:
             CSS filter value string
         """
-        filter_parts = []
+        filter_parts: list[str] = []
         
         for f in filters:
             if 'blur' in f:
@@ -307,15 +319,25 @@ class FilterBuilder:
             elif 'sepia' in f:
                 filter_parts.append(f'sepia({f["sepia"]})')
             elif 'drop_shadow' in f:
-                shadow = ShadowBuilder.build(**f['drop_shadow'])
-                filter_parts.append(f'drop-shadow({shadow})')
+                shadow_data = f['drop_shadow']
+                if isinstance(shadow_data, dict):
+                    shadow_mapping = cast(dict[str, Any], shadow_data)
+                    shadow = ShadowBuilder.build(
+                        offset_x=str(shadow_mapping.get('offset_x', '2px')),
+                        offset_y=str(shadow_mapping.get('offset_y', '2px')),
+                        blur=str(shadow_mapping.get('blur', '4px')),
+                        spread=str(shadow_mapping.get('spread', '0px')),
+                        color=str(shadow_mapping.get('color', '#00000080')),
+                        inset=bool(shadow_mapping.get('inset', False)),
+                    )
+                    filter_parts.append(f'drop-shadow({shadow})')
         
         return ' '.join(filter_parts) if filter_parts else 'none'
     
     @staticmethod
     def parse(filter_string: str) -> list[dict[str, Any]]:
         """Parse a CSS filter value into filter operations."""
-        filters = []
+        filters: list[dict[str, Any]] = []
         
         if 'blur' in filter_string:
             filters.append({'blur': 0})
@@ -367,7 +389,7 @@ class TransitionBuilder:
         return f'{property} {duration} {timing_function} {delay}'
     
     @staticmethod
-    def build_multiple(transitions: list[dict[str, Any]]) -> str:
+    def build_multiple(transitions: Sequence[Mapping[str, Any]]) -> str:
         """
         Build multiple CSS transitions.
         
@@ -378,18 +400,18 @@ class TransitionBuilder:
             CSS transition value string with multiple transitions
         """
         return ', '.join(
-            TransitionBuilder.build(**t) for t in transitions
+            TransitionBuilder.build(**dict(t)) for t in transitions
         )
     
     @staticmethod
     def parse(transition_string: str) -> list[dict[str, Any]]:
         """Parse a CSS transition value."""
-        transitions = []
+        transitions: list[dict[str, Any]] = []
         
         for part in transition_string.split(','):
             parts = part.strip().split()
             if len(parts) >= 1:
-                result = {'property': parts[0]}
+                result: dict[str, Any] = {'property': parts[0]}
                 if len(parts) >= 2:
                     result['duration'] = parts[1]
                 if len(parts) >= 3:
@@ -404,7 +426,7 @@ class TransitionBuilder:
 class AnimationBuilder:
     """Builder for CSS animation values."""
     
-    EASING_PRESETS = {
+    EASING_PRESETS: dict[str, str] = {
         'ease': 'cubic-bezier(0.25, 0.1, 0.25, 1)',
         'linear': 'linear',
         'ease-in': 'cubic-bezier(0.42, 0, 1, 1)',
@@ -453,9 +475,9 @@ class AnimationBuilder:
         """Parse a CSS animation value."""
         parts = animation_string.strip().split()
         
-        result = {'name': 'none'}
+        result: dict[str, Any] = {'name': 'none'}
         
-        for i, part in enumerate(parts):
+        for part in parts:
             if part.endswith('ms') or part.endswith('s'):
                 if 'duration' not in result:
                     result['duration'] = part

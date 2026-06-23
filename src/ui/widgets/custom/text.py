@@ -1,29 +1,109 @@
+from collections.abc import Callable
 from copy import deepcopy
 from math import ceil
 from time import monotonic
+from typing import TYPE_CHECKING, TypeAlias, cast
 
-from PySide6.QtCore import QPointF, QRectF, QSize, Qt
-from PySide6.QtGui import QBrush, QColor, QFontMetricsF, QIcon, QLinearGradient, QPainter, QPainterPath, QPainterPathStroker, QPixmap
-from PySide6.QtWidgets import QLabel, QPushButton, QStyle, QStyleOption
+from PySide6.QtCore import QEvent, QPointF, QRect, QRectF, QSize, Qt, QTimerEvent
+from PySide6.QtGui import QBrush, QColor, QEnterEvent, QFont, QFontMetrics, QFontMetricsF, QIcon, QLinearGradient, QPaintEvent, QPainter, QPainterPath, QPainterPathStroker, QPixmap
+from PySide6.QtWidgets import QLabel, QPushButton, QStyle, QWidget
+from PySide6.QtGui import QPalette
 
-from src.translation import TranslatableMixin
+from src.translation.mixin import TranslatableMixin
+from src.ui.painting import configure_painter, draw_widget_background
 from src.ui.widgets.custom.box import BoxThemeMixin
 
+TextEffectState: TypeAlias = dict[str, object]
+TextLayerDrawer: TypeAlias = Callable[[QPainter, QRectF], None]
 
-class _TextEffectMixin:
+if TYPE_CHECKING:
+    class _TextEffectBase:
+        def text(self) -> str: ...
+        def font(self) -> QFont: ...
+        def fontMetrics(self) -> QFontMetrics: ...
+        def palette(self) -> QPalette: ...
+        def contentsRect(self) -> QRect: ...
+        def updateGeometry(self) -> None: ...
+        def update(self, *args: object) -> None: ...
+        def startTimer(self, interval: int, timerType: Qt.TimerType = Qt.TimerType.CoarseTimer) -> int: ...
+        def killTimer(self, timerId: object) -> None: ...
+        def alignment(self) -> Qt.AlignmentFlag: ...
+        def property(self, name: str) -> object: ...
+        def style(self) -> QStyle: ...
+        def has_box_theme(self) -> bool: ...
+        def draw_box_theme(self, painter: QPainter) -> None: ...
+else:
+    class _TextEffectBase:
+        pass
+
+
+def _state_mapping(value: object) -> TextEffectState | None:
+    return cast(TextEffectState, value) if isinstance(value, dict) else None
+
+
+def _state_str(state: TextEffectState | None, key: str, default: str = '') -> str:
+    if state is None:
+        return default
+    value = state.get(key)
+    return str(value) if value is not None else default
+
+
+def _state_qcolor(state: TextEffectState | None, key: str) -> QColor | None:
+    if state is None:
+        return None
+    value = state.get(key)
+    return value if isinstance(value, QColor) else None
+
+
+def _state_qsize(state: TextEffectState | None, key: str) -> QSize | None:
+    if state is None:
+        return None
+    value = state.get(key)
+    if isinstance(value, QSize) and value.isValid():
+        return QSize(value)
+    return None
+
+
+def _state_qpixmap(state: TextEffectState | None, key: str) -> QPixmap | None:
+    if state is None:
+        return None
+    value = state.get(key)
+    if isinstance(value, QPixmap) and not value.isNull():
+        return QPixmap(value)
+    return None
+
+
+def _state_float(state: TextEffectState | None, key: str, default: float = 0.0) -> float:
+    if state is None:
+        return default
+    value = state.get(key)
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        stripped = value.strip().lower().removesuffix('px').strip()
+        try:
+            return float(stripped)
+        except ValueError:
+            return default
+    return default
+
+
+class TextEffectMixin(_TextEffectBase):
     _OVERFLOW_SCROLL_DELAY = 0.55
     _OVERFLOW_SCROLL_EDGE_PAUSE = 0.85
     _OVERFLOW_SCROLL_SPEED = 28.0
 
     def init_text_effects(self) -> None:
-        self._text_shadow = None
-        self._text_border = None
-        self._text_icon = None
-        self._default_text_icon = None
+        self._text_shadow: TextEffectState | None = None
+        self._text_border: TextEffectState | None = None
+        self._text_icon: TextEffectState | None = None
+        self._default_text_icon: TextEffectState | None = None
         self._default_text_icon_captured = False
-        self._text_spacing = None
+        self._text_spacing: float | None = None
         self._force_text_path_render = False
-        self._text_effect_cache = None
+        self._text_effect_cache: TextEffectState | None = None
         self._overflow_hover_active = False
         self._overflow_animation_timer_id = 0
         self._overflow_animation_started_at = 0.0
@@ -89,13 +169,11 @@ class _TextEffectMixin:
         self.updateGeometry()
         self.update()
 
-    def text_icon_state(self) -> dict[str, object] | None:
-        icon = getattr(self, '_text_icon', None)
-        return self._clone_text_icon_state(icon) if isinstance(icon, dict) else None
+    def text_icon_state(self) -> TextEffectState | None:
+        return self._clone_text_icon_state(_state_mapping(getattr(self, '_text_icon', None)))
 
-    def default_text_icon_state(self) -> dict[str, object] | None:
-        icon = getattr(self, '_default_text_icon', None)
-        return self._clone_text_icon_state(icon) if isinstance(icon, dict) else None
+    def default_text_icon_state(self) -> TextEffectState | None:
+        return self._clone_text_icon_state(_state_mapping(getattr(self, '_default_text_icon', None)))
 
     def capture_default_text_icon_state(self) -> None:
         if bool(getattr(self, '_default_text_icon_captured', False)):
@@ -104,34 +182,29 @@ class _TextEffectMixin:
         self._default_text_icon_captured = True
 
     def restore_default_text_icon_state(self) -> None:
-        icon = getattr(self, '_default_text_icon', None)
-        self._text_icon = self._clone_text_icon_state(icon) if isinstance(icon, dict) else None
+        self._text_icon = self._clone_text_icon_state(_state_mapping(getattr(self, '_default_text_icon', None)))
         self.updateGeometry()
         self.update()
 
-    def restore_text_icon_state(self, state: dict[str, object] | None) -> None:
-        self._text_icon = self._clone_text_icon_state(state) if isinstance(state, dict) else None
+    def restore_text_icon_state(self, state: TextEffectState | None) -> None:
+        self._text_icon = self._clone_text_icon_state(state)
         self.updateGeometry()
         self.update()
 
-    def _clone_text_icon_state(self, icon: dict[str, object] | None) -> dict[str, object] | None:
-        if not isinstance(icon, dict):
+    def _clone_text_icon_state(self, icon: TextEffectState | None) -> TextEffectState | None:
+        if icon is None:
             return None
 
-        cloned: dict[str, object] = {
-            'source': str(icon.get('source') or ''),
-            'align': str(icon.get('align') or 'left'),
-            'spacing': float(icon.get('spacing') or 0.0),
+        cloned: TextEffectState = {
+            'source': _state_str(icon, 'source'),
+            'align': _state_str(icon, 'align', 'left'),
+            'spacing': _state_float(icon, 'spacing'),
         }
 
-        pixmap = icon.get('pixmap')
-        if isinstance(pixmap, QPixmap) and not pixmap.isNull():
-            cloned['pixmap'] = QPixmap(pixmap)
-        else:
-            cloned['pixmap'] = QPixmap()
-
-        size = icon.get('size')
-        cloned['size'] = QSize(size) if isinstance(size, QSize) and size.isValid() else QSize()
+        pixmap = _state_qpixmap(icon, 'pixmap')
+        cloned['pixmap'] = pixmap if pixmap is not None else QPixmap()
+        size = _state_qsize(icon, 'size')
+        cloned['size'] = size if size is not None else QSize()
         return cloned
 
     def set_text_border(self, *, color: QColor, width: float = 1.0, style: str = 'solid') -> None:
@@ -148,23 +221,23 @@ class _TextEffectMixin:
         self._invalidate_text_effect_cache()
         self.update()
 
-    def text_border_state(self) -> dict[str, object] | None:
-        border = getattr(self, '_text_border', None)
-        return deepcopy(border) if isinstance(border, dict) else None
+    def text_border_state(self) -> TextEffectState | None:
+        border = _state_mapping(getattr(self, '_text_border', None))
+        return deepcopy(border) if border is not None else None
 
-    def restore_text_border_state(self, state: dict[str, object] | None) -> None:
-        self._text_border = deepcopy(state) if isinstance(state, dict) else None
+    def restore_text_border_state(self, state: TextEffectState | None) -> None:
+        self._text_border = deepcopy(state) if state is not None else None
         self._invalidate_text_effect_cache()
         self.update()
 
     def set_text_border_color(self, value: QColor | str) -> bool:
-        border = getattr(self, '_text_border', None)
-        if not isinstance(border, dict):
-            border = {
+        border = _state_mapping(getattr(self, '_text_border', None))
+        if border is None:
+            border = cast(TextEffectState, {
                 'color': QColor(Qt.GlobalColor.transparent),
                 'width': 1.0,
                 'style': 'solid',
-            }
+            })
             self._text_border = border
 
         color = QColor(value)
@@ -176,13 +249,13 @@ class _TextEffectMixin:
         return True
 
     def set_text_border_width(self, value: int | float | str) -> bool:
-        border = getattr(self, '_text_border', None)
-        if not isinstance(border, dict):
-            border = {
+        border = _state_mapping(getattr(self, '_text_border', None))
+        if border is None:
+            border = cast(TextEffectState, {
                 'color': QColor(Qt.GlobalColor.transparent),
                 'width': 0.0,
                 'style': 'solid',
-            }
+            })
             self._text_border = border
 
         try:
@@ -197,12 +270,12 @@ class _TextEffectMixin:
 
     def set_text_icon_color(self, value: QColor | str) -> bool:
         icon = self.text_icon_state()
-        if not isinstance(icon, dict):
+        if icon is None:
             icon = self.default_text_icon_state()
-        if not isinstance(icon, dict):
+        if icon is None:
             return False
 
-        source = str(icon.get('source') or '').strip()
+        source = _state_str(icon, 'source').strip()
         if not source:
             return False
 
@@ -210,10 +283,9 @@ class _TextEffectMixin:
         if not color.isValid():
             return False
 
-        size = icon.get('size')
-        requested_size = QSize(size) if isinstance(size, QSize) and size.isValid() else None
-        spacing = float(icon.get('spacing') or 0.0)
-        align = str(icon.get('align') or 'left')
+        requested_size = _state_qsize(icon, 'size')
+        spacing = _state_float(icon, 'spacing')
+        align = _state_str(icon, 'align', 'left')
         return self.set_text_icon(
             source=source,
             align=align,
@@ -259,20 +331,19 @@ class _TextEffectMixin:
         return abs(self._text_spacing_value()) > 0.001
 
     def _has_text_shadow(self) -> bool:
-        shadow = getattr(self, '_text_shadow', None)
-        color = shadow.get('color') if isinstance(shadow, dict) else None
+        shadow = _state_mapping(getattr(self, '_text_shadow', None))
+        color = _state_qcolor(shadow, 'color')
         return isinstance(color, QColor) and color.isValid() and color.alpha() > 0
 
     def _has_text_border(self) -> bool:
-        border = getattr(self, '_text_border', None)
-        color = border.get('color') if isinstance(border, dict) else None
-        width = border.get('width') if isinstance(border, dict) else None
+        border = _state_mapping(getattr(self, '_text_border', None))
+        color = _state_qcolor(border, 'color')
+        width = _state_float(border, 'width')
         return (
             isinstance(color, QColor)
             and color.isValid()
             and color.alpha() > 0
-            and isinstance(width, (int, float))
-            and float(width) > 0.0
+            and width > 0.0
         )
 
     def _has_text_effect(self) -> bool:
@@ -290,36 +361,15 @@ class _TextEffectMixin:
         self.update()
 
     def _has_text_icon(self) -> bool:
-        icon = getattr(self, '_text_icon', None)
-        pixmap = icon.get('pixmap') if isinstance(icon, dict) else None
-        size = icon.get('size') if isinstance(icon, dict) else None
+        icon = _state_mapping(getattr(self, '_text_icon', None))
+        pixmap = _state_qpixmap(icon, 'pixmap')
+        size = _state_qsize(icon, 'size')
         return (
             isinstance(pixmap, QPixmap)
             and not pixmap.isNull()
             and isinstance(size, QSize)
             and size.width() > 0
             and size.height() > 0
-        )
-
-    def _themed_content_size(self, text: str, icon_size: QSize | None = None) -> QSize:
-        visual_text = self._visual_text_size(text)
-        text_width = visual_text.width()
-        text_height = visual_text.height()
-        if icon_size is None:
-            icon_size = self._text_icon_size()
-        icon_width = icon_size.width() if icon_size is not None and icon_size.isValid() else 0
-        icon_height = icon_size.height() if icon_size is not None and icon_size.isValid() else 0
-        spacing = self._text_icon_spacing() if text_width and icon_width else 0.0
-
-        if self._text_icon_align() in {'top', 'bottom'}:
-            return QSize(
-                max(1, int(round(max(text_width, icon_width)))),
-                max(1, int(round(icon_height + spacing + text_height))),
-            )
-
-        return QSize(
-            max(1, int(round(icon_width + spacing + text_width))),
-            max(1, int(round(max(text_height, icon_height)))),
         )
 
     def _visual_text_size(self, text: str) -> QSize:
@@ -347,16 +397,16 @@ class _TextEffectMixin:
         width = left_overhang + right_extent
         height = max(text_height, bounds.height())
 
-        border = getattr(self, '_text_border', None)
-        border_width = float(border.get('width', 0.0) or 0.0) if isinstance(border, dict) else 0.0
+        border = _state_mapping(getattr(self, '_text_border', None))
+        border_width = _state_float(border, 'width')
         if border_width > 0.0:
             width += border_width
             height += border_width
 
-        shadow = getattr(self, '_text_shadow', None)
-        if isinstance(shadow, dict):
-            width += abs(float(shadow.get('x', 0.0) or 0.0))
-            height += abs(float(shadow.get('y', 0.0) or 0.0))
+        shadow = _state_mapping(getattr(self, '_text_shadow', None))
+        if shadow is not None:
+            width += abs(_state_float(shadow, 'x'))
+            height += abs(_state_float(shadow, 'y'))
 
         return QSize(
             max(1, int(ceil(width))),
@@ -392,8 +442,8 @@ class _TextEffectMixin:
         text: str,
         text_color: QColor,
     ) -> None:
-        icon = getattr(self, '_text_icon', None)
-        pixmap = icon.get('pixmap') if isinstance(icon, dict) else None
+        icon = _state_mapping(getattr(self, '_text_icon', None))
+        pixmap = _state_qpixmap(icon, 'pixmap')
         icon_size = self._text_icon_size()
         if not isinstance(pixmap, QPixmap) or pixmap.isNull() or icon_size is None:
             self._draw_themed_text(painter, rect, alignment, text, text_color)
@@ -478,21 +528,15 @@ class _TextEffectMixin:
         return result
 
     def _text_icon_size(self) -> QSize | None:
-        icon = getattr(self, '_text_icon', None)
-        size = icon.get('size') if isinstance(icon, dict) else None
-        return QSize(size) if isinstance(size, QSize) and size.isValid() else None
+        return _state_qsize(_state_mapping(getattr(self, '_text_icon', None)), 'size')
 
     def _text_icon_spacing(self) -> float:
-        icon = getattr(self, '_text_icon', None)
-        spacing = icon.get('spacing') if isinstance(icon, dict) else 0.0
-        try:
-            return max(0.0, float(spacing))
-        except (TypeError, ValueError):
-            return 0.0
+        icon = _state_mapping(getattr(self, '_text_icon', None))
+        return max(0.0, _state_float(icon, 'spacing'))
 
     def _text_icon_align(self) -> str:
-        icon = getattr(self, '_text_icon', None)
-        align = icon.get('align') if isinstance(icon, dict) else 'left'
+        icon = _state_mapping(getattr(self, '_text_icon', None))
+        align = _state_str(icon, 'align', 'left')
         align = str(align or 'left').strip().lower().replace('_', '-')
         return align if align in {'left', 'right', 'top', 'bottom'} else 'left'
 
@@ -540,11 +584,11 @@ class _TextEffectMixin:
         text: str,
         text_color: QColor,
     ) -> None:
-        shadow = getattr(self, '_text_shadow', None)
-        if isinstance(shadow, dict):
-            shadow_color = shadow.get('color')
+        shadow = _state_mapping(getattr(self, '_text_shadow', None))
+        if shadow is not None:
+            shadow_color = _state_qcolor(shadow, 'color')
             if isinstance(shadow_color, QColor) and shadow_color.isValid() and shadow_color.alpha() > 0:
-                offset_rect = rect.translated(float(shadow.get('x', 0.0)), float(shadow.get('y', 0.0)))
+                offset_rect = rect.translated(_state_float(shadow, 'x'), _state_float(shadow, 'y'))
                 painter.setPen(shadow_color)
                 painter.drawText(offset_rect, alignment, text)
 
@@ -595,18 +639,18 @@ class _TextEffectMixin:
             return
 
         text_path = self._cached_text_path(painter, rect, alignment, text)
-        shadow = getattr(self, '_text_shadow', None)
-        if isinstance(shadow, dict):
-            shadow_color = shadow.get('color')
+        shadow = _state_mapping(getattr(self, '_text_shadow', None))
+        if shadow is not None:
+            shadow_color = _state_qcolor(shadow, 'color')
             if isinstance(shadow_color, QColor) and shadow_color.isValid() and shadow_color.alpha() > 0:
                 shadow_path = QPainterPath(text_path)
-                shadow_path.translate(float(shadow.get('x', 0.0)), float(shadow.get('y', 0.0)))
+                shadow_path.translate(_state_float(shadow, 'x'), _state_float(shadow, 'y'))
                 painter.fillPath(shadow_path, QBrush(shadow_color))
 
-        border = getattr(self, '_text_border', None)
-        if isinstance(border, dict):
-            border_color = border.get('color')
-            border_width = float(border.get('width', 0.0) or 0.0)
+        border = _state_mapping(getattr(self, '_text_border', None))
+        if border is not None:
+            border_color = _state_qcolor(border, 'color')
+            border_width = _state_float(border, 'width')
             if isinstance(border_color, QColor) and border_color.isValid() and border_color.alpha() > 0 and border_width > 0.0:
                 self._draw_text_outline(
                     painter,
@@ -614,7 +658,7 @@ class _TextEffectMixin:
                     fill=QBrush(text_color),
                     border_color=border_color,
                     border_width=border_width,
-                    border_style=border.get('style', 'solid'),
+                    border_style=_state_str(border, 'style', 'solid'),
                 )
                 return
 
@@ -628,9 +672,10 @@ class _TextEffectMixin:
         text: str,
     ) -> QPainterPath:
         key = self._text_cache_key(painter, rect, alignment, text)
-        cache = getattr(self, '_text_effect_cache', None)
-        if isinstance(cache, dict) and cache.get('key') == key and isinstance(cache.get('path'), QPainterPath):
-            return QPainterPath(cache['path'])
+        cache = _state_mapping(getattr(self, '_text_effect_cache', None))
+        cached_path = cache.get('path') if cache is not None else None
+        if cache is not None and cache.get('key') == key and isinstance(cached_path, QPainterPath):
+            return QPainterPath(cached_path)
 
         path = self._text_path(painter, rect, alignment, text)
         self._text_effect_cache = {
@@ -664,7 +709,7 @@ class _TextEffectMixin:
         border_width: float,
         pen_style: Qt.PenStyle,
     ) -> QPainterPath:
-        cache = getattr(self, '_text_effect_cache', None)
+        cache = _state_mapping(getattr(self, '_text_effect_cache', None))
         path_bounds = text_path.boundingRect()
         key = (
             'outline',
@@ -676,11 +721,13 @@ class _TextEffectMixin:
             round(path_bounds.height(), 2),
         )
         if (
-            isinstance(cache, dict)
+            cache is not None
             and cache.get('outline_key') == key
             and isinstance(cache.get('outline'), QPainterPath)
         ):
-            return QPainterPath(cache['outline'])
+            outline = cache.get('outline')
+            if isinstance(outline, QPainterPath):
+                return QPainterPath(outline)
 
         stroker = QPainterPathStroker()
         stroker.setWidth(max(0.0, float(border_width)))
@@ -689,7 +736,7 @@ class _TextEffectMixin:
         stroker.setDashPattern(pen_style)
 
         outline = stroker.createStroke(text_path).subtracted(text_path)
-        if not isinstance(cache, dict):
+        if cache is None:
             cache = {}
             self._text_effect_cache = cache
         cache['outline_key'] = key
@@ -801,7 +848,7 @@ class _TextEffectMixin:
         self.killTimer(timer_id)
         self._overflow_animation_timer_id = 0
 
-    def _handle_overflow_timer_event(self, event) -> bool:
+    def _handle_overflow_timer_event(self, event: QTimerEvent) -> bool:
         timer_id = int(getattr(self, '_overflow_animation_timer_id', 0) or 0)
         if timer_id <= 0 or event.timerId() != timer_id:
             return False
@@ -860,7 +907,13 @@ class _TextEffectMixin:
         mask.setColorAt(1.0, QColor(0, 0, 0, right_edge_alpha))
         return mask
 
-    def _draw_faded_text_layer(self, painter: QPainter, rect: QRectF, text: str, draw_layer) -> None:
+    def _draw_faded_text_layer(
+        self,
+        painter: QPainter,
+        rect: QRectF,
+        text: str,
+        draw_layer: TextLayerDrawer,
+    ) -> None:
         width = max(1, int(ceil(rect.width())))
         height = max(1, int(ceil(rect.height())))
         if width <= 1 or height <= 1:
@@ -872,9 +925,7 @@ class _TextEffectMixin:
         pixmap.fill(Qt.GlobalColor.transparent)
 
         layer_painter = QPainter(pixmap)
-        layer_painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        layer_painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
-        layer_painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+        self._configure_themed_painter(layer_painter)
         layer_painter.setFont(painter.font())
         local_rect = QRectF(0.0, 0.0, float(width), float(height))
         offset = self._overflow_animation_offset(text, local_rect)
@@ -896,12 +947,59 @@ class _TextEffectMixin:
 
         painter.drawPixmap(QPointF(rect.left(), rect.top()), pixmap)
 
+    def _configure_themed_painter(self, painter: QPainter) -> None:
+        configure_painter(painter, text_antialias=True, smooth_pixmap=True)
 
-class MTPlainLabel(BoxThemeMixin, _TextEffectMixin, QLabel):
+    def _new_themed_painter(self) -> QPainter:
+        painter = QPainter(cast(QWidget, self))
+        self._configure_themed_painter(painter)
+        return painter
+
+    def _draw_themed_widget_background(self, painter: QPainter) -> None:
+        draw_widget_background(cast(QWidget, self), painter)
+
+    def _label_size_hint(self, base_hint: QSize) -> QSize:
+        if not base_hint.isEmpty() and not self.text() and not self._has_text_icon():
+            return base_hint
+        if self._has_text_icon():
+            return self._themed_visual_content_size(self.text())
+        return self._visual_text_size(self.text())
+
+    def _paint_themed_label(self, *, text_color: QColor) -> bool:
+        text = self.text()
+        text_rect = QRectF(self.contentsRect())
+        text_overflows = self._text_overflows_rect(text, text_rect)
+
+        if self.has_box_theme() and not text_overflows and not self._has_custom_text_render() and not self._has_text_icon():
+            painter = self._new_themed_painter()
+            self.draw_box_theme(painter)
+            painter.end()
+            return False
+
+        if not text.strip() and not self._has_text_icon():
+            return False
+        if not text_overflows and not self._has_custom_text_render() and not self._has_text_icon():
+            return False
+
+        painter = self._new_themed_painter()
+        self._draw_themed_widget_background(painter)
+        painter.setFont(self.font())
+        self._draw_themed_icon_text(
+            painter,
+            text_rect,
+            self.alignment(),
+            text,
+            text_color,
+        )
+        painter.end()
+        return True
+
+
+class MTPlainLabel(BoxThemeMixin, TextEffectMixin, QLabel):
     PAINTED_BOX_THEME = False
 
-    def __init__(self, *args, obj_name: str = '', **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, text: str = '', parent: QWidget | None = None, *, obj_name: str = '') -> None:
+        super().__init__(text, parent)
         self.init_box_theme()
         self.init_text_effects()
         self.set_force_text_path_render(True)
@@ -909,77 +1007,36 @@ class MTPlainLabel(BoxThemeMixin, _TextEffectMixin, QLabel):
         if obj_name:
             self.setObjectName(obj_name)
 
-    def enterEvent(self, event) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         self._set_overflow_hover_active(True)
         super().enterEvent(event)
 
-    def leaveEvent(self, event) -> None:
+    def leaveEvent(self, event: QEvent) -> None:
         self._set_overflow_hover_active(False)
         super().leaveEvent(event)
 
-    def timerEvent(self, event) -> None:
+    def timerEvent(self, event: QTimerEvent) -> None:
         if self._handle_overflow_timer_event(event):
             return
         super().timerEvent(event)
 
     def sizeHint(self) -> QSize:
-        base_hint = super().sizeHint()
-        if not base_hint.isEmpty() and not self.text() and not self._has_text_icon():
-            return base_hint
-        if self._has_text_icon():
-            return self._themed_visual_content_size(self.text())
-        return self._visual_text_size(self.text())
+        return self._label_size_hint(super().sizeHint())
 
     def minimumSizeHint(self) -> QSize:
         return self.sizeHint()
 
-    def paintEvent(self, event) -> None:
-        text_rect = QRectF(self.contentsRect())
-        text_overflows = self._text_overflows_rect(self.text(), text_rect)
-        if self.has_box_theme() and not text_overflows and not self._has_custom_text_render() and not self._has_text_icon():
-            painter = QPainter(self)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-            painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
-            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
-            self.draw_box_theme(painter)
-            painter.end()
-            super().paintEvent(event)
+    def paintEvent(self, event: QPaintEvent) -> None:
+        if self._paint_themed_label(text_color=self.palette().windowText().color()):
             return
-
-        if not self.text().strip() and not self._has_text_icon():
-            super().paintEvent(event)
-            return
-        if not text_overflows and not self._has_custom_text_render() and not self._has_text_icon():
-            super().paintEvent(event)
-            return
-
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
-        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
-
-        if self.has_box_theme():
-            self.draw_box_theme(painter)
-        else:
-            option = QStyleOption()
-            option.initFrom(self)
-            self.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, option, painter, self)
-
-        painter.setFont(self.font())
-        self._draw_themed_icon_text(
-            painter,
-            text_rect,
-            self.alignment(),
-            self.text(),
-            self.palette().windowText().color(),
-        )
+        super().paintEvent(event)
 
 
-class MTLabel(BoxThemeMixin, _TextEffectMixin, TranslatableMixin, QLabel):
+class MTLabel(BoxThemeMixin, TextEffectMixin, TranslatableMixin, QLabel):
     PAINTED_BOX_THEME = False
 
-    def __init__(self, *args, tr_key: str, obj_name: str = '', **kwargs) -> None:
-        super().__init__(tr_key, *args, **kwargs)
+    def __init__(self, tr_key: str, parent: QWidget | None = None, *, obj_name: str = '') -> None:
+        super().__init__(tr_key, parent)
         self.init_box_theme()
         self.init_text_effects()
         self.set_force_text_path_render(True)
@@ -987,77 +1044,43 @@ class MTLabel(BoxThemeMixin, _TextEffectMixin, TranslatableMixin, QLabel):
         if obj_name:
             self.setObjectName(obj_name)
 
-    def enterEvent(self, event) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         self._set_overflow_hover_active(True)
         super().enterEvent(event)
 
-    def leaveEvent(self, event) -> None:
+    def leaveEvent(self, event: QEvent) -> None:
         self._set_overflow_hover_active(False)
         super().leaveEvent(event)
 
-    def timerEvent(self, event) -> None:
+    def timerEvent(self, event: QTimerEvent) -> None:
         if self._handle_overflow_timer_event(event):
             return
         super().timerEvent(event)
 
     def sizeHint(self) -> QSize:
-        base_hint = super().sizeHint()
-        if not base_hint.isEmpty() and not self.text() and not self._has_text_icon():
-            return base_hint
-        if self._has_text_icon():
-            return self._themed_visual_content_size(self.text())
-        return self._visual_text_size(self.text())
+        return self._label_size_hint(super().sizeHint())
 
     def minimumSizeHint(self) -> QSize:
         return self.sizeHint()
 
-    def paintEvent(self, event) -> None:
-        text_rect = QRectF(self.contentsRect())
-        text_overflows = self._text_overflows_rect(self.text(), text_rect)
-        if self.has_box_theme() and not text_overflows and not self._has_custom_text_render() and not self._has_text_icon():
-            painter = QPainter(self)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-            painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
-            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
-            self.draw_box_theme(painter)
-            painter.end()
-            super().paintEvent(event)
+    def paintEvent(self, event: QPaintEvent) -> None:
+        if self._paint_themed_label(text_color=self.palette().windowText().color()):
             return
-
-        if not self.text().strip() and not self._has_text_icon():
-            super().paintEvent(event)
-            return
-        if not text_overflows and not self._has_custom_text_render() and not self._has_text_icon():
-            super().paintEvent(event)
-            return
-
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
-        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
-
-        if self.has_box_theme():
-            self.draw_box_theme(painter)
-        else:
-            option = QStyleOption()
-            option.initFrom(self)
-            self.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, option, painter, self)
-
-        painter.setFont(self.font())
-        self._draw_themed_icon_text(
-            painter,
-            text_rect,
-            self.alignment(),
-            self.text(),
-            self.palette().windowText().color(),
-        )
+        super().paintEvent(event)
 
 
-class MTButton(BoxThemeMixin, _TextEffectMixin, TranslatableMixin, QPushButton):
+class MTButton(BoxThemeMixin, TextEffectMixin, TranslatableMixin, QPushButton):
     PAINTED_BOX_THEME = False
 
-    def __init__(self, *args, tr_key: str, checkable: bool = False, checked: bool = False, obj_name: str = '', **kwargs) -> None:
-        super().__init__(tr_key, *args, **kwargs)
+    def __init__(
+        self,
+        tr_key: str,
+        parent: QWidget | None = None,
+        checkable: bool = False,
+        checked: bool = False,
+        obj_name: str = '',
+    ) -> None:
+        super().__init__(tr_key, parent)
         self.setFlat(True)
         self.setAutoDefault(False)
         self.setDefault(False)
@@ -1075,15 +1098,15 @@ class MTButton(BoxThemeMixin, _TextEffectMixin, TranslatableMixin, QPushButton):
         if obj_name:
             self.setObjectName(obj_name)
 
-    def enterEvent(self, event) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         self._set_overflow_hover_active(True)
         super().enterEvent(event)
 
-    def leaveEvent(self, event) -> None:
+    def leaveEvent(self, event: QEvent) -> None:
         self._set_overflow_hover_active(False)
         super().leaveEvent(event)
 
-    def timerEvent(self, event) -> None:
+    def timerEvent(self, event: QTimerEvent) -> None:
         if self._handle_overflow_timer_event(event):
             return
         super().timerEvent(event)
@@ -1123,18 +1146,9 @@ class MTButton(BoxThemeMixin, _TextEffectMixin, TranslatableMixin, QPushButton):
             max(1, int(round(top + text_height + bottom))),
         )
 
-    def paintEvent(self, event) -> None:
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
-        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
-
-        if self.has_box_theme():
-            self.draw_box_theme(painter)
-        else:
-            option = QStyleOption()
-            option.initFrom(self)
-            self.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, option, painter, self)
+    def paintEvent(self, event: QPaintEvent) -> None:
+        painter = self._new_themed_painter()
+        self._draw_themed_widget_background(painter)
 
         rect = self._padded_contents_rect()
         if self._has_text_icon():
@@ -1146,6 +1160,7 @@ class MTButton(BoxThemeMixin, _TextEffectMixin, TranslatableMixin, QPushButton):
                 self.text(),
                 self.palette().buttonText().color(),
             )
+            painter.end()
             return
 
         icon = self.icon()
@@ -1161,6 +1176,7 @@ class MTButton(BoxThemeMixin, _TextEffectMixin, TranslatableMixin, QPushButton):
                     self.text(),
                     self.palette().buttonText().color(),
                 )
+            painter.end()
             return
 
         icon_width = icon_size.width() if not icon.isNull() else 0
@@ -1191,6 +1207,7 @@ class MTButton(BoxThemeMixin, _TextEffectMixin, TranslatableMixin, QPushButton):
                 self.text(),
                 self.palette().buttonText().color(),
             )
+        painter.end()
 
     def _content_left(self, rect: QRectF, content_width: int | float) -> float:
         alignment = self._alignment
@@ -1232,11 +1249,14 @@ class MTButton(BoxThemeMixin, _TextEffectMixin, TranslatableMixin, QPushButton):
 
     def _theme_padding(self) -> tuple[float, float, float, float]:
         padding = self.property('_themePaddingBox')
-        if not isinstance(padding, (list, tuple)) or len(padding) != 4:
+        if not isinstance(padding, (list, tuple)):
+            return 0.0, 0.0, 0.0, 0.0
+        padding_values = cast(list[object] | tuple[object, ...], padding)
+        if len(padding_values) != 4:
             return 0.0, 0.0, 0.0, 0.0
 
         values: list[float] = []
-        for value in padding:
+        for value in padding_values:
             if isinstance(value, bool):
                 return 0.0, 0.0, 0.0, 0.0
             if isinstance(value, (int, float)):

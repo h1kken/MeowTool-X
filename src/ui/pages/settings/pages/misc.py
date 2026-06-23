@@ -6,11 +6,11 @@ from src.ui.widgets import (
     MTComboBoxSetting,
     MTCollapsibleContainer,
     MTColumnsSetting,
-    MTPathSetting,
     MTSliderSetting,
     MTWidget,
     MTSwitchSetting,
 )
+from src.config.enums import ConfigLoaderKey as CLKey
 
 
 class SettingsMiscPage(MTWidget):
@@ -28,31 +28,31 @@ class SettingsMiscPage(MTWidget):
                     MTSwitchSetting(
                         config=config_loader,
                         tr_key="DEBUG",
-                        cfg_key="Misc>Debugger>Debug",
+                        cfg_key=CLKey.MISC_DEBUGGER_DEBUG,
                         default=False,
                     ),
                     MTSwitchSetting(
                         config=config_loader,
                         tr_key="INFO",
-                        cfg_key="Misc>Debugger>Info",
+                        cfg_key=CLKey.MISC_DEBUGGER_INFO,
                         default=False,
                     ),
                     MTSwitchSetting(
                         config=config_loader,
                         tr_key="WARNING",
-                        cfg_key="Misc>Debugger>Warning",
+                        cfg_key=CLKey.MISC_DEBUGGER_WARNING,
                         default=False,
                     ),
                     MTSwitchSetting(
                         config=config_loader,
                         tr_key="ERROR",
-                        cfg_key="Misc>Debugger>Error",
+                        cfg_key=CLKey.MISC_DEBUGGER_ERROR,
                         default=False,
                     ),
                     MTSwitchSetting(
                         config=config_loader,
                         tr_key="EXCEPTION",
-                        cfg_key="Misc>Debugger>Exception",
+                        cfg_key=CLKey.MISC_DEBUGGER_EXCEPTION,
                         default=False,
                     ),
                 ],
@@ -90,7 +90,7 @@ class SettingsMiscPage(MTWidget):
             cfg_key="Misc>Rainbow Mode>Enabled",
             default=False,
         )
-        self._rainbow_mode_setting._switch.toggled.connect(
+        self._rainbow_mode_setting.switch.toggled.connect(
             self._on_rainbow_mode_toggled,
         )
         return self._rainbow_mode_setting
@@ -107,10 +107,10 @@ class SettingsMiscPage(MTWidget):
         self._rainbow_cycle_duration_setting.setObjectName(
             "Misc_Rainbow_Cycle_Duration_Slider_Setting"
         )
-        self._rainbow_cycle_duration_setting._spin_box.editingFinished.connect(
+        self._rainbow_cycle_duration_setting.spin_box.editingFinished.connect(
             self._commit_rainbow_cycle_duration_change,
         )
-        self._rainbow_cycle_duration_setting._slider.sliderReleased.connect(
+        self._rainbow_cycle_duration_setting.slider.sliderReleased.connect(
             self._commit_rainbow_cycle_duration_change,
         )
         return self._rainbow_cycle_duration_setting
@@ -133,11 +133,13 @@ class SettingsMiscPage(MTWidget):
         return bool(config.get("Misc>Rainbow Mode>Enabled", default=False))
 
     def _read_rainbow_cycle_duration(self) -> int:
+        value = config.get("Misc>Rainbow Mode>Cycle Duration", default=5000)
+        if isinstance(value, bool):
+            return 5000
+        if not isinstance(value, (int, float, str)):
+            return 5000
         try:
-            return max(
-                1000,
-                int(config.get("Misc>Rainbow Mode>Cycle Duration", default=5000)),
-            )
+            return max(1000, int(value))
         except (TypeError, ValueError):
             return 5000
 

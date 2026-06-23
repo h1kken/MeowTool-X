@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import json5
 
@@ -11,6 +11,10 @@ from src.utils.logging import logger
 
 SUPPORTED_THEME_EXTENSIONS: tuple[str, ...] = ('.json5', '.json')
 DEFAULT_USER_THEME_EXTENSION = '.json5'
+
+
+def _parse_json5_object(text: str) -> object:
+    return cast(object, json5.loads(text))
 
 
 def is_theme_file(path: Path) -> bool:
@@ -34,20 +38,18 @@ def load_theme_payload(path: Path) -> dict[str, Any]:
         if not text.strip():
             return {}
 
-        data = json5.loads(text)
+        data = _parse_json5_object(text)
 
         if not isinstance(data, dict):
             raise NotADictionaryError
 
-        return data
+        return cast(dict[str, Any], data)
     except FileNotFoundError:
         logger.warning(f'Theme file not found: {path}')
     except NotADictionaryError:
         logger.debug(f'Theme file does not contain a dictionary payload: {path}')
     except ValueError as e:
         logger.debug(f'Cannot decode theme JSON5 in {path}: {e}')
-    except UnicodeDecodeError:
-        logger.debug(f'Cannot decode theme unicode in {path}')
     except Exception:
         logger.exception(f'Error while loading theme {path}')
     return {}

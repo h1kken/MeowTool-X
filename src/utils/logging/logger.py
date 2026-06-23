@@ -1,25 +1,21 @@
+import inspect
 import sys
-import functools
-import time
-from pathlib import Path
 from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime
-from typing import Any, Awaitable, Callable
+from pathlib import Path
+from typing import Any, cast
 
 import loguru
-from aiohttp import ClientResponse
 
-from src.utils.constants import (
-    ROOT,
-    PROGRAM_NAME,
-    ASCII_MEOWTOOL,
-    IS_LAUNCHED_WITH_CONSOLE,
+from src.app.paths import PATH_ROOT
+from src.utils.constants.app import ASCII_MEOWTOOL, IS_LAUNCHED_WITH_CONSOLE, PROGRAM_NAME
+from src.utils.constants.log import (
     DATE_LOGGER_FORMAT,
-    LOGGER_INDENT_NAME,
-    LOGGER_INDENT_LINE,
     LOGGER_INDENT_FUNCTION,
     LOGGER_INDENT_LEVEL,
+    LOGGER_INDENT_LINE,
+    LOGGER_INDENT_NAME,
     LOG_ORIGIN_DEFAULT,
 )
 from src.utils.ansi import (
@@ -28,16 +24,18 @@ from src.utils.ansi import (
     CLEAR
 )
 from src.utils.logging.enums import LogLevel
-from src.utils.constants import ROOT
 
 _LOG_ORIGIN: ContextVar[str] = ContextVar('log_origin', default=LOG_ORIGIN_DEFAULT)
 
 
 def _capture_origin(depth: int = 1) -> str:
-    try:
-        frame = sys._getframe(depth + 1)
-    except ValueError:
+    frame = inspect.currentframe()
+    if frame is None:
         return LOG_ORIGIN_DEFAULT
+    for _ in range(depth + 1):
+        frame = frame.f_back
+        if frame is None:
+            return LOG_ORIGIN_DEFAULT
 
     try:
         file_path = Path(frame.f_code.co_filename)
@@ -48,21 +46,23 @@ def _capture_origin(depth: int = 1) -> str:
             pass
         
         try:
-            display_path = file_path.relative_to(ROOT).as_posix()
+            display_path = file_path.relative_to(PATH_ROOT).as_posix()
         except ValueError:
             display_path = file_path.as_posix()
             
-        display_path = display_path.removesuffix('.py').replace('/', '.')
-        
-        if display_path.startswith('src.'):
-            display_path = display_path.removeprefix('src.')
+        display_path = (
+            display_path
+            .removeprefix('src/')
+            .removesuffix('.py')
+            .replace('/', '.')
+        )
             
         return f'{display_path}:{frame.f_lineno}'
     finally:
         del frame
 
 
-def patcher(record: dict):
+def patcher(record: Any) -> None:
     name = record.get('name')
     if isinstance(name, str) and name.startswith('src.'):
         record['name'] = name.removeprefix('src.')
@@ -87,7 +87,7 @@ def patcher(record: dict):
                 pass
             
             try:
-                display_path = path.relative_to(ROOT).as_posix()
+                display_path = path.relative_to(PATH_ROOT).as_posix()
             except ValueError:
                 display_path = path.as_posix()
                 
@@ -120,20 +120,13 @@ class Logger:
         self._stream = bool(stream)
         self._console_level = console_level
         self._file_level = file_level
+        self._debugger_settings: dict[str, bool] = {}
         
-        self._path = Path(
+        self.path = Path(
             'Logs',
             f'{name} ({datetime.now().strftime(DATE_LOGGER_FORMAT)}).log'
         )
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        
-        self._debugger_settings = {
-            'debug': True,
-            'info': True,
-            'warning': True,
-            'error': True,
-            'exception': True,
-        }
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         
         self._configure_sinks()
 
@@ -143,8 +136,8 @@ class Logger:
                 f'{PINK}{ASCII_MEOWTOOL}{CLEAR}'
             )
 
-    def _resolve_record_kind(self, record):
-        extra = record.get('extra') or {}
+    def _resolve_record_kind(self, record: Any) -> str:
+        extra = cast(dict[str, Any], record.get('extra') or {})
         kind = str(extra.get('meow_kind') or record['level'].name).strip().lower()
         match kind:
             case 'trace':
@@ -154,10 +147,9 @@ class Logger:
             case _:
                 return kind
 
-    def _make_sink_filter(self):
-        settings = dict(self._debugger_settings)
-        def _filter(record):
-            return settings.get(self._resolve_record_kind(record), True)
+    def _make_sink_filter(self) -> Any:
+        def _filter(record: Any) -> bool:
+            return self._debugger_settings.get(self._resolve_record_kind(record), True)
         return _filter
 
     def _configure_sinks(self) -> None:
@@ -205,7 +197,7 @@ class Logger:
         )
         
         self._logger.add(
-            self._path,
+            self.path,
             level=self._file_level,
             format=_logger_file_format,
             rotation='10 MB',
@@ -224,7 +216,7 @@ class Logger:
         error: bool | None = None,
         exception: bool | None = None,
     ) -> bool:
-        updated = dict(self._debugger_settings)
+        updated: dict[str, bool] = dict(self._debugger_settings)
         overrides = {
             'debug': debug,
             'info': info,
@@ -237,15 +229,18 @@ class Logger:
                 continue
             updated[key] = bool(value)
         
-        if updated == self._debugger_settings:
-            return False
-        
         self._debugger_settings = updated
         self._configure_sinks()
         return True
 
     @contextmanager
-    def origin_scope(self, origin: str | None = None, *, overwrite: bool = False, depth: int = 1):
+    def origin_scope(
+        self,
+        origin: str | None = None,
+        *,
+        overwrite: bool = False,
+        depth: int = 1,
+    ) -> Any:
         current = _LOG_ORIGIN.get()
         if not overwrite and current != LOG_ORIGIN_DEFAULT:
             yield current
@@ -265,36 +260,3 @@ class Logger:
 
 
 logger = Logger()
-
-
-def log_action(action: str, *, re_raise: bool = False):
-    def log_action_decorator(func):
-        @functools.wraps(func)
-        def log_action_wrapper(path: Path, *args, **kwargs):
-            with logger.origin_scope(overwrite=False, depth=2):
-                try:
-                    return func(path, *args, **kwargs)
-                except FileExistsError:
-                    logger.debug(f'Can\'t {action} \'{path}\' that already exists')
-                    if re_raise:
-                        raise
-                except Exception as e:
-                    logger.exception(f'Can\'t {action}: {path}. Error: {type(e).__name__}')
-                    if re_raise:
-                        raise
-        return log_action_wrapper
-    return log_action_decorator
-
-
-def log_network_request(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
-    @functools.wraps(func)
-    async def wrapper(*args, **kwargs):
-        with logger.origin_scope(overwrite=False, depth=2):
-            start = time.perf_counter()
-            result = await func(*args, **kwargs)
-            end = time.perf_counter()
-            elapsed_ms = int((end - start) * 1000)
-            if isinstance(result, ClientResponse):
-                logger.debug(f'[{func.__name__.upper()}:{result.status}] {result.url} for {elapsed_ms}ms')
-            return result
-    return wrapper

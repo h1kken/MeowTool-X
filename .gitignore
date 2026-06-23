@@ -1,41 +1,70 @@
-# beta
+# local
 .beta/
-native/
-*.whl
-*.dll
+.prod
+TODOS.md
+notepad.txt
 
 # envs
 .env
 .venv/
+venv/
+
+# python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyright/
+.pyright.out
+.cache/
+.coverage
+coverage/
+htmlcov/
+pyright-*.json
+
+# build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+*.whl
+
+# native build artifacts
+native/
+*.dll
+*.so
+*.dylib
+*.lib
+*.exp
+
+# ide
+.vscode/
+.DS_Store
+Thumbs.db
+
+# runtime data
+Logs/
+Proxy/
+Roblox/
+Versions/
+Settings/Configs/
+Settings/Database/
+Settings/Fonts/
+Settings/Roblox/
+Settings/Themes/
+Settings/Translations/
 
 # docs
 docs/
 
-# bats
-run.bat
-
-# paths and files created MeowTool
-/Logs/
-/Proxy/
-/Roblox/
-/Settings/Configs/
-/Settings/Themes/
-/Settings/Fonts/
-/Settings/Translations/
-/Versions/
-
-# tests
-/tests/
+# dbs
 *.db
+*.sqlite
+*.sqlite3
 
 # trash
-.vscode/
-__pycache__/
-*cache
-*.py[cod]
-*.log
-
-build/
-dist/
-
-notepad.txt
+tests/
+*.svg
+pyright-report.json

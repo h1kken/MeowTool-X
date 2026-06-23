@@ -2,16 +2,14 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 
-from src.config.manager import config
-from src.utils.constants import (
-    CONFIG_COMMENT_SYMBOLS,
+from src.config.constants import CONFIG_COMMENT_SYMBOLS
+from src.translation.constants import (
     DEFAULT_FALLBACK_LOCALE,
     LANGUAGE_LOCALE_DEFAULTS,
-    PATH_TRANSLATIONS_SOURCE,
-    PATH_TRANSLATIONS_USER,
     SYSTEM_LANGUAGE,
     SYSTEM_LOCALE,
 )
+from src.translation.paths import PATH_TRANSLATIONS_SOURCE, PATH_TRANSLATIONS_USER
 from src.utils.filesystem import FS
 from src.utils.logging import logger
 
@@ -19,14 +17,14 @@ from src.utils.logging import logger
 class TranslationManager(QObject):
     language_changed = Signal()
 
-    def __init__(self, filename: str | None = None):
+    def __init__(self, filename: str | None = None) -> None:
         super().__init__()
-        self._path = None
-        self._translations = {}
+        self._path: Path | None = None
+        self._translations: dict[str, str] = {}
         self.load_language(filename)
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._path.stem if self._path is not None else ''
 
     @staticmethod
@@ -136,7 +134,7 @@ class TranslationManager(QObject):
             return
         
         try:
-            with open(language_path, 'r', encoding='utf-8', errors='ignore') as file:
+            with language_path.open('r', encoding='utf-8', errors='ignore') as file:
                 for line in file:
                     line = line.strip()
                     if line and not line.startswith(CONFIG_COMMENT_SYMBOLS) and '=' in line:
@@ -166,10 +164,17 @@ class TranslationManager(QObject):
         old_path = self._find_language_path(from_language)
         if old_path is None or not old_path.exists():
             return
-        FS.create_folder(PATH_TRANSLATIONS_USER)
+        FS.ensure_dir(PATH_TRANSLATIONS_USER)
         FS.copy_file(old_path, new_path)
 
-    def tr(self, key: str, **kwargs) -> str:
+    def tr(
+        self,
+        key: str,
+        disambiguation: str | None = None,
+        n: int = -1,
+        **kwargs: object,
+    ) -> str:
+        _ = (disambiguation, n)
         text = self._translations.get(key, key)
         if not kwargs:
             return text
@@ -179,4 +184,4 @@ class TranslationManager(QObject):
             return text
 
 
-translator = TranslationManager(config.get('General>Language', default=SYSTEM_LOCALE))
+translator = TranslationManager(SYSTEM_LOCALE)

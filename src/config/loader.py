@@ -1,14 +1,9 @@
-from typing import Any
+import threading
+from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 
-from src.config.defaults import default_config_loader
-from src.config.mixin import GetConfigMixin, SaveConfigMixin, SetConfigMixin
-from src.config.utils import normalize_config, parse_config
-from src.utils.constants import PATH_CONFIGS
-from src.utils.filesystem import FS, get_safe
-from src.utils.logging import logger
-from src.utils.constants import (
+from src.config.constants import (
     CONFIG_LOADER_AUTO_SAVE_CONFIG_FALLBACK,
     CONFIG_LOADER_AUTO_SAVE_THEME_FALLBACK,
     CONFIG_LOADER_LOG_DEBUG_FALLBACK,
@@ -17,7 +12,14 @@ from src.utils.constants import (
     CONFIG_LOADER_LOG_INFO_FALLBACK,
     CONFIG_LOADER_LOG_WARNING_FALLBACK,
 )
-from src.config.enums import ConfigLoaderKey as CLK
+from src.config.defaults import default_config_loader
+from src.config.mixin import GetConfigMixin, SaveConfigMixin, SetConfigMixin
+from src.config.paths import PATH_CONFIGS
+from src.config.types import ConfigMap
+from src.config.utils import normalize_config, parse_config
+from src.utils.filesystem import FS, get_safe
+from src.config.enums import ConfigLoaderKey as CLKey
+from src.utils.logging import logger
 
 
 class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
@@ -26,22 +28,39 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
 
     def __init__(self) -> None:
         super().__init__()
-        self._path = None
-        self._data = {}
-        self._defaults = default_config_loader()
+        self._path: Path = PATH_CONFIGS / ".Loader.txt"
+        self._data: ConfigMap = {}
+        self._defaults: ConfigMap = default_config_loader()
+        self._save_lock = threading.Lock()
         self.auto_save_config = False
         self.auto_save_theme = False
         self._load()
 
-    def set(self, key: str, value: Any, *, sep: str = ">") -> None:
+    @property
+    def data(self) -> ConfigMap:
+        return self._data
+
+    @property
+    def defaults(self) -> ConfigMap:
+        return self._defaults
+
+    @property
+    def path(self) -> Path:
+        return self._path
+
+    @property
+    def save_lock(self) -> threading.Lock:
+        return self._save_lock
+
+    def set(self, key: str, value: object, *, sep: str = ">") -> None:
         super().set(key, value, sep=sep)
 
         normalized_key = key.replace(sep, ">")
-        if normalized_key == CLK.SAVER_AUTO_SAVE_CONFIG_CHANGES:
+        if normalized_key == CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES:
             self.auto_save_config = bool(value)
-        if normalized_key == CLK.SAVER_AUTO_SAVE_THEME_CHANGES:
+        if normalized_key == CLKey.SAVER_AUTO_SAVE_THEME_CHANGES:
             self.auto_save_theme = bool(value)
-        if normalized_key.startswith(CLK.MISC_DEBUGGER_PATH):
+        if normalized_key.startswith(CLKey.MISC_DEBUGGER_PATH):
             self._apply_logger_settings()
         self.value_changed.emit(normalized_key, value)
         self.save()
@@ -50,8 +69,8 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         if self._path.exists():
             return
 
-        FS.create_folder(PATH_CONFIGS)
-        FS.create_file(self._path)
+        FS.ensure_dir(PATH_CONFIGS)
+        FS.ensure_file(self._path)
         logger.info("Loader created")
         self._load()
 
@@ -59,7 +78,7 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         self.auto_save_config = bool(
             get_safe(
                 self._data,
-                CLK.SAVER_AUTO_SAVE_CONFIG_CHANGES,
+                CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES,
                 sep=">",
                 default=CONFIG_LOADER_AUTO_SAVE_CONFIG_FALLBACK,
             )
@@ -67,7 +86,7 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         self.auto_save_theme = bool(
             get_safe(
                 self._data,
-                CLK.SAVER_AUTO_SAVE_THEME_CHANGES,
+                CLKey.SAVER_AUTO_SAVE_THEME_CHANGES,
                 sep=">",
                 default=CONFIG_LOADER_AUTO_SAVE_THEME_FALLBACK,
             )
@@ -79,7 +98,7 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             debug=bool(
                 get_safe(
                     self._data,
-                    CLK.MISC_DEBUGGER_DEBUG,
+                    CLKey.MISC_DEBUGGER_DEBUG,
                     sep=">",
                     default=CONFIG_LOADER_LOG_DEBUG_FALLBACK,
                 )
@@ -87,7 +106,7 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             info=bool(
                 get_safe(
                     self._data,
-                    CLK.MISC_DEBUGGER_ERROR,
+                    CLKey.MISC_DEBUGGER_ERROR,
                     sep=">",
                     default=CONFIG_LOADER_LOG_INFO_FALLBACK,
                 )
@@ -95,7 +114,7 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             warning=bool(
                 get_safe(
                     self._data,
-                    CLK.MISC_DEBUGGER_EXCEPTION,
+                    CLKey.MISC_DEBUGGER_EXCEPTION,
                     sep=">",
                     default=CONFIG_LOADER_LOG_WARNING_FALLBACK,
                 )
@@ -103,7 +122,7 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             error=bool(
                 get_safe(
                     self._data,
-                    CLK.MISC_DEBUGGER_INFO,
+                    CLKey.MISC_DEBUGGER_INFO,
                     sep=">",
                     default=CONFIG_LOADER_LOG_ERROR_FALLBACK,
                 )
@@ -111,7 +130,7 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             exception=bool(
                 get_safe(
                     self._data,
-                    CLK.MISC_DEBUGGER_WARNING,
+                    CLKey.MISC_DEBUGGER_WARNING,
                     sep=">",
                     default=CONFIG_LOADER_LOG_EXCEPTION_FALLBACK,
                 )
@@ -120,10 +139,9 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
 
     def _load(self) -> None:
         logger.info("Initializing loader...")
-        self._path = PATH_CONFIGS / ".Loader.txt"
 
         try:
-            with open(self._path, "r", encoding="utf-8", errors="ignore") as f:
+            with self._path.open("r", encoding="utf-8", errors="ignore") as f:
                 parsed_config_loader = parse_config(f.read())
 
             self._data = normalize_config(parsed_config_loader, self._defaults, keep_unknown=False)

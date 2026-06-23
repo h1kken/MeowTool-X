@@ -12,8 +12,8 @@ from src.ui.widgets import (
     MTWidget,
 )
 from src.ui.widgets.custom.roblox.cookie_checker import MTCookieCheckerFieldSetting
-from src.utils.constants import ROBLOX_COOKIE_CHECKER_MAIN_FIELDS
-from src.utils.regexes import NORMALIZE_QT_KEY_PATTERN
+from src.services.roblox.constants import ROBLOX_COOKIE_CHECKER_MAIN_FIELDS
+from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 
 class SettingsRobloxCookieCheckerPage(MTWidget):
     def __init__(self):

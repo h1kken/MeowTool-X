@@ -1,34 +1,36 @@
 import os
 import tempfile
-import threading
 import time
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
+from typing import TypeVar, cast
 
-from src.config.utils import convert_value
-from src.utils.constants import (
+from src.config.constants import (
     CONFIG_INDENT,
     CONFIG_MISSING_DEFAULT,
     CONFIG_SAVE_RETRY_COUNT,
     CONFIG_SAVE_RETRY_DELAY_SEC,
-    PATH_CONFIGS,
 )
+from src.config.paths import PATH_CONFIGS
+from src.config.types import ConfigMap, ConfigMixinHost, ConfigValue
+from src.config.utils import convert_value
 from src.utils.filesystem import FS, del_safe, get_safe, set_safe
 from src.utils.logging import logger
 
 _CONFIG_DEFAULT_SENTINEL = object()
+TDefault = TypeVar("TDefault")
 
 
 class GetConfigMixin:
     def get(
-        self,
+        self: ConfigMixinHost,
         key: str,
         *,
         sep: str = ">",
-        default: Any = _CONFIG_DEFAULT_SENTINEL,
-    ) -> Any:
+        default: TDefault | object = _CONFIG_DEFAULT_SENTINEL,
+    ) -> object | TDefault | None:
         missing = _CONFIG_DEFAULT_SENTINEL
-        value = get_safe(self._data, key, sep=sep, default=missing)
+        value = get_safe(self.data, key, sep=sep, default=missing)
 
         if value is not missing:
             logger.debug(f"Loaded '{value}' from '{key.replace(sep, ' > ')}'")
@@ -38,9 +40,9 @@ class GetConfigMixin:
             logger.debug(f"Loaded fallback '{default}' from explicit default for '{key.replace(sep, ' > ')}'")
             return default
 
-        default_value = get_safe(getattr(self, "_defaults", {}), key, sep=sep, default=missing)
+        default_value = get_safe(self.defaults, key, sep=sep, default=missing)
         if default_value is not missing:
-            resolved_default = convert_value(None, default_value)
+            resolved_default = convert_value(None, cast(ConfigValue, default_value))
             logger.debug(f"Loaded fallback '{resolved_default}' from defaults for '{key.replace(sep, ' > ')}'")
             return resolved_default
 
@@ -49,25 +51,30 @@ class GetConfigMixin:
 
 
 class SetConfigMixin:
-    def set(self, key: str, value: Any, *, sep: str = ">") -> None:
-        default_value = get_safe(self._defaults, key, sep=sep, default=CONFIG_MISSING_DEFAULT)
+    def set(self: ConfigMixinHost, key: str, value: object, *, sep: str = ">") -> None:
+        default_value = get_safe(self.defaults, key, sep=sep, default=CONFIG_MISSING_DEFAULT)
         has_default = default_value is not CONFIG_MISSING_DEFAULT
-        value = convert_value(value, None if not has_default else default_value)
+        typed_default = cast(ConfigValue, default_value) if has_default else None
+        value = convert_value(value, typed_default)
 
         if has_default:
-            normalized_default = convert_value(None, default_value)
+            normalized_default = convert_value(None, typed_default)
             if value == normalized_default:
-                del_safe(self._data, key, sep=sep)
+                del_safe(self.data, key, sep=sep)
                 logger.debug(f"Reset to default '{key.replace(sep, ' > ')}'")
                 return
 
-        set_safe(self._data, key, value, sep=sep)
+        set_safe(self.data, key, cast(ConfigValue, value), sep=sep)
         logger.debug(f"Setted '{value}' to '{key.replace(sep, ' > ')}'")
 
 
 class SaveConfigMixin:
-    def _iter_ordered_items(self, data: dict, defaults: dict | None = None):
-        if not isinstance(defaults, dict):
+    def _iter_ordered_items(
+        self,
+        data: ConfigMap,
+        defaults: ConfigMap | None = None,
+    ) -> Iterator[tuple[str, ConfigValue]]:
+        if defaults is None:
             yield from data.items()
             return
 
@@ -83,11 +90,16 @@ class SaveConfigMixin:
                 continue
             yield key, value
 
-    def _dump_dict(self, old_data: dict, defaults: dict | None = None, indent: int = 0) -> list[str]:
+    def _dump_dict(
+        self,
+        old_data: ConfigMap,
+        defaults: ConfigMap | None = None,
+        indent: int = 0,
+    ) -> list[str]:
         new_data: list[str] = []
         indent_prefix = CONFIG_INDENT * indent
         for key, value in self._iter_ordered_items(old_data, defaults):
-            child_defaults = defaults.get(key) if isinstance(defaults, dict) else None
+            child_defaults = defaults.get(key) if defaults is not None else None
             if isinstance(value, dict):
                 new_data.append(f"{indent_prefix}{key}")
                 new_data.extend(
@@ -103,23 +115,28 @@ class SaveConfigMixin:
                 new_data.append(f"{indent_prefix}{key}: {value}")
         return new_data
 
-    def save(self) -> None:
-        FS.create_folder(PATH_CONFIGS)
-        lines = self._dump_dict(self._data, getattr(self, "_defaults", None))
+    def dump_dict(
+        self,
+        old_data: ConfigMap,
+        defaults: ConfigMap | None = None,
+        indent: int = 0,
+    ) -> list[str]:
+        return self._dump_dict(old_data, defaults, indent)
+
+    def save(self: ConfigMixinHost) -> None:
+        FS.ensure_dir(PATH_CONFIGS)
+        lines = self.dump_dict(self.data, self.defaults)
         text = "\n".join(lines)
 
-        if not hasattr(self, "_save_lock"):
-            self._save_lock = threading.Lock()
-
-        with self._save_lock:
+        with self.save_lock:
             temp_file_path: Path | None = None
             try:
                 with tempfile.NamedTemporaryFile(
                     mode="w",
                     encoding="utf-8",
                     delete=False,
-                    dir=self._path.parent,
-                    prefix=f"{self._path.stem}.",
+                    dir=self.path.parent,
+                    prefix=f"{self.path.stem}.",
                     suffix=".tmp",
                 ) as temp_file:
                     temp_file.write(text)
@@ -129,11 +146,11 @@ class SaveConfigMixin:
 
                 for attempt in range(CONFIG_SAVE_RETRY_COUNT):
                     try:
-                        FS.replace_file(temp_file_path, self._path)
+                        FS.replace_file(temp_file_path, self.path)
                         break
                     except PermissionError:
                         tries = attempt + 1
-                        logger.debug(f"Can't save replace file: {temp_file_path} to {self._path}. Try: {tries}")
+                        logger.debug(f"Can't save replace file: {temp_file_path} to {self.path}. Try: {tries}")
                         if attempt == CONFIG_SAVE_RETRY_COUNT - 1:
                             raise
                         time.sleep(CONFIG_SAVE_RETRY_DELAY_SEC * tries)
@@ -143,4 +160,4 @@ class SaveConfigMixin:
                         FS.delete_file(temp_file_path)
                     except OSError:
                         pass
-        logger.debug(f"Config '{self._path.stem}' is saved")
+        logger.debug(f"Config '{self.path.stem}' is saved")

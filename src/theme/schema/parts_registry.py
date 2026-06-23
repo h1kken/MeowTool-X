@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, cast
 
 
 @dataclass(frozen=True)
@@ -447,28 +447,32 @@ PARTS_ANIMATION_PROPERTIES: tuple[str, ...] = tuple(
 )
 
 
-def _nested_get(data: Mapping[str, Any], path: tuple[str, ...]) -> Any:
-    current: Any = data
-    for key in path:
-        if not isinstance(current, Mapping):
-            return None
-        current = current.get(key)
-    return current
+def _nested_get(data: dict[str, Any], path: tuple[str, ...]) -> Any:
+    if not path:
+        return data
+
+    value = data.get(path[0])
+    if len(path) == 1:
+        return value
+    if not isinstance(value, dict):
+        return None
+    return _nested_get(cast(dict[str, Any], value), path[1:])
 
 
 def _nested_set(data: dict[str, Any], path: tuple[str, ...], value: Any) -> None:
-    current = data
+    current: dict[str, Any] = data
     for key in path[:-1]:
-        node = current.get(key)
+        node: object = current.get(key)
         if not isinstance(node, dict):
             node = {}
             current[key] = node
-        current = node
+        current = cast(dict[str, Any], node)
     current[path[-1]] = value
 
 
 def extract_parts_field_values(style: dict[str, Any]) -> dict[str, Any]:
-    parts = style.get('parts') if isinstance(style.get('parts'), dict) else {}
+    raw_parts = style.get('parts')
+    parts: dict[str, Any] = cast(dict[str, Any], raw_parts) if isinstance(raw_parts, dict) else {}
     values: dict[str, Any] = {}
     for spec in PARTS_FIELD_SPECS:
         values[spec.key] = _nested_get(parts, spec.path)

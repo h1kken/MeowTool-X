@@ -1,20 +1,13 @@
-from src.config.loader import config_loader
 from src.config.manager import config
-from src.translation import translator
+from src.translation.manager import translator
+from src.translation.constants import SYSTEM_LOCALE
+from src.translation.paths import PATH_TRANSLATIONS_SOURCE, PATH_TRANSLATIONS_USER
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets import (
     MTCollapsibleContainer,
     MTColumnsSetting,
     MTComboBoxSetting,
     MTWidget,
-    MTSliderSetting,
-    MTSwitchSetting,
-    MTTextSetting,
-)
-from src.utils.constants import (
-    PATH_TRANSLATIONS_SOURCE,
-    PATH_TRANSLATIONS_USER,
-    SYSTEM_LOCALE,
 )
 
 

@@ -1,9 +1,12 @@
 from copy import deepcopy
+from typing import Final, cast
 
-from src.utils.constants import DEFAULT_THEME, SYSTEM_LOCALE
+from src.config.types import ConfigMap, SortCategoryKind
+from src.translation.constants import SYSTEM_LOCALE
+from src.theme.paths import PATH_DEFAULT_THEME
 
 
-DEFAULT_CONFIG_LOADER = {
+DEFAULT_CONFIG_LOADER: Final[ConfigMap] = {
   "Loader": {
     "Config On Load": "default",
     "Developer Mode": False
@@ -32,14 +35,14 @@ DEFAULT_CONFIG_LOADER = {
 }
 
 
-def default_config_loader():
+def default_config_loader() -> ConfigMap:
     return deepcopy(DEFAULT_CONFIG_LOADER)
 
 
-DEFAULT_CONFIG = {
+DEFAULT_CONFIG: Final[ConfigMap] = {
   "General": {
     "Language": SYSTEM_LOCALE,
-    "Theme": DEFAULT_THEME.stem,
+    "Theme": PATH_DEFAULT_THEME.stem,
     "Disable Warnings For Links": False,
     "Disable Warnings For Dangerous Actions": False,
   },
@@ -200,49 +203,54 @@ DEFAULT_CONFIG = {
 
 
 # Generating [Roblox > Cookie Checker > Sorting > Categories]
-SORT_KEYS = {
-  "Link": None,
-  "ID": str,
-  "Name": str,
-  "Display Name": str,
-  "Country Registration": str,
-  "Registration Date (DMY)": str,
-  "Registration Date (In Days)": int,
-  "Robux": int,
-  "Billing": int,
-  "Pending": int,
-  "Donate (1 Year)": int,
-  "Donate (All Time)": int,
-  "Rap": int,
-  "Card": int,
-  "Premium": str,
-  "Gamepasses": int,
-  "Custom Gamepasses": int,
-  "Badges": int,
-  "Favorite Places": int,
-  "Bundles": int,
-  "Inventory Privacy": str,
-  "Trade Privacy": str,
-  "Can Trade": str,
-  "Sessions": int,
-  "Email": str,
-  "Phone": str,
-  "2FA": str,
-  "Pin": str,
-  "Groups Owned": int,
-  "Groups Members": int,
-  "Groups Pending": int,
-  "Groups Funds": int,
-  "Age Group": str,
-  "Verified Age": str,
-  "Verified Voice": str,
-  "Friends": int,
-  "Followers": int,
-  "Followings": int,
-  "Roblox Badges": int,
+SORT_KEYS: Final[dict[str, SortCategoryKind]] = {
+  "Link": "none",
+  "ID": "text",
+  "Name": "text",
+  "Display Name": "text",
+  "Country Registration": "text",
+  "Registration Date (DMY)": "text",
+  "Registration Date (In Days)": "number",
+  "Robux": "number",
+  "Billing": "number",
+  "Pending": "number",
+  "Donate (1 Year)": "number",
+  "Donate (All Time)": "number",
+  "Rap": "number",
+  "Card": "number",
+  "Premium": "text",
+  "Gamepasses": "number",
+  "Custom Gamepasses": "number",
+  "Badges": "number",
+  "Favorite Places": "number",
+  "Bundles": "number",
+  "Inventory Privacy": "text",
+  "Trade Privacy": "text",
+  "Can Trade": "text",
+  "Sessions": "number",
+  "Email": "text",
+  "Phone": "text",
+  "2FA": "text",
+  "Pin": "text",
+  "Groups Owned": "number",
+  "Groups Members": "number",
+  "Groups Pending": "number",
+  "Groups Funds": "number",
+  "Age Group": "text",
+  "Verified Age": "text",
+  "Verified Voice": "text",
+  "Friends": "number",
+  "Followers": "number",
+  "Followings": "number",
+  "Roblox Badges": "number",
 }
 
-SORT_KEYS_NAMES = (
+_roblox_config = cast(ConfigMap, DEFAULT_CONFIG["Roblox"])
+_cookie_checker_config = cast(ConfigMap, _roblox_config["Cookie Checker"])
+_sorting_config = cast(ConfigMap, _cookie_checker_config["Sorting"])
+_sorting_categories = cast(ConfigMap, _sorting_config["Categories"])
+
+SORT_KEYS_NAMES: Final[tuple[str, ...]] = (
   "Gamepasses",
   "Badges",
   "Custom Gamepasses",
@@ -252,14 +260,14 @@ SORT_KEYS_NAMES = (
   "Roblox Badges",
 )
 
-SORT_KEYS_PLACES = (
+SORT_KEYS_PLACES: Final[tuple[str, ...]] = (
   "Gamepasses",
   "Badges"
 )
 
 for key_name, key_type in SORT_KEYS.items():
-    if key_type is str:
-        DEFAULT_CONFIG["Roblox"]["Cookie Checker"]["Sorting"]["Categories"][key_name] = {
+    if key_type == "text":
+        _sorting_categories[key_name] = {
           "Enabled": False,
           "Options": {
             "Yes": True,
@@ -267,8 +275,8 @@ for key_name, key_type in SORT_KEYS.items():
           },
         }
     
-    if key_type is int:
-        DEFAULT_CONFIG["Roblox"]["Cookie Checker"]["Sorting"]["Categories"][key_name] = {
+    if key_type == "number":
+        _sorting_categories[key_name] = {
           "Enabled": False,
           "Options": {
             "Zero": False,
@@ -284,11 +292,13 @@ for key_name, key_type in SORT_KEYS.items():
         }
 
 for key_name in SORT_KEYS_NAMES:
-    DEFAULT_CONFIG["Roblox"]["Cookie Checker"]["Sorting"]["Categories"][key_name]["Names"] = False
+    category = cast(ConfigMap, _sorting_categories[key_name])
+    category["Names"] = False
 
 for key_name in SORT_KEYS_PLACES:
-    DEFAULT_CONFIG["Roblox"]["Cookie Checker"]["Sorting"]["Categories"][key_name]["Places"] = False
+    category = cast(ConfigMap, _sorting_categories[key_name])
+    category["Places"] = False
 
 
-def default_config():
+def default_config() -> ConfigMap:
     return deepcopy(DEFAULT_CONFIG)

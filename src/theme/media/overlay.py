@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget
 
@@ -23,11 +25,7 @@ class ThemeMediaOverlay(MTMediaWidget):
         super().reset_theme()
         self.hide()
 
-    def apply_theme(self, data: dict) -> None:
-        if not isinstance(data, dict):
-            self.reset_theme()
-            return
-
+    def apply_theme(self, data: dict[str, Any]) -> None:
         self.apply_media_theme(data)
         self.setVisible(self.has_media())
 

@@ -1,16 +1,19 @@
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Sequence, cast
 
 from PySide6.QtCore import QEvent, QObject, QSignalBlocker, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QIcon, QMouseEvent, QPainter, QPixmap, QTransform
+from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import QFileDialog, QSizePolicy, QVBoxLayout, QWidget
 
+from src.app.paths import PATH_ROOT
 from src.config.loader import ConfigLoader
 from src.config.manager import Config
 from src.theme.colors import to_qcolor
 from src.ui.layouts.factory import LayoutType, create_layout
+from src.ui.paths import PATH_CONTAINER_ARROW_ICON, PATH_FOLDER_ICON
 from src.ui.widgets import (
     MTButton,
     MTDoubleSpinBox,
@@ -22,8 +25,7 @@ from src.ui.widgets import (
     MTWidget,
 )
 from src.ui.widgets.custom import MTComboBox, MTSwitch
-from src.utils.constants import PATH_CONTAINER_ARROW_ICON, ROOT
-from src.utils.regexes import NORMALIZE_QT_KEY_PATTERN
+from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 
 SETTING_ROW_HEIGHT = 0
 SETTING_ROW_GAP = 0
@@ -59,10 +61,6 @@ def _icon(source: str, color_name: str, rotation: float, size: int) -> QIcon:
 
 def _repolish(widget: QWidget) -> None:
     style = widget.style()
-    if style is None:
-        widget.update()
-        return
-
     if not widget.testAttribute(Qt.WidgetAttribute.WA_WState_Polished):
         widget.update()
         return
@@ -106,17 +104,35 @@ def _theme_icon_path(value: Any) -> str | None:
     if path.is_absolute():
         return str(path)
 
-    root_path = ROOT / path
+    root_path = PATH_ROOT / path
     if root_path.exists():
         return str(root_path)
 
     return str(path)
 
 
+def _config_int(value: Any, default: int) -> int:
+    if isinstance(value, bool):
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _config_float(value: Any, default: float) -> float:
+    if isinstance(value, bool):
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
 class MTColumnsSetting(MTScrollArea):
     def __init__(
         self,
-        tabs: list[QWidget] | None = None,
+        tabs: Sequence[QWidget] | None = None,
         columns: int = 2,
         obj_name: str = "",
         parent: QWidget | None = None,
@@ -167,9 +183,6 @@ class MTColumnsSetting(MTScrollArea):
         self._rebalance_columns()
 
     def add_tab(self, tab: QWidget) -> None:
-        if not isinstance(tab, QWidget):
-            return
-
         self._tabs.append(tab)
         self._attach_tab_observers(tab)
         self.request_rebalance()
@@ -198,7 +211,8 @@ class MTColumnsSetting(MTScrollArea):
             self._column_heights = heights
 
             self._scroll_area_content.updateGeometry()
-            self.widget().updateGeometry()
+            if (scroll_widget := self.widget()) is not None:
+                scroll_widget.updateGeometry()
             self.updateGeometry()
         finally:
             self._rebalancing = False
@@ -210,9 +224,12 @@ class MTColumnsSetting(MTScrollArea):
             return
 
         try:
-            toggled.connect(lambda *_args: self.request_rebalance())
+            toggled.connect(self._on_tab_toggled)
         except Exception:
             return
+
+    def _on_tab_toggled(self, *_args: object) -> None:
+        self.request_rebalance()
 
     def _target_column_index(self) -> int:
         return min(
@@ -259,7 +276,9 @@ class MTColumnsSetting(MTScrollArea):
         height_hint = getattr(tab, "effective_height_hint", None)
         if callable(height_hint):
             try:
-                return max(1, int(height_hint()))
+                result = height_hint()
+                if isinstance(result, (int, float)):
+                    return max(1, int(result))
             except Exception:
                 pass
 
@@ -271,8 +290,9 @@ class MTColumnsSetting(MTScrollArea):
         minimum_hint = (
             tab.minimumSizeHint().height() if tab.minimumSizeHint().isValid() else 0
         )
+        layout = tab.layout()
         layout_hint = (
-            tab.layout().sizeHint().height() if tab.layout() is not None else 0
+            layout.sizeHint().height() if layout is not None else 0
         )
         return max(1, int(max(tab.sizeHint().height(), minimum_hint, layout_hint)))
 
@@ -294,7 +314,7 @@ class MTCollapsibleContainer(MTWidget):
         self,
         tr_key: str,
         obj_name: str,
-        widgets: list[QWidget] | None = None,
+        widgets: Sequence[QWidget] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -389,49 +409,45 @@ class MTCollapsibleContainer(MTWidget):
         self._apply_toggle_button_metrics()
         self._refresh_toggle_icon()
 
-    def apply_theme(self, data: dict) -> None:
-        if not isinstance(data, dict):
-            return
+    def apply_theme(self, data: dict[str, Any]) -> None:
+        icon = cast(dict[str, Any], data.get("icon")) if isinstance(data.get("icon"), dict) else {}
 
-        icon = data.get("icon") if isinstance(data.get("icon"), dict) else {}
+        source = icon.get("source", icon.get("path", icon.get("file")))
+        if (icon_path := _theme_icon_path(source)) is not None:
+            self._toggle_arrow_source = icon_path
 
-        if isinstance(icon, dict):
-            source = icon.get("source", icon.get("path", icon.get("file")))
-            if (icon_path := _theme_icon_path(source)) is not None:
-                self._toggle_arrow_source = icon_path
-
-            if "color" in icon:
-                color = to_qcolor(icon.get("color"))
-                self._toggle_arrow_color = (
-                    color.name(QColor.NameFormat.HexArgb) if color is not None else None
-                )
-
-            if (size := _positive_int(icon.get("size"))) is not None:
-                self._toggle_arrow_size = size
-
-            button_size = icon.get(
-                "button_size", icon.get("button-size", icon.get("buttonSize"))
+        if "color" in icon:
+            color = to_qcolor(icon.get("color"))
+            self._toggle_arrow_color = (
+                color.name(QColor.NameFormat.HexArgb) if color is not None else None
             )
-            if button_size is None and isinstance(icon.get("button"), dict):
-                button_size = icon["button"].get("size")
-            if (parsed_button_size := _positive_int(button_size)) is not None:
-                self._toggle_button_size = parsed_button_size
 
-            collapsed_rotation = icon.get(
-                "collapsed_rotation",
-                icon.get("collapsed-rotation", icon.get("collapsed")),
-            )
-            expanded_rotation = icon.get(
-                "expanded_rotation", icon.get("expanded-rotation", icon.get("expanded"))
-            )
-            if isinstance(icon.get("rotation"), dict):
-                rotation = icon["rotation"]
-                collapsed_rotation = rotation.get("collapsed", collapsed_rotation)
-                expanded_rotation = rotation.get("expanded", expanded_rotation)
-            if (parsed_collapsed := _measure(collapsed_rotation)) is not None:
-                self._toggle_arrow_collapsed_rotation = parsed_collapsed
-            if (parsed_expanded := _measure(expanded_rotation)) is not None:
-                self._toggle_arrow_expanded_rotation = parsed_expanded
+        if (size := _positive_int(icon.get("size"))) is not None:
+            self._toggle_arrow_size = size
+
+        button_size = icon.get(
+            "button_size", icon.get("button-size", icon.get("buttonSize"))
+        )
+        if button_size is None and isinstance(icon.get("button"), dict):
+            button_size = cast(dict[str, Any], icon["button"]).get("size")
+        if (parsed_button_size := _positive_int(button_size)) is not None:
+            self._toggle_button_size = parsed_button_size
+
+        collapsed_rotation = icon.get(
+            "collapsed_rotation",
+            icon.get("collapsed-rotation", icon.get("collapsed")),
+        )
+        expanded_rotation = icon.get(
+            "expanded_rotation", icon.get("expanded-rotation", icon.get("expanded"))
+        )
+        if isinstance(icon.get("rotation"), dict):
+            rotation = cast(dict[str, Any], icon["rotation"])
+            collapsed_rotation = rotation.get("collapsed", collapsed_rotation)
+            expanded_rotation = rotation.get("expanded", expanded_rotation)
+        if (parsed_collapsed := _measure(collapsed_rotation)) is not None:
+            self._toggle_arrow_collapsed_rotation = parsed_collapsed
+        if (parsed_expanded := _measure(expanded_rotation)) is not None:
+            self._toggle_arrow_expanded_rotation = parsed_expanded
 
         if not self._uses_theme_icon_rotation_animation():
             self._toggle_arrow_rotation = (
@@ -719,7 +735,7 @@ class MTCheckBoxSetting(MTWidget):
             bool(self._config.get(self._cfg_key, default=default))
         )
 
-        self._check_box.toggled.connect(lambda v: self._config.set(self._cfg_key, v))
+        self._check_box.toggled.connect(self._on_check_box_toggled)
         self._config.config_loaded.connect(
             lambda d=default: self._check_box.setChecked(
                 bool(self._config.get(self._cfg_key, default=d))
@@ -730,7 +746,10 @@ class MTCheckBoxSetting(MTWidget):
         self._main_layout.addStretch()
         self._main_layout.addWidget(self._check_box)
 
-    def resizeEvent(self, event: QEvent) -> None:
+    def _on_check_box_toggled(self, checked: bool) -> None:
+        self._config.set(self._cfg_key, checked)
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         available_height = max(12, self.height())
         self._check_box.sync_size(
@@ -778,7 +797,7 @@ class MTSwitchSetting(MTWidget):
         self._main_layout.addStretch()
         self._main_layout.addWidget(self._switch)
 
-    def resizeEvent(self, event: QEvent) -> None:
+    def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         available_height = max(12, self.height())
         self._switch.sync_size(
@@ -806,6 +825,10 @@ class MTSwitchSetting(MTWidget):
 
     def is_checked(self) -> bool:
         return self._switch.isChecked()
+
+    @property
+    def switch(self) -> MTSwitch:
+        return self._switch
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
@@ -862,7 +885,7 @@ class MTSwitchRowSetting(MTWidget):
     def switch(self) -> MTSwitch:
         return self._switch
 
-    def resizeEvent(self, event: QEvent) -> None:
+    def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         available_height = max(12, self.height())
         self._switch.sync_size(
@@ -894,7 +917,7 @@ class MTComboBoxSetting(MTWidget):
         config: Config | ConfigLoader,
         tr_key: str,
         cfg_key: str,
-        items: list[str | tuple[str, str]],
+        items: Sequence[str | tuple[str, str]],
         default: str,
         on_changed: Callable[[str], None] | None = None,
         parent: QWidget | None = None,
@@ -927,9 +950,7 @@ class MTComboBoxSetting(MTWidget):
         self._combo_box.set_content_width_mode("current")
         self.set_items(items, keep_current=False)
 
-        self._set_current_value(
-            self._config.get(self._cfg_key, default=default), fallback=default
-        )
+        self._set_current_value(self._config.get(self._cfg_key, default=default), fallback=default)
         self._combo_box.currentIndexChanged.connect(self._on_index_changed)
         self._config.config_loaded.connect(
             lambda d=default: self._set_current_value(
@@ -941,7 +962,7 @@ class MTComboBoxSetting(MTWidget):
         self._main_layout.addWidget(self._combo_box, 1)
 
     def set_items(
-        self, items: list[str | tuple[str, str]], *, keep_current: bool = True
+        self, items: Sequence[str | tuple[str, str]], *, keep_current: bool = True
     ) -> None:
         current_value: str | None = None
         if keep_current:
@@ -988,7 +1009,7 @@ class MTComboBoxSetting(MTWidget):
             self._set_current_value(target_value, fallback=self._default)
             self._combo_box.sync_content_width()
 
-    def _set_current_value(self, value: str, *, fallback: str | None = None) -> None:
+    def _set_current_value(self, value: Any, *, fallback: str | None = None) -> None:
         index = self._find_index(value)
         if index < 0 and fallback is not None:
             index = self._find_index(fallback)
@@ -997,7 +1018,7 @@ class MTComboBoxSetting(MTWidget):
         if index >= 0:
             self._combo_box.setCurrentIndex(index)
 
-    def _find_index(self, value: str | None) -> int:
+    def _find_index(self, value: Any) -> int:
         if value is None:
             return -1
 
@@ -1018,7 +1039,7 @@ class MTComboBoxSetting(MTWidget):
             if isinstance(data, str) and data.casefold() == needle_cf:
                 return idx
             text = self._combo_box.itemText(idx)
-            if isinstance(text, str) and text.casefold() == needle_cf:
+            if text.casefold() == needle_cf:
                 return idx
 
         return -1
@@ -1127,7 +1148,7 @@ class MTPathSetting(MTWidget):
         self._browse_button.setProperty("rainbowBorderTarget", True)
         self._browse_button.setText("")
         self._browse_button.set_text_icon(
-            source=str(ROOT / "src/assets/icons/folder.svg"),
+            source=str(PATH_FOLDER_ICON),
             align="center",
             size=QSize(18, 18),
             spacing=0.0,
@@ -1186,7 +1207,7 @@ class MTPathSetting(MTWidget):
     def _dialog_start_path(self) -> str:
         text = self._line_edit.text().strip()
         if not text:
-            return str(ROOT)
+            return str(PATH_ROOT)
 
         path = Path(text).expanduser()
         if path.exists():
@@ -1197,7 +1218,7 @@ class MTPathSetting(MTWidget):
         parent = path.parent
         if parent.exists():
             return str(parent)
-        return str(ROOT)
+        return str(PATH_ROOT)
 
 
 class MTSliderSetting(MTWidget):
@@ -1215,8 +1236,16 @@ class MTSliderSetting(MTWidget):
 
         self._config = config
         self._cfg_key = cfg_key
-        value = self._config.get(self._cfg_key, default=default)
-        self._prev_value = value if min_value <= value <= max_value else default
+        if isinstance(default, int):
+            current_value = _config_int(self._config.get(self._cfg_key, default=default), default)
+            min_int = int(min_value)
+            max_int = int(max_value)
+            self._prev_value = current_value if min_int <= current_value <= max_int else default
+        else:
+            current_value = _config_float(self._config.get(self._cfg_key, default=default), default)
+            min_float = float(min_value)
+            max_float = float(max_value)
+            self._prev_value = current_value if min_float <= current_value <= max_float else default
 
         obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, "_", self._cfg_key)
         self.setObjectName(f"{obj_name}_Slider_Setting")
@@ -1232,11 +1261,12 @@ class MTSliderSetting(MTWidget):
 
         if isinstance(default, int):
             self._spin_box = MTSpinBox(obj_name=f"{obj_name}_SpinBox")
+            self._spin_box.setRange(int(min_value), int(max_value))
+            self._spin_box.setValue(int(self._prev_value))
         else:
             self._spin_box = MTDoubleSpinBox(obj_name=f"{obj_name}_DoubleSpinBox")
-
-        self._spin_box.setRange(min_value, max_value)
-        self._spin_box.setValue(self._prev_value)
+            self._spin_box.setRange(float(min_value), float(max_value))
+            self._spin_box.setValue(float(self._prev_value))
         self._spin_box.setAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         )
@@ -1245,8 +1275,8 @@ class MTSliderSetting(MTWidget):
         )
 
         self._slider = MTSlider(obj_name=f"{obj_name}_Slider")
-        self._slider.setRange(min_value, max_value)
-        self._slider.setValue(self._prev_value)
+        self._slider.setRange(int(min_value), int(max_value))
+        self._slider.setValue(int(self._prev_value))
 
         self._slider.valueChanged.connect(self._spin_box.setValue)
         self._spin_box.valueChanged.connect(self._slider.setValue)
@@ -1259,7 +1289,7 @@ class MTSliderSetting(MTWidget):
         )
         self._config.config_loaded.connect(
             lambda d=default: self._slider.setValue(
-                self._config.get(self._cfg_key, default=d)
+                _config_int(self._config.get(self._cfg_key, default=d), int(d))
             )
         )
 
@@ -1273,3 +1303,11 @@ class MTSliderSetting(MTWidget):
         if self._spin_box.value() != self._prev_value:
             self._prev_value = self._spin_box.value()
             self._config.set(self._cfg_key, value)
+
+    @property
+    def spin_box(self) -> MTSpinBox | MTDoubleSpinBox:
+        return self._spin_box
+
+    @property
+    def slider(self) -> MTSlider:
+        return self._slider

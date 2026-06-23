@@ -7,15 +7,18 @@ import urllib.parse
 import urllib.request
 from copy import deepcopy
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QWidget
 
+from src.app.paths import PATH_ROOT
 from src.theme.colors import normalize_color, normalize_color_or_raw, to_qcolor
+from src.theme.constants import GRADIENT_DIRECTIONS, SUPPORTED_BG_MEDIA_EXTENSIONS
+from src.theme.paths import PATH_FONTS
 from src.theme.qss.normalizer import StyleNormalizer
-from src.utils.constants import GRADIENT_DIRECTIONS, PATH_FONTS, ROOT, SUPPORTED_BG_MEDIA_EXTENSIONS
+from src.theme.schema.access import theme_map
 
 _FONT_SOURCE_PATTERN = re.compile(r'^url\((?P<value>.+)\)$', re.IGNORECASE)
 _FONT_CSS_URL_PATTERN = re.compile(r'url\((?P<value>[^)]+)\)', re.IGNORECASE)
@@ -24,7 +27,6 @@ _SUPPORTED_FONT_EXTENSIONS = {'.ttf', '.otf', '.ttc', '.woff', '.woff2'}
 
 class _FontDownloadNotifier(QObject):
     font_ready = Signal(str)
-
 
 class QssBuilder(StyleNormalizer):
     def __init__(self, theme_base_dir: Path | None = None) -> None:
@@ -50,11 +52,8 @@ class QssBuilder(StyleNormalizer):
         widgets: list[QWidget] | None = None,
         root_widget: QWidget | None = None,
     ) -> str:
-        if not isinstance(styles, dict):
-            return ''
-
         widgets = widgets or []
-        if isinstance(obj_name, str) and obj_name != '*' and ('*' in obj_name or obj_name.startswith('MT')):
+        if obj_name != '*' and ('*' in obj_name or obj_name.startswith('MT')):
             return self._build_widget_specific_qss(obj_name, styles, widgets)
 
         if self.contains_resolvable_radius(styles):
@@ -69,29 +68,28 @@ class QssBuilder(StyleNormalizer):
         return self._build_qss_block(obj_name, styles, selector)
 
     def build_rules(self, data: Any) -> list[str]:
-        if not isinstance(data, dict):
+        if (data_dict := theme_map(data)) is None:
             return []
 
         rules: list[str] = []
 
-        bg_data = data.get('background') if isinstance(data.get('background'), dict) else {}
-        if isinstance(bg_data, dict):
-            if (bg_color := self.build_background_color(bg_data.get('color'))):
-                rules.append(bg_color)
-            if (bg_image := self.build_background_image(bg_data.get('image'))):
-                rules.append(bg_image)
+        bg_data = theme_map(data_dict.get('background')) or {}
+        if (bg_color := self.build_background_color(bg_data.get('color'))):
+            rules.append(bg_color)
+        if (bg_image := self.build_background_image(bg_data.get('image'))):
+            rules.append(bg_image)
 
-        if isinstance((media_data := data.get('media')), dict):
+        if (media_data := theme_map(data_dict.get('media'))) is not None:
             source = media_data.get('source')
             if isinstance(source, str) and source.strip():
                 resolved_source = self.resolve_media_source(source)
                 if (media_bg_image := self.build_background_image(resolved_source)):
                     rules.append(media_bg_image)
 
-        if isinstance((text_data := data.get('text')), dict):
+        if (text_data := theme_map(data_dict.get('text'))) is not None:
             if (text_color := text_data.get('color')):
                 rules.append(f'color: {normalize_color_or_raw(text_color)};')
-            if isinstance((font_data := text_data.get('font')), dict):
+            if (font_data := theme_map(text_data.get('font'))) is not None:
                 if (family := font_data.get('family')):
                     if (resolved_family := self.resolve_font_family(str(family))):
                         rules.append(f'font-family: {resolved_family};')
@@ -102,22 +100,22 @@ class QssBuilder(StyleNormalizer):
                 if (style := font_data.get('style')):
                     rules.append(f'font-style: {style};')
 
-        if (qss_rules := self.build_qss_passthrough_rules(data.get('qss'))):
+        if (qss_rules := self.build_qss_passthrough_rules(data_dict.get('qss'))):
             rules.extend(qss_rules)
 
-        if isinstance((border_data := data.get('border')), dict):
+        if (border_data := theme_map(data_dict.get('border'))) is not None:
             border_rules = self.build_border_rules(border_data)
             rules.extend(border_rules)
-            radius_value = border_data.get('radius', bg_data.get('radius') if isinstance(bg_data, dict) else None)
+            radius_value = border_data.get('radius', bg_data.get('radius'))
             if (radius_rule := self.build_border_radius_rule(radius_value)):
                 if not border_rules:
                     rules.append('border: none;')
                 rules.append(radius_rule)
-        elif isinstance(bg_data, dict) and (radius_rule := self.build_border_radius_rule(bg_data.get('radius'))):
+        elif (radius_rule := self.build_border_radius_rule(bg_data.get('radius'))):
             rules.append('border: none;')
             rules.append(radius_rule)
 
-        rules.extend(self.build_padding_rules(data))
+        rules.extend(self.build_padding_rules(data_dict))
 
         return rules
 
@@ -126,7 +124,9 @@ class QssBuilder(StyleNormalizer):
             return None
         if isinstance(data, str):
             return f'background-color: {normalize_color_or_raw(data)};'
-        if isinstance(data, dict) and (gradient := self.build_gradient(data)):
+        if (gradient_data := theme_map(data)) is not None and (
+            gradient := self.build_gradient(gradient_data)
+        ):
             return f'background: {gradient};'
         return None
 
@@ -148,9 +148,6 @@ class QssBuilder(StyleNormalizer):
         return f'background-image: {value};'
 
     def build_gradient(self, data: dict[str, Any]) -> str | None:
-        if not isinstance(data, dict):
-            return None
-
         if not (stops := self.parse_gradient_stops(data.get('stops'))):
             return None
 
@@ -164,22 +161,26 @@ class QssBuilder(StyleNormalizer):
                 cx, cy = data.get('center', (0.5, 0.5))
                 radius = data.get('radius', 0.5)
                 return f'qradialgradient(cx:{cx}, cy:{cy}, radius:{radius}, {stop_text})'
-        return None
+            case _:
+                return None
 
     def parse_gradient_stops(self, data: Any) -> list[tuple[float, str]]:
         if not isinstance(data, (list, tuple)):
             return []
 
         stops: list[tuple[float, str]] = []
-        for stop in data:
+        for stop in cast(list[Any] | tuple[Any, ...], data):
             pos: Any = None
             color: Any = None
 
-            if isinstance(stop, dict):
-                pos = stop.get('pos', stop.get('position'))
-                color = stop.get('color')
-            elif isinstance(stop, (list, tuple)) and len(stop) >= 2:
-                pos, color = stop[0:2]
+            if (stop_dict := theme_map(stop)) is not None:
+                pos = stop_dict.get('pos', stop_dict.get('position'))
+                color = stop_dict.get('color')
+            elif isinstance(stop, (list, tuple)):
+                stop_values = cast(list[Any] | tuple[Any, ...], stop)
+                if len(stop_values) < 2:
+                    continue
+                pos, color = stop_values[0:2]
             else:
                 continue
 
@@ -187,7 +188,7 @@ class QssBuilder(StyleNormalizer):
                 continue
 
             try:
-                pos_value = float(pos)
+                pos_value = float(str(pos).strip())
             except (TypeError, ValueError):
                 continue
 
@@ -208,9 +209,6 @@ class QssBuilder(StyleNormalizer):
         return '\n'.join(rules) if rules else None
 
     def build_border_rules(self, data: dict[str, Any]) -> list[str]:
-        if not isinstance(data, dict):
-            return []
-
         rules: list[str] = []
         width = self.normalize_measure(data.get('width')) or ''
         style = str(data.get('style', '')).strip()
@@ -235,7 +233,7 @@ class QssBuilder(StyleNormalizer):
         raw_side_data = data.get(side)
         if isinstance(raw_side_data, str):
             return [f'border-{side}: {raw_side_data.strip().rstrip(";")};'] if raw_side_data.strip() else []
-        side_data = raw_side_data if isinstance(raw_side_data, dict) else {}
+        side_data = theme_map(raw_side_data) or {}
 
         width = self.normalize_measure(side_data.get('width', data.get(f'{side}_width', ''))) or ''
         style = str(side_data.get('style', data.get(f'{side}_style', ''))).strip()
@@ -264,10 +262,12 @@ class QssBuilder(StyleNormalizer):
         return f'border-radius: {radius.strip()};'
 
     def build_padding_rules(self, data: Any) -> list[str]:
-        if isinstance(data, dict):
-            box = self.normalize_box(data.get('padding'))
+        if (data_dict := theme_map(data)) is not None:
+            box = self.normalize_box(data_dict.get('padding'))
             side_values = {
-                side: self.normalize_measure(data.get(f'padding-{side}', data.get(f'padding_{side}')))
+                side: self.normalize_measure(
+                    data_dict.get(f'padding-{side}', data_dict.get(f'padding_{side}'))
+                )
                 for side in ('top', 'right', 'bottom', 'left')
             }
         else:
@@ -299,12 +299,12 @@ class QssBuilder(StyleNormalizer):
                 return []
             return [text if text.endswith(';') else f'{text};']
 
-        if not isinstance(data, dict):
+        if (data_dict := theme_map(data)) is None:
             return []
 
         rules: list[str] = []
-        for key, value in data.items():
-            if not isinstance(key, str) or value is None:
+        for key, value in data_dict.items():
+            if value is None:
                 continue
             name = key.strip()
             text = str(value).strip()
@@ -330,23 +330,23 @@ class QssBuilder(StyleNormalizer):
         return None
 
     def contains_resolvable_radius(self, data: Any) -> bool:
-        if not isinstance(data, dict):
+        if (data_dict := theme_map(data)) is None:
             return False
 
-        if isinstance((border := data.get('border')), dict):
+        if (border := theme_map(data_dict.get('border'))) is not None:
             if self._radius_needs_widget_resolution(border.get('radius')):
                 return True
 
-        if isinstance((background := data.get('background')), dict):
+        if (background := theme_map(data_dict.get('background'))) is not None:
             if self._radius_needs_widget_resolution(background.get('radius')):
                 return True
 
-        for value in data.values():
-            if isinstance(value, dict) and self.contains_resolvable_radius(value):
+        for value in data_dict.values():
+            if theme_map(value) is not None and self.contains_resolvable_radius(value):
                 return True
             if isinstance(value, list):
-                for item in value:
-                    if isinstance(item, dict) and self.contains_resolvable_radius(item):
+                for item in cast(list[Any], value):
+                    if theme_map(item) is not None and self.contains_resolvable_radius(item):
                         return True
         return False
 
@@ -354,17 +354,17 @@ class QssBuilder(StyleNormalizer):
         return self.contains_resolvable_radius(data)
 
     def resolve_relative_styles(self, data: Any, widget: QWidget) -> Any:
-        if isinstance(data, dict):
+        if (data_dict := theme_map(data)) is not None:
             resolved: dict[str, Any] = {}
-            for key, value in data.items():
-                if key in {'background', 'border'} and isinstance(value, dict):
-                    resolved[key] = self._resolve_radius_styles(value, widget)
+            for key, value in data_dict.items():
+                if key in {'background', 'border'} and (value_dict := theme_map(value)) is not None:
+                    resolved[key] = self._resolve_radius_styles(value_dict, widget)
                 else:
                     resolved[key] = self.resolve_relative_styles(value, widget)
             return resolved
 
         if isinstance(data, list):
-            return [self.resolve_relative_styles(value, widget) for value in data]
+            return [self.resolve_relative_styles(value, widget) for value in cast(list[Any], data)]
 
         return deepcopy(data)
 
@@ -378,8 +378,8 @@ class QssBuilder(StyleNormalizer):
         if not raw.is_absolute():
             if self._theme_base_dir is not None:
                 candidates.insert(0, self._theme_base_dir / raw)
-            candidates.append(ROOT / raw)
-            candidates.append(ROOT / 'src' / raw)
+            candidates.append(PATH_ROOT / raw)
+            candidates.append(PATH_ROOT / 'src' / raw)
 
         for candidate in candidates:
             if candidate.exists() and candidate.is_file():
@@ -443,7 +443,10 @@ class QssBuilder(StyleNormalizer):
             return self._download_remote_font(source)
 
         if parsed.scheme == 'file':
-            local_path = Path(urllib.request.url2pathname(parsed.path))
+            local_path_text = urllib.parse.unquote(parsed.path)
+            if re.match(r'^/[A-Za-z]:', local_path_text):
+                local_path_text = local_path_text[1:]
+            local_path = Path(local_path_text)
             return local_path if local_path.exists() and local_path.is_file() else None
 
         raw = Path(source).expanduser()
@@ -451,7 +454,7 @@ class QssBuilder(StyleNormalizer):
         if not raw.is_absolute():
             if self._theme_base_dir is not None:
                 candidates.insert(0, self._theme_base_dir / raw)
-            candidates.append(ROOT / raw)
+            candidates.append(PATH_ROOT / raw)
 
         for candidate in candidates:
             if candidate.exists() and candidate.is_file():
@@ -588,9 +591,6 @@ class QssBuilder(StyleNormalizer):
         return '\n'.join(qss_parts)
 
     def _widget_selector(self, qss_target: str, widget: QWidget) -> str | None:
-        if not isinstance(qss_target, str):
-            return None
-
         object_name = widget.objectName().strip()
         if not object_name:
             return None

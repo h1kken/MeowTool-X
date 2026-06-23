@@ -1,17 +1,69 @@
 import functools
 import time
 from pathlib import Path
-from typing import Any, Awaitable, Callable
+from typing import Awaitable, Callable, Concatenate, Literal, ParamSpec, TypeVar, overload
 
 from aiohttp import ClientResponse
 
 from src.utils.logging import logger
 
+P = ParamSpec("P")
+R = TypeVar("R")
+T = TypeVar("T")
 
-def log_action(action: str, *, re_raise: bool = False):
-    def log_action_decorator(func):
+
+@overload
+def log_action(
+    action: str,
+    *,
+    re_raise: Literal[True],
+) -> Callable[
+    [Callable[Concatenate[Path, P], R]],
+    Callable[Concatenate[Path, P], R],
+]:
+    ...
+
+
+@overload
+def log_action(
+    action: str,
+    *,
+    re_raise: Literal[False] = False,
+) -> Callable[
+    [Callable[Concatenate[Path, P], R]],
+    Callable[Concatenate[Path, P], R | None],
+]:
+    ...
+
+
+def log_action(
+    action: str,
+    *,
+    re_raise: bool = False,
+) -> Callable[
+    [Callable[Concatenate[Path, P], R]],
+    Callable[Concatenate[Path, P], R] | Callable[Concatenate[Path, P], R | None],
+]:
+    def log_action_decorator(
+        func: Callable[Concatenate[Path, P], R],
+    ) -> Callable[Concatenate[Path, P], R] | Callable[Concatenate[Path, P], R | None]:
+        if re_raise:
+            @functools.wraps(func)
+            def log_action_wrapper_reraise(path: Path, *args: P.args, **kwargs: P.kwargs) -> R:
+                with logger.origin_scope(overwrite=False, depth=2):
+                    try:
+                        return func(path, *args, **kwargs)
+                    except FileExistsError:
+                        logger.debug(f'Can\'t {action} \'{path}\' that already exists')
+                        raise
+                    except Exception as e:
+                        logger.exception(f'Can\'t {action}: {path}. Error: {type(e).__name__}')
+                        raise
+
+            return log_action_wrapper_reraise
+
         @functools.wraps(func)
-        def log_action_wrapper(path: Path, *args, **kwargs):
+        def log_action_wrapper(path: Path, *args: P.args, **kwargs: P.kwargs) -> R | None:
             with logger.origin_scope(overwrite=False, depth=2):
                 try:
                     return func(path, *args, **kwargs)
@@ -27,9 +79,9 @@ def log_action(action: str, *, re_raise: bool = False):
     return log_action_decorator
 
 
-def log_network_request(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
+def log_network_request(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
     @functools.wraps(func)
-    async def wrapper(*args, **kwargs):
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         with logger.origin_scope(overwrite=False, depth=2):
             start = time.perf_counter()
             result = await func(*args, **kwargs)

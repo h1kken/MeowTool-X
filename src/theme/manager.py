@@ -1,8 +1,8 @@
 from copy import deepcopy
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, cast
 
-from PySide6.QtCore import QEvent, QObject, QSize, Signal, Qt, QTimer
+from PySide6.QtCore import QEvent, QMargins, QObject, QSize, Signal, Qt, QTimer
 from PySide6.QtGui import QFont, QPalette
 from PySide6.QtWidgets import QBoxLayout, QGraphicsDropShadowEffect, QLayout, QScrollArea, QSizePolicy, QWidget
 
@@ -21,8 +21,16 @@ from src.theme.schema.payload import (
     merge_widget_theme_data,
     normalize_theme_payload,
 )
+from src.theme.schema.access import coerce_int, theme_map
+from src.theme.schema.types import ThemeMap
 from src.theme.storage.io import load_theme_payload
-
+from src.theme.types import (
+    GeometrySnapshot,
+    LayoutSnapshot,
+    RuntimeStylesMap,
+    ThemeChangePayload,
+    ThemeWidgetsMap,
+)
 
 class ThemeManager(QObject):
     theme_changed = Signal(dict, dict)
@@ -30,14 +38,14 @@ class ThemeManager(QObject):
     def __init__(
         self,
         root: QWidget,
-        default_theme: dict | None = None,
+        default_theme: ThemeMap | None = None,
         *,
         emit_theme_changed: bool = True,
-    ):
+    ) -> None:
         super().__init__()
         self._root = root
-        self._default_theme = default_theme or {}
-        self._current_theme: dict[str, Any] = normalize_theme_payload(self._default_theme)
+        self._default_theme: ThemeMap = deepcopy(default_theme) if default_theme is not None else {}
+        self._current_theme: ThemeMap = normalize_theme_payload(self._default_theme)
         self._qss_builder = QssBuilder()
         self._style_normalizer = StyleNormalizer()
         self._styled_parts_widgets: set[QWidget] = set()
@@ -45,11 +53,11 @@ class ThemeManager(QObject):
         self._styled_combo_popup_widgets: set[QWidget] = set()
         self._styled_theme_prop_widgets: set[QWidget] = set()
         self._styled_rainbow_target_widgets: dict[QWidget, Any] = {}
-        self._styled_geometry_widgets: dict[QWidget, dict[str, int]] = {}
+        self._styled_geometry_widgets: dict[QWidget, GeometrySnapshot] = {}
         self._styled_viewport_margin_widgets: dict[QScrollArea, tuple[int, int, int, int]] = {}
         self._styled_size_policy_widgets: dict[QWidget, tuple[QSizePolicy.Policy, QSizePolicy.Policy]] = {}
         self._styled_layout_item_alignment_widgets: dict[QWidget, Qt.AlignmentFlag] = {}
-        self._styled_layout_widgets: dict[QWidget, dict[str, Any]] = {}
+        self._styled_layout_widgets: dict[QWidget, LayoutSnapshot] = {}
         self._styled_text_alignment_widgets: dict[QWidget, int] = {}
         self._styled_effect_widgets: set[QWidget] = set()
         self._styled_text_shadow_widgets: set[QWidget] = set()
@@ -67,12 +75,19 @@ class ThemeManager(QObject):
         self._media_overlay_filters: set[QWidget] = set()
         self._theme_base_dir: Path | None = None
         self._theme_change_suppressed = False
-        self._pending_theme_change: tuple[dict[str, Any], dict[str, Any]] | None = None
-        self._last_emitted_theme_change: tuple[dict[str, Any], dict[str, Any]] | None = None
+        self._pending_theme_change: ThemeChangePayload | None = None
+        self._last_emitted_theme_change: ThemeChangePayload | None = None
         self._emit_theme_changed_enabled = bool(emit_theme_changed)
         self._qss_builder.font_ready.connect(self._on_async_font_ready)
 
-    def eventFilter(self, obj, event):
+    @property
+    def current_theme(self) -> ThemeMap:
+        return deepcopy(self._current_theme)
+
+    def current_theme_widgets(self) -> ThemeWidgetsMap:
+        return deepcopy(self._theme_widgets())
+
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         if isinstance(obj, QWidget):
             if obj in self._media_overlay_filters:
                 overlay = self._media_overlays.get(obj)
@@ -85,29 +100,25 @@ class ThemeManager(QObject):
                         overlay.hide()
         return super().eventFilter(obj, event)
 
-    def load(self, theme: Path | dict, *, merge_with_default: bool = False):
+    def load(self, theme: Path | ThemeMap, *, merge_with_default: bool = False) -> None:
         if isinstance(theme, Path):
             self._theme_base_dir = theme.parent
             self._qss_builder.set_theme_base_dir(self._theme_base_dir)
-            theme = load_theme_payload(theme)
-            if theme is None:
-                return
+            theme_map = load_theme_payload(theme)
         else:
             self._theme_base_dir = None
             self._qss_builder.set_theme_base_dir(None)
-
-        if not isinstance(theme, dict):
-            return
+            theme_map = theme
 
         if merge_with_default:
             default_theme = normalize_theme_payload(self._default_theme)
-            user_theme = normalize_theme_payload(theme)
+            user_theme = normalize_theme_payload(theme_map)
             merged_theme = deep_merge_dicts(
                 {key: value for key, value in default_theme.items() if key != 'widgets'},
                 {key: value for key, value in user_theme.items() if key != 'widgets'},
             )
-            merged_widgets: dict[str, dict[str, dict]] = deepcopy(default_theme.get('widgets', {}))
-            user_widgets: dict[str, dict[str, dict]] = user_theme.get('widgets', {})
+            merged_widgets: ThemeWidgetsMap = deepcopy(self._theme_widgets(default_theme))
+            user_widgets = self._theme_widgets(user_theme)
 
             for obj_name, data in user_widgets.items():
                 merged_widgets[obj_name] = merge_widget_theme_data(
@@ -119,115 +130,128 @@ class ThemeManager(QObject):
             self._current_theme = merged_theme
             return
 
-        self._current_theme = normalize_theme_payload(theme)
+        self._current_theme = normalize_theme_payload(theme_map)
 
-    def apply(self):
+    def apply(self) -> None:
         self._reset_runtime_styles()
-        qss_parts = []
-        animations = {}
-        runtime_styles_by_widget: dict[QWidget, dict[str, Any]] = {}
-
-        widget_items = list(self._current_theme.get('widgets', {}).items())
-        for _index, (target, styles) in sorted(
-            enumerate(widget_items),
-            key=self._theme_widget_sort_key,
-        ):
-            if not isinstance(styles, dict):
-                continue
-
-            qss_target = normalize_qss_target(target)
-            effective_styles = styles
-            if qss_target == '*' and isinstance(styles.get('media'), dict):
-                effective_styles = {key: value for key, value in styles.items() if key != 'media'}
-
-            widgets = resolve_target_widgets(self._root, target, include_window=True)
-            style_options, effective_styles = self._extract_style_options(effective_styles)
-            if style_options.get('clear') is True:
-                self._clear_target_widget_styles(widgets)
-                for widget in widgets:
-                    runtime_styles_by_widget.pop(widget, None)
-
-            for widget in widgets:
-                merged_styles = merge_widget_theme_data(
-                    runtime_styles_by_widget.get(widget),
-                    effective_styles,
-                )
-                merged_styles = self._merge_checkable_state_styles(widget, merged_styles)
-                runtime_styles_by_widget[widget] = merged_styles
-                self._apply_theme_helper_properties(merged_styles, [widget])
-                self._apply_runtime_styles(target, merged_styles, widgets=[widget])
-                if self._has_checkable_state_styles(effective_styles):
-                    self._bind_checkable_state_style(widget)
-
-            selector = '' if qss_target.startswith(('*', 'MT')) else '#'
-            qss_styles = self._strip_checkable_state_styles(effective_styles)
-            if (qss := self._build_qss(qss_target, qss_styles, selector, widgets=widgets)):
-                qss_parts.append(qss)
-            anims = effective_styles.get('animations')
-            if not anims and isinstance(styles.get('animations'), (dict, list)):
-                anims = styles.get('animations')
-            if anims:
-                animations[target] = deepcopy(anims)
-
+        qss_parts, animations = self._build_theme_application(
+            self._root,
+            include_window=True,
+            skip_empty_targets=False,
+            collect_animations=True,
+        )
         self._root.setStyleSheet('\n'.join(qss_parts))
-        self._emit_theme_changed(animations, deepcopy(self._current_theme.get('widgets', {})))
+        self._emit_theme_changed(animations, deepcopy(self._theme_widgets()))
 
     def apply_to_subtree(self, root: QWidget) -> None:
-        if not isinstance(root, QWidget):
-            return
+        qss_parts, _animations = self._build_theme_application(
+            root,
+            include_window=False,
+            skip_empty_targets=True,
+            collect_animations=False,
+        )
+        root.setStyleSheet('\n'.join(qss_parts))
+        root.update()
 
+    def _build_theme_application(
+        self,
+        root: QWidget,
+        *,
+        include_window: bool,
+        skip_empty_targets: bool,
+        collect_animations: bool,
+    ) -> tuple[list[str], ThemeMap]:
         qss_parts: list[str] = []
-        runtime_styles_by_widget: dict[QWidget, dict[str, Any]] = {}
-        widget_items = list(self._current_theme.get('widgets', {}).items())
+        animations: ThemeMap = {}
+        runtime_styles_by_widget: RuntimeStylesMap = {}
 
+        widget_items = list(self._theme_widgets().items())
         for _index, (target, styles) in sorted(
             enumerate(widget_items),
             key=self._theme_widget_sort_key,
         ):
-            if not isinstance(styles, dict):
+            qss_target, effective_styles = self._prepare_target_styles(target, styles)
+            widgets = resolve_target_widgets(root, target, include_window=include_window)
+            if skip_empty_targets and not widgets:
                 continue
 
-            qss_target = normalize_qss_target(target)
-            effective_styles = styles
-            if qss_target == '*' and isinstance(styles.get('media'), dict):
-                effective_styles = {
-                    key: value for key, value in styles.items() if key != 'media'
-                }
+            resolved_styles = self._apply_target_runtime_styles(
+                target,
+                effective_styles,
+                widgets,
+                runtime_styles_by_widget,
+            )
+            if collect_animations and (target_animations := self._target_animations(styles, resolved_styles)) is not None:
+                animations[target] = deepcopy(target_animations)
 
-            widgets = resolve_target_widgets(root, target, include_window=False)
-            if not widgets:
-                continue
-
-            style_options, effective_styles = self._extract_style_options(effective_styles)
-            if style_options.get('clear') is True:
-                self._clear_target_widget_styles(widgets)
-                for widget in widgets:
-                    runtime_styles_by_widget.pop(widget, None)
-
-            for widget in widgets:
-                merged_styles = merge_widget_theme_data(
-                    runtime_styles_by_widget.get(widget),
-                    effective_styles,
-                )
-                merged_styles = self._merge_checkable_state_styles(widget, merged_styles)
-                runtime_styles_by_widget[widget] = merged_styles
-                self._apply_theme_helper_properties(merged_styles, [widget])
-                self._apply_runtime_styles(target, merged_styles, widgets=[widget])
-                if self._has_checkable_state_styles(effective_styles):
-                    self._bind_checkable_state_style(widget)
-
-            selector = '' if qss_target.startswith(('*', 'MT')) else '#'
-            qss_styles = self._strip_checkable_state_styles(effective_styles)
-            if qss := self._build_qss(
-                qss_target,
-                qss_styles,
-                selector,
-                widgets=widgets,
-            ):
+            qss = self._target_qss(qss_target, resolved_styles, widgets)
+            if qss:
                 qss_parts.append(qss)
 
-        root.setStyleSheet('\n'.join(qss_parts))
-        root.update()
+        return qss_parts, animations
+
+    def _prepare_target_styles(
+        self,
+        target: str,
+        styles: ThemeMap,
+    ) -> tuple[str, ThemeMap]:
+        qss_target = normalize_qss_target(target)
+        effective_styles: ThemeMap = styles
+        if qss_target == '*' and isinstance(styles.get('media'), dict):
+            effective_styles = {
+                key: value for key, value in styles.items() if key != 'media'
+            }
+        return qss_target, effective_styles
+
+    def _apply_target_runtime_styles(
+        self,
+        target: str,
+        styles: ThemeMap,
+        widgets: list[QWidget],
+        runtime_styles_by_widget: RuntimeStylesMap,
+    ) -> ThemeMap:
+        style_options, effective_styles = self._extract_style_options(styles)
+        if style_options.get('clear') is True:
+            self._clear_target_widget_styles(widgets)
+            for widget in widgets:
+                runtime_styles_by_widget.pop(widget, None)
+
+        for widget in widgets:
+            merged_styles = merge_widget_theme_data(
+                runtime_styles_by_widget.get(widget),
+                effective_styles,
+            )
+            merged_styles = self._merge_checkable_state_styles(widget, merged_styles)
+            runtime_styles_by_widget[widget] = merged_styles
+            self._apply_theme_helper_properties(merged_styles, [widget])
+            self._apply_runtime_styles(target, merged_styles, widgets=[widget])
+            if self._has_checkable_state_styles(effective_styles):
+                self._bind_checkable_state_style(widget)
+
+        return effective_styles
+
+    def _target_qss(
+        self,
+        qss_target: str,
+        styles: ThemeMap,
+        widgets: list[QWidget],
+    ) -> str:
+        selector = '' if qss_target.startswith(('*', 'MT')) else '#'
+        qss_styles = self._strip_checkable_state_styles(styles)
+        return self._build_qss(qss_target, qss_styles, selector, widgets=widgets)
+
+    def _target_animations(
+        self,
+        original_styles: ThemeMap,
+        effective_styles: ThemeMap,
+    ) -> dict[str, Any] | list[Any] | None:
+        anims = effective_styles.get('animations')
+        if isinstance(anims, (dict, list)):
+            return cast(dict[str, Any] | list[Any], anims)
+        fallback_anims = original_styles.get('animations')
+        if isinstance(fallback_anims, (dict, list)):
+            return cast(dict[str, Any] | list[Any], fallback_anims)
+        return None
 
     def _on_async_font_ready(self, _source: str) -> None:
         self.apply()
@@ -242,7 +266,7 @@ class ThemeManager(QObject):
             self._pending_theme_change = None
             self._emit_theme_changed(animations, widgets)
 
-    def _emit_theme_changed(self, animations: dict[str, Any], theme_widgets: dict[str, Any]) -> None:
+    def _emit_theme_changed(self, animations: ThemeMap, theme_widgets: ThemeWidgetsMap) -> None:
         if not self._emit_theme_changed_enabled:
             self._pending_theme_change = None
             return
@@ -263,6 +287,10 @@ class ThemeManager(QObject):
         self._pending_theme_change = None
         self._last_emitted_theme_change = deepcopy(payload)
         self.theme_changed.emit(*payload)
+
+    def _theme_widgets(self, theme: ThemeMap | None = None) -> ThemeWidgetsMap:
+        source = self._current_theme if theme is None else theme
+        return cast(ThemeWidgetsMap, theme_map(source.get('widgets')) or {})
 
     def _reset_runtime_styles(self) -> None:
         for widget, original in self._styled_rainbow_target_widgets.items():
@@ -320,13 +348,9 @@ class ThemeManager(QObject):
                 if not isinstance((layout := widget.layout()), QLayout):
                     continue
                 self._clear_layout_justify(layout, original)
-                margin = original.get('margin')
-                if isinstance(margin, tuple) and len(margin) == 4:
-                    layout.setContentsMargins(*margin)
-                if isinstance((spacing := original.get('spacing')), int):
-                    layout.setSpacing(spacing)
-                if isinstance((alignment := original.get('alignment')), int):
-                    layout.setAlignment(Qt.AlignmentFlag(alignment))
+                layout.setContentsMargins(*original['margin'])
+                layout.setSpacing(original['spacing'])
+                layout.setAlignment(Qt.AlignmentFlag(original['alignment']))
             except RuntimeError:
                 continue
 
@@ -419,7 +443,7 @@ class ThemeManager(QObject):
 
         for widget in self._styled_effect_widgets:
             try:
-                widget.setGraphicsEffect(None)
+                widget.setGraphicsEffect(cast(Any, None))
             except RuntimeError:
                 continue
 
@@ -484,28 +508,20 @@ class ThemeManager(QObject):
         self._media_overlays.clear()
         self._media_overlay_filters.clear()
 
-    def _has_checkable_state_styles(self, styles: dict[str, Any]) -> bool:
-        return isinstance(styles, dict) and (
-            isinstance(styles.get('checked'), dict) or
-            isinstance(styles.get('unchecked'), dict)
-        )
+    def _has_checkable_state_styles(self, styles: ThemeMap) -> bool:
+        return theme_map(styles.get('checked')) is not None or theme_map(styles.get('unchecked')) is not None
 
-    def _strip_checkable_state_styles(self, styles: dict[str, Any]) -> dict[str, Any]:
-        if not isinstance(styles, dict):
-            return {}
+    def _strip_checkable_state_styles(self, styles: ThemeMap) -> ThemeMap:
         return {
             key: deepcopy(value)
             for key, value in styles.items()
             if key not in {'checked', 'unchecked'}
         }
 
-    def _merge_checkable_state_styles(self, widget: QWidget, styles: dict[str, Any]) -> dict[str, Any]:
-        if not isinstance(styles, dict):
-            return {}
-
+    def _merge_checkable_state_styles(self, widget: QWidget, styles: ThemeMap) -> ThemeMap:
         merged = self._strip_checkable_state_styles(styles)
-        state_styles = styles.get('checked') if self._widget_is_checked(widget) else styles.get('unchecked')
-        if isinstance(state_styles, dict):
+        state_styles = theme_map(styles.get('checked')) if self._widget_is_checked(widget) else theme_map(styles.get('unchecked'))
+        if state_styles is not None:
             merged = merge_widget_theme_data(merged, state_styles)
         return merged
 
@@ -528,27 +544,25 @@ class ThemeManager(QObject):
             return
 
         self._checkable_state_style_base_qss.setdefault(widget, widget.styleSheet())
-        slot = lambda _checked, w=widget, self=self: QTimer.singleShot(0, lambda: self._refresh_checkable_state_widget(w))
+        def slot(_checked: bool, w: QWidget = widget) -> None:
+            QTimer.singleShot(0, lambda: self._refresh_checkable_state_widget(w))
+
         self._checkable_state_style_slots[widget] = slot
         toggled.connect(slot)
 
     def _refresh_checkable_state_widget(self, widget: QWidget) -> None:
-        if not isinstance(widget, QWidget):
-            return
-
         try:
             widget.objectName()
         except RuntimeError:
             return
 
-        merged_styles: dict[str, Any] = {}
+        merged_styles: ThemeMap = {}
         widget_items = list(self._current_theme.get('widgets', {}).items())
         for _index, (target, styles) in sorted(
             enumerate(widget_items),
             key=self._theme_widget_sort_key,
         ):
-            if not isinstance(styles, dict):
-                continue
+            styles = cast(ThemeMap, styles)
 
             if widget not in resolve_target_widgets(self._root, target, include_window=True):
                 continue
@@ -584,10 +598,7 @@ class ThemeManager(QObject):
         except RuntimeError:
             return
 
-    def _extract_style_options(self, styles: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
-        if not isinstance(styles, dict):
-            return {}, {}
-
+    def _extract_style_options(self, styles: ThemeMap) -> tuple[dict[str, Any], ThemeMap]:
         options: dict[str, Any] = {}
         filtered = dict(styles)
         if 'clear' in filtered:
@@ -597,7 +608,7 @@ class ThemeManager(QObject):
     def _clear_target_widget_styles(self, widgets: list[QWidget]) -> None:
         for widget in widgets:
             try:
-                widget.setStyleSheet('')
+                self._set_widget_stylesheet_if_changed(widget, '')
                 clear_box_theme = getattr(widget, 'clear_box_theme', None)
                 if callable(clear_box_theme):
                     clear_box_theme()
@@ -605,109 +616,171 @@ class ThemeManager(QObject):
             except RuntimeError:
                 continue
 
-    def _apply_theme_helper_properties(self, styles: dict[str, dict], widgets: list[QWidget]) -> None:
-        if not isinstance(styles, dict):
-            return
+    def _set_widget_property_if_changed(self, widget: QWidget, name: str, value: object) -> bool:
+        if widget.property(name) == value:
+            return False
+        widget.setProperty(name, value)
+        return True
 
+    def _set_widget_stylesheet_if_changed(self, widget: QWidget, stylesheet: str) -> bool:
+        if widget.styleSheet() == stylesheet:
+            return False
+        widget.setStyleSheet(stylesheet)
+        return True
+
+    def _set_layout_margins_if_changed(self, layout: QLayout, margins: tuple[int, int, int, int]) -> bool:
+        current = layout.contentsMargins()
+        current_margins = (current.left(), current.top(), current.right(), current.bottom())
+        if current_margins == margins:
+            return False
+        layout.setContentsMargins(*margins)
+        return True
+
+    def _set_layout_alignment_if_changed(self, layout: QLayout, alignment: Qt.AlignmentFlag) -> bool:
+        if layout.alignment() == alignment:
+            return False
+        layout.setAlignment(alignment)
+        return True
+
+    def _set_viewport_margins_if_changed(self, widget: QScrollArea, margins: tuple[int, int, int, int]) -> bool:
+        current = widget.viewportMargins()
+        current_margins = (current.left(), current.top(), current.right(), current.bottom())
+        if current_margins == margins:
+            return False
+        widget.setViewportMargins(*margins)
+        return True
+
+    def _set_font_if_changed(self, widget: QWidget, font: QFont) -> bool:
+        if widget.font() == font:
+            return False
+        widget.setFont(font)
+        return True
+
+    def _apply_theme_helper_properties(self, styles: ThemeMap, widgets: list[QWidget]) -> None:
         needs_relative_resolution = self._qss_builder.contains_percent_radius(styles)
         for widget in widgets:
             raw_padding_box = self._style_normalizer.normalize_box_from_mapping(styles, 'padding')
             if raw_padding_box is not None:
-                widget.setProperty('_themePaddingBox', raw_padding_box)
+                self._set_widget_property_if_changed(widget, '_themePaddingBox', raw_padding_box)
 
             resolved_styles = self._qss_builder.resolve_relative_styles(styles, widget) if needs_relative_resolution else styles
-            applied = False
-
-            if 'rainbow' in resolved_styles:
-                rainbow_target = self._normalize_bool_value(resolved_styles.get('rainbow'))
-                if rainbow_target is not None and widget.property('rainbowBorderExcluded') is not True:
-                    if widget not in self._styled_rainbow_target_widgets:
-                        self._styled_rainbow_target_widgets[widget] = widget.property('rainbowBorderTarget')
-                    widget.setProperty('rainbowBorderTarget', rainbow_target)
-                    applied = True
-
-            if isinstance((bg_data := resolved_styles.get('background')), dict):
-                if (bg_rule := self._qss_builder.build_background_color(bg_data.get('color'))):
-                    widget.setProperty('_themeBackgroundRule', bg_rule)
-                    applied = True
-                if not isinstance(resolved_styles.get('border'), dict):
-                    radius = bg_data.get('radius')
-                    if radius is not None:
-                        radius_value = str(self._qss_builder.normalize_measure(radius) or radius).strip()
-                        if radius_value:
-                            widget.setProperty('_themeBorderRadius', radius_value)
-                            applied = True
-
-            if isinstance((border_data := resolved_styles.get('border')), dict):
-                if (border_rule := self._qss_builder.build_border(border_data)):
-                    widget.setProperty('_themeBorderRule', border_rule)
-                    applied = True
-                background_data = resolved_styles.get('background') if isinstance(resolved_styles.get('background'), dict) else {}
-                radius = border_data.get('radius', background_data.get('radius') if isinstance(background_data, dict) else None)
-                if radius is not None:
-                    radius_value = str(self._qss_builder.normalize_measure(radius) or radius).strip()
-                    if radius_value:
-                        widget.setProperty('_themeBorderRadius', radius_value)
-                        applied = True
-
-            if (padding_rule := self._qss_builder.build_padding_rule(resolved_styles)):
-                widget.setProperty('_themePaddingRule', padding_rule)
-                widget.setProperty('_themePaddingBox', self._style_normalizer.normalize_box_from_mapping(resolved_styles, 'padding'))
-                applied = True
-
-            if self._apply_line_edit_padding_theme(widget, resolved_styles):
-                applied = True
-
-            if isinstance((text_data := resolved_styles.get('text')), dict):
-                if self._apply_text_font_theme(widget, text_data):
-                    applied = True
-                if self._apply_text_alignment_theme(widget, text_data, align_keys=('align', 'alignment')):
-                    applied = True
-                if self._apply_text_focus_alignment_theme(widget, text_data):
-                    applied = True
-                if self._apply_line_edit_text_theme(widget, text_data):
-                    applied = True
-                if self._apply_text_shadow_theme(widget, text_data):
-                    applied = True
-                if self._apply_text_border_theme(widget, text_data):
-                    applied = True
-                if self._apply_text_icon_theme(widget, text_data):
-                    applied = True
-                if self._apply_text_spacing_theme(widget, text_data):
-                    applied = True
-
-            if self._apply_text_icon_theme(widget, resolved_styles):
-                applied = True
-
-            if isinstance((effects_data := resolved_styles.get('effects')), dict):
-                if self._apply_shadow_effect_theme(widget, effects_data):
-                    applied = True
-
-            if isinstance((layout_data := resolved_styles.get('layout')), dict):
-                if self._apply_layout_theme(widget, layout_data):
-                    applied = True
-
-            if isinstance((viewport_data := resolved_styles.get('viewport')), dict):
-                if self._apply_viewport_theme(widget, viewport_data):
-                    applied = True
-
-            if isinstance((size_data := resolved_styles.get('size')), dict):
-                if self._apply_size_theme(widget, size_data):
-                    applied = True
-
-            if isinstance((geometry_data := resolved_styles.get('geometry')), dict):
-                if self._apply_geometry_theme(widget, geometry_data):
-                    applied = True
+            applied = self._apply_widget_property_rules(widget, resolved_styles)
+            applied = self._apply_widget_text_rules(widget, resolved_styles) or applied
+            applied = self._apply_widget_structural_rules(widget, resolved_styles) or applied
 
             if applied:
                 self._styled_theme_prop_widgets.add(widget)
 
-    def _apply_line_edit_padding_theme(self, widget: QWidget, styles: dict[str, Any]) -> bool:
-        if not isinstance(styles, dict):
+    def _apply_widget_property_rules(self, widget: QWidget, styles: ThemeMap) -> bool:
+        applied = False
+
+        if 'rainbow' in styles:
+            applied = self._apply_widget_rainbow_rule(widget, styles) or applied
+
+        applied = self._apply_widget_frame_rules(widget, styles) or applied
+        applied = self._apply_line_edit_padding_theme(widget, styles) or applied
+        return applied
+
+    def _apply_widget_rainbow_rule(self, widget: QWidget, styles: ThemeMap) -> bool:
+        rainbow_target = self._normalize_bool_value(styles.get('rainbow'))
+        if rainbow_target is None or widget.property('rainbowBorderExcluded') is True:
             return False
 
-        set_text_margins = getattr(widget, 'setTextMargins', None)
-        text_margins = getattr(widget, 'textMargins', None)
+        if widget not in self._styled_rainbow_target_widgets:
+            self._styled_rainbow_target_widgets[widget] = widget.property('rainbowBorderTarget')
+        return self._set_widget_property_if_changed(widget, 'rainbowBorderTarget', rainbow_target)
+
+    def _apply_widget_frame_rules(self, widget: QWidget, styles: ThemeMap) -> bool:
+        applied = False
+        background_data = theme_map(styles.get('background'))
+        border_data = theme_map(styles.get('border'))
+
+        if background_data is not None:
+            if (bg_rule := self._qss_builder.build_background_color(background_data.get('color'))):
+                applied = self._set_widget_property_if_changed(widget, '_themeBackgroundRule', bg_rule) or applied
+            if border_data is None:
+                applied = self._apply_widget_border_radius_rule(widget, background_data.get('radius')) or applied
+
+        if border_data is not None:
+            if (border_rule := self._qss_builder.build_border(border_data)):
+                applied = self._set_widget_property_if_changed(widget, '_themeBorderRule', border_rule) or applied
+            radius = border_data.get('radius', (background_data or {}).get('radius'))
+            applied = self._apply_widget_border_radius_rule(widget, radius) or applied
+
+        if (padding_rule := self._qss_builder.build_padding_rule(styles)):
+            applied = self._set_widget_property_if_changed(widget, '_themePaddingRule', padding_rule) or applied
+            applied = self._set_widget_property_if_changed(
+                widget,
+                '_themePaddingBox',
+                self._style_normalizer.normalize_box_from_mapping(styles, 'padding'),
+            ) or applied
+
+        return applied
+
+    def _apply_widget_border_radius_rule(self, widget: QWidget, radius: object) -> bool:
+        if radius is None:
+            return False
+        radius_value = str(self._qss_builder.normalize_measure(radius) or radius).strip()
+        if not radius_value:
+            return False
+        return self._set_widget_property_if_changed(widget, '_themeBorderRadius', radius_value)
+
+    def _apply_widget_text_rules(self, widget: QWidget, styles: ThemeMap) -> bool:
+        applied = False
+        text_data = theme_map(styles.get('text'))
+        if text_data is not None:
+            if self._apply_text_font_theme(widget, text_data):
+                applied = True
+            if self._apply_text_alignment_theme(widget, text_data, align_keys=('align', 'alignment')):
+                applied = True
+            if self._apply_text_focus_alignment_theme(widget, text_data):
+                applied = True
+            if self._apply_line_edit_text_theme(widget, text_data):
+                applied = True
+            if self._apply_text_shadow_theme(widget, text_data):
+                applied = True
+            if self._apply_text_border_theme(widget, text_data):
+                applied = True
+            if self._apply_text_icon_theme(widget, text_data):
+                applied = True
+            if self._apply_text_spacing_theme(widget, text_data):
+                applied = True
+
+        if self._apply_text_icon_theme(widget, styles):
+            applied = True
+        return applied
+
+    def _apply_widget_structural_rules(self, widget: QWidget, styles: ThemeMap) -> bool:
+        applied = False
+
+        if (effects_data := theme_map(styles.get('effects'))) is not None:
+            if self._apply_shadow_effect_theme(widget, effects_data):
+                applied = True
+
+        if (layout_data := theme_map(styles.get('layout'))) is not None:
+            if self._apply_layout_theme(widget, layout_data):
+                applied = True
+
+        if (viewport_data := theme_map(styles.get('viewport'))) is not None:
+            if self._apply_viewport_theme(widget, viewport_data):
+                applied = True
+
+        if (size_data := theme_map(styles.get('size'))) is not None:
+            if self._apply_size_theme(widget, size_data):
+                applied = True
+
+        if (geometry_data := theme_map(styles.get('geometry'))) is not None:
+            if self._apply_geometry_theme(widget, geometry_data):
+                applied = True
+
+        return applied
+
+    def _apply_line_edit_padding_theme(self, widget: QWidget, styles: dict[str, Any]) -> bool:
+        set_text_margins = cast(
+            Callable[[int, int, int, int], None] | None,
+            getattr(widget, 'setTextMargins', None),
+        )
+        text_margins = cast(Callable[[], QMargins] | None, getattr(widget, 'textMargins', None))
         if not callable(set_text_margins) or not callable(text_margins):
             return False
 
@@ -732,17 +805,14 @@ class ThemeManager(QObject):
     def _apply_runtime_styles(
         self,
         target: str,
-        styles: dict[str, dict],
+        styles: ThemeMap,
         *,
         widgets: list[QWidget] | None = None,
     ) -> None:
-        if not isinstance(styles, dict):
-            return
-
-        parts_theme = styles.get('parts')
-        media_theme = styles.get('media')
-        dropdown_theme = styles.get('dropdown')
-        items_theme = styles.get('items')
+        parts_theme = theme_map(styles.get('parts'))
+        media_theme = theme_map(styles.get('media'))
+        dropdown_theme = theme_map(styles.get('dropdown'))
+        items_theme = theme_map(styles.get('items'))
         box_theme = self._extract_box_theme(styles)
         if normalize_qss_target(target) == '*':
             media_theme = None
@@ -757,50 +827,80 @@ class ThemeManager(QObject):
         ):
             return
 
-        resolved_media_theme = self._resolve_media_theme(media_theme) if isinstance(media_theme, dict) else None
+        resolved_media_theme = self._resolve_media_theme(media_theme) if media_theme is not None else None
         resolved_widgets = widgets if widgets is not None else resolve_target_widgets(self._root, target, include_window=True)
         for widget in resolved_widgets:
-            if isinstance(box_theme, dict):
-                if self._uses_painted_box_theme(widget) and (apply_box_theme := getattr(widget, 'apply_box_theme', None)) and callable(apply_box_theme):
-                    apply_box_theme(box_theme)
-                    self._styled_box_widgets.add(widget)
-            if isinstance(parts_theme, dict):
-                if (apply_theme := getattr(widget, 'apply_theme', None)) and callable(apply_theme):
-                    apply_theme(self._resolve_parts_media_sources(parts_theme))
-                    self._styled_parts_widgets.add(widget)
-            if isinstance(resolved_media_theme, dict):
-                if (apply_media_theme := getattr(widget, 'apply_media_theme', None)) and callable(apply_media_theme):
-                    apply_media_theme(resolved_media_theme)
-                    self._styled_media_widgets.add(widget)
-                    self._clear_widget_media_overlay(widget)
-                else:
-                    self._apply_widget_media_overlay(widget, resolved_media_theme)
-            if isinstance(dropdown_theme, dict):
-                self._apply_combo_popup_theme(widget, dropdown_theme)
-            if isinstance(items_theme, dict):
-                self._apply_combo_items_theme(widget, items_theme)
+            self._apply_widget_box_runtime_theme(widget, box_theme)
+            self._apply_widget_parts_runtime_theme(widget, parts_theme)
+            self._apply_widget_media_runtime_theme(widget, resolved_media_theme)
+            self._apply_widget_combo_runtime_themes(widget, dropdown_theme, items_theme)
+
+    def _apply_widget_box_runtime_theme(self, widget: QWidget, box_theme: ThemeMap | None) -> None:
+        if box_theme is None or not self._uses_painted_box_theme(widget):
+            return
+
+        apply_box_theme = getattr(widget, 'apply_box_theme', None)
+        if not callable(apply_box_theme):
+            return
+
+        apply_box_theme(box_theme)
+        self._styled_box_widgets.add(widget)
+
+    def _apply_widget_parts_runtime_theme(self, widget: QWidget, parts_theme: ThemeMap | None) -> None:
+        if parts_theme is None:
+            return
+
+        apply_theme = getattr(widget, 'apply_theme', None)
+        if not callable(apply_theme):
+            return
+
+        apply_theme(self._resolve_parts_media_sources(parts_theme))
+        self._styled_parts_widgets.add(widget)
+
+    def _apply_widget_media_runtime_theme(self, widget: QWidget, media_theme: ThemeMap | None) -> None:
+        if media_theme is None:
+            return
+
+        apply_media_theme = getattr(widget, 'apply_media_theme', None)
+        if callable(apply_media_theme):
+            apply_media_theme(media_theme)
+            self._styled_media_widgets.add(widget)
+            self._clear_widget_media_overlay(widget)
+            return
+
+        self._apply_widget_media_overlay(widget, media_theme)
+
+    def _apply_widget_combo_runtime_themes(
+        self,
+        widget: QWidget,
+        dropdown_theme: ThemeMap | None,
+        items_theme: ThemeMap | None,
+    ) -> None:
+        if dropdown_theme is not None:
+            self._apply_combo_popup_theme(widget, dropdown_theme)
+        if items_theme is not None:
+            self._apply_combo_items_theme(widget, items_theme)
 
     def _resolve_parts_media_sources(self, data: dict[str, Any]) -> dict[str, Any]:
         def resolve(value: Any) -> Any:
             if isinstance(value, dict):
                 resolved_dict: dict[str, Any] = {}
-                for key, item in value.items():
+                for key, item in cast(dict[str, Any], value).items():
                     if key in {'source', 'path', 'file', 'icon'} and isinstance(item, str) and item.strip():
                         resolved_dict[key] = self._qss_builder.resolve_media_source(item)
                     else:
                         resolved_dict[key] = resolve(item)
                 return resolved_dict
             if isinstance(value, list):
-                return [resolve(item) for item in value]
+                return [resolve(item) for item in cast(list[Any], value)]
             return deepcopy(value)
 
         return resolve(data)
 
-    def _extract_box_theme(self, styles: dict[str, Any]) -> dict[str, Any] | None:
-        box_theme: dict[str, Any] = {}
+    def _extract_box_theme(self, styles: dict[str, Any]) -> ThemeMap | None:
+        box_theme: ThemeMap = {}
         for key in ('background', 'border'):
-            value = styles.get(key)
-            if isinstance(value, dict):
+            if (value := theme_map(styles.get(key))) is not None:
                 box_theme[key] = deepcopy(value)
         return box_theme or None
 
@@ -833,10 +933,6 @@ class ThemeManager(QObject):
             self._media_overlay_filters.discard(widget)
 
     def _apply_widget_media_overlay(self, widget: QWidget, media_theme: dict[str, Any]) -> None:
-        if not isinstance(media_theme, dict):
-            self._clear_widget_media_overlay(widget)
-            return
-
         source = media_theme.get('source')
         if not isinstance(source, str) or not source.strip():
             self._clear_widget_media_overlay(widget)
@@ -852,8 +948,7 @@ class ThemeManager(QObject):
 
         source = resolved.get('source')
         if not isinstance(source, str) or not source.strip():
-            icon_data = resolved.get('icon')
-            if isinstance(icon_data, dict):
+            if (icon_data := theme_map(resolved.get('icon'))) is not None:
                 icon_source = icon_data.get('source')
                 if isinstance(icon_source, str) and icon_source.strip():
                     source = icon_source
@@ -863,9 +958,6 @@ class ThemeManager(QObject):
         return resolved
 
     def _apply_combo_popup_theme(self, widget: QWidget, dropdown_theme: dict[str, Any]) -> None:
-        if not isinstance(dropdown_theme, dict):
-            return
-
         try:
             apply_dropdown_theme = getattr(widget, 'apply_dropdown_theme', None)
             if not callable(apply_dropdown_theme):
@@ -876,9 +968,6 @@ class ThemeManager(QObject):
             return
 
     def _apply_combo_items_theme(self, widget: QWidget, items_theme: dict[str, Any]) -> None:
-        if not isinstance(items_theme, dict):
-            return
-
         try:
             apply_items_theme = getattr(widget, 'apply_items_theme', None)
             if not callable(apply_items_theme):
@@ -907,7 +996,7 @@ class ThemeManager(QObject):
         base_target, properties = parsed if parsed else (text, [])
         if base_target == '*':
             return 0, len(properties)
-        if isinstance(base_target, str) and base_target.startswith('MT'):
+        if base_target.startswith('MT'):
             return 1, len(properties)
         return 2, self._target_specificity(base_target, properties)
 
@@ -921,7 +1010,7 @@ class ThemeManager(QObject):
             specificity += self._target_specificity(base_target, properties)
         return specificity
 
-    def _target_specificity(self, target: str, properties: list[str]) -> int:
+    def _target_specificity(self, target: str, properties: list[tuple[str, str]]) -> int:
         text = str(target or '')
         wildcard_count = text.count('*') + text.count('?')
         literal_length = len(text.replace('*', '').replace('?', ''))
@@ -930,7 +1019,7 @@ class ThemeManager(QObject):
     def _build_qss(
         self,
         obj_name: str,
-        styles: dict[str, dict],
+        styles: ThemeMap,
         selector: str = '#',
         *,
         widgets: list[QWidget] | None = None,
@@ -944,14 +1033,14 @@ class ThemeManager(QObject):
             root_widget=self._root,
         )
 
-    def _qss_styles_for_widgets(self, styles: dict[str, Any], widgets: list[QWidget]) -> dict[str, Any]:
-        if not isinstance(styles, dict) or not widgets:
+    def _qss_styles_for_widgets(self, styles: ThemeMap, widgets: list[QWidget]) -> ThemeMap:
+        if not widgets:
             return styles
 
         if not all(self._uses_painted_box_theme(widget) for widget in widgets):
             return styles
 
-        if not isinstance(styles.get('background'), dict) and not isinstance(styles.get('border'), dict):
+        if theme_map(styles.get('background')) is None and theme_map(styles.get('border')) is None:
             return styles
 
         filtered = dict(styles)
@@ -964,10 +1053,7 @@ class ThemeManager(QObject):
             return False
         return bool(getattr(widget, 'PAINTED_BOX_THEME', True))
 
-    def _apply_layout_theme(self, widget: QWidget, data: dict[str, Any]) -> bool:
-        if not isinstance(data, dict):
-            return False
-
+    def _apply_layout_theme(self, widget: QWidget, data: ThemeMap) -> bool:
         spacing = self._style_normalizer.normalize_int(data.get('spacing'))
         alignment = self._style_normalizer.normalize_alignment(data.get('align', data.get('alignment')))
         justify = self._style_normalizer.normalize_layout_justify(data.get('justify'))
@@ -979,8 +1065,11 @@ class ThemeManager(QObject):
             current_margins = (current.left(), current.top(), current.right(), current.bottom())
         else:
             current_margins = widget.property('_themePaddingBox')
-            if not isinstance(current_margins, tuple) or len(current_margins) != 4:
+            current_margin_tuple = cast(tuple[object, ...] | None, current_margins if isinstance(current_margins, tuple) else None)
+            if current_margin_tuple is None or len(current_margin_tuple) != 4:
                 current_margins = None
+            else:
+                current_margins = cast(tuple[int, int, int, int], current_margin_tuple)
 
         margins = self._normalize_box_from_cascade(data, 'margin', current=current_margins)
         if margins is None and spacing is None and alignment is None and justify is None:
@@ -989,22 +1078,27 @@ class ThemeManager(QObject):
         if not isinstance(layout, QLayout):
             if margins is None:
                 return False
-            widget.setProperty('_themePaddingBox', margins)
-            widget.update()
-            return True
+            changed = self._set_widget_property_if_changed(widget, '_themePaddingBox', margins)
+            if changed:
+                widget.update()
+            return changed
 
         self._remember_layout_defaults(widget, layout)
-        original = self._styled_layout_widgets.get(widget, {})
+        original = self._styled_layout_widgets[widget]
         self._clear_layout_justify(layout, original)
+        changed = False
         if margins is not None:
-            layout.setContentsMargins(*margins)
+            changed = self._set_layout_margins_if_changed(layout, margins) or changed
         if spacing is not None:
-            layout.setSpacing(spacing)
+            if layout.spacing() != spacing:
+                layout.setSpacing(spacing)
+                changed = True
         if alignment is not None:
-            layout.setAlignment(alignment)
+            changed = self._set_layout_alignment_if_changed(layout, alignment) or changed
         if justify is not None:
             self._apply_layout_justify(layout, original, justify)
-        return True
+            changed = True
+        return changed
 
     def _normalize_box_from_cascade(
         self,
@@ -1051,7 +1145,7 @@ class ThemeManager(QObject):
         }
 
     def _apply_viewport_theme(self, widget: QWidget, data: dict[str, Any]) -> bool:
-        if not isinstance(widget, QScrollArea) or not isinstance(data, dict):
+        if not isinstance(widget, QScrollArea):
             return False
 
         if widget not in self._styled_viewport_margin_widgets:
@@ -1077,15 +1171,13 @@ class ThemeManager(QObject):
         if margins is None:
             return False
 
-        widget.setViewportMargins(*margins)
+        if not self._set_viewport_margins_if_changed(widget, margins):
+            return False
         widget.viewport().update()
         widget.updateGeometry()
         return True
 
     def _apply_geometry_theme(self, widget: QWidget, data: dict[str, Any]) -> bool:
-        if not isinstance(data, dict):
-            return False
-
         min_w = self._style_normalizer.normalize_int(data.get('min_width', data.get('minWidth')))
         max_w = self._style_normalizer.normalize_int(data.get('max_width', data.get('maxWidth')))
         fix_w = self._style_normalizer.normalize_int(data.get('fixed_width', data.get('width')))
@@ -1125,15 +1217,13 @@ class ThemeManager(QObject):
         return True
 
     def _apply_size_theme(self, widget: QWidget, data: dict[str, Any]) -> bool:
-        if not isinstance(data, dict):
-            return False
-
         policy_data = data.get('policy')
-        if not isinstance(policy_data, dict):
+        policy = theme_map(policy_data)
+        if policy is None:
             return False
 
-        horizontal = self._normalize_size_policy(policy_data.get('h'))
-        vertical = self._normalize_size_policy(policy_data.get('v'))
+        horizontal = self._normalize_size_policy(policy.get('h'))
+        vertical = self._normalize_size_policy(policy.get('v'))
         if horizontal is None and vertical is None:
             return False
 
@@ -1144,10 +1234,16 @@ class ThemeManager(QObject):
                 current.verticalPolicy(),
             )
 
-        if horizontal is not None:
+        changed = False
+        if horizontal is not None and current.horizontalPolicy() != horizontal:
             current.setHorizontalPolicy(horizontal)
-        if vertical is not None:
+            changed = True
+        if vertical is not None and current.verticalPolicy() != vertical:
             current.setVerticalPolicy(vertical)
+            changed = True
+        if not changed:
+            return False
+
         widget.setSizePolicy(current)
         self._relax_parent_item_alignment_for_policy(widget, horizontal, vertical)
         widget.updateGeometry()
@@ -1243,9 +1339,6 @@ class ThemeManager(QObject):
         *,
         align_keys: tuple[str, ...] = ('align', 'alignment'),
     ) -> bool:
-        if not isinstance(data, dict):
-            return False
-
         set_alignment = getattr(widget, 'setAlignment', None)
         if not callable(set_alignment):
             return False
@@ -1261,24 +1354,33 @@ class ThemeManager(QObject):
             current_alignment = getattr(widget, 'alignment', None)
             if callable(current_alignment):
                 try:
-                    self._styled_text_alignment_widgets[widget] = int(current_alignment())
+                    current_value = current_alignment()
+                    self._styled_text_alignment_widgets[widget] = coerce_int(
+                        current_value,
+                        int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter),
+                    ) or int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
                 except RuntimeError:
                     self._styled_text_alignment_widgets[widget] = int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+
+        current_alignment = getattr(widget, 'alignment', None)
+        if callable(current_alignment):
+            try:
+                if current_alignment() == alignment:
+                    return False
+            except RuntimeError:
+                pass
 
         set_alignment(alignment)
         return True
 
     def _apply_text_focus_alignment_theme(self, widget: QWidget, data: dict[str, Any]) -> bool:
-        if not isinstance(data, dict):
-            return False
-
         set_focus_alignments = getattr(widget, 'set_focus_alignments', None)
         clear_focus_alignments = getattr(widget, 'clear_focus_alignments', None)
         if not callable(set_focus_alignments):
             return False
 
         align_data = data.get('align', data.get('alignment'))
-        align_state_data = align_data if isinstance(align_data, dict) else {}
+        align_state_data = theme_map(align_data) or {}
         focused = self._style_normalizer.normalize_alignment(align_state_data.get('focused'))
         unfocused = self._style_normalizer.normalize_alignment(align_state_data.get('unfocused'))
         if focused is None and unfocused is None:
@@ -1297,9 +1399,6 @@ class ThemeManager(QObject):
         return True
 
     def _apply_line_edit_text_theme(self, widget: QWidget, data: dict[str, Any]) -> bool:
-        if not isinstance(data, dict):
-            return False
-
         set_line_edit_text_theme = getattr(widget, 'set_line_edit_text_theme', None)
         if not callable(set_line_edit_text_theme):
             return False
@@ -1319,36 +1418,38 @@ class ThemeManager(QObject):
         return True
 
     def _apply_text_font_theme(self, widget: QWidget, data: dict[str, Any]) -> bool:
-        if not isinstance(data, dict) or 'font' not in data:
+        if 'font' not in data:
             return False
 
         font_data = data.get('font')
         if font_data is False or font_data is None:
             if widget in self._styled_text_font_widgets:
-                widget.setFont(QFont(self._styled_text_font_widgets[widget]))
-                widget.updateGeometry()
-                widget.update()
-                return True
+                font = QFont(self._styled_text_font_widgets[widget])
+                if self._set_font_if_changed(widget, font):
+                    widget.updateGeometry()
+                    widget.update()
+                    return True
             return False
 
-        if not isinstance(font_data, dict):
+        font_config = theme_map(font_data)
+        if font_config is None:
             return False
 
         font = QFont(widget.font())
         changed = False
 
-        family = self._font_family_for_qfont(font_data.get('family'))
+        family = self._font_family_for_qfont(font_config.get('family'))
         if family:
             font.setFamily(family)
             changed = True
 
-        if self._apply_font_size(font, font_data.get('size')):
+        if self._apply_font_size(font, font_config.get('size')):
             changed = True
 
-        if self._apply_font_weight(font, font_data.get('weight')):
+        if self._apply_font_weight(font, font_config.get('weight')):
             changed = True
 
-        if self._apply_font_style(font, font_data.get('style')):
+        if self._apply_font_style(font, font_config.get('style')):
             changed = True
 
         if not changed:
@@ -1357,7 +1458,8 @@ class ThemeManager(QObject):
         if widget not in self._styled_text_font_widgets:
             self._styled_text_font_widgets[widget] = QFont(widget.font())
 
-        widget.setFont(font)
+        if not self._set_font_if_changed(widget, font):
+            return False
         widget.updateGeometry()
         widget.update()
         return True
@@ -1443,12 +1545,12 @@ class ThemeManager(QObject):
         return True
 
     def _apply_shadow_effect_theme(self, widget: QWidget, data: dict[str, Any]) -> bool:
-        if not isinstance(data, dict) or 'shadow' not in data:
+        if 'shadow' not in data:
             return False
 
         shadow = self._style_normalizer.normalize_shadow(data.get('shadow'))
         if shadow is None:
-            widget.setGraphicsEffect(None)
+            widget.setGraphicsEffect(cast(Any, None))
             self._styled_effect_widgets.add(widget)
             return True
 
@@ -1461,7 +1563,7 @@ class ThemeManager(QObject):
         return True
 
     def _apply_text_shadow_theme(self, widget: QWidget, data: dict[str, Any]) -> bool:
-        if not isinstance(data, dict) or 'shadow' not in data:
+        if 'shadow' not in data:
             return False
 
         set_text_shadow = getattr(widget, 'set_text_shadow', None)
@@ -1488,7 +1590,7 @@ class ThemeManager(QObject):
         return True
 
     def _apply_text_border_theme(self, widget: QWidget, data: dict[str, Any]) -> bool:
-        if not isinstance(data, dict) or 'border' not in data:
+        if 'border' not in data:
             return False
 
         set_text_border = getattr(widget, 'set_text_border', None)
@@ -1504,12 +1606,14 @@ class ThemeManager(QObject):
                 return True
             return False
 
-        if not isinstance(border, dict):
+        border_map = theme_map(border)
+        if border_map is None:
             return False
 
-        color = to_qcolor(border.get('color', '#000000'))
-        width = self._style_normalizer.normalize_float(border.get('width', 1.0))
-        style = str(border.get('style', 'solid') or 'solid').strip()
+        color = to_qcolor(border_map.get('color', '#000000'))
+        width = self._style_normalizer.normalize_float(border_map.get('width', 1.0))
+        style_value = border_map.get('style', 'solid')
+        style = str(style_value or 'solid').strip()
         if color is None or width is None or width <= 0.0 or color.alpha() <= 0:
             clear_text_border = getattr(widget, 'clear_text_border', None)
             if callable(clear_text_border):
@@ -1523,7 +1627,7 @@ class ThemeManager(QObject):
         return True
 
     def _apply_text_icon_theme(self, widget: QWidget, data: dict[str, Any]) -> bool:
-        if not isinstance(data, dict) or 'icon' not in data:
+        if 'icon' not in data:
             return False
 
         set_text_icon = getattr(widget, 'set_text_icon', None)
@@ -1547,44 +1651,49 @@ class ThemeManager(QObject):
 
         if isinstance(icon, str):
             icon = {'source': icon}
-        if not isinstance(icon, dict):
+        icon_map = theme_map(icon)
+        if icon_map is None:
             return False
 
-        source = icon.get('source', icon.get('path', icon.get('file')))
+        source = icon_map.get('source', icon_map.get('path', icon_map.get('file')))
         if not isinstance(source, str) or not source.strip():
             current_icon = text_icon_state() if callable(text_icon_state) else None
             default_icon = default_text_icon_state() if callable(default_text_icon_state) else None
-            if isinstance(current_icon, dict):
-                source = current_icon.get('source')
-            if (not isinstance(source, str) or not source.strip()) and isinstance(default_icon, dict):
-                source = default_icon.get('source')
+            current_icon_map = theme_map(current_icon)
+            default_icon_map = theme_map(default_icon)
+            if current_icon_map is not None:
+                source = current_icon_map.get('source')
+            if (not isinstance(source, str) or not source.strip()) and default_icon_map is not None:
+                source = default_icon_map.get('source')
             if not isinstance(source, str) or not source.strip():
                 return False
 
         current_icon = text_icon_state() if callable(text_icon_state) else None
         default_icon = default_text_icon_state() if callable(default_text_icon_state) else None
+        current_icon_map = theme_map(current_icon)
+        default_icon_map = theme_map(default_icon)
 
         resolved_source = self._qss_builder.resolve_media_source(source)
-        size = self._normalize_icon_size(icon)
+        size = self._normalize_icon_size(icon_map)
         if size is None:
-            if isinstance(current_icon, dict):
-                size = current_icon.get('size')
-            elif isinstance(default_icon, dict):
-                size = default_icon.get('size')
-        spacing = self._style_normalizer.normalize_float(icon.get('spacing'))
+            if current_icon_map is not None:
+                size = self._normalize_icon_size(current_icon_map)
+            elif default_icon_map is not None:
+                size = self._normalize_icon_size(default_icon_map)
+        spacing = self._style_normalizer.normalize_float(icon_map.get('spacing'))
         if spacing is None:
-            if isinstance(current_icon, dict):
-                spacing = current_icon.get('spacing')
-            elif isinstance(default_icon, dict):
-                spacing = default_icon.get('spacing')
+            if current_icon_map is not None:
+                spacing = self._style_normalizer.normalize_float(current_icon_map.get('spacing'))
+            elif default_icon_map is not None:
+                spacing = self._style_normalizer.normalize_float(default_icon_map.get('spacing'))
             spacing = float(spacing) if isinstance(spacing, (int, float)) else 4.0
-        color = to_qcolor(icon.get('color'))
-        align = icon.get('align', icon.get('side'))
+        color = to_qcolor(icon_map.get('color'))
+        align = icon_map.get('align', icon_map.get('side'))
         if not isinstance(align, str) or not align.strip():
-            if isinstance(current_icon, dict):
-                align = current_icon.get('align')
-            elif isinstance(default_icon, dict):
-                align = default_icon.get('align')
+            if current_icon_map is not None:
+                align = current_icon_map.get('align')
+            elif default_icon_map is not None:
+                align = default_icon_map.get('align')
         if not isinstance(align, str) or not align.strip():
             align = 'left'
         applied = bool(set_text_icon(
@@ -1603,9 +1712,6 @@ class ThemeManager(QObject):
         return applied
 
     def _apply_text_spacing_theme(self, widget: QWidget, data: dict[str, Any]) -> bool:
-        if not isinstance(data, dict):
-            return False
-
         raw_spacing = data.get('spacing', data.get('letter_spacing', data.get('letter-spacing')))
         if raw_spacing is None:
             return False
@@ -1631,16 +1737,15 @@ class ThemeManager(QObject):
         return True
 
     def _normalize_icon_size(self, data: dict[str, Any]) -> QSize | None:
-        if not isinstance(data, dict):
-            return None
-
         raw_size = data.get('size')
-        if isinstance(raw_size, (list, tuple)) and len(raw_size) >= 2:
-            width = self._style_normalizer.normalize_int(raw_size[0])
-            height = self._style_normalizer.normalize_int(raw_size[1])
-        elif isinstance(raw_size, dict):
-            width = self._style_normalizer.normalize_int(raw_size.get('width', raw_size.get('w')))
-            height = self._style_normalizer.normalize_int(raw_size.get('height', raw_size.get('h')))
+        raw_size_sequence = cast(list[object] | tuple[object, ...] | None, raw_size if isinstance(raw_size, (list, tuple)) else None)
+        raw_size_map = theme_map(cast(object, raw_size))
+        if raw_size_sequence is not None and len(raw_size_sequence) >= 2:
+            width = self._style_normalizer.normalize_int(raw_size_sequence[0])
+            height = self._style_normalizer.normalize_int(raw_size_sequence[1])
+        elif raw_size_map is not None:
+            width = self._style_normalizer.normalize_int(raw_size_map.get('width', raw_size_map.get('w')))
+            height = self._style_normalizer.normalize_int(raw_size_map.get('height', raw_size_map.get('h')))
         elif raw_size is not None:
             value = self._style_normalizer.normalize_int(raw_size)
             width = value
@@ -1659,7 +1764,7 @@ class ThemeManager(QObject):
             return None
         return QSize(int(width), int(height))
 
-    def _apply_layout_justify(self, layout: QLayout, original: dict[str, Any], justify: str) -> None:
+    def _apply_layout_justify(self, layout: QLayout, original: LayoutSnapshot, justify: str) -> None:
         if not isinstance(layout, QBoxLayout):
             original['justify_indices'] = []
             return
@@ -1679,22 +1784,20 @@ class ThemeManager(QObject):
                 widget_positions = [
                     index
                     for index in range(layout.count())
-                    if layout.itemAt(index) is not None and layout.itemAt(index).spacerItem() is None
+                    if (item := layout.itemAt(index)) is not None and item.spacerItem() is None
                 ]
                 for position in reversed(widget_positions[:-1]):
                     insert_index = position + 1
                     layout.insertStretch(insert_index, 1)
                     indices.append(insert_index)
                 indices.sort(reverse=True)
+            case _:
+                pass
         original['justify_indices'] = indices
 
-    def _clear_layout_justify(self, layout: QLayout, original: dict[str, Any]) -> None:
-        indices = original.get('justify_indices')
-        if not isinstance(indices, list):
-            original['justify_indices'] = []
-            return
-
-        for index in sorted({int(value) for value in indices if isinstance(value, int)}, reverse=True):
+    def _clear_layout_justify(self, layout: QLayout, original: LayoutSnapshot) -> None:
+        indices = original['justify_indices']
+        for index in sorted({int(value) for value in indices}, reverse=True):
             item = layout.takeAt(index)
             if item is None:
                 continue

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
@@ -89,7 +89,7 @@ def detect_border_config(
             'border_radius_rules': {
                 key: str(value).strip()
                 for key, value in declarations.items()
-                if key in BORDER_RADIUS_KEYS and isinstance(value, str) and value.strip()
+                if key in BORDER_RADIUS_KEYS and value.strip()
             },
             'border_side_widths': side_widths,
             'border_side_styles': side_styles,
@@ -149,7 +149,7 @@ def build_native_border_color_rules(
     runtime_side_colors = {
         side: str(value).strip()
         for side, value in (side_color_names or {}).items()
-        if isinstance(value, str) and value.strip()
+        if value.strip()
     }
 
     rules: list[str] = []
@@ -175,8 +175,9 @@ def build_native_border_color_rules(
             if isinstance(side_color, str) and side_color.strip():
                 rules.append(f'border-{side}-color: {side_color};')
     elif isinstance(border_side_colors, dict) and border_side_colors:
+        side_colors_map = cast(dict[str, str], border_side_colors)
         for side in BORDER_SIDE_KEYS:
-            side_color = border_side_colors.get(side)
+            side_color = side_colors_map.get(side)
             if isinstance(side_color, str) and side_color.strip():
                 rules.append(f'border-{side}-color: {color_name};')
     else:
@@ -189,8 +190,9 @@ def build_native_border_color_rules(
         ])
 
     if isinstance(border_radius_rules, dict):
-        for key, value in border_radius_rules.items():
-            if isinstance(value, str) and value.strip():
+        radius_rules = cast(dict[str, str], border_radius_rules)
+        for key, value in radius_rules.items():
+            if value.strip():
                 rules.append(f'{key}: {value.strip()};')
 
     rules.append('outline: 0;')
@@ -235,7 +237,7 @@ def collect_widget_declarations(widget: QWidget) -> dict[str, str]:
     declarations: dict[str, str] = {}
 
     local_stylesheet = widget.styleSheet()
-    if isinstance(local_stylesheet, str) and local_stylesheet.strip():
+    if local_stylesheet.strip():
         declarations.update(extract_css_declarations(local_stylesheet))
 
     declarations.update(collect_stylesheet_declarations(widget))
@@ -253,11 +255,11 @@ def collect_widget_declarations(widget: QWidget) -> dict[str, str]:
 def collect_stylesheet_declarations(widget: QWidget) -> dict[str, str]:
     declarations: dict[str, str] = {}
     root = widget.window()
-    stylesheet = root.styleSheet() if isinstance(root, QWidget) else ''
-    if not isinstance(stylesheet, str) or not stylesheet.strip():
+    stylesheet = root.styleSheet()
+    if not stylesheet.strip():
         return declarations
 
-    class_names = {cls.__name__ for cls in type(widget).mro() if isinstance(cls.__name__, str)}
+    class_names = {cls.__name__ for cls in type(widget).mro()}
     object_name = widget.objectName()
     for match in CSS_BLOCK_PATTERN.finditer(stylesheet):
         selector_text = str(match.group(1)).strip()

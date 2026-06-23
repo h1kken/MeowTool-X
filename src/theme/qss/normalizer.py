@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import QColor
@@ -13,7 +13,8 @@ class StyleNormalizer:
             return None
 
         if isinstance(data, (list, tuple, set)):
-            tokens = [str(item).strip().lower() for item in data if str(item).strip()]
+            values = cast(list[Any] | tuple[Any, ...] | set[Any], data)
+            tokens = [str(item).strip().lower() for item in values if str(item).strip()]
         else:
             text = str(data).strip().lower()
             if not text:
@@ -88,27 +89,35 @@ class StyleNormalizer:
             return f'{top} {right} {bottom} {left}'
 
         if isinstance(data, dict):
+            mapping = cast(dict[str, Any], data)
             values = (
-                self.normalize_measure(data.get('top')),
-                self.normalize_measure(data.get('right')),
-                self.normalize_measure(data.get('bottom')),
-                self.normalize_measure(data.get('left')),
+                self.normalize_measure(mapping.get('top')),
+                self.normalize_measure(mapping.get('right')),
+                self.normalize_measure(mapping.get('bottom')),
+                self.normalize_measure(mapping.get('left')),
             )
             if all(isinstance(value, str) for value in values):
-                top, right, bottom, left = values
+                top = cast(str, values[0])
+                right = cast(str, values[1])
+                bottom = cast(str, values[2])
+                left = cast(str, values[3])
                 if top == right == bottom == left:
                     return top
                 return f'{top} {right} {bottom} {left}'
             return None
 
         if isinstance(data, (list, tuple)):
-            expanded = self._expand_box_sequence(list(data))
+            sequence = list(cast(list[Any] | tuple[Any, ...], data))
+            expanded = self._expand_box_sequence(sequence)
             if expanded is None:
                 return None
             values = [self.normalize_measure(value) for value in expanded]
             if not all(isinstance(value, str) for value in values):
                 return None
-            top, right, bottom, left = values
+            top = cast(str, values[0])
+            right = cast(str, values[1])
+            bottom = cast(str, values[2])
+            left = cast(str, values[3])
             if top == right == bottom == left:
                 return top
             return f'{top} {right} {bottom} {left}'
@@ -156,28 +165,41 @@ class StyleNormalizer:
                 return None
             values = tuple(self.normalize_int(part) for part in expanded)
             if all(isinstance(value, int) for value in values):
-                top, right, bottom, left = values
+                top = cast(int, values[0])
+                right = cast(int, values[1])
+                bottom = cast(int, values[2])
+                left = cast(int, values[3])
                 return left, top, right, bottom
             return None
 
         if isinstance(data, dict):
+            mapping = cast(dict[str, Any], data)
             values = (
-                self.normalize_int(data.get('left')),
-                self.normalize_int(data.get('top')),
-                self.normalize_int(data.get('right')),
-                self.normalize_int(data.get('bottom')),
+                self.normalize_int(mapping.get('left')),
+                self.normalize_int(mapping.get('top')),
+                self.normalize_int(mapping.get('right')),
+                self.normalize_int(mapping.get('bottom')),
             )
             if all(isinstance(value, int) for value in values):
-                return values
+                return (
+                    cast(int, values[0]),
+                    cast(int, values[1]),
+                    cast(int, values[2]),
+                    cast(int, values[3]),
+                )
             return None
 
         if isinstance(data, (list, tuple)):
-            expanded = self._expand_box_sequence(list(data))
+            sequence = list(cast(list[Any] | tuple[Any, ...], data))
+            expanded = self._expand_box_sequence(sequence)
             if expanded is None:
                 return None
             values = tuple(self.normalize_int(value) for value in expanded)
             if all(isinstance(value, int) for value in values):
-                top, right, bottom, left = values
+                top = cast(int, values[0])
+                right = cast(int, values[1])
+                bottom = cast(int, values[2])
+                left = cast(int, values[3])
                 return left, top, right, bottom
 
         return None
@@ -233,25 +255,39 @@ class StyleNormalizer:
 
         if not isinstance(data, dict):
             return None
+        mapping = cast(dict[str, Any], data)
 
-        if data.get('enabled') is False:
+        if mapping.get('enabled') is False:
             return None
 
-        color = to_qcolor(data.get('color', 'rgba(0, 0, 0, 0.35)'))
+        color = to_qcolor(mapping.get('color', 'rgba(0, 0, 0, 0.35)'))
         if color is None:
             color = QColor(0, 0, 0, 90)
 
-        blur = self.normalize_float(data.get('blur', data.get('radius', 0))) or 0.0
-        x = self.normalize_float(data.get('x', data.get('offset_x', 0))) or 0.0
-        y = self.normalize_float(data.get('y', data.get('offset_y', 0))) or 0.0
+        blur = self.normalize_float(
+            mapping.get('blur', mapping.get('radius', 0))
+        ) or 0.0
+        x = self.normalize_float(
+            mapping.get('x', mapping.get('offset_x', 0))
+        ) or 0.0
+        y = self.normalize_float(
+            mapping.get('y', mapping.get('offset_y', 0))
+        ) or 0.0
 
-        offset_data = data.get('offset')
-        if isinstance(offset_data, (list, tuple)) and len(offset_data) >= 2:
-            x = self.normalize_float(offset_data[0]) or 0.0
-            y = self.normalize_float(offset_data[1]) or 0.0
+        offset_data = mapping.get('offset')
+        if isinstance(offset_data, (list, tuple)):
+            offset_values = cast(list[Any] | tuple[Any, ...], offset_data)
+            if len(offset_values) >= 2:
+                x = self.normalize_float(offset_values[0]) or 0.0
+                y = self.normalize_float(offset_values[1]) or 0.0
         elif isinstance(offset_data, dict):
-            x = self.normalize_float(offset_data.get('x', offset_data.get('left', x))) or 0.0
-            y = self.normalize_float(offset_data.get('y', offset_data.get('top', y))) or 0.0
+            offset_mapping = cast(dict[str, Any], offset_data)
+            x = self.normalize_float(
+                offset_mapping.get('x', offset_mapping.get('left', x))
+            ) or 0.0
+            y = self.normalize_float(
+                offset_mapping.get('y', offset_mapping.get('top', y))
+            ) or 0.0
 
         return {
             'color': color,

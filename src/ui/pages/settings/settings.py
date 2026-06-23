@@ -1,6 +1,7 @@
 from typing import Callable
 
 from PySide6.QtCore import QTimer, Signal
+from PySide6.QtGui import QShowEvent
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
 from src.ui.controllers import PageController
@@ -34,7 +35,6 @@ class SettingsPage(MTWidget):
     def __init__(
         self,
         *,
-        startup_progress: Callable[[int, int, str], None] | None = None,
         current_theme_name: str | None = None,
     ):
         super().__init__()
@@ -42,7 +42,6 @@ class SettingsPage(MTWidget):
         self._heavy_tab_keys: list[str] = []
         self._tab_names_by_key: dict[str, str] = {}
         self._pages_by_key: dict[str, QWidget] = {}
-        self._startup_progress = startup_progress
         self._current_theme_name = current_theme_name
 
         main_layout = create_layout(LayoutType.VBOX, parent=self)
@@ -54,9 +53,7 @@ class SettingsPage(MTWidget):
         self._page_controller = PageController(main_layout)
 
         first_key: str | None = None
-        total_pages = len(self.PAGE_SPECS)
-
-        for index, (obj_name, tr_key, PageClass) in enumerate(self.PAGE_SPECS, start=1):
+        for obj_name, tr_key, PageClass in self.PAGE_SPECS:
             self._tab_names_by_key[tr_key] = obj_name
             if PageClass is SettingsThemePage:
                 page = PageClass(autoload_name=self._current_theme_name)
@@ -68,7 +65,10 @@ class SettingsPage(MTWidget):
             )
             presence_signal = getattr(page, "presence_path_changed", None)
             if presence_signal is not None:
-                presence_signal.connect(lambda *_args: self._emit_presence_path())
+                def _forward_presence_path(*_args: object) -> None:
+                    self._emit_presence_path()
+
+                presence_signal.connect(_forward_presence_path)
             self._page_controller.add_page(
                 tr_key, page, object_name=f"Settings_{obj_name}_Page"
             )
@@ -80,11 +80,6 @@ class SettingsPage(MTWidget):
             if tr_key in self.HEAVY_TAB_KEYS:
                 self._heavy_tab_keys.append(tr_key)
 
-            if callable(self._startup_progress):
-                self._startup_progress(
-                    index, total_pages, f"Loading settings: {obj_name}"
-                )
-
             if first_key is None:
                 first_key = tr_key
 
@@ -95,7 +90,7 @@ class SettingsPage(MTWidget):
             self._page_controller.show(first_key)
             self._emit_presence_path()
 
-    def showEvent(self, event) -> None:
+    def showEvent(self, event: QShowEvent) -> None:
         super().showEvent(event)
         if self._heavy_tabs_preloaded:
             return

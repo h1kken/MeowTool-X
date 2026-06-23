@@ -20,9 +20,12 @@ def create_layout(
     parent: QWidget | None = None,
 ) -> QLayout:
     match layout_type:
-        case LayoutType.HBOX: layout = QHBoxLayout(parent)
-        case LayoutType.VBOX: layout = QVBoxLayout(parent)
-        case LayoutType.GRID: layout = QGridLayout(parent)
+        case LayoutType.HBOX:
+            layout = QHBoxLayout(parent) if parent is not None else QHBoxLayout()
+        case LayoutType.VBOX:
+            layout = QVBoxLayout(parent) if parent is not None else QVBoxLayout()
+        case LayoutType.GRID:
+            layout = QGridLayout(parent) if parent is not None else QGridLayout()
         case _:
             raise ValueError(f'Unknown layout type: {layout_type}')
 

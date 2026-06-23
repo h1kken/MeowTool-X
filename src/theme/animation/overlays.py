@@ -6,9 +6,10 @@ from math import cos, radians, sin
 from PySide6.QtGui import QBrush, QColor, QGradient, QLinearGradient, QPainter, QPainterPath, QPainterPathStroker
 from PySide6.QtWidgets import QWidget
 
-from src.utils.constants import GRADIENT_DIRECTIONS
+from src.theme.constants import GRADIENT_DIRECTIONS
 
-from .helpers import _clamp01
+def _clamp01(value: float) -> float:
+    return max(0.0, min(1.0, float(value)))
 
 
 class DashBorderOverlay(QWidget):

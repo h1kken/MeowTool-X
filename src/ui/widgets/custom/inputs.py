@@ -1,13 +1,16 @@
+from copy import deepcopy
 from math import ceil
 from time import monotonic
-
-from PySide6.QtCore import QPointF, QRect, QRectF, QSize, Qt
+from PySide6.QtCore import QEvent, QPoint, QPointF, QRect, QRectF, QSize, Qt, QTimerEvent
 from PySide6.QtGui import (
     QBrush,
     QColor,
+    QEnterEvent,
+    QFocusEvent,
     QPalette,
     QLinearGradient,
     QMouseEvent,
+    QPaintEvent,
     QPainter,
     QPainterPath,
     QPen,
@@ -21,39 +24,30 @@ from PySide6.QtWidgets import (
     QSlider,
     QSpinBox,
     QStyle,
-    QStyleOption,
     QStyleOptionSpinBox,
     QStyleOptionSlider,
     QWidget,
 )
 
 from src.theme.colors import to_qcolor
-from src.translation import translator as t
-from src.theme.rainbow.palette import sample_rainbow_color
-from src.ui.widgets.custom.box import BoxThemeMixin
-from src.ui.widgets.custom.text import _TextEffectMixin
-from src.utils.qt_gradients import (
+from src.theme.gradients import (
     adjust_gradient_data,
     adjust_qcolor,
     build_background_brush,
     normalize_gradient_data,
 )
+from src.theme.schema.access import coerce_box_sides, coerce_number, theme_map
+from src.translation.manager import translator as t
+from src.theme.rainbow.palette import sample_rainbow_color
+from src.ui.painting import configure_painter, draw_widget_background, new_widget_painter
+from src.ui.widgets.custom.box import BoxThemeMixin
+from src.ui.widgets.custom.text import TextEffectMixin
+from src.ui.widgets.custom.types import WidgetThemeMap
 
 
 def _text_render_width(widget: QWidget, values: tuple[str, ...]) -> int:
     metrics = widget.fontMetrics()
-    widths: list[int] = []
-    for value in values:
-        text = str(value)
-        if not text:
-            continue
-        path = QPainterPath()
-        path.addText(QPointF(0.0, float(metrics.ascent())), widget.font(), text)
-        bounds = path.boundingRect()
-        advance = float(metrics.horizontalAdvance(text))
-        left_overhang = max(0.0, -bounds.left())
-        right_extent = max(advance, bounds.right())
-        widths.append(int(ceil(left_overhang + right_extent)))
+    widths = [metrics.horizontalAdvance(str(value)) for value in values if str(value)]
     return max(widths or [1])
 
 
@@ -89,8 +83,8 @@ def _spin_box_content_size_hint(spin_box: QSpinBox | QDoubleSpinBox, values: tup
 
 
 class MTSlider(QSlider):
-    def __init__(self, *args, obj_name: str = '', **kwargs) -> None:
-        super().__init__(Qt.Orientation.Horizontal, *args, **kwargs)
+    def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
+        super().__init__(Qt.Orientation.Horizontal, parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setMouseTracking(True)
         self._dragging_anywhere = False
@@ -100,9 +94,12 @@ class MTSlider(QSlider):
         self._runtime_rainbow_saturation = 1.0
         self._rainbow_line_color: QColor | None = None
         self._default_parts = self._build_default_parts()
-        self._parts = self._clone_parts(self._default_parts)
+        self._parts = deepcopy(self._default_parts)
         self.valueChanged.connect(self.update)
-        self.rangeChanged.connect(lambda *_: self.update())
+        def _update_range(_: int, __: int) -> None:
+            self.update()
+
+        self.rangeChanged.connect(_update_range)
         self.sliderPressed.connect(self.update)
         self.sliderReleased.connect(self.update)
 
@@ -164,21 +161,7 @@ class MTSlider(QSlider):
             },
         }
 
-    def _clone_parts(self, source: dict[str, dict[str, object]]) -> dict[str, dict[str, object]]:
-        cloned: dict[str, dict[str, object]] = {}
-        for part, values in source.items():
-            cloned_values: dict[str, object] = {}
-            for key, value in values.items():
-                if isinstance(value, QColor):
-                    cloned_values[key] = QColor(value)
-                elif isinstance(value, tuple):
-                    cloned_values[key] = tuple(float(v) for v in value)
-                else:
-                    cloned_values[key] = value
-            cloned[part] = cloned_values
-        return cloned
-
-    def mousePressEvent(self, event: QMouseEvent):
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             self._dragging_anywhere = True
             self.setSliderDown(True)
@@ -198,14 +181,14 @@ class MTSlider(QSlider):
             return
         event.ignore()
 
-    def mouseMoveEvent(self, event: QMouseEvent):
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if self._dragging_anywhere and (event.buttons() & Qt.MouseButton.LeftButton):
             self._drag_with_offset(event.position())
             event.accept()
             return
         super().mouseMoveEvent(event)
 
-    def mouseReleaseEvent(self, event: QMouseEvent):
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton and self._dragging_anywhere:
             self._drag_with_offset(event.position())
             self._dragging_anywhere = False
@@ -219,14 +202,14 @@ class MTSlider(QSlider):
     def wheelEvent(self, event: QWheelEvent):
         event.ignore()
 
-    def _jump_to_cursor(self, pos: QPointF):
+    def _jump_to_cursor(self, pos: QPointF) -> None:
         handle = self._handle_rect(self._create_option_slider())
         if self.orientation() == Qt.Orientation.Horizontal:
             self._set_value_from_cursor(pos, handle.width() // 2)
         else:
             self._set_value_from_cursor(pos, handle.height() // 2)
 
-    def _drag_with_offset(self, pos: QPointF):
+    def _drag_with_offset(self, pos: QPointF) -> None:
         self._set_value_from_cursor(pos, self._drag_offset)
 
     def _set_value_from_cursor(self, pos: QPointF, offset: int) -> None:
@@ -253,7 +236,7 @@ class MTSlider(QSlider):
         )
         self.setValue(value)
 
-    def _extract_drag_offset(self, point, handle: QRect) -> int:
+    def _extract_drag_offset(self, point: QPoint, handle: QRect) -> int:
         if self.orientation() == Qt.Orientation.Horizontal:
             offset = point.x() - handle.x()
             return max(0, min(handle.width(), offset))
@@ -274,54 +257,6 @@ class MTSlider(QSlider):
 
     def _part_value(self, part: str, key: str, fallback: object = None) -> object:
         return self._parts.get(part, {}).get(key, fallback)
-
-    def _coerce_qcolor(self, value: object) -> QColor | None:
-        return to_qcolor(value)
-
-    def _coerce_number(self, value: object) -> float | None:
-        if isinstance(value, (int, float)):
-            return float(value)
-        if not isinstance(value, str):
-            return None
-        text = value.strip().lower()
-        if not text:
-            return None
-        if text.endswith('px'):
-            text = text[:-2].strip()
-        try:
-            return float(text)
-        except ValueError:
-            return None
-
-    def _coerce_box_margin(self, value: object) -> tuple[float, float, float, float] | None:
-        if isinstance(value, (int, float)):
-            margin = float(value)
-            return (margin, margin, margin, margin)
-        if isinstance(value, (list, tuple)) and len(value) == 4:
-            result = []
-            for item in value:
-                number = self._coerce_number(item)
-                if number is None:
-                    return None
-                result.append(float(number))
-            return tuple(result)  # type: ignore[return-value]
-        if not isinstance(value, str):
-            return None
-        parts = [part for part in value.replace(',', ' ').split() if part]
-        if len(parts) == 1:
-            number = self._coerce_number(parts[0])
-            if number is None:
-                return None
-            return (number, number, number, number)
-        if len(parts) == 4:
-            result = []
-            for part in parts:
-                number = self._coerce_number(part)
-                if number is None:
-                    return None
-                result.append(float(number))
-            return tuple(result)  # type: ignore[return-value]
-        return None
 
     def _resolve_radius(self, value: object, rect: QRectF) -> float:
         base = max(0.0, min(rect.width(), rect.height()) / 2.0)
@@ -380,10 +315,10 @@ class MTSlider(QSlider):
     def _adjust_part_color(self, part: str, color: QColor) -> QColor:
         return adjust_qcolor(color, brightness=self._part_brightness(part), saturation=self._part_saturation(part))
 
-    def _adjust_part_gradient(self, part: str, gradient: dict | None) -> dict | None:
+    def _adjust_part_gradient(self, part: str, gradient: WidgetThemeMap | None) -> WidgetThemeMap | None:
         return adjust_gradient_data(gradient, brightness=self._part_brightness(part), saturation=self._part_saturation(part))
 
-    def current_part_color(self, part: str):
+    def current_part_color(self, part: str) -> QColor:
         if part == 'handle':
             return self._current_handle_color()
         if part == 'sub_page' and isinstance(self._rainbow_line_color, QColor) and self._rainbow_line_color.isValid():
@@ -393,14 +328,15 @@ class MTSlider(QSlider):
             return self._adjust_part_color(part, color)
         return QColor()
 
-    def current_part_gradient(self, part: str) -> dict | None:
-        if part == 'handle' and isinstance(getattr(self, '_animated_handle_color', None), QColor) and self._animated_handle_color.isValid():
+    def current_part_gradient(self, part: str) -> WidgetThemeMap | None:
+        animated = getattr(self, '_animated_handle_color', None)
+        if part == 'handle' and isinstance(animated, QColor) and animated.isValid():
             return None
         if part == 'sub_page' and isinstance(self._rainbow_line_color, QColor) and self._rainbow_line_color.isValid():
             return None
-        return self._adjust_part_gradient(part, self._part_value(part, 'background_gradient'))
+        return self._adjust_part_gradient(part, theme_map(self._part_value(part, 'background_gradient')))
 
-    def set_part_color(self, part: str, value):
+    def set_part_color(self, part: str, value: object) -> bool:
         color = to_qcolor(value)
         if color is None or part not in self._parts:
             return False
@@ -411,12 +347,40 @@ class MTSlider(QSlider):
         self.update()
         return True
 
-    def set_part_gradient(self, part: str, value) -> bool:
-        gradient = normalize_gradient_data(value)
-        if not isinstance(gradient, dict) or part not in self._parts:
+    def set_part_gradient(self, part: str, value: object) -> bool:
+        gradient = theme_map(normalize_gradient_data(value))
+        if gradient is None or part not in self._parts:
             return False
         self._parts[part]['background_gradient'] = gradient
         self.update()
+        return True
+
+    def set_part_style_value(self, part: str, path: tuple[str, ...], value: object) -> bool:
+        if part not in self._parts:
+            return False
+        if path in {('color',), ('background', 'color')}:
+            return self.set_part_color(part, value)
+        if path == ('background', 'gradient'):
+            return self.set_part_gradient(part, value)
+        if path == ('border', 'color'):
+            color = to_qcolor(value)
+            if color is None:
+                return False
+            self._parts[part]['border_color'] = QColor(color)
+            self.update()
+            return True
+        if path == ('border', 'width'):
+            number = coerce_number(value)
+            if number is None:
+                return False
+            self._parts[part]['border_width'] = max(0.0, float(number))
+            self.update()
+            return True
+        if path == ('border', 'radius'):
+            self._parts[part]['border_radius'] = value
+            self.update()
+            return True
+        return False
 
     def set_part_metric(self, part: str, metric: str, value: float) -> bool:
         if part not in self._parts:
@@ -437,7 +401,7 @@ class MTSlider(QSlider):
         return max(1.0, width), max(1.0, height)
 
     def _handle_margin(self) -> tuple[float, float, float, float]:
-        margin = self._coerce_box_margin(self._part_value('handle', 'margin'))
+        margin = coerce_box_sides(self._part_value('handle', 'margin'), allow_negative=True)
         return margin if margin is not None else (0.0, 0.0, 0.0, 0.0)
 
     def _groove_thickness(self) -> float:
@@ -542,31 +506,28 @@ class MTSlider(QSlider):
         self._slider_line_rainbow_phase = 0.0
         self._runtime_rainbow_palette = 'Pastel'
         self._runtime_rainbow_saturation = 1.0
-        self._parts = self._clone_parts(self._default_parts)
+        self._parts = deepcopy(self._default_parts)
         self._rainbow_line_color = None
         self._animated_handle_color = None
         self.update()
 
-    def apply_theme(self, data: dict) -> None:
-        if not isinstance(data, dict):
-            return
-
+    def apply_theme(self, data: WidgetThemeMap) -> None:
         for part in ('groove', 'sub_page', 'add_page', 'handle'):
-            part_data = data.get(part) if isinstance(data.get(part), dict) else {}
-            if not isinstance(part_data, dict):
+            part_data = theme_map(data.get(part))
+            if part_data is None:
                 continue
-            background = part_data.get('background') if isinstance(part_data.get('background'), dict) else {}
-            border = part_data.get('border') if isinstance(part_data.get('border'), dict) else {}
-            if (color := self._coerce_qcolor(background.get('color'))):
+            background = theme_map(part_data.get('background')) or {}
+            border = theme_map(part_data.get('border')) or {}
+            if (color := to_qcolor(background.get('color'))):
                 self._parts[part]['background_color'] = color
                 self._parts[part]['background_gradient'] = None
                 if part == 'handle':
                     self._animated_handle_color = None
             if 'gradient' in background:
-                self._parts[part]['background_gradient'] = normalize_gradient_data(background.get('gradient'))
-            if (border_color := self._coerce_qcolor(border.get('color'))):
+                self._parts[part]['background_gradient'] = theme_map(normalize_gradient_data(background.get('gradient')))
+            if (border_color := to_qcolor(border.get('color'))):
                 self._parts[part]['border_color'] = border_color
-            if (border_width := self._coerce_number(border.get('width'))) is not None:
+            if (border_width := coerce_number(border.get('width'))) is not None:
                 self._parts[part]['border_width'] = max(0.0, border_width)
             if isinstance((border_style := border.get('style')), str) and border_style.strip():
                 self._parts[part]['border_style'] = border_style.strip().lower()
@@ -578,14 +539,14 @@ class MTSlider(QSlider):
             saturation = background.get('saturation')
             if isinstance(saturation, (int, float)):
                 self._parts[part]['saturation'] = max(0.0, min(float(saturation), 1.0))
-            if part == 'groove' and (size := self._coerce_number(part_data.get('size'))) is not None:
+            if part == 'groove' and (size := coerce_number(part_data.get('size'))) is not None:
                 self._parts[part]['size'] = max(1.0, size)
             if part == 'handle':
-                if (width := self._coerce_number(part_data.get('width'))) is not None:
+                if (width := coerce_number(part_data.get('width'))) is not None:
                     self._parts[part]['width'] = max(1.0, width)
-                if (height := self._coerce_number(part_data.get('height'))) is not None:
+                if (height := coerce_number(part_data.get('height'))) is not None:
                     self._parts[part]['height'] = max(1.0, height)
-                if (margin := self._coerce_box_margin(part_data.get('margin'))) is not None:
+                if (margin := coerce_box_sides(part_data.get('margin'), allow_negative=True)) is not None:
                     self._parts[part]['margin'] = margin
 
         if isinstance(self._rainbow_line_color, QColor):
@@ -599,7 +560,7 @@ class MTSlider(QSlider):
             saturation=self._runtime_rainbow_saturation,
         )
 
-    def _pen_style(self, value: object):
+    def _pen_style(self, value: object) -> Qt.PenStyle:
         text = str(value).strip().lower()
         match text:
             case 'none':
@@ -663,7 +624,7 @@ class MTSlider(QSlider):
             return radius, radius, 0.0, 0.0
         return radius, radius, radius, radius
 
-    def _draw_part_rect(self, painter, rect: QRectF, part: str, *, draw_fill: bool = True, draw_border: bool = True) -> None:
+    def _draw_part_rect(self, painter: QPainter, rect: QRectF, part: str, *, draw_fill: bool = True, draw_border: bool = True) -> None:
         if not rect.isValid() or rect.width() <= 0 or rect.height() <= 0:
             return
 
@@ -672,13 +633,14 @@ class MTSlider(QSlider):
         background = self.current_part_color(part)
         background_gradient = self.current_part_gradient(part)
         border_color = self._part_value(part, 'border_color')
-        border_width = float(self._part_value(part, 'border_width', 0.0) or 0.0)
+        border_width_value = coerce_number(self._part_value(part, 'border_width', 0.0))
+        border_width = border_width_value if border_width_value is not None else 0.0
         border_style = self._pen_style(self._part_value(part, 'border_style', 'solid'))
 
-        if draw_fill and isinstance(background_gradient, dict):
+        if draw_fill and background_gradient is not None:
             brush = build_background_brush(rect, {'gradient': background_gradient})
             painter.setBrush(brush if brush is not None else Qt.BrushStyle.NoBrush)
-        elif draw_fill and isinstance(background, QColor) and background.isValid():
+        elif draw_fill and background.isValid():
             painter.setBrush(background)
         else:
             painter.setBrush(Qt.BrushStyle.NoBrush)
@@ -701,14 +663,14 @@ class MTSlider(QSlider):
         painter.drawPath(path)
         painter.restore()
 
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+    def paintEvent(self, event: QPaintEvent) -> None:
+        _ = event
+        painter = new_widget_painter(self, smooth_pixmap=True)
 
         groove_rect = QRectF(self._groove_rect(self._create_option_slider()))
         handle_rect = QRectF(self._handle_rect(self._create_option_slider()))
         if not groove_rect.isValid() or not handle_rect.isValid():
+            painter.end()
             return
 
         if self.orientation() == Qt.Orientation.Horizontal:
@@ -724,16 +686,17 @@ class MTSlider(QSlider):
         self._draw_part_rect(painter, sub_rect, 'sub_page')
         self._draw_part_rect(painter, groove_rect, 'groove', draw_fill=False, draw_border=True)
         self._draw_part_rect(painter, handle_rect, 'handle')
+        painter.end()
 
-class MTLineEdit(BoxThemeMixin, _TextEffectMixin, QLineEdit):
+class MTLineEdit(BoxThemeMixin, TextEffectMixin, QLineEdit):
     PAINTED_BOX_THEME = False
 
     _OVERFLOW_SCROLL_DELAY = 0.55
     _OVERFLOW_SCROLL_EDGE_PAUSE = 0.85
     _OVERFLOW_SCROLL_SPEED = 28.0
 
-    def __init__(self, *args, obj_name: str = '', **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, text: str = '', parent: QWidget | None = None, *, obj_name: str = '') -> None:
+        super().__init__(text, parent)
         self._focused_alignment: Qt.AlignmentFlag | None = None
         self._unfocused_alignment: Qt.AlignmentFlag | None = None
         self._theme_text_color_override: QColor | None = None
@@ -808,31 +771,31 @@ class MTLineEdit(BoxThemeMixin, _TextEffectMixin, QLineEdit):
             return
         self.setPlaceholderText(t.tr(self._placeholder_tr_key))
 
-    def focusInEvent(self, event) -> None:
+    def focusInEvent(self, event: QFocusEvent) -> None:
         super().focusInEvent(event)
         self._set_overflow_hover_active(False)
         self._apply_focus_alignment()
 
-    def focusOutEvent(self, event) -> None:
+    def focusOutEvent(self, event: QFocusEvent) -> None:
         super().focusOutEvent(event)
         self._apply_focus_alignment()
         self._set_overflow_hover_active(self.underMouse())
 
-    def enterEvent(self, event) -> None:
+    def enterEvent(self, event: QEnterEvent) -> None:
         if not self.hasFocus():
             self._set_overflow_hover_active(True)
         super().enterEvent(event)
 
-    def leaveEvent(self, event) -> None:
+    def leaveEvent(self, event: QEvent) -> None:
         self._set_overflow_hover_active(False)
         super().leaveEvent(event)
 
-    def timerEvent(self, event) -> None:
+    def timerEvent(self, event: QTimerEvent) -> None:
         if self._handle_overflow_timer_event(event):
             return
         super().timerEvent(event)
 
-    def paintEvent(self, event) -> None:
+    def paintEvent(self, event: QPaintEvent) -> None:
         if self.hasFocus():
             self._draw_line_edit_background()
             super().paintEvent(event)
@@ -841,9 +804,7 @@ class MTLineEdit(BoxThemeMixin, _TextEffectMixin, QLineEdit):
         text = self.displayText() or self.placeholderText()
         text_rect = self._visible_text_rect()
         if text and self._text_overflows_rect(text, text_rect):
-            painter = QPainter(self)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-            painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+            painter = new_widget_painter(self, text_antialias=True)
             self._draw_line_edit_background(painter)
             self._draw_faded_text(painter, text_rect, text, self._text_color(text))
             painter.end()
@@ -869,15 +830,9 @@ class MTLineEdit(BoxThemeMixin, _TextEffectMixin, QLineEdit):
     def _draw_line_edit_background(self, painter: QPainter | None = None) -> None:
         should_end = painter is None
         if painter is None:
-            painter = QPainter(self)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            painter = new_widget_painter(self)
 
-        if self.has_box_theme():
-            self.draw_box_theme(painter)
-        else:
-            option = QStyleOption()
-            option.initFrom(self)
-            self.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, option, painter, self)
+        draw_widget_background(self, painter)
 
         if should_end:
             painter.end()
@@ -912,9 +867,7 @@ class MTLineEdit(BoxThemeMixin, _TextEffectMixin, QLineEdit):
         pixmap.fill(Qt.GlobalColor.transparent)
 
         layer = QPainter(pixmap)
-        layer.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        layer.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
-        layer.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+        configure_painter(layer, text_antialias=True, smooth_pixmap=True)
         layer.setFont(self.font())
         local_rect = QRectF(0, 0, pixmap.width() / ratio, pixmap.height() / ratio)
         offset = self._overflow_animation_offset(text, local_rect)
@@ -1001,7 +954,7 @@ class MTLineEdit(BoxThemeMixin, _TextEffectMixin, QLineEdit):
         self.killTimer(self._overflow_animation_timer_id)
         self._overflow_animation_timer_id = 0
 
-    def _handle_overflow_timer_event(self, event) -> bool:
+    def _handle_overflow_timer_event(self, event: QTimerEvent) -> bool:
         timer_id = int(self._overflow_animation_timer_id or 0)
         if timer_id <= 0 or event.timerId() != timer_id:
             return False
@@ -1052,8 +1005,8 @@ class MTLineEdit(BoxThemeMixin, _TextEffectMixin, QLineEdit):
 class MTSpinBox(BoxThemeMixin, QSpinBox):
     PAINTED_BOX_THEME = False
 
-    def __init__(self, *args, obj_name: str = '', **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
+        super().__init__(parent)
         self.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
         self.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self.setFrame(False)
@@ -1082,10 +1035,9 @@ class MTSpinBox(BoxThemeMixin, QSpinBox):
         event.ignore()
         self.clearFocus()
 
-    def paintEvent(self, event) -> None:
+    def paintEvent(self, event: QPaintEvent) -> None:
         if self.has_box_theme():
-            painter = QPainter(self)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            painter = new_widget_painter(self)
             self.draw_box_theme(painter)
             painter.end()
         super().paintEvent(event)
@@ -1094,8 +1046,8 @@ class MTSpinBox(BoxThemeMixin, QSpinBox):
 class MTDoubleSpinBox(BoxThemeMixin, QDoubleSpinBox):
     PAINTED_BOX_THEME = False
 
-    def __init__(self, *args, obj_name: str = '', **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
+        super().__init__(parent)
         self.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
         self.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self.setFrame(False)
@@ -1124,10 +1076,9 @@ class MTDoubleSpinBox(BoxThemeMixin, QDoubleSpinBox):
         event.ignore()
         self.clearFocus()
 
-    def paintEvent(self, event) -> None:
+    def paintEvent(self, event: QPaintEvent) -> None:
         if self.has_box_theme():
-            painter = QPainter(self)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            painter = new_widget_painter(self)
             self.draw_box_theme(painter)
             painter.end()
         super().paintEvent(event)

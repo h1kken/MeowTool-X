@@ -1,17 +1,24 @@
 import json
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, cast
 
-from PySide6.QtCore import QEvent, QSize, Qt, QTimer
-from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QMainWindow, QSizePolicy, QWidget
+from PySide6.QtCore import QSize, Qt, QTimer
+from PySide6.QtGui import QCloseEvent, QIcon, QMoveEvent, QResizeEvent, QShowEvent
+from PySide6.QtWidgets import QBoxLayout, QMainWindow, QSizePolicy, QWidget
 
 from src.config.loader import config_loader
 from src.config.manager import config
-from src.services.discord_presence import DiscordPresenceManager
+from src.services.discord.rich_presence import DiscordPresenceManager
 from src.theme.animation.manager import AnimationManager
+from src.theme.constants import (
+    THEME_AUTOLOAD_FALLBACK,
+    THEME_RUNTIME_RAINBOW_DURATION_FALLBACK,
+    THEME_RUNTIME_RAINBOW_ENABLED_FALLBACK,
+    THEME_RUNTIME_RAINBOW_PALETTE_FALLBACK,
+)
 from src.theme.manager import ThemeManager
+from src.theme.paths import PATH_DEFAULT_THEME, PATH_THEMES_USER
 from src.theme.rainbow.runtime import RainbowRuntimeController
 from src.theme.storage.io import (
     find_theme_file_by_name,
@@ -33,45 +40,18 @@ from src.ui.pages import (
     # RobloxTimeBoosterPage,
     SettingsPage,
 )
-from src.ui.widgets import MTButton, MTWidget, SidebarMediaWidget
-from src.ui.windows.window_header import apply_frameless_window_header
-from src.utils.constants import (
-    DEFAULT_THEME,
+from src.ui.constants import (
     MAIN_WINDOW_PAGE_LABEL_FALLBACK,
-    PATH_APP_ICON,
-    PATH_SIDEBAR_ICONS,
-    PATH_THEMES_USER,
-    PROGRAM_NAME,
-    THEME_AUTOLOAD_FALLBACK,
     THEME_AUTO_SAVE_DEBOUNCE_MS,
-    THEME_RUNTIME_RAINBOW_DURATION_FALLBACK,
-    THEME_RUNTIME_RAINBOW_ENABLED_FALLBACK,
-    THEME_RUNTIME_RAINBOW_PALETTE_FALLBACK,
     WINDOW_X,
     WINDOW_Y,
 )
+from src.ui.paths import PATH_APP_ICON, PATH_SIDEBAR_ICONS
+from src.ui.widgets import MTButton, MTWidget, SidebarMediaWidget
+from src.ui.windows.types import PageSpec, SidebarSectionSpec
+from src.ui.windows.window_header import apply_frameless_window_header
+from src.utils.constants.app import PROGRAM_NAME
 from src.utils.filesystem import FS
-
-type _PageSpec = tuple[str, str, type[QWidget]]
-type _SidebarSectionSpec = tuple[
-    str | None, str | None, list[_PageSpec] | type[QWidget] | None, dict[str, Any] | None
-]
-_QT_MAX_SIZE = 16_777_215
-
-
-def _repolish(widget: QWidget) -> None:
-    style = widget.style()
-    if style is None:
-        widget.update()
-        return
-
-    if not widget.testAttribute(Qt.WidgetAttribute.WA_WState_Polished):
-        widget.update()
-        return
-
-    style.unpolish(widget)
-    style.polish(widget)
-    widget.update()
 
 
 class _SidebarNavButton(MTButton):
@@ -97,17 +77,11 @@ class _SidebarCategorySection(MTWidget):
     def __init__(
         self,
         *,
-        category_name: str,
         obj_name: str,
-        collapsible: bool = False,
-        show_separator: bool = True,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(obj_name=f"{obj_name}_Category_Widget", parent=parent)
-        self._category_name = str(category_name).strip()
-        self._collapsible = bool(collapsible)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
-        self.setProperty("collapsible", self._collapsible)
 
         self._main_layout = create_layout(LayoutType.VBOX, parent=self)
         self._main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -115,8 +89,6 @@ class _SidebarCategorySection(MTWidget):
         self._header_button = MTButton(
             tr_key="",
             obj_name=f"{obj_name}_Category_Header_Button",
-            checkable=self._collapsible,
-            checked=True,
             parent=self,
         )
         self._header_button.setProperty("rainbowBorderTarget", False)
@@ -124,16 +96,6 @@ class _SidebarCategorySection(MTWidget):
         self._header_button.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
-        self._header_button.setProperty("collapsible", self._collapsible)
-
-        self._header_separator = MTWidget(
-            obj_name=f"{obj_name}_Category_Separator_Widget", parent=self
-        )
-        self._header_separator.setFixedHeight(1)
-        self._header_separator.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
-        self._header_separator.setVisible(bool(show_separator))
 
         self._content_widget = MTWidget(
             obj_name=f"{obj_name}_Category_Content_Widget", parent=self
@@ -141,72 +103,30 @@ class _SidebarCategorySection(MTWidget):
         self._content_widget.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum
         )
-        self._content_widget.setProperty("collapsible", self._collapsible)
         self._content_layout = create_layout(
             LayoutType.VBOX, parent=self._content_widget
         )
         self._content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self._main_layout.addWidget(self._header_button)
-        self._main_layout.addWidget(self._header_separator)
         self._main_layout.addWidget(self._content_widget)
-
-        if self._collapsible:
-            self._header_button.toggled.connect(self.set_expanded)
-            self.set_expanded(self._header_button.isChecked())
-        else:
-            self.set_expanded(True)
 
     def add_button(self, button: QWidget) -> None:
         self._content_layout.addWidget(button)
-        if self.is_expanded():
-            self._content_widget.setMaximumHeight(_QT_MAX_SIZE)
         self.updateGeometry()
-
-    def is_expanded(self) -> bool:
-        return True if not self._collapsible else self._header_button.isChecked()
-
-    def set_expanded(self, expanded: bool) -> None:
-        if not self._collapsible:
-            expanded = True
-        expanded = bool(expanded)
-        if self._header_button.isChecked() != expanded:
-            self._header_button.setChecked(expanded)
-            return
-
-        self.setProperty("expanded", expanded)
-        self._header_button.setProperty("expanded", expanded)
-        self._content_widget.setProperty("expanded", expanded)
-
-        self._content_widget.setVisible(expanded)
-        self._content_widget.setMaximumHeight(_QT_MAX_SIZE if expanded else 0)
-        self.updateGeometry()
-        self._content_widget.updateGeometry()
-
-        _repolish(self)
-        _repolish(self._header_button)
-        _repolish(self._header_separator)
-        _repolish(self._content_widget)
 
     def header_button(self) -> MTButton:
         return self._header_button
 
-    def content_widget(self) -> MTWidget:
-        return self._content_widget
-
 
 class MainWindow(QMainWindow):
-    _MAIN_PAGE_SPECS: list[_SidebarSectionSpec] = [
+    _MAIN_PAGE_SPECS: list[SidebarSectionSpec] = [
         (
             "PRX",
             "Sidebar_Proxy",
             [
                 ("Proxy_Checker", "CHCKR", ProxyCheckerPage),
             ],
-            {
-                "collapsible": False,
-                "show_separator": True,
-            },
         ),
         (
             "RBX",
@@ -220,13 +140,9 @@ class MainWindow(QMainWindow):
                 # ('Roblox_Auto_Regger', 'AT_RGGR', RobloxAutoReggerPage),
                 # ('Roblox_Time_Booster', 'TM_BSTR', RobloxTimeBoosterPage),
             ],
-            {
-                "collapsible": False,
-                "show_separator": True,
-            },
         ),
-        (None, None, None, None),
-        ("Settings", "STNGS", SettingsPage, None),
+        (None, None, None),
+        ("Settings", "STNGS", SettingsPage),
     ]
     _SIDEBAR_CATEGORY_ICON_NAMES: dict[str, str] = {
         "Sidebar_Proxy": "proxy.svg",
@@ -279,7 +195,7 @@ class MainWindow(QMainWindow):
 
         self.setObjectName("Main_Window")
         self.setWindowTitle(PROGRAM_NAME)
-        if PATH_APP_ICON.exists():
+        if PATH_APP_ICON.is_file():
             self.setWindowIcon(QIcon(str(PATH_APP_ICON)))
         self.resize(WINDOW_X, WINDOW_Y)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -289,24 +205,20 @@ class MainWindow(QMainWindow):
         config.config_loaded.connect(self._on_config_loaded)
         config.value_changed.connect(self._on_config_value_changed)
 
-        FS.create_folder(PATH_THEMES_USER)
-
-    def _resolve_theme_path(self, theme_name: str) -> Path | None:
-        return resolve_theme_path(theme_name)
+        FS.ensure_dir(PATH_THEMES_USER)
 
     def resolve_theme_path(self, theme_name: str) -> Path | None:
-        return self._resolve_theme_path(theme_name)
+        return resolve_theme_path(theme_name)
 
-    def moveEvent(self, event) -> None:
+    def moveEvent(self, event: QMoveEvent) -> None:
         super().moveEvent(event)
         self._window_move_idle_timer.start()
         self._defer_theme_related_activity_for_window_motion()
 
-    def resizeEvent(self, event) -> None:
+    def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         self.repaint()
-        if (central_widget := self.centralWidget()) is not None:
-            central_widget.repaint()
+        self.centralWidget().repaint()
 
     def _defer_theme_related_activity_for_window_motion(self) -> None:
         if self._theme_auto_save_timer.isActive():
@@ -322,12 +234,12 @@ class MainWindow(QMainWindow):
             return
         self._deferred_theme_auto_save = False
 
-    def closeEvent(self, event) -> None:
+    def closeEvent(self, event: QCloseEvent) -> None:
         if self._discord_presence_manager is not None:
             self._discord_presence_manager.shutdown()
         super().closeEvent(event)
 
-    def showEvent(self, event) -> None:
+    def showEvent(self, event: QShowEvent) -> None:
         super().showEvent(event)
         if not self._runtime_theme_post_show_pending:
             return
@@ -340,19 +252,13 @@ class MainWindow(QMainWindow):
         obj_name: str,
         tr_key: str,
         page_class: type[QWidget],
-        *,
-        settings_startup_progress: Callable[[int, int, str], None] | None = None,
     ) -> QWidget:
         if tr_key == "STNGS":
-            page = page_class(
-                startup_progress=settings_startup_progress,
-                current_theme_name=self._initial_theme_name,
+            page = SettingsPage(current_theme_name=self._initial_theme_name)
+            self._settings_page = page
+            page.presence_path_changed.connect(
+                self._on_settings_presence_path_changed
             )
-            if isinstance(page, SettingsPage):
-                self._settings_page = page
-                page.presence_path_changed.connect(
-                    self._on_settings_presence_path_changed
-                )
             return page
 
         return page_class()
@@ -362,16 +268,9 @@ class MainWindow(QMainWindow):
         obj_name: str,
         tr_key: str,
         page_class: type[QWidget],
-        *,
-        settings_startup_progress: Callable[[int, int, str], None] | None = None,
     ) -> tuple[QWidget, str]:
-        page_label = obj_name.replace("_", " ") if isinstance(obj_name, str) else "Page"
-        page = self._create_main_page(
-            obj_name,
-            tr_key,
-            page_class,
-            settings_startup_progress=settings_startup_progress,
-        )
+        page_label = obj_name.replace("_", " ")
+        page = self._create_main_page(obj_name, tr_key, page_class)
         self._page_controller.add_page(
             tr_key, page, object_name=f"Main_{obj_name}_Page"
         )
@@ -404,38 +303,26 @@ class MainWindow(QMainWindow):
 
     def _build_standalone_sidebar_page(
         self,
-        sidebar_layout,
+        sidebar_layout: QBoxLayout,
         obj_name: str,
         tr_key: str,
         page_class: type[QWidget],
-        *,
-        settings_startup_progress: Callable[[int, int, str], None] | None = None,
     ) -> tuple[str, str]:
-        _page, page_label = self._register_page(
-            obj_name,
-            tr_key,
-            page_class,
-            settings_startup_progress=settings_startup_progress,
-        )
+        _page, page_label = self._register_page(obj_name, tr_key, page_class)
         button = self._create_sidebar_button(obj_name, tr_key, page_label)
         sidebar_layout.addWidget(button)
         return tr_key, page_label
 
     def _build_category_sidebar_pages(
         self,
-        category_name: str,
         category_obj_name: str,
-        page_specs: list[_PageSpec],
-        options: dict[str, Any] | None,
+        page_specs: list[PageSpec],
         *,
         parent: QWidget,
-        sidebar_layout,
+        sidebar_layout: QBoxLayout,
     ) -> tuple[_SidebarCategorySection, str | None, str | None]:
         category = _SidebarCategorySection(
-            category_name=category_name,
             obj_name=category_obj_name,
-            collapsible=bool((options or {}).get("collapsible", False)),
-            show_separator=bool((options or {}).get("show_separator", True)),
             parent=parent,
         )
         self._apply_default_sidebar_category_icon(category, category_obj_name)
@@ -493,50 +380,31 @@ class MainWindow(QMainWindow):
         pages_layout = create_layout(LayoutType.VBOX, parent=main_content)
         self._page_controller = PageController(pages_layout)
 
-    def build_pages(
-        self,
-        *,
-        progress_callback: Callable[[int, int, str], None] | None = None,
-    ) -> None:
+    def initialize_runtime_controllers(self) -> None:
+        self.init_runtime_controllers()
+
+    def build_pages(self) -> None:
         if self._pages_built:
             return
 
         self._pages_built = True
+        assert self._sidebar_widget is not None
 
         first_key: str | None = None
         first_page_label: str | None = None
-        total_pages = self.startup_page_total()
-        pages_done = 0
 
-        def emit_progress(current: int, label: str) -> None:
-            if callable(progress_callback):
-                progress_callback(current, total_pages, label)
-
-        for category_name, category_obj_name, page_specs, options in self._MAIN_PAGE_SPECS:
+        for category_name, category_obj_name, page_specs in self._MAIN_PAGE_SPECS:
             if category_name is None or category_obj_name is None or page_specs is None:
                 self._sidebar_buttons_layout.addStretch()
                 continue
 
             if not isinstance(page_specs, list):
-                settings_offset = pages_done
-                settings_progress = None
-                if category_obj_name == "STNGS":
-                    def settings_progress(current: int, total: int, stage: str) -> None:
-                        emit_progress(settings_offset + current, stage)
-
                 next_key, next_label = self._build_standalone_sidebar_page(
                     self._sidebar_buttons_layout,
                     category_name,
                     category_obj_name,
                     page_specs,
-                    settings_startup_progress=settings_progress,
                 )
-                pages_done += (
-                    len(SettingsPage.PAGE_SPECS) + 1
-                    if category_obj_name == "STNGS"
-                    else 1
-                )
-                emit_progress(pages_done, f"Loading page: {next_label}")
                 first_key, first_page_label = self._pick_first_page(
                     first_key,
                     first_page_label,
@@ -546,15 +414,11 @@ class MainWindow(QMainWindow):
                 continue
 
             _category, next_key, next_label = self._build_category_sidebar_pages(
-                category_name,
                 category_obj_name,
                 page_specs,
-                options,
                 parent=self._sidebar_widget,
                 sidebar_layout=self._sidebar_buttons_layout,
             )
-            pages_done += len(page_specs)
-            emit_progress(pages_done, f"Loading page: {next_label or category_name}")
             if next_key is not None and next_label is not None:
                 first_key, first_page_label = self._pick_first_page(
                     first_key,
@@ -577,7 +441,7 @@ class MainWindow(QMainWindow):
             return
 
         icon_path = PATH_SIDEBAR_ICONS / icon_name.strip()
-        if not icon_path.exists():
+        if not icon_path.is_file():
             return
 
         button.set_text_icon(
@@ -595,7 +459,7 @@ class MainWindow(QMainWindow):
             return
 
         icon_path = PATH_SIDEBAR_ICONS / icon_name.strip()
-        if not icon_path.exists():
+        if not icon_path.is_file():
             return
 
         category.header_button().set_text_icon(
@@ -634,42 +498,6 @@ class MainWindow(QMainWindow):
         self._sidebar_widget.setFixedWidth(target_width)
         self._sidebar_width_locked = True
 
-    @classmethod
-    def _page_spec_count(cls) -> int:
-        total = 0
-        for _category_name, _category_obj_name, pages, _options in cls._MAIN_PAGE_SPECS:
-            if pages is None:
-                continue
-            if isinstance(pages, list):
-                total += len(pages)
-            else:
-                total += 1
-        return total
-
-    @classmethod
-    def startup_page_total(cls) -> int:
-        return cls._page_spec_count() + len(SettingsPage.PAGE_SPECS)
-
-    @classmethod
-    def startup_settings_prewarm_total(cls) -> int:
-        return len(SettingsPage.HEAVY_TAB_KEYS)
-
-    def toggle_maximize_restore(self) -> None:
-        if self.isMaximized():
-            self.showNormal()
-            return
-
-        self.showMaximized()
-
-    def changeEvent(self, event: QEvent) -> None:
-        super().changeEvent(event)
-
-    def setWindowIcon(self, icon: QIcon) -> None:
-        super().setWindowIcon(icon)
-
-    def setWindowTitle(self, title: str) -> None:
-        super().setWindowTitle(title)
-
     def _set_discord_presence_page(self, page_label: str) -> None:
         normalized = str(page_label).strip() or MAIN_WINDOW_PAGE_LABEL_FALLBACK
         self._discord_presence_page = normalized
@@ -690,7 +518,7 @@ class MainWindow(QMainWindow):
         if current_key == "STNGS":
             self._set_discord_presence_page(normalized)
 
-    def initialize_runtime_controllers(self) -> None:
+    def init_runtime_controllers(self) -> None:
         if self._animation_manager is None:
             self._animation_manager = AnimationManager(self.centralWidget())
 
@@ -716,20 +544,16 @@ class MainWindow(QMainWindow):
         self._theme_manager.suppress_theme_changed()
 
     def apply_startup_theme(self, theme_name: str | None = None) -> str:
-        target_theme = str(theme_name or self._initial_theme_name).strip() or DEFAULT_THEME.stem
+        target_theme = str(theme_name or self._initial_theme_name).strip() or PATH_DEFAULT_THEME.stem
         if not self.set_theme(target_theme, persist=False):
-            self.set_theme(DEFAULT_THEME.stem, persist=False)
+            self.set_theme(PATH_DEFAULT_THEME.stem, persist=False)
         self._lock_sidebar_width_once()
         return self.current_theme_name()
 
-    def preload_settings_pages(
-        self,
-        *,
-        progress_callback: Callable[[int, int, str], None] | None = None,
-    ) -> None:
+    def preload_settings_pages(self) -> None:
         if self._settings_page is None:
             return
-        self._settings_page.preload_heavy_tabs(progress_callback=progress_callback)
+        self._settings_page.preload_heavy_tabs()
 
     def start_discord_presence(self) -> None:
         if self._discord_presence_manager is not None:
@@ -750,15 +574,15 @@ class MainWindow(QMainWindow):
         if current:
             return current
         initial = str(getattr(self, "_initial_theme_name", "")).strip()
-        return initial or DEFAULT_THEME.stem
+        return initial or PATH_DEFAULT_THEME.stem
 
     def theme_on_load_name(self) -> str:
         if not self._theme_autoload_enabled():
-            return DEFAULT_THEME.stem
+            return PATH_DEFAULT_THEME.stem
         configured = str(
-            config.get("General>Theme", default=DEFAULT_THEME.stem)
+            config.get("General>Theme", default=PATH_DEFAULT_THEME.stem)
         ).strip()
-        return configured or DEFAULT_THEME.stem
+        return configured or PATH_DEFAULT_THEME.stem
 
     def _theme_autoload_enabled(self) -> bool:
         return bool(
@@ -784,10 +608,6 @@ class MainWindow(QMainWindow):
             return False
         theme_path = self.resolve_theme_path(theme_name)
         if theme_path is None:
-            return False
-
-        raw_payload = load_theme_payload(theme_path)
-        if not isinstance(raw_payload, dict):
             return False
 
         self._theme_manager.load(theme_path, merge_with_default=False)
@@ -818,7 +638,7 @@ class MainWindow(QMainWindow):
         output_path = find_theme_file_by_name(
             PATH_THEMES_USER, name
         ) or theme_output_path(PATH_THEMES_USER, name)
-        FS.create_folder(PATH_THEMES_USER)
+        FS.ensure_dir(PATH_THEMES_USER)
         try:
             write_theme_payload(output_path, payload)
         except OSError:
@@ -828,16 +648,11 @@ class MainWindow(QMainWindow):
 
     def _theme_payload_for_save(self) -> dict[str, Any]:
         current_theme = deepcopy(self._build_theme_payload_from_manager())
-        if not isinstance(current_theme, dict):
-            return {"widgets": []}
-
         widgets = current_theme.get("widgets")
         if isinstance(widgets, list):
             return current_theme
 
-        widgets_payload = self._widgets_dict_to_payload(
-            widgets if isinstance(widgets, dict) else {}
-        )
+        widgets_payload = self._widgets_dict_to_payload(cast(dict[str, dict[str, Any]], widgets if isinstance(widgets, dict) else {}))
         payload: dict[str, Any] = {
             key: deepcopy(value)
             for key, value in current_theme.items()
@@ -847,8 +662,7 @@ class MainWindow(QMainWindow):
         return payload
 
     def _load_default_theme_payload(self) -> dict[str, Any]:
-        payload = load_theme_payload(DEFAULT_THEME)
-        return payload if isinstance(payload, dict) else {}
+        return load_theme_payload(PATH_DEFAULT_THEME)
 
     def _widgets_dict_to_payload(
         self, widgets: dict[str, dict[str, Any]]
@@ -857,7 +671,7 @@ class MainWindow(QMainWindow):
         order: list[str] = []
 
         for target, data in widgets.items():
-            if not (isinstance(target, str) and target and isinstance(data, dict)):
+            if not target:
                 continue
 
             styles = {
@@ -920,18 +734,12 @@ class MainWindow(QMainWindow):
         if self._theme_manager is None or self._animation_manager is None:
             return
 
-        current_theme = getattr(self._theme_manager, "_current_theme", {})
-        widgets = (
-            current_theme.get("widgets", {}) if isinstance(current_theme, dict) else {}
-        )
-        if not isinstance(widgets, dict):
-            widgets = {}
-
-        animations = {
-            target: deepcopy(item.get("animations"))
-            for target, item in widgets.items()
-            if isinstance(item, dict) and item.get("animations")
-        }
+        widgets = self._theme_manager.current_theme_widgets()
+        animations: dict[str, Any] = {}
+        for target, item in widgets.items():
+            animation_data = item.get("animations")
+            if animation_data is not None:
+                animations[target] = deepcopy(animation_data)
         self._animation_manager.load(animations, widgets)
 
     def _apply_runtime_theme_preferences_for_controller(
@@ -947,8 +755,7 @@ class MainWindow(QMainWindow):
     def _apply_runtime_theme_preferences_to_children(self) -> None:
         preferences = self._runtime_theme_preferences()
         enabled, duration, palette = preferences
-        if hasattr(self, "_window_header") and self._window_header is not None:
-            self._window_header.set_title_rainbow(enabled, duration, palette=palette)
+        self._window_header.set_title_rainbow(enabled, duration, palette=palette)
 
         self._apply_runtime_theme_preferences_for_controller(
             getattr(self, "_rainbow_runtime", None), preferences
@@ -958,34 +765,22 @@ class MainWindow(QMainWindow):
         if self._theme_manager is None:
             return {"widgets": []}
 
-        current_theme = deepcopy(getattr(self._theme_manager, "_current_theme", {}))
-        widgets = (
-            current_theme.get("widgets", {}) if isinstance(current_theme, dict) else {}
-        )
-        payload = (
-            {
-                key: deepcopy(value)
-                for key, value in current_theme.items()
-                if key != "widgets"
-            }
-            if isinstance(current_theme, dict)
-            else {}
-        )
-        payload["widgets"] = self._widgets_dict_to_payload(
-            widgets if isinstance(widgets, dict) else {}
-        )
+        current_theme = self._theme_manager.current_theme
+        widgets = self._theme_manager.current_theme_widgets()
+        payload = {
+            key: deepcopy(value)
+            for key, value in current_theme.items()
+            if key != "widgets"
+        }
+        payload["widgets"] = self._widgets_dict_to_payload(widgets)
         return payload
 
     def _payload_widgets_dict(
         self, payload: dict[str, Any]
     ) -> dict[str, dict[str, Any]]:
-        if not isinstance(payload, dict):
-            return {}
-
         parser = ThemeManager(self, emit_theme_changed=False)
         parser.load(payload, merge_with_default=False)
-        widgets = getattr(parser, "_current_theme", {}).get("widgets", {})
-        return deepcopy(widgets) if isinstance(widgets, dict) else {}
+        return parser.current_theme_widgets()
 
     def _rainbow_mode_enabled(self) -> bool:
         return self._runtime_theme_preferences()[0]
@@ -1009,12 +804,10 @@ class MainWindow(QMainWindow):
         try:
             duration = max(
                 1000,
-                int(
-                    config.get(
-                        "Misc>Rainbow Mode>Cycle Duration",
-                        default=THEME_RUNTIME_RAINBOW_DURATION_FALLBACK,
-                    )
-                ),
+                int(str(config.get(
+                    "Misc>Rainbow Mode>Cycle Duration",
+                    default=THEME_RUNTIME_RAINBOW_DURATION_FALLBACK,
+                ))),
             )
         except (TypeError, ValueError):
             duration = THEME_RUNTIME_RAINBOW_DURATION_FALLBACK
@@ -1035,8 +828,6 @@ class MainWindow(QMainWindow):
         self._runtime_theme_preferences_cache = None
 
     def _effective_theme_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
-        if not isinstance(payload, dict):
-            return {"widgets": []}
         return deepcopy(payload)
 
     def reapply_runtime_theme_preferences(self) -> None:

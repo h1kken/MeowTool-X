@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from time import monotonic
-from typing import Any
+from typing import Any, cast
 
 from PySide6.QtCore import QEvent, QObject, Qt, QTimer
 from PySide6.QtGui import QColor, QCursor
@@ -88,9 +88,9 @@ class RainbowRuntimeController(QObject):
 
     def set_border_target_selectors(self, selectors: list[str] | tuple[str, ...]) -> None:
         normalized = tuple(
-            str(selector).strip()
+            selector.strip()
             for selector in selectors
-            if isinstance(selector, str) and selector.strip()
+            if selector.strip()
         )
         self._border_target_selectors = normalized or _DEFAULT_BORDER_TARGET_SELECTORS
         if self._enabled:
@@ -133,7 +133,7 @@ class RainbowRuntimeController(QObject):
         self._setting_configs.clear()
         self._syncing_native_border_styles.clear()
 
-    def eventFilter(self, obj: QObject, event: QEvent):
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         if not isinstance(obj, QWidget):
             return super().eventFilter(obj, event)
 
@@ -161,6 +161,8 @@ class RainbowRuntimeController(QObject):
                         overlay.hide()
                     except RuntimeError:
                         pass
+            case _:
+                pass
 
         return super().eventFilter(obj, event)
 
@@ -178,7 +180,6 @@ class RainbowRuntimeController(QObject):
         previous_states = {
             widget: dict(state)
             for widget, state in self._setting_states.items()
-            if isinstance(state, dict)
         }
         current_filtered: set[QWidget] = set()
 
@@ -221,8 +222,11 @@ class RainbowRuntimeController(QObject):
             self._install_filter(widget, current_filtered)
             self._text_icon_targets.add(widget)
             text_icon_state = getattr(widget, 'text_icon_state', None)
+            raw_text_icon_state = text_icon_state() if callable(text_icon_state) else None
             self._text_icon_base_states[widget] = (
-                text_icon_state() if callable(text_icon_state) else None
+                cast(dict[str, object], raw_text_icon_state)
+                if isinstance(raw_text_icon_state, dict)
+                else None
             )
             try:
                 widget.setProperty(_RUNTIME_TEXT_ICON_TARGET_PROPERTY, True)
@@ -672,10 +676,11 @@ class RainbowRuntimeController(QObject):
             self._restore_box_border(widget, config)
             config['native_applied'] = False
             return
-        if callable(getattr(widget, 'set_box_border', None)):
+        set_box_border = getattr(widget, 'set_box_border', None)
+        if callable(set_box_border):
             base_color = self._base_border_color(config)
             if base_color:
-                widget.set_box_border(color=base_color)
+                set_box_border(color=base_color)
                 config['native_applied'] = False
                 return
         base_style = self._setting_base_styles.get(widget, '')
@@ -710,9 +715,10 @@ class RainbowRuntimeController(QObject):
         if not callable(state_getter):
             return None
 
-        state = state_getter()
-        if not isinstance(state, dict):
+        raw_state = state_getter()
+        if not isinstance(raw_state, dict):
             return None
+        state = cast(dict[str, Any], raw_state)
 
         color = state.get('color')
         width = state.get('width')
@@ -751,20 +757,25 @@ class RainbowRuntimeController(QObject):
         if not callable(state_getter):
             return False
 
-        state = state_getter()
-        if not isinstance(state, dict):
+        raw_state = state_getter()
+        if not isinstance(raw_state, dict):
             return False
+        state = cast(dict[str, Any], raw_state)
 
         border = state.get('border')
         if not isinstance(border, dict):
             return False
+        border_data = cast(dict[str, Any], border)
 
-        if self._border_part_is_visible(border):
+        if self._border_part_is_visible(border_data):
             return True
 
         for side in ('top', 'right', 'bottom', 'left'):
-            side_data = border.get(side)
-            if isinstance(side_data, dict) and self._border_part_is_visible(side_data, fallback_style=border.get('style')):
+            side_data = border_data.get(side)
+            if isinstance(side_data, dict) and self._border_part_is_visible(
+                cast(dict[str, Any], side_data),
+                fallback_style=border_data.get('style'),
+            ):
                 return True
         return False
 
@@ -795,15 +806,17 @@ class RainbowRuntimeController(QObject):
         if not callable(state_getter) or not callable(restore):
             return
 
-        saved_state = config.get('box_theme_state')
-        if not isinstance(saved_state, dict):
+        raw_saved_state = config.get('box_theme_state')
+        if not isinstance(raw_saved_state, dict):
             return
+        saved_state = cast(dict[str, Any], raw_saved_state)
 
-        current_state = state_getter()
-        state = deepcopy(current_state) if isinstance(current_state, dict) else deepcopy(saved_state)
+        raw_current_state = state_getter()
+        current_state = cast(dict[str, Any], raw_current_state) if isinstance(raw_current_state, dict) else None
+        state = deepcopy(current_state) if current_state is not None else deepcopy(saved_state)
         border = saved_state.get('border')
         if isinstance(border, dict):
-            state['border'] = deepcopy(border)
+            state['border'] = deepcopy(cast(dict[str, Any], border))
         if 'radius' in saved_state:
             state['radius'] = deepcopy(saved_state.get('radius'))
 

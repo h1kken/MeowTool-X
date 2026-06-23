@@ -1,26 +1,67 @@
 from __future__ import annotations
 
 import math
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 from PySide6.QtCore import QEasingCurve, Qt
 from PySide6.QtGui import QColor
 
-from src.utils.constants import GRADIENT_DIRECTIONS
-from src.utils.regexes import CUBIC_BEZIER_PATTERN
 from src.theme.colors import normalize_color, to_qcolor
+from src.theme.constants import GRADIENT_DIRECTIONS
+from src.theme.regexes import CUBIC_BEZIER_PATTERN
+from src.theme.schema.access import coerce_int, object_map
+
+ColorStop = tuple[float, QColor]
+GradientData = dict[str, Any]
+
+
+def _iterable_data(value: Any) -> list[Any]:
+    if isinstance(value, (list, tuple)):
+        items = cast(list[Any] | tuple[Any, ...], value)
+        return [item for item in items]
+    return []
+
+
+def _color_stops(value: Any) -> list[ColorStop]:
+    if not isinstance(value, list):
+        return []
+
+    items = cast(list[Any], value)
+    result: list[ColorStop] = []
+    for item in items:
+        item_tuple = cast(tuple[Any, ...], item) if isinstance(item, tuple) else ()
+        if (
+            len(item_tuple) == 2
+            and isinstance(item_tuple[0], (int, float))
+            and isinstance(item_tuple[1], QColor)
+        ):
+            result.append((float(item_tuple[0]), QColor(item_tuple[1])))
+    return result
+
+
+def _point2(value: Any, default: tuple[float, float] = (0.5, 0.5)) -> tuple[float, float]:
+    if isinstance(value, (list, tuple)):
+        items = cast(list[Any] | tuple[Any, ...], value)
+        if len(items) < 2:
+            return default
+        x = _to_float(items[0])
+        y = _to_float(items[1])
+        if x is not None and y is not None:
+            return float(x), float(y)
+    return default
+
+
+def _float_or(value: Any, default: float) -> float:
+    numeric = _to_float(value)
+    return float(numeric) if numeric is not None else default
 
 
 def _clamp01(value: float) -> float:
     return max(0.0, min(1.0, float(value)))
 
 
-def _normalize_token(value: Any) -> str:
+def normalize_token(value: Any) -> str:
     return str(value).strip().lower().replace('-', '_').replace(' ', '_')
-
-
-def _to_color(value: Any) -> QColor | None:
-    return to_qcolor(value)
 
 
 def _to_float(value: Any) -> float | None:
@@ -30,62 +71,62 @@ def _to_float(value: Any) -> float | None:
         return None
 
 
-def _normalize_dash_border(data: Any) -> dict[str, Any] | None:
+def normalize_dash_border(data: Any) -> dict[str, Any] | None:
     default_dash = [4.0, 2.0]
 
     if isinstance(data, dict):
+        mapping = object_map(cast(object, data)) or {}
         provided: set[str] = set()
-        if 'offset' in data or 'value' in data:
+        if 'offset' in mapping or 'value' in mapping:
             provided.add('offset')
-        if 'color' in data:
+        if 'color' in mapping:
             provided.add('color')
-        if 'opacity' in data:
+        if 'opacity' in mapping:
             provided.add('opacity')
-        if 'brightness' in data:
+        if 'brightness' in mapping:
             provided.add('brightness')
-        if 'saturation' in data:
+        if 'saturation' in mapping:
             provided.add('saturation')
-        if 'phase_offset' in data:
+        if 'phase_offset' in mapping:
             provided.add('phase_offset')
-        if any(key in data for key in ('phase_duration', 'rainbow_duration', 'period')):
+        if any(key in mapping for key in ('phase_duration', 'rainbow_duration', 'period')):
             provided.add('phase_duration')
-        if 'width' in data:
+        if 'width' in mapping:
             provided.add('width')
-        if 'radius' in data:
+        if 'radius' in mapping:
             provided.add('radius')
-        if 'inset' in data:
+        if 'inset' in mapping:
             provided.add('inset')
-        if 'dash' in data or 'dash_pattern' in data:
+        if 'dash' in mapping or 'dash_pattern' in mapping:
             provided.add('dash_pattern')
-        if 'style' in data:
+        if 'style' in mapping:
             provided.add('pen_style')
-        if 'seamless' in data:
+        if 'seamless' in mapping:
             provided.add('seamless')
 
-        offset = _to_float(data.get('offset', data.get('value', 0.0)))
-        color_raw = data.get('color', '#ffffff')
+        offset = _to_float(mapping.get('offset', mapping.get('value', 0.0)))
+        color_raw = mapping.get('color', '#ffffff')
         shared_color = False
-        color = _to_color(color_raw)
-        opacity = _to_float(data.get('opacity', 1.0))
-        brightness = _to_float(data.get('brightness', 1.0))
-        saturation = _to_float(data.get('saturation', 1.0))
-        phase_offset = _to_float(data.get('phase_offset', data.get('offset', 0.0)))
-        phase_duration = _to_float(data.get('phase_duration', data.get('rainbow_duration', data.get('period', 5000))))
-        width = _to_float(data.get('width', 1.0))
-        radius = _to_float(data.get('radius', 6.0))
-        inset = _to_float(data.get('inset', 0.5))
+        color = to_qcolor(color_raw)
+        opacity = _to_float(mapping.get('opacity', 1.0))
+        brightness = _to_float(mapping.get('brightness', 1.0))
+        saturation = _to_float(mapping.get('saturation', 1.0))
+        phase_offset = _to_float(mapping.get('phase_offset', mapping.get('offset', 0.0)))
+        phase_duration = _to_float(mapping.get('phase_duration', mapping.get('rainbow_duration', mapping.get('period', 5000))))
+        width = _to_float(mapping.get('width', 1.0))
+        radius = _to_float(mapping.get('radius', 6.0))
+        inset = _to_float(mapping.get('inset', 0.5))
 
-        dash_raw = data.get('dash', data.get('dash_pattern', default_dash))
+        dash_raw = mapping.get('dash', mapping.get('dash_pattern', default_dash))
         dash_pattern: list[float] = []
-        if isinstance(dash_raw, (list, tuple)):
-            for value in dash_raw:
+        for value in _iterable_data(dash_raw):
                 dash_value = _to_float(value)
                 if dash_value is None:
                     continue
                 dash_pattern.append(max(0.1, dash_value))
 
-        pen_style = _parse_pen_style(data.get('style'), default=Qt.PenStyle.CustomDashLine)
-        seamless = bool(data.get('seamless', True))
+        pen_style = _parse_pen_style(mapping.get('style'), default=Qt.PenStyle.CustomDashLine)
+        seamless = bool(mapping.get('seamless', True))
 
         if color is None:
             color = QColor('#ffffff')
@@ -129,86 +170,31 @@ def _normalize_dash_border(data: Any) -> dict[str, Any] | None:
         'seamless': True,
         '_provided': {'offset'},
     }
-
-
-def _normalize_gradient_border(data: Any) -> dict[str, Any] | None:
-    default_stops = [
-        (0.0, QColor('#ff8ac6')),
-        (0.5, QColor('#8ac6ff')),
-        (1.0, QColor('#ff8ac6')),
-    ]
-
-    if not isinstance(data, dict):
-        return None
-
-    phase_raw = data.get('phase', data.get('offset', data.get('value', 1.0)))
-    shared_phase = False
-    phase = _to_float(phase_raw)
-    phase_offset = _to_float(data.get('phase_offset', data.get('offset', 0.0)))
-    phase_duration = _to_float(data.get('phase_duration', data.get('rainbow_duration', data.get('period', 5000))))
-    opacity = _to_float(data.get('opacity', 1.0))
-    width = _to_float(data.get('width', 1.5))
-    radius = _to_float(data.get('radius', 6.0))
-    inset = _to_float(data.get('inset', 0.5))
-    direction = str(data.get('direction', 'horizontal'))
-    seamless = bool(data.get('seamless', True))
-    pen_style = _parse_pen_style(data.get('style'), default=Qt.PenStyle.SolidLine)
-
-    dash_raw = data.get('dash', data.get('dash_pattern', [4.0, 2.0]))
-    dash_pattern: list[float] = []
-    if isinstance(dash_raw, (list, tuple)):
-        for value in dash_raw:
-            dash_value = _to_float(value)
-            if dash_value is None:
-                continue
-            dash_pattern.append(max(0.1, dash_value))
-
-    stops_raw = data.get('stops')
-    stops = _parse_gradient_stops(stops_raw) if stops_raw is not None else []
-    if not stops:
-        if (gradient_data := _normalize_gradient(data)) is not None:
-            stops = gradient_data.get('stops', [])
-    if not stops:
-        stops = default_stops
-
-    return {
-        'phase': float(phase if phase is not None else 1.0),
-        'phase_offset': float(phase_offset if phase_offset is not None else 0.0),
-        'phase_duration': float(max(1.0, phase_duration if phase_duration is not None else 5000.0)),
-        'shared_phase': bool(shared_phase),
-        'opacity': _clamp01(opacity if opacity is not None else 1.0),
-        'width': float(max(0.5, width if width is not None else 1.5)),
-        'radius': float(max(0.0, radius if radius is not None else 6.0)),
-        'inset': float(max(0.0, inset if inset is not None else 0.5)),
-        'direction': direction,
-        'seamless': seamless,
-        'stops': [(_clamp01(pos), QColor(color)) for pos, color in stops],
-        'pen_style': pen_style,
-        'dash_pattern': dash_pattern or [4.0, 2.0],
-    }
-
-
-def _parse_gradient_stops(raw: Any) -> list[tuple[float, QColor]]:
-    stops: list[tuple[float, QColor]] = []
-    if not isinstance(raw, (list, tuple)):
+def _parse_gradient_stops(raw: Any) -> list[ColorStop]:
+    stops: list[ColorStop] = []
+    items = _iterable_data(raw)
+    if not items:
         return stops
 
-    for stop in raw:
+    for stop in items:
         pos: Any = None
         color_raw: Any = None
 
         if isinstance(stop, dict):
-            pos = stop.get('pos', stop.get('position'))
-            color_raw = stop.get('color')
-        elif isinstance(stop, (list, tuple)) and len(stop) >= 2:
-            pos, color_raw = stop[0], stop[1]
+            stop_data = object_map(cast(object, stop)) or {}
+            pos = stop_data.get('pos', stop_data.get('position'))
+            color_raw = stop_data.get('color')
+        elif isinstance(stop, (list, tuple)):
+            stop_items = _iterable_data(stop)
+            if len(stop_items) >= 2:
+                pos, color_raw = stop_items[0], stop_items[1]
 
         try:
             pos_f = float(pos)
         except (TypeError, ValueError):
             continue
 
-        color = _to_color(color_raw)
+        color = to_qcolor(color_raw)
         if color is None:
             continue
 
@@ -221,7 +207,7 @@ def _parse_pen_style(raw: Any, *, default: Qt.PenStyle = Qt.PenStyle.CustomDashL
     if raw is None:
         return default
 
-    token = _normalize_token(raw)
+    token = normalize_token(raw)
     aliases: dict[str, Qt.PenStyle] = {
         'solid': Qt.PenStyle.SolidLine,
         'solidline': Qt.PenStyle.SolidLine,
@@ -244,7 +230,7 @@ def _parse_pen_style(raw: Any, *, default: Qt.PenStyle = Qt.PenStyle.CustomDashL
     return aliases.get(token, default)
 
 
-def _interpolate_color(start: QColor, end: QColor, t: float) -> QColor:
+def interpolate_color(start: QColor, end: QColor, t: float) -> QColor:
     t = _clamp01(t)
     return QColor(
         round(start.red() + (end.red() - start.red()) * t),
@@ -254,61 +240,25 @@ def _interpolate_color(start: QColor, end: QColor, t: float) -> QColor:
     )
 
 
-def _normalize_gradient(data: Any) -> dict[str, Any] | None:
-    if not isinstance(data, dict):
+def normalize_gradient(data: Any) -> GradientData | None:
+    mapping = object_map(data)
+    if mapping is None:
         return None
 
-    stops_data = data.get('stops')
-    if not isinstance(stops_data, list) or not stops_data:
-        return None
-
-    stops: list[tuple[float, QColor]] = []
-    for stop in stops_data:
-        pos: Any = None
-        color_raw: Any = None
-
-        if isinstance(stop, dict):
-            pos = stop.get('pos', stop.get('position'))
-            color_raw = stop.get('color')
-        elif isinstance(stop, (list, tuple)) and len(stop) >= 2:
-            pos, color_raw = stop[0], stop[1]
-
-        try:
-            pos_f = float(pos)
-        except (TypeError, ValueError):
-            continue
-
-        color = _to_color(color_raw)
-        if color is None:
-            continue
-
-        stops.append((_clamp01(pos_f), color))
-
+    stops = _parse_gradient_stops(mapping.get('stops'))
     if not stops:
         return None
 
-    g_type = _normalize_token(data.get('type', 'linear'))
-    grad: dict[str, Any] = {
+    g_type = normalize_token(mapping.get('type', 'linear'))
+    grad: GradientData = {
         'type': 'radial' if g_type == 'radial' else 'linear',
-        'direction': str(data.get('direction', 'vertical')),
+        'direction': str(mapping.get('direction', 'vertical')),
         'stops': stops,
     }
 
     if grad['type'] == 'radial':
-        center = data.get('center', (0.5, 0.5))
-        if isinstance(center, (list, tuple)) and len(center) >= 2:
-            try:
-                cx = float(center[0])
-                cy = float(center[1])
-            except (TypeError, ValueError):
-                cx, cy = 0.5, 0.5
-        else:
-            cx, cy = 0.5, 0.5
-
-        try:
-            radius = float(data.get('radius', 0.5))
-        except (TypeError, ValueError):
-            radius = 0.5
+        cx, cy = _point2(mapping.get('center', (0.5, 0.5)))
+        radius = _float_or(mapping.get('radius', 0.5), 0.5)
 
         grad['center'] = (cx, cy)
         grad['radius'] = radius
@@ -316,37 +266,38 @@ def _normalize_gradient(data: Any) -> dict[str, Any] | None:
     return grad
 
 
-def _clone_gradient(grad: dict[str, Any]) -> dict[str, Any]:
+def clone_gradient(grad: GradientData) -> GradientData:
+    stops = _color_stops(grad.get('stops', []))
     cloned = {
         'type': grad.get('type', 'linear'),
         'direction': grad.get('direction', 'vertical'),
-        'stops': [(float(pos), QColor(color)) for pos, color in grad.get('stops', [])],
+        'stops': [(pos, QColor(color)) for pos, color in stops],
     }
 
     if cloned['type'] == 'radial':
-        cloned['center'] = tuple(grad.get('center', (0.5, 0.5)))
-        cloned['radius'] = float(grad.get('radius', 0.5))
+        cloned['center'] = _point2(grad.get('center', (0.5, 0.5)))
+        cloned['radius'] = _float_or(grad.get('radius', 0.5), 0.5)
 
     return cloned
 
 
-def _interpolate_gradient(start: dict[str, Any], end: dict[str, Any], t: float) -> dict[str, Any]:
+def interpolate_gradient(start: GradientData, end: GradientData, t: float) -> GradientData:
     t = _clamp01(t)
 
-    s_stops = start.get('stops', [])
-    e_stops = end.get('stops', [])
+    s_stops = _color_stops(start.get('stops', []))
+    e_stops = _color_stops(end.get('stops', []))
     if not s_stops or not e_stops:
-        return _clone_gradient(end)
+        return clone_gradient(end)
 
     count = max(len(s_stops), len(e_stops))
-    new_stops: list[tuple[float, QColor]] = []
+    new_stops: list[ColorStop] = []
 
     for i in range(count):
         s_pos, s_color = s_stops[min(i, len(s_stops) - 1)]
         e_pos, e_color = e_stops[min(i, len(e_stops) - 1)]
 
         pos = s_pos + (e_pos - s_pos) * t
-        color = _interpolate_color(s_color, e_color, t)
+        color = interpolate_color(s_color, e_color, t)
         new_stops.append((_clamp01(pos), color))
 
     result = {
@@ -356,10 +307,10 @@ def _interpolate_gradient(start: dict[str, Any], end: dict[str, Any], t: float) 
     }
 
     if result['type'] == 'radial':
-        s_center = start.get('center', (0.5, 0.5))
-        e_center = end.get('center', s_center)
-        s_radius = float(start.get('radius', 0.5))
-        e_radius = float(end.get('radius', s_radius))
+        s_center = _point2(start.get('center', (0.5, 0.5)))
+        e_center = _point2(end.get('center', s_center), s_center)
+        s_radius = _float_or(start.get('radius', 0.5), 0.5)
+        e_radius = _float_or(end.get('radius', s_radius), s_radius)
 
         result['center'] = (
             float(s_center[0]) + (float(e_center[0]) - float(s_center[0])) * t,
@@ -370,8 +321,8 @@ def _interpolate_gradient(start: dict[str, Any], end: dict[str, Any], t: float) 
     return result
 
 
-def _gradient_to_qss(grad: dict[str, Any]) -> str:
-    stops = grad.get('stops', [])
+def gradient_to_qss(grad: GradientData) -> str:
+    stops = _color_stops(grad.get('stops', []))
     stop_parts = ', '.join(
         f'stop:{pos:.3f} {normalize_color(color)}'
         for pos, color in stops
@@ -379,8 +330,8 @@ def _gradient_to_qss(grad: dict[str, Any]) -> str:
     )
 
     if grad.get('type') == 'radial':
-        cx, cy = grad.get('center', (0.5, 0.5))
-        radius = grad.get('radius', 0.5)
+        cx, cy = _point2(grad.get('center', (0.5, 0.5)))
+        radius = _float_or(grad.get('radius', 0.5), 0.5)
         return f'qradialgradient(cx:{cx}, cy:{cy}, radius:{radius}, {stop_parts})'
 
     direction = grad.get('direction', 'vertical')
@@ -388,31 +339,37 @@ def _gradient_to_qss(grad: dict[str, Any]) -> str:
     return f'qlineargradient(x1:{x1}, y1:{y1}, x2:{x2}, y2:{y2}, {stop_parts})'
 
 
-def _parse_easing(raw: Any) -> Callable[[float], float]:
+def parse_easing(raw: Any) -> Callable[[float], float]:
     if isinstance(raw, dict):
-        easing_type = _normalize_token(raw.get('type', raw.get('name', raw.get('curve', 'linear'))))
+        mapping = object_map(cast(object, raw)) or {}
+        easing_type = normalize_token(mapping.get('type', mapping.get('name', mapping.get('curve', 'linear'))))
 
         if easing_type in ('bezier', 'cubic_bezier'):
-            points = raw.get('points')
-            if isinstance(points, (list, tuple)) and len(points) == 4:
+            points = mapping.get('points')
+            if isinstance(points, (list, tuple)):
                 try:
-                    x1, y1, x2, y2 = (float(points[0]), float(points[1]), float(points[2]), float(points[3]))
+                    point_items = _iterable_data(points)
+                    if len(point_items) != 4:
+                        return _linear_easing
+                    x1 = float(point_items[0])
+                    y1 = float(point_items[1])
+                    x2 = float(point_items[2])
+                    y2 = float(point_items[3])
                     return _cubic_bezier_easing(x1, y1, x2, y2)
                 except (TypeError, ValueError):
                     return _linear_easing
 
-            try:
-                x1 = float(raw.get('x1'))
-                y1 = float(raw.get('y1'))
-                x2 = float(raw.get('x2'))
-                y2 = float(raw.get('y2'))
-                return _cubic_bezier_easing(x1, y1, x2, y2)
-            except (TypeError, ValueError):
+            x1 = _to_float(mapping.get('x1'))
+            y1 = _to_float(mapping.get('y1'))
+            x2 = _to_float(mapping.get('x2'))
+            y2 = _to_float(mapping.get('y2'))
+            if x1 is None or y1 is None or x2 is None or y2 is None:
                 return _linear_easing
+            return _cubic_bezier_easing(x1, y1, x2, y2)
 
         if easing_type == 'steps':
-            count = int(raw.get('count', 1) or 1)
-            jump = _normalize_token(raw.get('jump', 'end'))
+            count = max(1, coerce_int(mapping.get('count', 1), 1) or 1)
+            jump = normalize_token(mapping.get('jump', 'end'))
             return _steps_easing(count, jump)
 
         return _qt_easing(easing_type)
@@ -428,12 +385,12 @@ def _parse_easing(raw: Any) -> Callable[[float], float]:
                 except (TypeError, ValueError):
                     return _linear_easing
 
-        return _qt_easing(_normalize_token(raw))
+        return _qt_easing(normalize_token(raw))
 
     return _linear_easing
 
 
-def _parse_loop_count(raw: Any, *, default: int = 1) -> int:
+def parse_loop_count(raw: Any, *, default: int = 1) -> int:
     if raw is None:
         return default
 
@@ -447,7 +404,7 @@ def _parse_loop_count(raw: Any, *, default: int = 1) -> int:
         return max(1, count)
 
     if isinstance(raw, str):
-        token = _normalize_token(raw)
+        token = normalize_token(raw)
         if token in ('infinite', 'forever', 'always', 'loop', 'endless'):
             return -1
         if token in ('once', 'one', 'single'):
@@ -543,5 +500,7 @@ def _cubic_bezier_easing(x1: float, y1: float, x2: float, y2: float) -> Callable
         return _clamp01(sample(u, y1, y2))
 
     return easing
+
+
 
 

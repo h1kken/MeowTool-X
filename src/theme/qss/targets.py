@@ -3,7 +3,7 @@ from fnmatch import fnmatchcase
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget
 
-from src.utils.regexes import QSS_TARGET_PATTERN, QSS_TARGET_PROPERTY_PATTERN
+from src.theme.regexes import QSS_TARGET_PATTERN, QSS_TARGET_PROPERTY_PATTERN
 
 _CLASS_TARGET_FAMILIES: dict[str, tuple[str, ...]] = {}
 
@@ -18,7 +18,7 @@ def _strip_quotes(value: str) -> str:
 
 
 def _is_wildcard_target(text: str) -> bool:
-    return isinstance(text, str) and '*' in text
+    return '*' in text
 
 
 def _widget_class_matches(widget: QWidget, target: str) -> bool:
@@ -31,9 +31,6 @@ def _widget_class_wildcard_matches(widget: QWidget, target: str) -> bool:
 
 
 def parse_qss_target(target: str) -> tuple[str, list[tuple[str, str]]] | None:
-    if not isinstance(target, str):
-        return None
-
     text = target.strip()
     if not text:
         return None
@@ -60,7 +57,7 @@ def normalize_qss_target(target: str) -> str:
         if not properties:
             return obj_name
 
-        prop_chunks = []
+        prop_chunks: list[str] = []
         for key, value in properties:
             escaped = value.replace('\\', '\\\\').replace('"', '\\"')
             prop_chunks.append(f'[{key}="{escaped}"]')
@@ -72,13 +69,13 @@ def find_target_widgets(root: QWidget, target: str) -> list[QWidget]:
     if target == '*':
         return [root, *root.findChildren(QWidget)]
 
-    if isinstance(target, str) and target.startswith('#'):
+    if target.startswith('#'):
         target = target[1:]
 
-    if isinstance(target, str) and (chain := parse_selector_chain(target)) and len(chain) > 1:
+    if (chain := parse_selector_chain(target)) and len(chain) > 1:
         return _find_widgets_by_selector_chain(root, chain)
 
-    if isinstance(target, str) and (parsed := parse_qss_target(target)):
+    if parsed := parse_qss_target(target):
         obj_name, properties = parsed
         if not properties:
             return _find_widgets(root, obj_name)
@@ -96,7 +93,7 @@ def resolve_target_widgets(root: QWidget, target: str, *, include_window: bool =
     widgets = find_target_widgets(root, target)
     if include_window:
         root_window = root.window()
-        if isinstance(root_window, QWidget) and root_window is not root:
+        if root_window is not root:
             widgets.extend(find_target_widgets(root_window, target))
     return _dedupe_widgets(widgets)
 
@@ -137,9 +134,6 @@ def _find_widgets(root: QWidget, obj_name: str) -> list[QWidget]:
 
 
 def parse_selector_chain(target: str) -> list[tuple[str, str]] | None:
-    if not isinstance(target, str):
-        return None
-
     text = target.strip()
     if not text:
         return None
@@ -238,7 +232,10 @@ def _find_widgets_by_selector_chain(root: QWidget, chain: list[tuple[str, str]])
                     if isinstance(child, QWidget)
                 ]
             else:
-                candidates = parent_widget.findChildren(QWidget, options=Qt.FindChildrenRecursively)
+                candidates = parent_widget.findChildren(
+                    QWidget,
+                    options=Qt.FindChildOption.FindChildrenRecursively,
+                )
 
             next_widgets.extend(
                 widget

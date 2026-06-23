@@ -4,7 +4,9 @@ from typing import Callable
 
 from PySide6.QtCore import QAbstractAnimation, QObject
 
-from .helpers import _clamp01
+
+def _clamp_progress(value: float) -> float:
+    return max(0.0, min(1.0, float(value)))
 
 
 class TimerAnimation(QAbstractAnimation):
@@ -30,7 +32,11 @@ class TimerAnimation(QAbstractAnimation):
     def duration(self) -> int:
         return self._duration
 
-    def updateState(self, new_state, old_state) -> None:
+    def updateState(
+        self,
+        new_state: QAbstractAnimation.State,
+        old_state: QAbstractAnimation.State,
+    ) -> None:
         super().updateState(new_state, old_state)
         if new_state == QAbstractAnimation.State.Running:
             self._started = False
@@ -46,6 +52,6 @@ class TimerAnimation(QAbstractAnimation):
             self._active_loop = current_loop
             self._on_start()
 
-        progress = _clamp01(msec / self._duration)
-        self._on_update(_clamp01(self._easing_fn(progress)))
+        progress = _clamp_progress(msec / self._duration)
+        self._on_update(_clamp_progress(self._easing_fn(progress)))
 

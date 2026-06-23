@@ -7,23 +7,25 @@ import shutil
 import tarfile
 import tempfile
 import zipfile
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Lock
-from typing import TYPE_CHECKING, Any, Iterator, TypeAlias
+from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 from PySide6.QtCore import QObject, Signal
 
-import src.utils.constants.archive as archive_constants
 from src.config.manager import config
-from src.utils.constants import DATE_ROBLOX_COOKIE_SORTER_FORMAT, ROBLOX_COOKIE_START
-from src.utils.datetime import current_date
-from src.utils.filesystem import FS, validate_filename
-from src.utils.logging import logger
-from src.utils.regexes import (
+from src.services.roblox import archive_support
+from src.services.roblox.constants import DATE_ROBLOX_COOKIE_SORTER_FORMAT, ROBLOX_COOKIE_START
+from src.services.roblox.regexes import (
     ROBLOX_COOKIE_PATTERN_BYTES,
     STRING_100_PLUS_SYMBOLS_PATTERN_BYTES,
 )
+from src.services.roblox.types import ReadableBinaryStream
+from src.utils.datetime import current_date
+from src.utils.filesystem import FS, validate_filename
+from src.utils.logging import logger
 
 try:
     import py7zr
@@ -50,8 +52,6 @@ if TYPE_CHECKING:
     RarFileType: TypeAlias = RarFile
 else:
     RarFileType: TypeAlias = Any
-
-
 class RobloxCookieSorter(QObject):
     statement = Signal(str)
     progress = Signal(int)
@@ -64,36 +64,44 @@ class RobloxCookieSorter(QObject):
         input_paths: list[Path] | None = None,
         text_chunks: list[str] | None = None,
         use_default_folder: bool = True,
-    ):
+    ) -> None:
         super().__init__()
         self._config = config
 
         # Settings
-        self._filename = validate_filename(self._config.get('Roblox>Cookie Sorter>Output Filename', default='output'))
-        self._search_no_roblox_cookie_pattern = self._config.get('Roblox>Cookie Sorter>Search For 100 Plus Symbols Strings', default=False)
+        output_filename = self._config.get('Roblox>Cookie Sorter>Output Filename', default='output')
+        self._filename = validate_filename(output_filename if isinstance(output_filename, str) else 'output')
+        self._search_no_roblox_cookie_pattern = bool(
+            self._config.get('Roblox>Cookie Sorter>Search For 100 Plus Symbols Strings', default=False)
+        )
         self._symbols_between_warning_and_cookie = str(
             self._config.get('Roblox>General>Symbols Between Warning And Cookie', default='')
         ).strip() if self._config.get('Roblox>General>Add Symbols Between Warning And Cookie', default=False) else ''
 
         self._base_path = Path('Roblox', 'Cookie Sorter')
         self._default_outputs_path = self._base_path / 'outputs'
-        self._save_path = Path(self._config.get('Roblox>Cookie Sorter>Save Path', default=self._default_outputs_path))
+        raw_save_path = self._config.get('Roblox>Cookie Sorter>Save Path', default=self._default_outputs_path)
+        self._save_path = Path(raw_save_path) if isinstance(raw_save_path, (str, Path)) else self._default_outputs_path
         self._input_paths = [Path(path) for path in (input_paths or [])]
-        self._text_chunks = [chunk for chunk in (text_chunks or []) if isinstance(chunk, str) and chunk.strip()]
-        self._use_default_folder = bool(use_default_folder)
+        self._text_chunks = [chunk for chunk in (text_chunks or []) if chunk.strip()]
+        self._use_default_folder = use_default_folder
 
         self._counter_unique = 0
         self._counter_duplicate = 0
         self._counter_incorrect = 0
 
         self._cookie_set: set[str] = set()
-        raw_workers = config.get('Roblox>Cookie Sorter>Threads', default=None)
+        raw_workers = cast(object, config.get('Roblox>Cookie Sorter>Threads', default=None))
         if raw_workers is None:
-            raw_workers = config.get('Roblox>Cookie Sorter>Main Threads', default=self._DEFAULT_SORTER_WORKERS)
+            raw_workers = cast(
+                object,
+                config.get('Roblox>Cookie Sorter>Main Threads', default=self._DEFAULT_SORTER_WORKERS),
+            )
         if isinstance(raw_workers, tuple):
-            raw_workers = raw_workers[0] if raw_workers else self._DEFAULT_SORTER_WORKERS
+            tuple_workers = cast(tuple[object, ...], raw_workers)
+            raw_workers = tuple_workers[0] if tuple_workers else self._DEFAULT_SORTER_WORKERS
         try:
-            self._max_workers = max(1, int(raw_workers))
+            self._max_workers = max(1, int(raw_workers if isinstance(raw_workers, (int, float, str)) else self._DEFAULT_SORTER_WORKERS))
         except (TypeError, ValueError):
             self._max_workers = self._DEFAULT_SORTER_WORKERS
         self._lock = Lock()
@@ -114,31 +122,6 @@ class RobloxCookieSorter(QObject):
         except OSError:
             return str(path.absolute()).lower()
 
-    def _is_archive_name(self, name: str) -> bool:
-        return name.lower().endswith(archive_constants.ARCHIVE_EXTENSIONS)
-
-    def _archive_kind_from_name(self, name: str) -> str | None:
-        low = name.lower()
-        if low.endswith(archive_constants.ARCHIVE_TAR_EXTENSIONS):
-            return 'tar'
-        if low.endswith(archive_constants.ARCHIVE_ZIP_CONTAINER_EXTENSIONS):
-            return 'zip'
-        if low.endswith(archive_constants.ARCHIVE_7Z_EXTENSIONS):
-            return '7z'
-        if low.endswith(archive_constants.ARCHIVE_RAR_EXTENSIONS):
-            return 'rar'
-        if low.endswith(archive_constants.ARCHIVE_GZIP_EXTENSIONS):
-            return 'gz'
-        if low.endswith(archive_constants.ARCHIVE_BZIP2_EXTENSIONS):
-            return 'bz2'
-        if low.endswith(archive_constants.ARCHIVE_XZ_EXTENSIONS):
-            return 'xz'
-        if low.endswith(archive_constants.ARCHIVE_ZST_EXTENSIONS):
-            return 'zst'
-        if low.endswith(archive_constants.ARCHIVE_LZ4_EXTENSIONS):
-            return 'lz4'
-        return None
-
     def _read_file_head(self, path: Path, size: int = 8) -> bytes:
         try:
             with open(path, 'rb') as f:
@@ -149,36 +132,20 @@ class RobloxCookieSorter(QObject):
     def _looks_like_tar_file(self, path: Path) -> bool:
         try:
             with open(path, 'rb') as f:
-                f.seek(archive_constants.ARCHIVE_TAR_USTAR_OFFSET)
-                return f.read(len(archive_constants.ARCHIVE_TAR_USTAR_SIGNATURE)) == archive_constants.ARCHIVE_TAR_USTAR_SIGNATURE
+                f.seek(archive_support.ARCHIVE_TAR_USTAR_OFFSET)
+                return f.read(len(archive_support.ARCHIVE_TAR_USTAR_SIGNATURE)) == archive_support.ARCHIVE_TAR_USTAR_SIGNATURE
         except OSError:
             return False
 
     def _detect_archive_kind(self, path: Path, *, name_hint: str | None = None) -> str | None:
-        by_name = self._archive_kind_from_name(name_hint or path.name)
+        by_name = archive_support.archive_kind_from_name(name_hint or path.name)
         if by_name is not None:
             return by_name
 
-        head = self._read_file_head(path)
-        if not head:
-            return None
+        by_signature = archive_support.archive_kind_from_signature(self._read_file_head(path))
+        if by_signature is not None:
+            return by_signature
 
-        if any(head.startswith(sig) for sig in archive_constants.ARCHIVE_ZIP_SIGNATURES):
-            return 'zip'
-        if head.startswith(archive_constants.ARCHIVE_7Z_SIGNATURE):
-            return '7z'
-        if head.startswith(archive_constants.ARCHIVE_RAR4_SIGNATURE) or head.startswith(archive_constants.ARCHIVE_RAR5_SIGNATURE):
-            return 'rar'
-        if head.startswith(archive_constants.ARCHIVE_GZIP_SIGNATURE):
-            return 'gz'
-        if head.startswith(archive_constants.ARCHIVE_BZIP2_SIGNATURE):
-            return 'bz2'
-        if head.startswith(archive_constants.ARCHIVE_XZ_SIGNATURE):
-            return 'xz'
-        if head.startswith(archive_constants.ARCHIVE_ZSTD_SIGNATURE):
-            return 'zst'
-        if any(head.startswith(sig) for sig in archive_constants.ARCHIVE_LZ4_SIGNATURES):
-            return 'lz4'
         if self._looks_like_tar_file(path):
             return 'tar'
         return None
@@ -196,7 +163,7 @@ class RobloxCookieSorter(QObject):
             return False
         return True
 
-    def _iter_files_from_directory(self, directory: Path):
+    def _iter_files_from_directory(self, directory: Path) -> Iterator[Path]:
         for path in directory.rglob('*'):
             if self._is_supported_input_file(path):
                 yield path
@@ -225,13 +192,6 @@ class RobloxCookieSorter(QObject):
             seen.add(key)
             deduped.append(path)
         return deduped
-
-    def _archive_suffix_for_name(self, name: str) -> str:
-        low = name.lower()
-        for ext in sorted(archive_constants.ARCHIVE_EXTENSIONS, key=len, reverse=True):
-            if low.endswith(ext):
-                return ext
-        return Path(name).suffix
 
     def _decode_token(self, raw: bytes) -> str | None:
         if not raw:
@@ -299,13 +259,13 @@ class RobloxCookieSorter(QObject):
             with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mm:
                 return self._extract_cookies_from_bytes(mm)
 
-    def _extract_from_stream(self, stream, *, name: str, depth: int) -> tuple[set[str], int]:
-        suffix = self._archive_suffix_for_name(name) or '.bin'
+    def _extract_from_stream(self, stream: ReadableBinaryStream, *, name: str, depth: int) -> tuple[set[str], int]:
+        suffix = archive_support.archive_suffix_for_name(name) or '.bin'
         tmp_path: Path | None = None
 
         try:
             with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-                shutil.copyfileobj(stream, tmp, length=archive_constants.ARCHIVE_STREAM_COPY_CHUNK_BYTES)
+                shutil.copyfileobj(cast(Any, stream), tmp, length=archive_support.ARCHIVE_STREAM_COPY_CHUNK_BYTES)
                 tmp_path = Path(tmp.name)
 
             nested = self._extract_archive_file(tmp_path, depth=depth, name_hint=name)
@@ -367,7 +327,8 @@ class RobloxCookieSorter(QObject):
     def _extract_from_rar(self, archive: RarFileType, *, depth: int) -> tuple[set[str], int]:
         cookies: set[str] = set()
         total_found = 0
-        for info in archive.infolist():
+        archive_any = cast(Any, archive)
+        for info in cast(list[Any], archive_any.infolist()):
             if not self._is_running:
                 break
 
@@ -382,7 +343,7 @@ class RobloxCookieSorter(QObject):
 
             entry_name = str(getattr(info, 'filename', None) or getattr(info, 'name', '') or '')
             try:
-                with archive.open(info, 'r') as stream:
+                with archive_any.open(info, 'r') as stream:
                     nested_cookies, nested_total_found = self._extract_from_stream(stream, name=entry_name, depth=depth + 1)
                     cookies.update(nested_cookies)
                     total_found += nested_total_found
@@ -395,8 +356,9 @@ class RobloxCookieSorter(QObject):
     def _extract_from_7z_file(self, path: Path, *, depth: int) -> tuple[set[str], int]:
         cookies: set[str] = set()
         total_found = 0
+        archive_mod = cast(Any, py7zr)
         with tempfile.TemporaryDirectory() as temp_dir:
-            with py7zr.SevenZipFile(path, mode='r') as archive:
+            with archive_mod.SevenZipFile(path, mode='r') as archive:
                 archive.extractall(path=temp_dir)
 
             root = Path(temp_dir)
@@ -445,16 +407,18 @@ class RobloxCookieSorter(QObject):
             case 'zst':
                 if zstd is None:
                     self._warn_missing_backend('zstandard')
-                    return
+                    return None
+                zstd_mod = cast(Any, zstd)
                 with open(path, 'rb') as fh:
-                    dctx = zstd.ZstdDecompressor()
+                    dctx = zstd_mod.ZstdDecompressor()
                     with dctx.stream_reader(fh) as stream:
                         return self._extract_from_stream(stream, name=out_name, depth=depth + 1)
             case 'lz4':
                 if lz4f is None:
                     self._warn_missing_backend('lz4')
-                    return
-                with lz4f.open(path, mode='rb') as stream:
+                    return None
+                lz4f_mod = cast(Any, lz4f)
+                with lz4f_mod.open(path, mode='rb') as stream:
                     return self._extract_from_stream(stream, name=out_name, depth=depth + 1)
             case _:
                 return None
@@ -475,13 +439,14 @@ class RobloxCookieSorter(QObject):
                 case '7z':
                     if py7zr is None:
                         self._warn_missing_backend('py7zr')
-                        return
+                        return None
                     return self._extract_from_7z_file(path, depth=depth)
                 case 'rar':
                     if rarfile is None:
                         self._warn_missing_backend('rarfile')
-                        return
-                    with rarfile.RarFile(path) as archive:
+                        return None
+                    rarfile_mod = cast(Any, rarfile)
+                    with rarfile_mod.RarFile(path) as archive:
                         return self._extract_from_rar(archive, depth=depth)
                 case _:
                     payload_cookies = self._extract_from_single_compressed_path(path, depth=depth, kind=kind)
@@ -506,7 +471,7 @@ class RobloxCookieSorter(QObject):
 
             return unique_cookies_counter
 
-    def _process_file(self, file_path: Path):
+    def _process_file(self, file_path: Path) -> None:
         try:
             archive_cookies = self._extract_archive_file(file_path, depth=0)
             if archive_cookies is None:
@@ -530,10 +495,10 @@ class RobloxCookieSorter(QObject):
             except (OSError, ValueError, UnicodeError):
                 self._add_incorrect()
 
-    def stop(self):
+    def stop(self) -> None:
         self._is_running = False
 
-    def run(self):
+    def run(self) -> None:
         logger.info(f'Roblox Cookie Sorter started in {self._date_of_sorting}')
 
         file_paths = self._collect_input_files()
@@ -548,7 +513,7 @@ class RobloxCookieSorter(QObject):
 
         if self._cookie_set:
             save_path = self._save_path / self._date_of_sorting
-            FS.create_folder(save_path)
+            FS.ensure_dir(save_path)
             with open(save_path / f'{self._filename}.txt', 'a', encoding='utf-8') as f:
                 f.write('\n'.join(self._cookie_set))
 

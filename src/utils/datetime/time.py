@@ -13,7 +13,7 @@ def format_duration(
     
     units = {'d': d, 'h': h, 'm': m, 's': s, 'ms': ms}
     
-    parts = {}
+    parts: dict[str, int] = {}
     for key in units.keys():
         if key in out_units or (isinstance(out_units, str) and 'all' == out_units.lower()):
             parts[key] = units[key]

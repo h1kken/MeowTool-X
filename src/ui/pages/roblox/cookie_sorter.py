@@ -2,7 +2,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QThread
 
-from src.services.roblox import RobloxCookieSorter
+from src.services.roblox.cookie_sorter import RobloxCookieSorter
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets import MTButton, MTDropZone, MTLabel, MTWidget

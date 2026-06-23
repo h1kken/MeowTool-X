@@ -27,12 +27,12 @@ class SettingsRobloxPage(MTWidget):
 
         self._page_controller = PageController(main_layout)
 
-        PAGES: list[tuple[str | None, str | None, type[QWidget] | None]] = [
+        PAGES: list[tuple[str, str, type[QWidget] | None]] = [
             ("Cookie_Sorter", "C_SRTR", SettingsRobloxCookieSorterPage),
             ("Cookie_Checker", "C_CHCKR", SettingsRobloxCookieCheckerPage),
             ("Cookie_Refresher", "C_RFRSHR", SettingsRobloxCookieRefresherPage),
             # ('Time_Booster',     'TM_BSTR',  SettingsRobloxTimeBoosterPage),
-            (None, None, None),
+            ("", "", None),
         ]
 
         first_key: str | None = None

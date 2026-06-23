@@ -3,6 +3,8 @@ from src.utils.filesystem.file import (
     count_lines_in_file,
     create_start_folders_and_files,
     del_safe,
+    ensure_dir,
+    ensure_file,
     get_files_from_folder,
     get_safe,
     load_json,
@@ -14,6 +16,8 @@ from src.utils.filesystem.paths import detect_roblox_path
 __all__ = [
     'FS',
     'create_start_folders_and_files',
+    'ensure_dir',
+    'ensure_file',
     'load_json',
     'get_safe',
     'set_safe',
@@ -21,5 +25,5 @@ __all__ = [
     'get_files_from_folder',
     'count_lines_in_file',
     'validate_filename',
-    'detect_roblox_path'
+    'detect_roblox_path',
 ]

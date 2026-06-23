@@ -2,18 +2,27 @@ from __future__ import annotations
 
 import re
 from copy import deepcopy
-from typing import Any
+from typing import Any, cast
+
+from src.theme.schema.access import theme_map
 
 from .helpers import (
-    _normalize_gradient,
-    _normalize_token,
-    _parse_easing,
-    _parse_loop_count,
-    _to_color,
+    normalize_gradient,
+    normalize_token,
+    parse_easing,
+    parse_loop_count,
 )
 from .types import AnimationSpec
+from src.theme.colors import to_qcolor
 
 _NUMBER_VALUE_PATTERN = re.compile(r'^\s*([-+]?\d+(?:[.,]\d+)?)\s*(?:px)?\s*$', re.IGNORECASE)
+
+
+def _iterable_items(value: Any) -> list[Any]:
+    if isinstance(value, (list, tuple, set)):
+        items = cast(list[Any] | tuple[Any, ...] | set[Any], value)
+        return list(items)
+    return []
 
 
 def parse_specs(raw: Any) -> list[AnimationSpec]:
@@ -28,16 +37,18 @@ def normalize_specs_payload(raw: Any) -> list[dict[str, Any]]:
     payloads: list[dict[str, Any]] = []
 
     if isinstance(raw, list):
-        for item in raw:
+        items = cast(list[Any], raw)
+        for item in items:
             _collect_payload_specs(payloads, item, default_action=None)
         return payloads
 
     if isinstance(raw, dict):
-        if _looks_like_spec(raw):
-            _collect_payload_specs(payloads, raw, default_action=None)
+        mapping = cast(dict[str, Any], raw)
+        if _looks_like_spec(mapping):
+            _collect_payload_specs(payloads, mapping, default_action=None)
             return payloads
 
-        for action, payload in raw.items():
+        for action, payload in mapping.items():
             _collect_payload_specs(payloads, payload, default_action=action)
 
     return payloads
@@ -45,15 +56,17 @@ def normalize_specs_payload(raw: Any) -> list[dict[str, Any]]:
 
 def _collect_payload_specs(output: list[dict[str, Any]], payload: Any, default_action: str | None) -> None:
     if isinstance(payload, list):
-        for item in payload:
+        items = cast(list[Any], payload)
+        for item in items:
             _collect_payload_specs(output, item, default_action)
         return
 
     if isinstance(payload, dict):
-        if default_action and not any(key in payload for key in ('on', 'action', 'state', 'event')):
-            candidate = {'on': default_action, **deepcopy(payload)}
+        mapping = cast(dict[str, Any], payload)
+        if default_action and not any(key in mapping for key in ('on', 'action', 'state', 'event')):
+            candidate: dict[str, Any] = {'on': default_action, **deepcopy(mapping)}
         else:
-            candidate = deepcopy(payload)
+            candidate = deepcopy(mapping)
 
         spec_payloads = _normalize_raw_specs(candidate)
         if spec_payloads:
@@ -152,55 +165,58 @@ def _normalize_raw_spec(raw: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def _expand_shorthand(action: str, prop: str, value: Any, common: dict[str, Any]) -> list[dict[str, Any]]:
-    key = _normalize_token(prop)
+    key = normalize_token(prop)
     specs: list[dict[str, Any]] = []
 
     if isinstance(value, dict):
+        mapping = cast(dict[str, Any], value)
         match key:
             case 'background' | 'bg':
-                if 'color' in value:
-                    specs.append({'on': action, 'property': 'background.color', 'to': value['color'], **common})
-                if 'gradient' in value:
-                    specs.append({'on': action, 'property': 'background.gradient', 'to': value['gradient'], **common})
+                if 'color' in mapping:
+                    specs.append({'on': action, 'property': 'background.color', 'to': mapping['color'], **common})
+                if 'gradient' in mapping:
+                    specs.append({'on': action, 'property': 'background.gradient', 'to': mapping['gradient'], **common})
             case 'text':
-                if 'color' in value:
-                    specs.append({'on': action, 'property': 'color', 'to': value['color'], **common})
-                if 'spacing' in value:
-                    specs.append({'on': action, 'property': 'text.spacing', 'to': value['spacing'], **common})
-                if 'letter_spacing' in value:
-                    specs.append({'on': action, 'property': 'text.spacing', 'to': value['letter_spacing'], **common})
-                if 'letter-spacing' in value:
-                    specs.append({'on': action, 'property': 'text.spacing', 'to': value['letter-spacing'], **common})
-                border = value.get('border') if isinstance(value.get('border'), dict) else {}
+                if 'color' in mapping:
+                    specs.append({'on': action, 'property': 'color', 'to': mapping['color'], **common})
+                if 'spacing' in mapping:
+                    specs.append({'on': action, 'property': 'text.spacing', 'to': mapping['spacing'], **common})
+                if 'letter_spacing' in mapping:
+                    specs.append({'on': action, 'property': 'text.spacing', 'to': mapping['letter_spacing'], **common})
+                if 'letter-spacing' in mapping:
+                    specs.append({'on': action, 'property': 'text.spacing', 'to': mapping['letter-spacing'], **common})
+                border = theme_map(mapping.get('border')) or {}
                 if 'color' in border:
                     specs.append({'on': action, 'property': 'text.border.color', 'to': border['color'], **common})
                 if 'width' in border:
                     specs.append({'on': action, 'property': 'text.border.width', 'to': border['width'], **common})
             case 'border':
-                if 'color' in value:
-                    specs.append({'on': action, 'property': 'border.color', 'to': value['color'], **common})
-                if 'width' in value:
-                    specs.append({'on': action, 'property': 'border.width', 'to': value['width'], **common})
-                if 'radius' in value:
-                    specs.append({'on': action, 'property': 'border.radius', 'to': value['radius'], **common})
+                if 'color' in mapping:
+                    specs.append({'on': action, 'property': 'border.color', 'to': mapping['color'], **common})
+                if 'width' in mapping:
+                    specs.append({'on': action, 'property': 'border.width', 'to': mapping['width'], **common})
+                if 'radius' in mapping:
+                    specs.append({'on': action, 'property': 'border.radius', 'to': mapping['radius'], **common})
             case 'padding':
                 for side in ('left', 'top', 'right', 'bottom'):
-                    if side in value:
-                        specs.append({'on': action, 'property': f'padding.{side}', 'to': value[side], **common})
+                    if side in mapping:
+                        specs.append({'on': action, 'property': f'padding.{side}', 'to': mapping[side], **common})
             case 'layout':
-                if 'spacing' in value:
-                    specs.append({'on': action, 'property': 'layout.spacing', 'to': value['spacing'], **common})
-                margin = value.get('margin', value.get('margins'))
-                if isinstance(margin, dict):
+                if 'spacing' in mapping:
+                    specs.append({'on': action, 'property': 'layout.spacing', 'to': mapping['spacing'], **common})
+                margin = theme_map(mapping.get('margin', mapping.get('margins'))) or {}
+                if margin:
                     for side in ('left', 'top', 'right', 'bottom'):
                         if side in margin:
                             specs.append({'on': action, 'property': f'layout.margin.{side}', 'to': margin[side], **common})
                 for side in ('left', 'top', 'right', 'bottom'):
                     for key_name in (f'margin_{side}', f'margin-{side}'):
-                        if key_name in value:
-                            specs.append({'on': action, 'property': f'layout.margin.{side}', 'to': value[key_name], **common})
+                        if key_name in mapping:
+                            specs.append({'on': action, 'property': f'layout.margin.{side}', 'to': mapping[key_name], **common})
             case 'parts':
-                specs.extend(_expand_parts_shorthand(action, value, common))
+                specs.extend(_expand_parts_shorthand(action, mapping, common))
+            case _:
+                pass
         return specs
 
     specs.append({'on': action, 'property': prop, 'to': value, **common})
@@ -210,23 +226,24 @@ def _expand_shorthand(action: str, prop: str, value: Any, common: dict[str, Any]
 def _expand_parts_shorthand(action: str, value: dict[str, Any], common: dict[str, Any]) -> list[dict[str, Any]]:
     specs: list[dict[str, Any]] = []
     for part, part_data in value.items():
-        part_name = _normalize_token(part)
+        part_name = normalize_token(part)
         if not isinstance(part_data, dict) or not part_name:
             continue
+        mapping = cast(dict[str, Any], part_data)
 
-        if 'color' in part_data:
-            specs.append({'on': action, 'property': f'parts.{part_name}.color', 'to': part_data['color'], **common})
+        if 'color' in mapping:
+            specs.append({'on': action, 'property': f'parts.{part_name}.color', 'to': mapping['color'], **common})
         for metric in ('width', 'height', 'size', 'rotation'):
-            if metric in part_data:
-                specs.append({'on': action, 'property': f'parts.{part_name}.{metric}', 'to': part_data[metric], **common})
+            if metric in mapping:
+                specs.append({'on': action, 'property': f'parts.{part_name}.{metric}', 'to': mapping[metric], **common})
 
-        background = part_data.get('background') if isinstance(part_data.get('background'), dict) else {}
+        background = theme_map(mapping.get('background')) or {}
         if 'color' in background:
             specs.append({'on': action, 'property': f'parts.{part_name}.background.color', 'to': background['color'], **common})
         if 'gradient' in background:
             specs.append({'on': action, 'property': f'parts.{part_name}.background.gradient', 'to': background['gradient'], **common})
 
-        border = part_data.get('border') if isinstance(part_data.get('border'), dict) else {}
+        border = theme_map(mapping.get('border')) or {}
         if 'color' in border:
             specs.append({'on': action, 'property': f'parts.{part_name}.border.color', 'to': border['color'], **common})
         if 'width' in border:
@@ -234,17 +251,18 @@ def _expand_parts_shorthand(action: str, value: dict[str, Any], common: dict[str
         if 'radius' in border:
             specs.append({'on': action, 'property': f'parts.{part_name}.border.radius', 'to': border['radius'], **common})
 
-        text = part_data.get('text') if isinstance(part_data.get('text'), dict) else {}
+        text = theme_map(mapping.get('text')) or {}
         if 'color' in text:
             specs.append({'on': action, 'property': f'parts.{part_name}.text.color', 'to': text['color'], **common})
 
-        states = part_data.get('states') if isinstance(part_data.get('states'), dict) else {}
+        states = theme_map(mapping.get('states')) or {}
         for state, state_data in states.items():
-            state_name = _normalize_token(state)
+            state_name = normalize_token(state)
             if not isinstance(state_data, dict) or not state_name:
                 continue
+            state_mapping = cast(dict[str, Any], state_data)
 
-            state_background = state_data.get('background') if isinstance(state_data.get('background'), dict) else {}
+            state_background = theme_map(state_mapping.get('background')) or {}
             if 'color' in state_background:
                 specs.append({
                     'on': action,
@@ -260,7 +278,7 @@ def _expand_parts_shorthand(action: str, value: dict[str, Any], common: dict[str
                     **common,
                 })
 
-            state_text = state_data.get('text') if isinstance(state_data.get('text'), dict) else {}
+            state_text = theme_map(state_mapping.get('text')) or {}
             if 'color' in state_text:
                 specs.append({
                     'on': action,
@@ -269,7 +287,7 @@ def _expand_parts_shorthand(action: str, value: dict[str, Any], common: dict[str
                     **common,
                 })
 
-            state_border = state_data.get('border') if isinstance(state_data.get('border'), dict) else {}
+            state_border = theme_map(state_mapping.get('border')) or {}
             if 'color' in state_border:
                 specs.append({
                     'on': action,
@@ -294,7 +312,7 @@ def _build_spec(raw: dict[str, Any]) -> AnimationSpec | None:
         return None
 
     property_key, kind, css_property = property_data
-    loop_count = _parse_loop_count(
+    loop_count = parse_loop_count(
         raw.get('loop', raw.get('loops', raw.get('iterations'))),
         default=-1 if action == 'always' else 1,
     )
@@ -306,11 +324,11 @@ def _build_spec(raw: dict[str, Any]) -> AnimationSpec | None:
     start_raw = raw.get('from', raw.get('start'))
 
     if kind == 'color':
-        end_color = _to_color(end_raw)
+        end_color = to_qcolor(end_raw)
         if end_color is None:
             return None
 
-        start_color = _to_color(start_raw) if start_raw is not None else None
+        start_color = to_qcolor(start_raw) if start_raw is not None else None
 
         return AnimationSpec(
             action=action,
@@ -319,7 +337,7 @@ def _build_spec(raw: dict[str, Any]) -> AnimationSpec | None:
             kind=kind,
             duration=_resolve_duration(raw, default=220),
             loop_count=loop_count,
-            easing=_parse_easing(raw.get('easing', raw.get('curve'))),
+            easing=parse_easing(raw.get('easing', raw.get('curve'))),
             start=start_color,
             end=end_color,
         )
@@ -338,17 +356,17 @@ def _build_spec(raw: dict[str, Any]) -> AnimationSpec | None:
             kind=kind,
             duration=_resolve_duration(raw, default=220),
             loop_count=loop_count,
-            easing=_parse_easing(raw.get('easing', raw.get('curve'))),
+            easing=parse_easing(raw.get('easing', raw.get('curve'))),
             start=start_number,
             end=end_number,
             options={'duration_provided': 'duration' in raw or 'duration_ms' in raw},
         )
 
-    end_grad = _normalize_gradient(end_raw)
+    end_grad = normalize_gradient(end_raw)
     if end_grad is None:
         return None
 
-    start_grad = _normalize_gradient(start_raw) if start_raw is not None else None
+    start_grad = normalize_gradient(start_raw) if start_raw is not None else None
 
     return AnimationSpec(
         action=action,
@@ -357,7 +375,7 @@ def _build_spec(raw: dict[str, Any]) -> AnimationSpec | None:
         kind=kind,
         duration=_resolve_duration(raw, default=220),
         loop_count=loop_count,
-        easing=_parse_easing(raw.get('easing', raw.get('curve'))),
+        easing=parse_easing(raw.get('easing', raw.get('curve'))),
         start=start_grad,
         end=end_grad,
     )
@@ -413,7 +431,7 @@ def _normalize_actions(action: Any) -> list[str]:
     if isinstance(action, str):
         values = [part.strip() for part in re.split(r'[,|]', action) if part.strip()]
     elif isinstance(action, (list, tuple, set)):
-        values = list(action)
+        values = _iterable_items(action)
     else:
         values = [action]
 
@@ -431,7 +449,7 @@ def _normalize_action(action: Any) -> str:
     if not isinstance(action, str):
         return ''
 
-    key = _normalize_token(action)
+    key = normalize_token(action)
     aliases = {
         'hover': 'hover',
         'enter': 'hover',
@@ -483,7 +501,7 @@ def _normalize_action(action: Any) -> str:
 
 
 def _normalize_property(prop: str) -> tuple[str, str, str] | None:
-    key = _normalize_token(prop)
+    key = normalize_token(prop)
     aliases = {
         'background': 'background.color',
         'bg': 'background.color',
@@ -542,7 +560,7 @@ def _normalize_property(prop: str) -> tuple[str, str, str] | None:
 
     canonical = aliases.get(key)
     if canonical is None and '.' in prop:
-        parts = [_normalize_token(p) for p in prop.split('.') if p]
+        parts = [normalize_token(p) for p in prop.split('.') if p]
         canonical = '.'.join(parts)
 
     match canonical:
@@ -590,6 +608,8 @@ def _normalize_property(prop: str) -> tuple[str, str, str] | None:
             return canonical, 'number', ''
         case 'scroll.horizontal':
             return canonical, 'number', ''
+        case _:
+            pass
 
     if isinstance(canonical, str) and canonical.startswith('parts.'):
         parts = canonical.split('.')

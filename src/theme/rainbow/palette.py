@@ -5,7 +5,7 @@ from math import cos, pi
 from PySide6.QtGui import QColor
 
 from src.theme.colors import to_qcolor
-from src.utils.qt_gradients import adjust_qcolor
+from src.theme.gradients import adjust_qcolor
 
 CLASSIC_RAINBOW_STOPS: tuple[tuple[float, str], ...] = (
     (0.00, '#ff0000'),

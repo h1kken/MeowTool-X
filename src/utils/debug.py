@@ -1,47 +1,13 @@
-from typing import Callable
+from typing import Any, Callable
 
-from PySide6.QtCore import QByteArray, QEvent, QObject
+from PySide6.QtCore import QByteArray, QObject
 
 from src.utils.logging import logger
 
 
-class EventListener(QObject):
-    BLACKLIST = {
-        QEvent.Type.Paint,
-        QEvent.Type.UpdateRequest,
-        QEvent.Type.LayoutRequest,
-        QEvent.Type.Timer,
-        QEvent.Type.Polish,
-        QEvent.Type.StyleChange,
-        QEvent.Type.FontChange,
-        QEvent.Type.Resize,
-        QEvent.Type.Move,
-        QEvent.Type.ChildAdded,
-        QEvent.Type.ChildRemoved,
-        QEvent.Type.MouseMove,
-        QEvent.Type.HoverMove,
-        QEvent.Type.NonClientAreaMouseMove,
-        QEvent.Type.NonClientAreaMouseButtonPress,
-        QEvent.Type.NonClientAreaMouseButtonRelease,
-        QEvent.Type.WindowDeactivate,
-        QEvent.Type.Enter,
-        QEvent.Type.Leave,
-        QEvent.Type.HoverEnter,
-        QEvent.Type.HoverLeave,
-        QEvent.Type.Expose,
-    }
-    
-    def eventFilter(self, obj, event: QEvent):
-        if event.type() in self.BLACKLIST:
-            return False
-        
-        logger.debug(f'[EVENT] {obj.__class__.__name__:<20} {event.type().name}')
-        return False
-
-
-def _normalize_property_name(value) -> str:
+def _normalize_property_name(value: Any) -> str:
     if isinstance(value, QByteArray):
-        return bytes(value).decode('utf-8', errors='ignore')
+        return bytes(value.data()).decode('utf-8', errors='ignore')
 
     if isinstance(value, (bytes, bytearray)):
         return value.decode('utf-8', errors='ignore')
@@ -49,7 +15,7 @@ def _normalize_property_name(value) -> str:
     return str(value)
 
 
-def _format_property_value(value) -> str | None:
+def _format_property_value(value: Any) -> str | None:
     if isinstance(value, bool):
         return 'True' if value else 'False'
 
@@ -132,7 +98,7 @@ def dump_object_tree(
     indent: int = 0,
     *,
     progress_callback: Callable[[int, int, QObject], None] | None = None,
-):
+) -> None:
     total_nodes = _count_object_tree_nodes(obj)
     logger.debug(f'Object tree nodes: {total_nodes}')
     _dump_object_tree_recursive(

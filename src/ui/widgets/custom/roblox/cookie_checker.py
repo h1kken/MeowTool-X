@@ -3,21 +3,34 @@ from __future__ import annotations
 from copy import deepcopy
 
 from PySide6.QtCore import QSize, Qt, Signal
-from PySide6.QtGui import QMouseEvent
+from PySide6.QtGui import QMouseEvent, QResizeEvent
 from PySide6.QtWidgets import QWidget
 
 from src.config.defaults import SORT_KEYS, default_config
 from src.config.manager import config
+from src.config.types import SortCategoryKind
+from src.theme.schema.access import theme_map
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets.custom.checkables import MTSwitch
 from src.ui.widgets.custom.containers import MTWidget
 from src.ui.widgets.custom.inputs import MTLineEdit
 from src.ui.widgets.custom.popups import MTPopup
 from src.ui.widgets.custom.text import MTButton, MTLabel
+from src.ui.widgets.custom.types import WidgetThemeMap
 from src.ui.widgets.settings_widgets import MTSwitchSetting
-from src.utils.constants import ROBLOX_COOKIE_CHECKER_MAIN_FIELDS
+from src.services.roblox.constants import ROBLOX_COOKIE_CHECKER_MAIN_FIELDS
 
-_COOKIE_CHECKER_SORT_DEFAULTS: dict = default_config()["Roblox"]["Cookie Checker"]["Sorting"]["Categories"]
+
+def _sort_defaults() -> WidgetThemeMap:
+    root = theme_map(default_config()) or {}
+    roblox = theme_map(root.get("Roblox")) or {}
+    cookie_checker = theme_map(roblox.get("Cookie Checker")) or {}
+    sorting = theme_map(cookie_checker.get("Sorting")) or {}
+    categories = theme_map(sorting.get("Categories")) or {}
+    return categories
+
+
+_COOKIE_CHECKER_SORT_DEFAULTS: WidgetThemeMap = _sort_defaults()
 _COOKIE_CHECKER_SORT_TEXT_FLAGS: dict[str, dict[str, str]] = {
     "Gamepasses": {
         "Names": "Gamepass Names",
@@ -106,7 +119,7 @@ class _BoundSwitchRow(MTWidget):
             config.set(self._cfg_key, bool(checked))
         self.toggled.emit(bool(checked))
 
-    def resizeEvent(self, event) -> None:
+    def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         available_height = max(12, self.height())
         self._switch.sync_size(
@@ -210,14 +223,18 @@ class _SortListEntryRow(MTWidget):
         self._remove_button.setProperty("rainbowBorderExcluded", True)
         self._main_layout.addWidget(self._remove_button)
 
+        def _emit_text_changed(_: str) -> None:
+            self.changed.emit()
+
+        def _request_remove() -> None:
+            self.remove_requested.emit(self)
+
         self._start_edit.editingFinished.connect(self.changed.emit)
-        self._start_edit.textChanged.connect(lambda *_: self.changed.emit())
+        self._start_edit.textChanged.connect(_emit_text_changed)
         if self._end_edit is not None:
             self._end_edit.editingFinished.connect(self.changed.emit)
-            self._end_edit.textChanged.connect(lambda *_: self.changed.emit())
-        self._remove_button.clicked.connect(
-            lambda *_: self.remove_requested.emit(self)
-        )
+            self._end_edit.textChanged.connect(_emit_text_changed)
+        self._remove_button.clicked.connect(_request_remove)
 
     def entry_key(self) -> str | None:
         start_text = self._start_edit.text().strip()
@@ -273,7 +290,7 @@ class _SortListEditor(MTWidget):
         self._main_layout.addWidget(self._add_button)
 
         self._enabled_row.toggled.connect(self._sync_enabled_state)
-        self._enabled_row.toggled.connect(lambda *_: self.changed.emit())
+        self._enabled_row.toggled.connect(self._on_enabled_row_toggled)
         self._add_button.clicked.connect(self._add_empty_entry)
         config.config_loaded.connect(self.reload_from_config)
 
@@ -282,11 +299,14 @@ class _SortListEditor(MTWidget):
     def reload_from_config(self) -> None:
         enabled = bool(config.get(self._cfg_key_enabled, default=False))
         self._enabled_row.set_checked(enabled)
-        items = config.get(self._cfg_key_items, default={})
-        self._rebuild_entries(items if isinstance(items, dict) else {})
+        items = theme_map(config.get(self._cfg_key_items, default={})) or {}
+        self._rebuild_entries({str(key): bool(value) for key, value in items.items()})
         self._sync_enabled_state()
 
-    def _sync_enabled_state(self) -> None:
+    def _on_enabled_row_toggled(self, _: bool) -> None:
+        self.changed.emit()
+
+    def _sync_enabled_state(self, _: bool | None = None) -> None:
         enabled = self._enabled_row.is_checked()
         self._entries_widget.setEnabled(enabled)
         self._add_button.setEnabled(enabled)
@@ -315,7 +335,7 @@ class _SortListEditor(MTWidget):
         self._save_entries()
         self._sync_theme_subtree()
 
-    def _rebuild_entries(self, items: dict) -> None:
+    def _rebuild_entries(self, items: dict[str, bool]) -> None:
         self._suspend_save = True
         try:
             for row in self._entry_rows:
@@ -377,7 +397,7 @@ class _CookieCheckerSortPopup(MTPopup):
         self,
         *,
         field_name: str,
-        sort_kind: type[int] | type[str],
+        sort_kind: SortCategoryKind,
         tr_key: str,
         obj_name: str,
         parent: QWidget | None = None,
@@ -385,7 +405,7 @@ class _CookieCheckerSortPopup(MTPopup):
         super().__init__(obj_name=obj_name, parent=parent, close_on_outside_click=True)
         self._field_name = field_name
         self._sort_kind = sort_kind
-        self._category_defaults = deepcopy(_COOKIE_CHECKER_SORT_DEFAULTS.get(field_name, {}))
+        self._category_defaults = deepcopy(theme_map(_COOKIE_CHECKER_SORT_DEFAULTS.get(field_name)) or {})
 
         self.content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
@@ -421,12 +441,15 @@ class _CookieCheckerSortPopup(MTPopup):
         self._build_detail_widgets(obj_name)
 
         self._enabled_row.toggled.connect(self._sync_enabled_state)
-        self._enabled_row.toggled.connect(lambda *_: self._sync_global_sorting_enabled())
+        self._enabled_row.toggled.connect(self._on_enabled_toggled)
         self._enabled_row.toggled.connect(self.enabled_changed.emit)
         self._close_button.clicked.connect(self.hide)
         config.config_loaded.connect(self.reload_from_config)
 
         self.reload_from_config()
+
+    def _on_enabled_toggled(self, _: bool) -> None:
+        self._sync_global_sorting_enabled()
 
     def reload_from_config(self) -> None:
         self._enabled_row.reload_from_config()
@@ -436,17 +459,25 @@ class _CookieCheckerSortPopup(MTPopup):
                 reload_from_config()
         self._sync_enabled_state()
 
+    def set_enabled_state(self, enabled: bool) -> None:
+        self._enabled_row.set_checked(enabled)
+        self._sync_enabled_state()
+
+    def sync_enabled_state(self) -> None:
+        self._sync_enabled_state()
+
     def _category_key(self, suffix: str) -> str:
         return f"Roblox>Cookie Checker>Sorting>Categories>{self._field_name}>{suffix}"
 
     def _build_detail_widgets(self, obj_name: str) -> None:
-        if self._sort_kind is str:
+        options_defaults = theme_map(self._category_defaults.get("Options")) or {}
+        if self._sort_kind != "number":
             return
 
         self._zero_row = _BoundSwitchRow(
             label_text="Zero",
             cfg_key=self._category_key("Options>Zero"),
-            default=bool(self._category_defaults.get("Options", {}).get("Zero", False)),
+            default=bool(options_defaults.get("Zero", False)),
             obj_name=f"{obj_name}_Zero",
         )
         self.add_widget(self._zero_row)
@@ -484,7 +515,7 @@ class _CookieCheckerSortPopup(MTPopup):
             self.add_widget(row)
             self._detail_widgets.append(row)
 
-    def _sync_enabled_state(self) -> None:
+    def _sync_enabled_state(self, _: bool | None = None) -> None:
         enabled = self._enabled_row.is_checked()
         for widget in self._detail_widgets:
             widget.setEnabled(enabled)
@@ -523,12 +554,12 @@ class MTCookieCheckerFieldSetting(MTSwitchSetting):
             parent=parent,
         )
         self._field_name = field_name
-        self._sort_kind = SORT_KEYS.get(field_name)
+        self._sort_kind: SortCategoryKind = SORT_KEYS.get(field_name, "none")
         self._sort_enabled_cfg_key = f"Roblox>Cookie Checker>Sorting>Categories>{self._field_name}>Enabled"
         self._sort_popup: _CookieCheckerSortPopup | None = None
         self._sort_button: _SortActionButton | None = None
 
-        if self._sort_kind is not None:
+        if self._sort_kind != "none":
             self._sort_button = _SortActionButton(
                 obj_name=f"{obj_name}_Sort_Button",
                 parent=self,
@@ -556,18 +587,17 @@ class MTCookieCheckerFieldSetting(MTSwitchSetting):
     def _sort_enabled(self) -> bool:
         return bool(config.get(self._sort_enabled_cfg_key, default=False))
 
-    def _sync_sort_button_state(self, *_args) -> None:
+    def _sync_sort_button_state(self, *_args: object) -> None:
         if self._sort_button is None:
             return
         self._sort_button.setChecked(self._sort_enabled())
 
-    def _on_config_value_changed(self, key: str, value) -> None:
+    def _on_config_value_changed(self, key: str, value: object) -> None:
         if str(key).strip() == self._sort_enabled_cfg_key:
             if self._sort_button is not None:
                 self._sort_button.setChecked(bool(value))
             if self._sort_popup is not None and self._sort_popup.isVisible():
-                self._sort_popup._enabled_row.set_checked(bool(value))
-                self._sort_popup._sync_enabled_state()
+                self._sort_popup.set_enabled_state(bool(value))
 
     def _on_sort_enabled_changed(self, enabled: bool) -> None:
         if self._sort_button is not None:
@@ -576,11 +606,10 @@ class MTCookieCheckerFieldSetting(MTSwitchSetting):
     def _toggle_sort_enabled(self, enabled: bool) -> None:
         config.set(self._sort_enabled_cfg_key, bool(enabled))
         if self._sort_popup is not None and self._sort_popup.isVisible():
-            self._sort_popup._enabled_row.set_checked(bool(enabled))
-            self._sort_popup._sync_enabled_state()
+            self._sort_popup.set_enabled_state(bool(enabled))
 
     def _toggle_sort_popup(self) -> None:
-        if self._sort_kind is None or self._sort_popup is None:
+        if self._sort_kind == "none" or self._sort_popup is None:
             return
 
         if self._sort_popup.isVisible():

@@ -2,30 +2,27 @@ from __future__ import annotations
 
 import sys
 from time import monotonic
-from pathlib import Path
+from typing import cast
 
-from PySide6.QtCore import QAbstractNativeEventFilter, QEvent, QPoint, QRect, QRectF, QSize, Qt, QTimer
-from PySide6.QtGui import QBrush, QFontMetricsF, QIcon, QLinearGradient, QMouseEvent, QPainter, QPainterPath
+from PySide6.QtCore import QAbstractNativeEventFilter, QEvent, QObject, QPoint, QRect, QRectF, QSize, Qt, QTimer
+from PySide6.QtGui import QBrush, QColor, QFontMetricsF, QIcon, QLinearGradient, QMouseEvent, QPaintEvent, QPainterPath, QResizeEvent
 from PySide6.QtWidgets import (
     QAbstractButton,
     QAbstractSlider,
     QAbstractSpinBox,
     QApplication,
+    QBoxLayout,
     QComboBox,
-    QGridLayout,
-    QHBoxLayout,
     QLineEdit,
     QSizePolicy,
-    QStyle,
-    QStyleOption,
-    QVBoxLayout,
     QWidget,
 )
 
-from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.widgets import MTButton, MTPlainLabel, MTWidget
 from src.theme.rainbow.palette import sample_rainbow_color
-from src.utils.constants import PATH_HEADER_ICONS
+from src.ui.layouts.factory import LayoutType, create_layout
+from src.ui.painting import draw_widget_background, new_widget_painter
+from src.ui.paths import PATH_HEADER_ICONS
+from src.ui.widgets import MTButton, MTPlainLabel, MTWidget
 
 if sys.platform.startswith('win'):
     import ctypes
@@ -90,12 +87,14 @@ class _FramelessWindowNativeEventFilter(QAbstractNativeEventFilter):
         for handle in stale_handles:
             self._headers.pop(handle, None)
 
-    def nativeEventFilter(self, event_type, message):
+    def nativeEventFilter(self, event_type: object, message: int | object) -> tuple[bool, int]:
         if not sys.platform.startswith('win'):
+            return False, 0
+        if not isinstance(message, int):
             return False, 0
 
         try:
-            msg = MSG.from_address(int(message))
+            msg = MSG.from_address(message)
         except (TypeError, ValueError, OSError):
             return False, 0
 
@@ -120,7 +119,7 @@ class _FramelessWindowNativeEventFilter(QAbstractNativeEventFilter):
         return False, 0
 
 
-_NATIVE_EVENT_FILTER: _FramelessWindowNativeEventFilter | None = None
+_native_event_filter: _FramelessWindowNativeEventFilter | None = None
 
 
 def _enable_native_resize_frame(window: QWidget) -> None:
@@ -144,22 +143,22 @@ def _enable_native_resize_frame(window: QWidget) -> None:
 
 
 def _install_native_event_filter() -> _FramelessWindowNativeEventFilter | None:
-    global _NATIVE_EVENT_FILTER
+    global _native_event_filter
     if not sys.platform.startswith('win'):
         return None
-    if _NATIVE_EVENT_FILTER is not None:
-        return _NATIVE_EVENT_FILTER
+    if _native_event_filter is not None:
+        return _native_event_filter
     app = QApplication.instance()
     if app is None:
         return None
-    _NATIVE_EVENT_FILTER = _FramelessWindowNativeEventFilter()
-    app.installNativeEventFilter(_NATIVE_EVENT_FILTER)
-    return _NATIVE_EVENT_FILTER
+    _native_event_filter = _FramelessWindowNativeEventFilter()
+    app.installNativeEventFilter(_native_event_filter)
+    return _native_event_filter
 
 
 def _header_icon(name: str) -> QIcon:
     path = PATH_HEADER_ICONS / f'{name}.svg'
-    return QIcon(str(path)) if isinstance(path, Path) and path.exists() else QIcon()
+    return QIcon(str(path)) if path.is_file() else QIcon()
 
 
 class _HeaderIconButton(MTButton):
@@ -179,8 +178,14 @@ class _HeaderIconButton(MTButton):
 
 
 class _HeaderTitleLabel(MTPlainLabel):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        text: str = '',
+        parent: QWidget | None = None,
+        *,
+        obj_name: str = '',
+    ) -> None:
+        super().__init__(text, parent, obj_name=obj_name)
         self.set_force_text_path_render(True)
         self._ribbon_enabled = False
         self._ribbon_duration_ms = 5000
@@ -213,18 +218,11 @@ class _HeaderTitleLabel(MTPlainLabel):
             self._ribbon_timer.stop()
         self.update()
 
-    def paintEvent(self, event) -> None:
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+    def paintEvent(self, event: QPaintEvent) -> None:
+        painter = new_widget_painter(self, text_antialias=True)
         painter.setFont(self.font())
 
-        if self.has_box_theme():
-            self.draw_box_theme(painter)
-        else:
-            option = QStyleOption()
-            option.initFrom(self)
-            self.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, option, painter, self)
+        draw_widget_background(self, painter)
 
         text = self.text()
         if not text.strip():
@@ -278,10 +276,14 @@ class _HeaderTitleLabel(MTPlainLabel):
 
         border = getattr(self, '_text_border', None)
         if isinstance(border, dict):
-            border_color = border.get('color')
-            border_width = float(border.get('width', 0.0) or 0.0)
-            border_style = self._pen_style(border.get('style', 'solid'))
-            if border_color is not None and border_color.isValid() and border_color.alpha() > 0 and border_width > 0.0 and border_style != Qt.PenStyle.NoPen:
+            border_map = cast(dict[str, object], border)
+            raw_border_color = border_map.get('color')
+            raw_border_width = border_map.get('width', 0.0)
+            raw_border_style = border_map.get('style', 'solid')
+            border_color = raw_border_color if isinstance(raw_border_color, QColor) else None
+            border_width = float(raw_border_width if isinstance(raw_border_width, (int, float)) else 0.0)
+            border_style = self._pen_style(raw_border_style)
+            if isinstance(border_color, QColor) and border_color.isValid() and border_color.alpha() > 0 and border_width > 0.0 and border_style != Qt.PenStyle.NoPen:
                 self._draw_text_outline(
                     painter,
                     path,
@@ -380,11 +382,14 @@ class MTWindowHeader(MTWidget):
         window.installEventFilter(self)
         if self._native_filter is not None:
             self._native_filter.register(self)
-        window.destroyed.connect(lambda *_: self._unregister_native_filter())
+        def _on_window_destroyed(*_args: object) -> None:
+            self._unregister_native_filter()
+
+        window.destroyed.connect(_on_window_destroyed)
         self.sync_window_meta()
         self._sync_title_geometry()
 
-    def eventFilter(self, obj, event: QEvent):
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         if obj is self._window and event.type() in {
             QEvent.Type.Show,
             QEvent.Type.WinIdChange,
@@ -403,7 +408,7 @@ class MTWindowHeader(MTWidget):
                 self.sync_window_meta()
         return super().eventFilter(obj, event)
 
-    def resizeEvent(self, event) -> None:
+    def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         self._sync_title_geometry()
         self._buttons_host.raise_()
@@ -490,8 +495,8 @@ class MTWindowHeader(MTWidget):
         self._window.move(target_x, target_y)
 
         self._maximized_drag_pending = False
-        if (handle := self._window.windowHandle()) is not None:
-            handle.startSystemMove()
+        handle = self._window.windowHandle()
+        handle.startSystemMove()
 
     def _unregister_native_filter(self) -> None:
         if self._native_filter is None:
@@ -520,8 +525,12 @@ class MTWindowHeader(MTWidget):
         return None
 
     def _global_pos_from_lparam(self, lparam: int) -> QPoint | None:
-        x = ctypes.c_short(lparam & 0xFFFF).value if sys.platform.startswith('win') else 0
-        y = ctypes.c_short((lparam >> 16) & 0xFFFF).value if sys.platform.startswith('win') else 0
+        if not sys.platform.startswith('win'):
+            return None
+        import ctypes
+
+        x = ctypes.c_short(lparam & 0xFFFF).value
+        y = ctypes.c_short((lparam >> 16) & 0xFFFF).value
         return QPoint(int(x), int(y))
 
     def _is_over_interactive_widget(self, global_pos: QPoint) -> bool:
@@ -564,7 +573,7 @@ class MTWindowHeader(MTWidget):
             return HTBOTTOM
         return None
 
-    def _resize_edges_at(self, global_pos: QPoint):
+    def _resize_edges_at(self, global_pos: QPoint) -> Qt.Edge | None:
         if self._window.isMaximized() or self._window.isFullScreen():
             return None
 
@@ -640,7 +649,7 @@ class MTWindowHeader(MTWidget):
 
 def apply_frameless_window_header(
     window: QWidget,
-    layout: QHBoxLayout | QVBoxLayout | QGridLayout | object,
+    layout: QBoxLayout,
     *,
     title: str | None = None,
     allow_minimize: bool = True,

@@ -22,9 +22,9 @@ class SettingsProxyPage(MTWidget):
 
         self._page_controller = PageController(main_layout)
 
-        PAGES: list[tuple[str | None, str | None, type[QWidget] | None]] = [
+        PAGES: list[tuple[str, str, type[QWidget] | None]] = [
             ("Checker", "CHCKR", SettingsProxyCheckerPage),
-            (None, None, None),
+            ("", "", None),
         ]
 
         first_key: str | None = None

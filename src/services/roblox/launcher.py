@@ -1,12 +1,12 @@
 from src.utils.datetime import current_date_ms
-from src.utils.string import encode_string_to_url, generate_browser_tracker_id
+from src.services.roblox.text import encode_string_to_url, generate_browser_tracker_id
 
 
 class RobloxLauncher:
-    def __init__(self):
-        self._launchers = {}
+    def __init__(self) -> None:
+        self._launchers: dict[str, str] = {}
         
-    def launch(self, auth_ticket: str, place_id: str, server_id: str):
+    def launch(self, auth_ticket: str, place_id: str, server_id: str) -> str:
         launch_time = current_date_ms()
         browser_tracker_id = generate_browser_tracker_id()
         
@@ -14,3 +14,5 @@ class RobloxLauncher:
         encoded_launch_url = encode_string_to_url(launch_url)
         
         arguments = f'roblox-player:1+launchmode:play+gameinfo:{auth_ticket}+launchtime:{launch_time}+placelauncherurl:{encoded_launch_url}+browsertrackerid:{browser_tracker_id}+robloxLocale:en_us+gameLocale:en_us+channel:+LaunchExp:InApp'
+        self._launchers[server_id] = arguments
+        return arguments

@@ -4,10 +4,15 @@ from pathlib import Path
 
 from PySide6.QtCore import QFileSystemWatcher, QSignalBlocker, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import QSizePolicy, QStackedWidget
+from PySide6.QtWidgets import QLayout, QSizePolicy, QStackedWidget
 
+from src.config.constants import (
+    CONFIG_DEFAULT_NAME,
+    CONFIGS_REFRESH_DEBOUNCE_MS,
+)
 from src.config.loader import config_loader
 from src.config.manager import config
+from src.config.paths import PATH_CONFIGS
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets import (
     MTButton,
@@ -20,19 +25,15 @@ from src.ui.widgets import (
     MTWidget,
     MTSwitchRowSetting,
 )
-from src.utils.constants import (
-    CONFIG_DEFAULT_NAME,
-    CONFIGS_REFRESH_DEBOUNCE_MS,
-    FILENAME_SPECIAL_CHARS,
-    PATH_CONFIGS,
-)
+from src.config.enums import ConfigLoaderKey as CLKey
 from src.utils.filesystem import FS
+from src.utils.filesystem.constants import FILENAME_SPECIAL_CHARS
 
 
 class SettingsConfigPage(MTWidget):
     def __init__(self):
         super().__init__()
-        FS.create_folder(PATH_CONFIGS)
+        FS.ensure_dir(PATH_CONFIGS)
         self._autoload_name = self._read_autoload_name()
 
         main_layout = create_layout(LayoutType.VBOX, parent=self)
@@ -201,6 +202,8 @@ class SettingsConfigPage(MTWidget):
                 self._rename_button = button
                 self._rename_edit_line = line_edit
                 self._rename_edit_cancel_button = cancel_btn
+            case _:
+                raise ValueError(f"Unsupported inline editor mode: {mode}")
 
         stack.setCurrentIndex(0)
         return stack
@@ -250,7 +253,7 @@ class SettingsConfigPage(MTWidget):
     def _add_info_row(
         self,
         *,
-        layout,
+        layout: QLayout,
         tr_key: str,
         row_obj_name: str,
         label_obj_name: str,
@@ -288,13 +291,13 @@ class SettingsConfigPage(MTWidget):
     def _selected_config_path(self) -> Path | None:
         selected = self._current_selected_name()
         if not selected:
-            return
+            return None
         return PATH_CONFIGS / f"{selected}.txt"
 
     def _read_autoload_name(self) -> str:
         return (
             str(
-                config_loader.get("Loader>Config On Load", default=CONFIG_DEFAULT_NAME)
+                config_loader.get(CLKey.LOADER_CONFIG_ON_LOAD, default=CONFIG_DEFAULT_NAME)
             ).strip()
             or CONFIG_DEFAULT_NAME
         )
@@ -303,7 +306,7 @@ class SettingsConfigPage(MTWidget):
         normalized = str(value).strip() or CONFIG_DEFAULT_NAME
         if normalized == self._autoload_name:
             return self._autoload_name
-        config_loader.set("Loader>Config On Load", normalized)
+        config_loader.set(CLKey.LOADER_CONFIG_ON_LOAD, normalized)
         self._autoload_name = normalized
         return normalized
 
@@ -385,7 +388,7 @@ class SettingsConfigPage(MTWidget):
                 bool(getattr(config_loader, "auto_save_config", False))
             )
 
-    def _on_selection_changed(self, *_) -> None:
+    def _on_selection_changed(self, *_args: object) -> None:
         self._sync_actions_state()
 
     def _on_configs_dir_changed(self, _path: str) -> None:
@@ -412,7 +415,7 @@ class SettingsConfigPage(MTWidget):
         self._sync_actions_state()
 
     def _on_auto_save_toggled(self, checked: bool) -> None:
-        config_loader.set("Saver>Auto Save Config Changes", bool(checked))
+        config_loader.set(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES, bool(checked))
         self._sync_actions_state()
 
     def _save_selected_config(self) -> None:

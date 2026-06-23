@@ -2,26 +2,35 @@ from __future__ import annotations
 
 from copy import deepcopy
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
-from PySide6.QtCore import QRectF, Qt
+from PySide6.QtCore import QPointF, QRect, QRectF, Qt
 from PySide6.QtGui import QBrush, QColor, QPainter, QPainterPath, QPen
+from src.theme.gradients import build_background_brush, normalize_gradient_data
+from src.theme.schema.access import coerce_number, theme_map
+from src.theme.schema.types import ThemeMap
 
-from src.utils.qt_gradients import build_background_brush, normalize_gradient_data
 
+ThemeState = ThemeMap
+_BOX_BORDER_SIDES = ('top', 'right', 'bottom', 'left')
 
-class BoxThemeMixin:
+if TYPE_CHECKING:
+    class _BoxThemeBase:
+        def setAttribute(self, attr: Qt.WidgetAttribute, on: bool = True) -> None: ...
+        def update(self, *args: object) -> None: ...
+        def rect(self) -> QRect: ...
+else:
+    class _BoxThemeBase:
+        pass
+
+class BoxThemeMixin(_BoxThemeBase):
     def init_box_theme(self) -> None:
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self._box_theme: dict[str, Any] | None = None
+        self._box_theme: ThemeState | None = None
 
-    def apply_box_theme(self, theme: dict[str, Any]) -> None:
-        if not isinstance(theme, dict):
-            self.clear_box_theme()
-            return
-
-        background = theme.get('background') if isinstance(theme.get('background'), dict) else {}
-        border = theme.get('border') if isinstance(theme.get('border'), dict) else {}
+    def apply_box_theme(self, theme: ThemeState) -> None:
+        background = theme_map(theme.get('background')) or {}
+        border = theme_map(theme.get('border')) or {}
         self._box_theme = {
             'background': self._normalize_background(background),
             'border': self._normalize_border(border),
@@ -34,14 +43,14 @@ class BoxThemeMixin:
         self.update()
 
     def has_box_theme(self) -> bool:
-        return isinstance(getattr(self, '_box_theme', None), dict)
+        return theme_map(getattr(self, '_box_theme', None)) is not None
 
-    def box_theme_state(self) -> dict[str, Any] | None:
-        theme = getattr(self, '_box_theme', None)
-        return deepcopy(theme) if isinstance(theme, dict) else None
+    def box_theme_state(self) -> ThemeState | None:
+        theme = theme_map(getattr(self, '_box_theme', None))
+        return deepcopy(theme) if theme is not None else None
 
-    def restore_box_theme_state(self, state: dict[str, Any] | None) -> None:
-        self._box_theme = deepcopy(state) if isinstance(state, dict) else None
+    def restore_box_theme_state(self, state: ThemeState | None) -> None:
+        self._box_theme = deepcopy(state) if state is not None else None
         self.update()
 
     def set_box_background_color(self, value: Any) -> bool:
@@ -58,12 +67,10 @@ class BoxThemeMixin:
         if color is None:
             return False
         theme = self._ensure_box_theme()
-        border = theme.setdefault('border', self._normalize_border({}))
+        border = cast(ThemeState, theme.setdefault('border', self._normalize_border({})))
         border['color'] = color
-        for side in ('top', 'right', 'bottom', 'left'):
-            side_data = border.get(side)
-            if isinstance(side_data, dict) and self._side_has_any_border_value(side_data):
-                side_data['color'] = QColor(color)
+        for side_data in self._configured_side_borders(border):
+            side_data['color'] = QColor(color)
         self.update()
         return True
 
@@ -77,7 +84,7 @@ class BoxThemeMixin:
         style: str | None = None,
     ) -> bool:
         theme = self._ensure_box_theme()
-        border = theme.setdefault('border', self._normalize_border({}))
+        border = cast(ThemeState, theme.setdefault('border', self._normalize_border({})))
 
         if color is not None:
             border_color = self._theme_color(color)
@@ -85,11 +92,9 @@ class BoxThemeMixin:
                 return False
             border['color'] = border_color
             border['gradient'] = None
-            for side in ('top', 'right', 'bottom', 'left'):
-                side_data = border.get(side)
-                if isinstance(side_data, dict) and self._side_has_any_border_value(side_data):
-                    side_data['color'] = QColor(border_color)
-                    side_data['gradient'] = None
+            for side_data in self._configured_side_borders(border):
+                side_data['color'] = QColor(border_color)
+                side_data['gradient'] = None
 
         if gradient is not None:
             border_gradient = normalize_gradient_data(gradient)
@@ -97,11 +102,9 @@ class BoxThemeMixin:
                 return False
             border['gradient'] = border_gradient
             border['color'] = None
-            for side in ('top', 'right', 'bottom', 'left'):
-                side_data = border.get(side)
-                if isinstance(side_data, dict) and self._side_has_any_border_value(side_data):
-                    side_data['gradient'] = deepcopy(border_gradient)
-                    side_data['color'] = None
+            for side_data in self._configured_side_borders(border):
+                side_data['gradient'] = deepcopy(border_gradient)
+                side_data['color'] = None
 
         if width is not None:
             border['width'] = max(0.0, self._theme_measure(width, default=0.0))
@@ -114,11 +117,11 @@ class BoxThemeMixin:
         return True
 
     def draw_box_theme(self, painter: QPainter, rect: QRectF | None = None) -> None:
-        theme = getattr(self, '_box_theme', None)
-        if not isinstance(theme, dict):
+        theme = theme_map(getattr(self, '_box_theme', None))
+        if theme is None:
             return
 
-        border = theme.get('border') if isinstance(theme.get('border'), dict) else {}
+        border = theme_map(theme.get('border')) or {}
         max_border_width = self._max_border_width(border)
         rect = QRectF(rect if rect is not None else self.rect()).adjusted(
             max_border_width / 2.0,
@@ -133,56 +136,60 @@ class BoxThemeMixin:
         path = QPainterPath()
         path.addRoundedRect(rect, radius, radius)
 
-        background = theme.get('background') if isinstance(theme.get('background'), dict) else {}
+        background = theme_map(theme.get('background')) or {}
         self._draw_background(painter, path, rect, background)
         self._draw_border(painter, path, rect, border)
 
-    def _ensure_box_theme(self) -> dict[str, Any]:
-        if not isinstance(getattr(self, '_box_theme', None), dict):
+    def _ensure_box_theme(self) -> ThemeState:
+        theme = theme_map(getattr(self, '_box_theme', None))
+        if theme is None:
             self._box_theme = {
                 'background': self._normalize_background({}),
                 'border': self._normalize_border({}),
                 'radius': 0.0,
             }
-        return self._box_theme
+            theme = self._box_theme
+        return theme
 
-    def _normalize_background(self, data: Any) -> dict[str, Any]:
-        if not isinstance(data, dict):
-            data = {}
+    def _normalize_background(self, data: Any) -> ThemeState:
+        mapping = theme_map(data) or {}
 
-        gradient = data.get('gradient') if isinstance(data.get('gradient'), dict) else None
-        if gradient is None and isinstance(data.get('color'), dict):
-            gradient = data.get('color')
+        gradient = theme_map(mapping.get('gradient'))
+        if gradient is None:
+            gradient = theme_map(mapping.get('color'))
 
         return {
-            'color': self._theme_color(data.get('color')) if not isinstance(data.get('color'), dict) else None,
+            'color': self._theme_color(mapping.get('color')) if theme_map(mapping.get('color')) is None else None,
             'gradient': normalize_gradient_data(gradient) if isinstance(gradient, dict) else None,
         }
 
-    def _normalize_border(self, data: Any) -> dict[str, Any]:
-        data = data if isinstance(data, dict) else {}
+    def _normalize_border(self, data: Any) -> ThemeState:
+        mapping = theme_map(data) or {}
+        border_gradient = theme_map(mapping.get('gradient'))
         full = {
-            'color': self._theme_color(data.get('color')),
-            'gradient': normalize_gradient_data(data.get('gradient')) if isinstance(data.get('gradient'), dict) else None,
-            'width': self._theme_measure(data.get('width'), default=0.0),
-            'style': str(data.get('style', 'solid') or 'solid').strip().lower(),
+            'color': self._theme_color(mapping.get('color')),
+            'gradient': normalize_gradient_data(border_gradient) if border_gradient is not None else None,
+            'width': self._theme_measure(mapping.get('width'), default=0.0),
+            'style': str(mapping.get('style', 'solid') or 'solid').strip().lower(),
         }
-        for side in ('top', 'right', 'bottom', 'left'):
-            side_data = self._normalize_side_border(data.get(side))
+        for side in _BOX_BORDER_SIDES:
+            side_data = self._normalize_side_border(mapping.get(side))
+            side_gradient = theme_map(side_data.get('gradient', mapping.get(f'{side}_gradient')))
             full[side] = {
-                'color': self._theme_color(side_data.get('color', data.get(f'{side}_color'))) if isinstance(side_data, dict) else None,
-                'gradient': normalize_gradient_data(side_data.get('gradient', data.get(f'{side}_gradient'))) if isinstance(side_data, dict) and isinstance(side_data.get('gradient', data.get(f'{side}_gradient')), dict) else None,
+                'color': self._theme_color(side_data.get('color', mapping.get(f'{side}_color'))),
+                'gradient': normalize_gradient_data(side_gradient) if side_gradient is not None else None,
                 'width': self._theme_measure(
-                    side_data.get('width', data.get(f'{side}_width')),
+                    side_data.get('width', mapping.get(f'{side}_width')),
                     default=-1.0,
-                ) if isinstance(side_data, dict) else -1.0,
-                'style': str(side_data.get('style', data.get(f'{side}_style', '')) if isinstance(side_data, dict) else '').strip().lower(),
+                ),
+                'style': str(side_data.get('style', mapping.get(f'{side}_style', ''))).strip().lower(),
             }
         return full
 
-    def _normalize_side_border(self, value: Any) -> dict[str, Any]:
-        if isinstance(value, dict):
-            return value
+    def _normalize_side_border(self, value: Any) -> ThemeState:
+        mapping = theme_map(value)
+        if mapping is not None:
+            return mapping
         if not isinstance(value, str):
             return {}
 
@@ -199,9 +206,9 @@ class BoxThemeMixin:
         }
 
     def _resolve_radius_source(self, background: Any, border: Any) -> Any:
-        background = background if isinstance(background, dict) else {}
-        border = border if isinstance(border, dict) else {}
-        return border.get('radius', background.get('radius', 0.0))
+        background_mapping = theme_map(background) or {}
+        border_mapping = theme_map(border) or {}
+        return border_mapping.get('radius', background_mapping.get('radius', 0.0))
 
     def _draw_background(self, painter: QPainter, path: QPainterPath, rect: QRectF, background: dict[str, Any]) -> None:
         painter.save()
@@ -234,9 +241,9 @@ class BoxThemeMixin:
         self._draw_side_borders(painter, rect, border)
 
     def _draw_side_borders(self, painter: QPainter, rect: QRectF, border: dict[str, Any]) -> None:
-        for side in ('top', 'right', 'bottom', 'left'):
-            side_data = border.get(side)
-            if not isinstance(side_data, dict):
+        for side in _BOX_BORDER_SIDES:
+            side_data = self._side_border_data(border, side)
+            if side_data is None:
                 continue
 
             width = float(side_data.get('width', -1.0) or -1.0)
@@ -259,29 +266,41 @@ class BoxThemeMixin:
             half = width / 2.0
             match side:
                 case 'top':
-                    painter.drawLine(rect.left(), rect.top() + half, rect.right(), rect.top() + half)
+                    painter.drawLine(QPointF(rect.left(), rect.top() + half), QPointF(rect.right(), rect.top() + half))
                 case 'right':
-                    painter.drawLine(rect.right() - half, rect.top(), rect.right() - half, rect.bottom())
+                    painter.drawLine(QPointF(rect.right() - half, rect.top()), QPointF(rect.right() - half, rect.bottom()))
                 case 'bottom':
-                    painter.drawLine(rect.left(), rect.bottom() - half, rect.right(), rect.bottom() - half)
+                    painter.drawLine(QPointF(rect.left(), rect.bottom() - half), QPointF(rect.right(), rect.bottom() - half))
                 case 'left':
-                    painter.drawLine(rect.left() + half, rect.top(), rect.left() + half, rect.bottom())
+                    painter.drawLine(QPointF(rect.left() + half, rect.top()), QPointF(rect.left() + half, rect.bottom()))
             painter.restore()
 
     def _max_border_width(self, border: dict[str, Any]) -> float:
         values = [self._theme_measure(border.get('width'), default=0.0)]
-        for side in ('top', 'right', 'bottom', 'left'):
-            side_data = border.get(side)
-            if isinstance(side_data, dict):
+        for side in _BOX_BORDER_SIDES:
+            side_data = self._side_border_data(border, side)
+            if side_data is not None:
                 values.append(max(0.0, float(side_data.get('width', -1.0) or -1.0)))
         return max(values or [0.0])
 
     def _side_has_any_border_value(self, side_data: dict[str, Any]) -> bool:
         return any(side_data.get(key) not in (None, '', -1.0) for key in ('color', 'gradient', 'width', 'style'))
 
+    def _side_border_data(self, border: dict[str, Any], side: str) -> ThemeState | None:
+        return theme_map(border.get(side))
+
+    def _configured_side_borders(self, border: dict[str, Any]) -> list[ThemeState]:
+        result: list[ThemeState] = []
+        for side in _BOX_BORDER_SIDES:
+            side_data = self._side_border_data(border, side)
+            if side_data is not None and self._side_has_any_border_value(side_data):
+                result.append(side_data)
+        return result
+
     def _border_brush(self, rect: QRectF, *, color: Any, gradient: Any) -> QBrush | None:
-        if isinstance(gradient, dict):
-            brush = build_background_brush(rect, {'gradient': gradient})
+        gradient_map = theme_map(gradient)
+        if gradient_map is not None:
+            brush = build_background_brush(rect, {'gradient': gradient_map})
             if isinstance(brush, QBrush):
                 return brush
         if self._valid_color(color):
@@ -300,21 +319,11 @@ class BoxThemeMixin:
     def _theme_measure(self, value: Any, *, default: float = 0.0) -> float:
         if isinstance(value, bool) or value is None:
             return default
-        if isinstance(value, (int, float)):
-            return float(value)
-        if isinstance(value, str):
-            text = value.strip().lower().removesuffix('px').strip()
-            if not text:
-                return default
-            try:
-                return float(text)
-            except ValueError:
-                return default
-        return default
+        return float(coerce_number(value, default) or default)
 
     def _theme_color(self, value: Any) -> QColor | None:
         color = QColor(value)
-        return QColor(color) if color is not None and color.isValid() else None
+        return QColor(color) if color.isValid() else None
 
     def _valid_color(self, color: Any) -> bool:
         return isinstance(color, QColor) and color.isValid() and color.alpha() > 0

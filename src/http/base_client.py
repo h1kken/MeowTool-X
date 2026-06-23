@@ -1,5 +1,6 @@
 import asyncio
 import random
+from collections.abc import Mapping
 from typing import Any
 
 from aiohttp import (
@@ -11,7 +12,7 @@ from aiohttp import (
 )
 
 from src.exceptions.roblox import AccountBanned, InvalidCookie
-from src.utils.constants import (
+from src.http.constants import (
     HTTP_CLIENT_CONNECTIONS_LIMIT,
     HTTP_CLIENT_MAX_RETRIES,
     HTTP_CLIENT_RETRY_BACKOFF,
@@ -24,17 +25,19 @@ from src.utils.logging import logger
 
 
 class BaseHttpClient:
-    def __init__(self, proxies: list[str] | None = None):
-        self._session = ClientSession(TCPConnector(limit=HTTP_CLIENT_CONNECTIONS_LIMIT))
+    def __init__(self, proxies: list[str] | None = None) -> None:
+        self._session = ClientSession(
+            connector=TCPConnector(limit=HTTP_CLIENT_CONNECTIONS_LIMIT)
+        )
         self._proxies = proxies
     
-    async def __aenter__(self):
+    async def __aenter__(self) -> "BaseHttpClient":
         return self
 
-    async def __aexit__(self, *_):
+    async def __aexit__(self, *_: object) -> None:
         await self.close()
         
-    async def close(self):
+    async def close(self) -> None:
         await self._session.close()
 
     async def _request(
@@ -42,15 +45,15 @@ class BaseHttpClient:
         method: str,
         url: str,
         *,
-        data: dict | None = None,
-        json: dict | None = None,
-        params: dict | None = None,
-        headers: dict | None = None,
-        cookies: dict | None = None,
+        data: Mapping[str, object] | None = None,
+        json: Mapping[str, object] | None = None,
+        params: Mapping[str, str] | None = None,
+        headers: Mapping[str, str] | None = None,
+        cookies: Mapping[str, str] | None = None,
         allow_redirects: bool = False,
         timeout: ClientTimeout | None = None,
-        ssl: bool = False
-    ):
+        ssl: bool = False,
+    ) -> ClientResponse | None:
         if timeout is None:
             timeout = ClientTimeout(total=HTTP_CLIENT_TIMEOUT_SECONDS)
 
@@ -59,7 +62,7 @@ class BaseHttpClient:
             response: ClientResponse | None = None
             try:
                 proxy = random.choice(self._proxies) if self._proxies else None
-                response: ClientResponse = await self._session.request(
+                response = await self._session.request(
                     method,
                     url,
                     params=params,
@@ -90,19 +93,24 @@ class BaseHttpClient:
             raise last_error
         raise RuntimeError(f'Failed request without specific error: {method.upper()} {url}')
                         
-    async def _handle_response(self, method: str, url: str, response: ClientResponse) -> ClientResponse | None:
-        pass
+    async def _handle_response(
+        self,
+        method: str,
+        url: str,
+        response: ClientResponse,
+    ) -> ClientResponse | None:
+        raise NotImplementedError
         
     # @log_network_request()
     # async def options(self, url: str, **kwargs: Any):
     #     return await self._request('options', url, **kwargs)
         
     @log_network_request
-    async def get(self, url: str, **kwargs: Any):
+    async def get(self, url: str, **kwargs: Any) -> ClientResponse | None:
         return await self._request('get', url, **kwargs)
     
     @log_network_request
-    async def post(self, url: str, **kwargs: Any):
+    async def post(self, url: str, **kwargs: Any) -> ClientResponse | None:
         return await self._request('post', url, **kwargs)
     
     # @log_network_request()

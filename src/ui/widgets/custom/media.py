@@ -1,24 +1,24 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-from PySide6.QtCore import QEvent, QSize, Qt, QUrl
-from PySide6.QtGui import QMovie, QPixmap
+from PySide6.QtCore import QObject, QSize, Qt, QUrl
+from PySide6.QtGui import QMovie, QPixmap, QResizeEvent
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
-from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.widgets.custom.containers import MTWidget
-from src.ui.widgets.custom.text import MTLabel
-from src.utils.constants import (
-    PATH_APP_ICON,
-    ROOT,
+from src.app.paths import PATH_ROOT
+from src.ui.constants import (
     SIDEBAR_MEDIA_GIF_EXTENSIONS,
     SIDEBAR_MEDIA_HEIGHT,
     SIDEBAR_MEDIA_IMAGE_EXTENSIONS,
     SIDEBAR_MEDIA_MARGIN,
     SIDEBAR_MEDIA_VIDEO_EXTENSIONS,
 )
+from src.ui.layouts.factory import LayoutType, create_layout
+from src.ui.paths import PATH_APP_ICON
+from src.ui.widgets.custom.containers import MTWidget
+from src.ui.widgets.custom.text import MTLabel
 
 _MEDIA_FIT_CONTAIN = 'contain'
 _MEDIA_FIT_COVER = 'cover'
@@ -28,16 +28,14 @@ _DEFAULT_MEDIA_FIT = _MEDIA_FIT_CONTAIN
 
 
 def _extract_media_source(data: dict[str, Any]) -> str:
-    if not isinstance(data, dict):
-        return ''
-
     direct_source = data.get('source')
     if isinstance(direct_source, str) and direct_source.strip():
         return direct_source.strip()
 
     icon_data = data.get('icon')
     if isinstance(icon_data, dict):
-        icon_source = icon_data.get('source')
+        icon_mapping = cast(dict[str, Any], icon_data)
+        icon_source = icon_mapping.get('source')
         if isinstance(icon_source, str) and icon_source.strip():
             return icon_source.strip()
 
@@ -60,7 +58,12 @@ def _normalize_fit(value: object) -> str:
 def _normalize_margins(value: int | tuple[int, int, int, int]) -> tuple[int, int, int, int]:
     if isinstance(value, tuple):
         if len(value) == 4:
-            return tuple(int(max(0, item)) for item in value)
+            return (
+                int(max(0, value[0])),
+                int(max(0, value[1])),
+                int(max(0, value[2])),
+                int(max(0, value[3])),
+            )
         return 0, 0, 0, 0
     margin = max(0, int(value))
     return margin, margin, margin, margin
@@ -73,7 +76,7 @@ def _resolve_media_path(source: str) -> Path | None:
     candidate = Path(source).expanduser()
     candidates = [candidate]
     if not candidate.is_absolute():
-        candidates.append(ROOT / candidate)
+        candidates.append(PATH_ROOT / candidate)
 
     for path in candidates:
         if path.exists() and path.is_file():
@@ -83,23 +86,23 @@ def _resolve_media_path(source: str) -> Path | None:
 
 
 class MTVideoWidget(QVideoWidget):
-    def __init__(self, *args, obj_name: str = '', **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
+        super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         if obj_name:
             self.setObjectName(obj_name)
 
 
 class MTAudioOutput(QAudioOutput):
-    def __init__(self, *args, obj_name: str = '', **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, parent: QObject | None = None, *, obj_name: str = '') -> None:
+        super().__init__(parent)
         if obj_name:
             self.setObjectName(obj_name)
 
 
 class MTMediaPlayer(QMediaPlayer):
-    def __init__(self, *args, obj_name: str = '', **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, parent: QObject | None = None, *, obj_name: str = '') -> None:
+        super().__init__(parent)
         if obj_name:
             self.setObjectName(obj_name)
 
@@ -166,9 +169,6 @@ class MTMediaWidget(MTWidget):
         self._clear_media_layer()
 
     def apply_media_theme(self, data: dict[str, Any]) -> None:
-        if not isinstance(data, dict):
-            return
-
         source = _extract_media_source(data)
         if source or 'source' in data or isinstance(data.get('icon'), dict):
             self._source = source
@@ -181,7 +181,7 @@ class MTMediaWidget(MTWidget):
         self._source = str(source).strip() if source is not None else ''
         self._apply_current_media()
 
-    def resizeEvent(self, event: QEvent) -> None:
+    def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         self._refresh_visuals()
 
@@ -254,7 +254,6 @@ class MTMediaWidget(MTWidget):
 
         if self._movie is not None:
             self._movie.stop()
-            self._image_label.setMovie(None)
             self._movie.deleteLater()
             self._movie = None
 
@@ -278,7 +277,6 @@ class MTMediaWidget(MTWidget):
 
         self._video_widget = MTVideoWidget(
             self,
-            aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio,
             obj_name=self._video_obj_name or self._child_obj_name('Video_Widget', 'Media_Video_Widget'),
         )
         if self._transparent_for_mouse:
@@ -363,7 +361,7 @@ class MTMediaWidget(MTWidget):
 
 
 class SidebarMediaWidget(MTMediaWidget):
-    def __init__(self, parent: QWidget | None = None):
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(
             parent=parent,
             obj_name='Sidebar_Media_Widget',
@@ -378,7 +376,7 @@ class SidebarMediaWidget(MTMediaWidget):
 
     def reset_theme(self) -> None:
         super().reset_theme()
-        self._source = str(PATH_APP_ICON) if PATH_APP_ICON.exists() else ''
+        self._source = str(PATH_APP_ICON) if PATH_APP_ICON.is_file() else ''
         self._apply_current_media()
 
     def _apply_current_media(self) -> None:

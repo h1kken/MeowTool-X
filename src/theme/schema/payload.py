@@ -2,18 +2,16 @@ from __future__ import annotations
 
 import re
 from copy import deepcopy
-from typing import Any
+from typing import Any, cast
 
 from src.theme.animation.parser import normalize_specs_payload
+from src.theme.schema.types import ThemeMap
 
 BORDER_SIDE_KEYS = ('top', 'right', 'bottom', 'left')
 BORDER_GLOBAL_KEYS = ('width', 'style', 'color', 'radius')
 
 
 def normalize_theme_payload(theme: dict[str, Any]) -> dict[str, Any]:
-    if not isinstance(theme, dict):
-        return {'widgets': {}}
-
     resolved_theme = resolve_theme_vars(theme)
     normalized = {
         key: deepcopy(value)
@@ -44,11 +42,8 @@ def _normalize_theme_vars(raw_vars: Any) -> dict[str, Any]:
     if not isinstance(raw_vars, dict):
         return {}
 
-    normalized: dict[str, Any] = {}
-    for key, value in raw_vars.items():
-        if not isinstance(key, str):
-            continue
-
+    normalized: ThemeMap = {}
+    for key, value in cast(ThemeMap, raw_vars).items():
         name = key.strip()
         if not name:
             continue
@@ -92,35 +87,36 @@ def _resolve_theme_value(value: Any, vars_map: dict[str, Any], stack: tuple[str,
         return _resolve_theme_value(deepcopy(resolved), vars_map, stack + (ref,))
 
     if isinstance(value, list):
-        return [_resolve_theme_value(item, vars_map, stack) for item in value]
+        return [_resolve_theme_value(item, vars_map, stack) for item in cast(list[Any], value)]
 
     if isinstance(value, dict):
         return {
             key: _resolve_theme_value(item, vars_map, stack)
-            for key, item in value.items()
+            for key, item in cast(ThemeMap, value).items()
         }
 
     return deepcopy(value)
 
 
-def parse_widgets(widgets: Any) -> dict[str, dict]:
-    parsed: dict[str, dict[str, dict]] = {}
+def parse_widgets(widgets: Any) -> dict[str, ThemeMap]:
+    parsed: dict[str, ThemeMap] = {}
     if not isinstance(widgets, list):
         return parsed
 
-    for item in widgets:
+    for item in cast(list[Any], widgets):
         if not isinstance(item, dict):
             continue
+        item_map = cast(ThemeMap, item)
 
-        targets = item.get('targets', [])
+        targets = item_map.get('targets', [])
         if not isinstance(targets, list):
             continue
 
-        raw_styles = item.get('styles', {})
-        styles = normalize_widget_styles(raw_styles if isinstance(raw_styles, dict) else {})
-        animations = item.get('animations')
+        raw_styles = item_map.get('styles', {})
+        styles = normalize_widget_styles(cast(ThemeMap, raw_styles) if isinstance(raw_styles, dict) else {})
+        animations = item_map.get('animations')
 
-        for obj_name in targets:
+        for obj_name in cast(list[Any], targets):
             if not isinstance(obj_name, str) or not obj_name:
                 continue
 
@@ -194,30 +190,34 @@ def merge_widget_theme_data(current: dict[str, Any] | None, incoming: dict[str, 
 def deep_merge_dicts(current: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
     merged = deepcopy(current)
     for key, value in incoming.items():
-        if isinstance(value, dict) and isinstance(merged.get(key), dict):
-            if key == 'border' and _is_side_only_border(value):
-                merged[key] = deepcopy(value)
+        existing = merged.get(key)
+        if isinstance(value, dict) and isinstance(existing, dict):
+            value_map = cast(ThemeMap, value)
+            existing_map = cast(ThemeMap, existing)
+            if key == 'border' and _is_side_only_border(value_map):
+                merged[key] = deepcopy(value_map)
             else:
-                merged[key] = deep_merge_dicts(merged[key], value)
+                merged[key] = deep_merge_dicts(existing_map, value_map)
         else:
-            merged[key] = deepcopy(value)
+            merged[key] = deepcopy(cast(Any, value))
     return merged
 
 
 def normalize_widget_styles(styles: dict[str, Any]) -> dict[str, Any]:
-    normalized = deepcopy(styles) if isinstance(styles, dict) else {}
+    normalized = deepcopy(styles)
     _fold_border_side_keys(normalized)
 
-    background = normalized.get('background') if isinstance(normalized.get('background'), dict) else None
+    raw_background = normalized.get('background')
+    background = cast(ThemeMap, raw_background) if isinstance(raw_background, dict) else None
     if isinstance(background, dict) and 'radius' in background:
-        border = normalized.get('border') if isinstance(normalized.get('border'), dict) else {}
-        if not isinstance(border, dict):
-            border = {}
+        raw_border = normalized.get('border')
+        border = cast(ThemeMap, raw_border) if isinstance(raw_border, dict) else {}
         if 'radius' not in border:
             border['radius'] = deepcopy(background['radius'])
             normalized['border'] = border
 
-    layout = normalized.get('layout') if isinstance(normalized.get('layout'), dict) else {}
+    raw_layout = normalized.get('layout')
+    layout = cast(ThemeMap, raw_layout) if isinstance(raw_layout, dict) else {}
     if layout:
         normalized['layout'] = layout
 
@@ -225,7 +225,8 @@ def normalize_widget_styles(styles: dict[str, Any]) -> dict[str, Any]:
 
 
 def _fold_border_side_keys(styles: dict[str, Any]) -> None:
-    border = styles.get('border') if isinstance(styles.get('border'), dict) else {}
+    raw_border = styles.get('border')
+    border = cast(ThemeMap, raw_border) if isinstance(raw_border, dict) else {}
     changed = False
 
     for side in BORDER_SIDE_KEYS:
@@ -238,7 +239,8 @@ def _fold_border_side_keys(styles: dict[str, Any]) -> None:
             for key in (f'border-{side}-{field}', f'border_{side}_{field}'):
                 if key not in styles:
                     continue
-                side_data = border.get(side) if isinstance(border.get(side), dict) else {}
+                raw_side_data = border.get(side)
+                side_data = cast(ThemeMap, raw_side_data) if isinstance(raw_side_data, dict) else {}
                 side_data[field] = deepcopy(styles.pop(key))
                 border[side] = side_data
                 changed = True
@@ -249,7 +251,7 @@ def _fold_border_side_keys(styles: dict[str, Any]) -> None:
 
 def _normalize_side_border_value(value: Any) -> dict[str, Any]:
     if isinstance(value, dict):
-        return deepcopy(value)
+        return deepcopy(cast(ThemeMap, value))
     if not isinstance(value, str):
         return {}
 

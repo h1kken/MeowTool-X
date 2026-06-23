@@ -1,26 +1,13 @@
 from __future__ import annotations
 
-from typing import Literal
-
 from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QRectF, QSize, Qt, Signal
-from PySide6.QtGui import QCursor, QPainter, QPainterPath, QRegion
-from PySide6.QtWidgets import QApplication, QSizePolicy, QWidget
+from PySide6.QtGui import QCursor, QHideEvent, QMouseEvent, QPaintEvent, QPainterPath, QRegion, QResizeEvent, QShowEvent, QWheelEvent
+from PySide6.QtWidgets import QApplication, QBoxLayout, QLayout, QSizePolicy, QWidget
 
+from src.ui.painting import new_widget_painter
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets.custom.containers import MTWidget
-
-PopupPlacement = Literal[
-    'bottom-left',
-    'bottom-right',
-    'top-left',
-    'top-right',
-    'left-top',
-    'left-bottom',
-    'right-top',
-    'right-bottom',
-    'center',
-    'cursor',
-]
+from src.ui.widgets.custom.types import PopupPlacement
 
 
 class _PopupBackdrop(MTWidget):
@@ -36,18 +23,18 @@ class _PopupBackdrop(MTWidget):
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.hide()
 
-    def mousePressEvent(self, event) -> None:
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         event.accept()
-        if self._popup._close_on_outside_click:
+        if self._popup.close_on_outside_click:
             self._popup.hide()
 
-    def mouseReleaseEvent(self, event) -> None:
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         event.accept()
 
-    def mouseDoubleClickEvent(self, event) -> None:
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
         event.accept()
 
-    def wheelEvent(self, event) -> None:
+    def wheelEvent(self, event: QWheelEvent) -> None:
         event.accept()
 
 
@@ -63,13 +50,12 @@ class MTPopup(MTWidget):
         layout_type: LayoutType = LayoutType.VBOX,
         close_on_outside_click: bool = True,
     ) -> None:
-        flags = (
+        super().__init__(parent=parent, obj_name=obj_name)
+        self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.NoDropShadowWindowHint
             | Qt.WindowType.Tool
         )
-
-        super().__init__(parent, flags, obj_name=obj_name)
         self._close_on_outside_click = bool(close_on_outside_click)
         self._backdrop: _PopupBackdrop | None = None
         self._backdrop_parent: QWidget | None = None
@@ -80,7 +66,6 @@ class MTPopup(MTWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, False)
         self.setAutoFillBackground(False)
-        self.setGraphicsEffect(None)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         self.apply_box_theme(
@@ -103,29 +88,44 @@ class MTPopup(MTWidget):
         self._root_layout.addWidget(self._content)
 
     @property
+    def close_on_outside_click(self) -> bool:
+        return self._close_on_outside_click
+
+    @property
     def content_widget(self) -> MTWidget:
         return self._content
 
     @property
-    def content_layout(self):
+    def content_layout(self) -> QLayout:
         return self._content_layout
 
     def add_widget(self, widget: QWidget, stretch: int = 0, alignment: Qt.AlignmentFlag | None = None) -> None:
-        if alignment is None:
-            self._content_layout.addWidget(widget, stretch)
-        else:
-            self._content_layout.addWidget(widget, stretch, alignment=alignment)
+        if isinstance(self._content_layout, QBoxLayout):
+            if alignment is None:
+                self._content_layout.addWidget(widget, stretch)
+            else:
+                self._content_layout.addWidget(widget, stretch, alignment)
+            return
+
+        grid_layout = self._content_layout
+        row = grid_layout.rowCount()
+        grid_layout.addWidget(widget, row, 0)
+        if alignment is not None:
+            grid_layout.setAlignment(widget, alignment)
 
     def clear(self) -> None:
         while self._content_layout.count():
             item = self._content_layout.takeAt(0)
+            if item is None:
+                continue
             widget = item.widget()
             if widget is not None:
                 widget.setParent(None)
                 widget.deleteLater()
 
     def sync_theme(self) -> None:
-        parent_window = self.parentWidget().window() if isinstance(self.parentWidget(), QWidget) else None
+        parent_widget = self.parentWidget()
+        parent_window = parent_widget.window() if isinstance(parent_widget, QWidget) else None
         theme_manager = getattr(parent_window, '_theme_manager', None)
         if theme_manager is not None:
             apply_to_subtree = getattr(theme_manager, 'apply_to_subtree', None)
@@ -179,8 +179,9 @@ class MTPopup(MTWidget):
         self._last_offset = self._normalize_offset(offset)
         self._prepare_to_show()
         popup_rect = QRect(QPoint(0, 0), self.sizeHint().expandedTo(self.minimumSizeHint()))
-        if isinstance(self.parentWidget(), QWidget):
-            local_cursor = self.parentWidget().mapFromGlobal(QCursor.pos())
+        parent_widget = self.parentWidget()
+        if isinstance(parent_widget, QWidget):
+            local_cursor = parent_widget.mapFromGlobal(QCursor.pos())
             popup_rect.moveTopLeft(local_cursor + self._last_offset)
         else:
             popup_rect.moveTopLeft(QCursor.pos() + self._last_offset)
@@ -214,24 +215,23 @@ class MTPopup(MTWidget):
             self._backdrop.deleteLater()
             self._backdrop = None
 
-    def resizeEvent(self, event) -> None:
+    def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         self._apply_shape_mask()
 
-    def showEvent(self, event) -> None:
+    def showEvent(self, event: QShowEvent) -> None:
         self.activateWindow()
         self.raise_()
         super().showEvent(event)
 
-    def hideEvent(self, event) -> None:
+    def hideEvent(self, event: QHideEvent) -> None:
         self._hide_backdrop()
         self.closed.emit()
         super().hideEvent(event)
 
-    def paintEvent(self, event) -> None:
+    def paintEvent(self, event: QPaintEvent) -> None:
         if self.has_box_theme():
-            painter = QPainter(self)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            painter = new_widget_painter(self)
             self.draw_box_theme(painter)
             painter.end()
             return
@@ -246,8 +246,9 @@ class MTPopup(MTWidget):
         self._show_backdrop()
 
     def _placement_point(self, anchor: QWidget, popup_size: QSize, placement: PopupPlacement) -> QPoint:
-        if isinstance(self.parentWidget(), QWidget):
-            anchor_top_left = anchor.mapTo(self.parentWidget(), QPoint(0, 0))
+        parent_widget = self.parentWidget()
+        if isinstance(parent_widget, QWidget):
+            anchor_top_left = anchor.mapTo(parent_widget, QPoint(0, 0))
             anchor_rect = QRect(anchor_top_left, anchor.size())
         else:
             anchor_rect = QRect(anchor.mapToGlobal(QPoint(0, 0)), anchor.size())
@@ -277,15 +278,15 @@ class MTPopup(MTWidget):
 
     def _clamped_top_left(self, popup_rect: QRect) -> QPoint:
         if isinstance(self.parentWidget(), QWidget):
-            bounds = QRect(QPoint(0, 0), self.parentWidget().size())
+            parent_widget = self.parentWidget()
+            if not isinstance(parent_widget, QWidget):
+                return popup_rect.topLeft()
+            bounds = QRect(QPoint(0, 0), parent_widget.size())
             x = min(max(popup_rect.left(), bounds.left()), max(bounds.left(), bounds.right() - popup_rect.width() + 1))
             y = min(max(popup_rect.top(), bounds.top()), max(bounds.top(), bounds.bottom() - popup_rect.height() + 1))
             return QPoint(x, y)
 
         screen = QApplication.screenAt(popup_rect.center()) or QApplication.primaryScreen()
-        if screen is None:
-            return popup_rect.topLeft()
-
         available = screen.availableGeometry()
         x = min(max(popup_rect.left(), available.left()), max(available.left(), available.right() - popup_rect.width() + 1))
         y = min(max(popup_rect.top(), available.top()), max(available.top(), available.bottom() - popup_rect.height() + 1))
@@ -294,13 +295,13 @@ class MTPopup(MTWidget):
     def _normalize_offset(self, offset: QPoint | tuple[int, int]) -> QPoint:
         if isinstance(offset, QPoint):
             return QPoint(offset)
-        if isinstance(offset, tuple) and len(offset) >= 2:
+        if len(offset) >= 2:
             return QPoint(int(offset[0]), int(offset[1]))
         return QPoint(0, 0)
 
     def _apply_shape_mask(self) -> None:
         theme = self.box_theme_state()
-        radius_value = theme.get('radius') if isinstance(theme, dict) else None
+        radius_value = theme.get('radius') if theme is not None else None
         radius = self._radius(radius_value, QRectF(self.rect())) if radius_value is not None else 0.0
         if radius <= 0.0:
             self.clearMask()
@@ -333,8 +334,9 @@ class MTPopup(MTWidget):
     def _resolve_modal_parent(self) -> QWidget | None:
         if isinstance(self._modal_host, QWidget):
             return self._modal_host
-        if isinstance(self.parentWidget(), QWidget):
-            parent_window = self.parentWidget().window()
+        parent_widget = self.parentWidget()
+        if isinstance(parent_widget, QWidget):
+            parent_window = parent_widget.window()
             host = getattr(parent_window, '_popup_modal_host', None)
             if isinstance(host, QWidget):
                 return host
@@ -386,7 +388,7 @@ class MTPopup(MTWidget):
             parent_rect = QRect(parent.mapToGlobal(QPoint(0, 0)), parent.size())
         else:
             screen = QApplication.primaryScreen()
-            parent_rect = screen.availableGeometry() if screen is not None else QRect(QPoint(0, 0), popup_size)
+            parent_rect = screen.availableGeometry()
 
         popup_rect = QRect(QPoint(0, 0), popup_size)
         popup_rect.moveCenter(parent_rect.center())

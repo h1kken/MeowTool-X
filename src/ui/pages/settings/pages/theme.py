@@ -7,8 +7,10 @@ from PySide6.QtCore import QFileSystemWatcher, QSignalBlocker, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QLayout, QSizePolicy, QStackedWidget
 
+from src.config.constants import CONFIGS_REFRESH_DEBOUNCE_MS
 from src.config.loader import config_loader
 from src.config.manager import config
+from src.theme.paths import PATH_DEFAULT_THEME, PATH_THEMES_SOURCE, PATH_THEMES_USER
 from src.theme.storage.io import (
     find_theme_file_by_name,
     iter_theme_files,
@@ -29,20 +31,15 @@ from src.ui.widgets import (
     MTWidget,
     MTSwitchRowSetting,
 )
-from src.utils.constants import (
-    CONFIGS_REFRESH_DEBOUNCE_MS,
-    DEFAULT_THEME,
-    FILENAME_SPECIAL_CHARS,
-    PATH_THEMES_SOURCE,
-    PATH_THEMES_USER,
-)
 from src.utils.filesystem import FS
+from src.utils.filesystem.constants import FILENAME_SPECIAL_CHARS
+from src.config.enums import ConfigLoaderKey as CLKey
 
 
 class SettingsThemePage(MTWidget):
     def __init__(self, *, autoload_name: str | None = None):
         super().__init__()
-        FS.create_folder(PATH_THEMES_USER)
+        FS.ensure_dir(PATH_THEMES_USER)
 
         self._themes_by_name: dict[str, Path] = {}
         self._autoload_name = (
@@ -220,6 +217,8 @@ class SettingsThemePage(MTWidget):
                 self._rename_button = button
                 self._rename_edit_line = line_edit
                 self._rename_edit_cancel_button = cancel_btn
+            case _:
+                raise ValueError(f"Unsupported inline editor mode: {mode}")
 
         stack.setCurrentIndex(0)
         return stack
@@ -316,7 +315,7 @@ class SettingsThemePage(MTWidget):
 
     def _read_autoload_name(self) -> str:
         return self._normalize_theme_name(
-            config.get("General>Theme", default=DEFAULT_THEME.stem)
+            config.get("General>Theme", default=PATH_DEFAULT_THEME.stem)
         )
 
     def _read_autoload_enabled(self) -> bool:
@@ -324,10 +323,10 @@ class SettingsThemePage(MTWidget):
 
     def _normalize_theme_name(self, value: Any) -> str:
         normalized = normalize_theme_name(str(value or ""))
-        return normalized or DEFAULT_THEME.stem
+        return normalized or PATH_DEFAULT_THEME.stem
 
     def _set_autoload_name(self, value: str, *, force_save: bool = False) -> str:
-        normalized = normalize_theme_name(value) or DEFAULT_THEME.stem
+        normalized = normalize_theme_name(value) or PATH_DEFAULT_THEME.stem
         if normalized == self._autoload_name:
             return self._autoload_name
         config.set("General>Theme", normalized, force_save=force_save)
@@ -361,7 +360,7 @@ class SettingsThemePage(MTWidget):
             preferred,
             self._current_selected_name(),
             self._applied_name,
-            DEFAULT_THEME.stem,
+            PATH_DEFAULT_THEME.stem,
         ):
             if candidate in names:
                 return candidate
@@ -452,7 +451,7 @@ class SettingsThemePage(MTWidget):
     def _on_themes_dir_changed(self, _path: str) -> None:
         self._refresh_timer.start()
 
-    def _on_selection_changed(self, *_) -> None:
+    def _on_selection_changed(self, *_args: object) -> None:
         self._sync_actions_state()
 
     def _on_autoload_toggled(self, checked: bool) -> None:
@@ -468,7 +467,7 @@ class SettingsThemePage(MTWidget):
         self._sync_actions_state()
 
     def _on_auto_save_toggled(self, checked: bool) -> None:
-        config_loader.set("Saver>Auto Save Theme Changes", bool(checked))
+        config_loader.set(CLKey.SAVER_AUTO_SAVE_THEME_CHANGES, bool(checked))
         self._sync_actions_state()
 
     def _load_selected_theme(self) -> None:
@@ -508,10 +507,7 @@ class SettingsThemePage(MTWidget):
 
     def _theme_template_payload(self) -> dict[str, Any]:
         if (selected_path := self._selected_theme_path()) is not None:
-            if isinstance(
-                (selected_payload := load_theme_payload(selected_path)), dict
-            ):
-                return selected_payload
+            return load_theme_payload(selected_path)
         return {"widgets": []}
 
     def _start_create_edit(self) -> None:
@@ -572,7 +568,7 @@ class SettingsThemePage(MTWidget):
     def _submit_rename_edit(self) -> None:
         old_name = self._current_selected_name()
         old_path = self._selected_theme_path()
-        if None in (old_name, old_path) or not self._is_user_theme(old_path):
+        if old_name is None or old_path is None or not self._is_user_theme(old_path):
             self._cancel_rename_edit()
             return
 
@@ -611,7 +607,11 @@ class SettingsThemePage(MTWidget):
     def _delete_selected_theme(self) -> None:
         selected = self._current_selected_name()
         selected_path = self._selected_theme_path()
-        if None in (selected, selected_path) or not self._is_user_theme(selected_path):
+        if (
+            selected is None
+            or selected_path is None
+            or not self._is_user_theme(selected_path)
+        ):
             self._cancel_delete_confirm()
             return
 
@@ -621,14 +621,14 @@ class SettingsThemePage(MTWidget):
             return
 
         if self._autoload_name == selected:
-            self._set_autoload_name(DEFAULT_THEME.stem)
+            self._set_autoload_name(PATH_DEFAULT_THEME.stem)
 
         if self._applied_name == selected:
             if callable(set_theme := getattr(self.window(), "set_theme", None)):
-                set_theme(DEFAULT_THEME.stem, persist=False)
+                set_theme(PATH_DEFAULT_THEME.stem, persist=False)
                 self._applied_name = self._read_applied_name()
             else:
-                self._applied_name = DEFAULT_THEME.stem
+                self._applied_name = PATH_DEFAULT_THEME.stem
         self._cancel_delete_confirm()
         self._refresh_themes(preferred=self._applied_name)
 

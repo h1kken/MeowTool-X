@@ -13,7 +13,6 @@ class ConfigLoaderKey(StrEnum):
 
     UPDATER_PATH = "Updater"
     UPDATER_CHECK_UPDATES = f"{UPDATER_PATH}>Check Updates"
-    UPDATER_SAVE_OLD_VERSION = f"{UPDATER_PATH}>Save Old Versions"
     
     MISC_PATH = "Misc"
     MISC_DEBUGGER_PATH = f"{MISC_PATH}>Debugger"
