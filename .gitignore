@@ -65,6 +65,7 @@ docs/
 *.sqlite3
 
 # trash
+run.bat/
 tests/
 *.svg
 pyright-report.json
