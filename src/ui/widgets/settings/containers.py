@@ -1,30 +1,23 @@
 import re
-from functools import lru_cache
-from pathlib import Path
 from typing import Any, Callable, Sequence, cast
 
-from PySide6.QtCore import QEvent, QObject, QSignalBlocker, QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QIcon, QMouseEvent, QPainter, QPixmap, QTransform
-from PySide6.QtGui import QResizeEvent
-from PySide6.QtWidgets import QFileDialog, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtCore import QEvent, QObject, QSize, QSignalBlocker, Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QIcon, QMouseEvent
+from PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 
-from src.app.paths import PATH_ROOT
-from src.config.loader import ConfigLoader
-from src.config.manager import Config
 from src.theme.colors import to_qcolor
 from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.paths import PATH_CONTAINER_ARROW_ICON, PATH_FOLDER_ICON
+from src.ui.paths import PATH_CONTAINER_ARROW_ICON
 from src.ui.widgets import (
     MTButton,
-    MTDoubleSpinBox,
     MTLabel,
-    MTLineEdit,
     MTScrollArea,
-    MTSlider,
-    MTSpinBox,
     MTWidget,
 )
-from src.ui.widgets.custom import MTComboBox, MTSwitch
+from src.config.loader import ConfigLoader
+from src.config.manager import Config
+from src.ui.widgets.helpers import icon, positive_int, repolish, measure, theme_icon_path
+from src.ui.widgets import MTComboBox
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 
 SETTING_ROW_HEIGHT = 0
@@ -32,101 +25,10 @@ SETTING_ROW_GAP = 0
 SLIDER_COMPACT_PART_HEIGHT = 0
 COLLAPSIBLE_TOGGLE_BUTTON_SIZE = 20
 COLLAPSIBLE_TOGGLE_ICON_SIZE = 18
-_COLUMN_REBALANCE_EVENT_TYPES = {
+COLUMN_REBALANCE_EVENT_TYPES = {
     QEvent.Type.Show,
     QEvent.Type.Hide,
 }
-
-
-@lru_cache(maxsize=64)
-def _icon(source: str, color_name: str, rotation: float, size: int) -> QIcon:
-    base_pixmap = QIcon(source).pixmap(QSize(size, size))
-    if base_pixmap.isNull():
-        return QIcon()
-
-    tinted_pixmap = QPixmap(base_pixmap.size())
-    tinted_pixmap.fill(Qt.GlobalColor.transparent)
-
-    painter = QPainter(tinted_pixmap)
-    painter.drawPixmap(0, 0, base_pixmap)
-    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-    painter.fillRect(tinted_pixmap.rect(), QColor(color_name))
-    painter.end()
-
-    rotated_pixmap = tinted_pixmap.transformed(
-        QTransform().rotate(rotation), Qt.TransformationMode.SmoothTransformation
-    )
-    return QIcon(rotated_pixmap)
-
-
-def _repolish(widget: QWidget) -> None:
-    style = widget.style()
-    if not widget.testAttribute(Qt.WidgetAttribute.WA_WState_Polished):
-        widget.update()
-        return
-
-    style.unpolish(widget)
-    style.polish(widget)
-    widget.update()
-
-
-def _measure(value: Any) -> float | None:
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, (int, float)):
-        return float(value)
-    if not isinstance(value, str):
-        return None
-
-    text = value.strip().lower()
-    if not text or text.endswith("%"):
-        return None
-    if text.endswith("px"):
-        text = text[:-2].strip()
-    try:
-        return float(text)
-    except ValueError:
-        return None
-
-
-def _positive_int(value: Any) -> int | None:
-    number = _measure(value)
-    if number is None:
-        return None
-    return max(1, int(round(number)))
-
-
-def _theme_icon_path(value: Any) -> str | None:
-    if not isinstance(value, str) or not value.strip():
-        return None
-
-    path = Path(value.strip()).expanduser()
-    if path.is_absolute():
-        return str(path)
-
-    root_path = PATH_ROOT / path
-    if root_path.exists():
-        return str(root_path)
-
-    return str(path)
-
-
-def _config_int(value: Any, default: int) -> int:
-    if isinstance(value, bool):
-        return default
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def _config_float(value: Any, default: float) -> float:
-    if isinstance(value, bool):
-        return default
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
 
 
 class MTColumnsSetting(MTScrollArea):
@@ -193,7 +95,7 @@ class MTColumnsSetting(MTScrollArea):
         self._rebalance_timer.start()
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        if watched in self._tabs and event.type() in _COLUMN_REBALANCE_EVENT_TYPES:
+        if watched in self._tabs and event.type() in COLUMN_REBALANCE_EVENT_TYPES:
             self.request_rebalance()
         return super().eventFilter(watched, event)
 
@@ -413,7 +315,7 @@ class MTCollapsibleContainer(MTWidget):
         icon = cast(dict[str, Any], data.get("icon")) if isinstance(data.get("icon"), dict) else {}
 
         source = icon.get("source", icon.get("path", icon.get("file")))
-        if (icon_path := _theme_icon_path(source)) is not None:
+        if (icon_path := theme_icon_path(source)) is not None:
             self._toggle_arrow_source = icon_path
 
         if "color" in icon:
@@ -422,7 +324,7 @@ class MTCollapsibleContainer(MTWidget):
                 color.name(QColor.NameFormat.HexArgb) if color is not None else None
             )
 
-        if (size := _positive_int(icon.get("size"))) is not None:
+        if (size := positive_int(icon.get("size"))) is not None:
             self._toggle_arrow_size = size
 
         button_size = icon.get(
@@ -430,7 +332,7 @@ class MTCollapsibleContainer(MTWidget):
         )
         if button_size is None and isinstance(icon.get("button"), dict):
             button_size = cast(dict[str, Any], icon["button"]).get("size")
-        if (parsed_button_size := _positive_int(button_size)) is not None:
+        if (parsed_button_size := positive_int(button_size)) is not None:
             self._toggle_button_size = parsed_button_size
 
         collapsed_rotation = icon.get(
@@ -444,9 +346,9 @@ class MTCollapsibleContainer(MTWidget):
             rotation = cast(dict[str, Any], icon["rotation"])
             collapsed_rotation = rotation.get("collapsed", collapsed_rotation)
             expanded_rotation = rotation.get("expanded", expanded_rotation)
-        if (parsed_collapsed := _measure(collapsed_rotation)) is not None:
+        if (parsed_collapsed := measure(collapsed_rotation)) is not None:
             self._toggle_arrow_collapsed_rotation = parsed_collapsed
-        if (parsed_expanded := _measure(expanded_rotation)) is not None:
+        if (parsed_expanded := measure(expanded_rotation)) is not None:
             self._toggle_arrow_expanded_rotation = parsed_expanded
 
         if not self._uses_theme_icon_rotation_animation():
@@ -482,10 +384,10 @@ class MTCollapsibleContainer(MTWidget):
                 else self._toggle_arrow_collapsed_rotation
             )
             self.set_part_metric("icon", ("rotation",), target_rotation)
-        _repolish(self)
-        _repolish(self._header_widget)
-        _repolish(self._header_separator)
-        _repolish(self._toggle_button)
+        repolish(self)
+        repolish(self._header_widget)
+        repolish(self._header_separator)
+        repolish(self._toggle_button)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         if (
@@ -550,7 +452,7 @@ class MTCollapsibleContainer(MTWidget):
             .color()
             .name(QColor.NameFormat.HexArgb)
         )
-        return _icon(
+        return icon(
             self._toggle_arrow_source, color, rotation, self._toggle_arrow_size
         )
 
@@ -693,224 +595,6 @@ class MTCollapsibleContainer(MTWidget):
                 self._sync_content_height_to_layout()
 
 
-class MTButtonSetting(MTButton):
-    def __init__(
-        self,
-        tr_key: str,
-        action: Callable[[], None],
-        obj_name: str,
-        parent: QWidget | None = None,
-    ) -> None:
-        super().__init__(tr_key=tr_key, obj_name=f"{obj_name}_Setting", parent=parent)
-        self.setProperty("rainbowBorderTarget", True)
-        self.clicked.connect(action)
-
-
-class MTCheckBoxSetting(MTWidget):
-    def __init__(
-        self,
-        config: Config | ConfigLoader,
-        tr_key: str,
-        cfg_key: str,
-        default: bool,
-        parent: QWidget | None = None,
-    ) -> None:
-        super().__init__(parent)
-
-        self._config = config
-        self._cfg_key = cfg_key
-        obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, "_", self._cfg_key)
-        self.setObjectName(f"{obj_name}_CheckBox_Setting")
-        self.setProperty("rainbowBorderTarget", False)
-
-        self._main_layout = create_layout(LayoutType.HBOX, parent=self)
-
-        self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
-        self._label.setAlignment(
-            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
-        )
-
-        self._check_box = MTSwitch(obj_name=f"{obj_name}_CheckBox")
-        self._check_box.setChecked(
-            bool(self._config.get(self._cfg_key, default=default))
-        )
-
-        self._check_box.toggled.connect(self._on_check_box_toggled)
-        self._config.config_loaded.connect(
-            lambda d=default: self._check_box.setChecked(
-                bool(self._config.get(self._cfg_key, default=d))
-            )
-        )
-
-        self._main_layout.addWidget(self._label)
-        self._main_layout.addStretch()
-        self._main_layout.addWidget(self._check_box)
-
-    def _on_check_box_toggled(self, checked: bool) -> None:
-        self._config.set(self._cfg_key, checked)
-
-    def resizeEvent(self, event: QResizeEvent) -> None:
-        super().resizeEvent(event)
-        available_height = max(12, self.height())
-        self._check_box.sync_size(
-            bounds_height=available_height - 2, bounds_width=max(1, self.width() // 3)
-        )
-
-
-class MTSwitchSetting(MTWidget):
-    def __init__(
-        self,
-        config: Config | ConfigLoader,
-        tr_key: str,
-        cfg_key: str,
-        default: bool,
-        obj_name: str | None = None,
-        parent: QWidget | None = None,
-    ) -> None:
-        super().__init__(parent)
-
-        self._config = config
-        self._cfg_key = cfg_key
-        obj_name = obj_name or re.sub(NORMALIZE_QT_KEY_PATTERN, "_", self._cfg_key)
-        self.setObjectName(f"{obj_name}_Switch_Setting")
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-
-        self._main_layout = create_layout(LayoutType.HBOX, parent=self)
-
-        self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
-        self._label.setAlignment(
-            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
-        )
-
-        self._switch = MTSwitch(obj_name=f"{obj_name}_Switch")
-        self._switch.setChecked(bool(self._config.get(self._cfg_key, default=default)))
-        self._suspend_config_write = False
-
-        self._switch.toggled.connect(self._on_switch_toggled)
-        self._config.config_loaded.connect(
-            lambda d=default: self._switch.setChecked(
-                bool(self._config.get(self._cfg_key, default=d))
-            )
-        )
-
-        self._main_layout.addWidget(self._label)
-        self._main_layout.addStretch()
-        self._main_layout.addWidget(self._switch)
-
-    def resizeEvent(self, event: QResizeEvent) -> None:
-        super().resizeEvent(event)
-        available_height = max(12, self.height())
-        self._switch.sync_size(
-            bounds_height=available_height - 2, bounds_width=max(1, self.width() // 3)
-        )
-
-    def _on_switch_toggled(self, value: bool) -> None:
-        if self._suspend_config_write:
-            return
-        self._config.set(self._cfg_key, value)
-
-    def set_checked(self, checked: bool, *, emit_signal: bool = True) -> None:
-        target = bool(checked)
-        if self._switch.isChecked() == target:
-            return
-        if emit_signal:
-            self._switch.setChecked(target)
-            return
-
-        self._suspend_config_write = True
-        try:
-            self._switch.setChecked(target)
-        finally:
-            self._suspend_config_write = False
-
-    def is_checked(self) -> bool:
-        return self._switch.isChecked()
-
-    @property
-    def switch(self) -> MTSwitch:
-        return self._switch
-
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        if event.button() == Qt.MouseButton.LeftButton:
-            point = event.position().toPoint()
-            if self.rect().contains(point):
-                child = self.childAt(point)
-                if child is not None and (
-                    child is self._switch or self._switch.isAncestorOf(child)
-                ):
-                    super().mouseReleaseEvent(event)
-                    return
-
-                if self._switch.isEnabled():
-                    self.set_checked(not self.is_checked(), emit_signal=True)
-                    event.accept()
-                    return
-
-        super().mouseReleaseEvent(event)
-
-
-class MTSwitchRowSetting(MTWidget):
-    def __init__(
-        self,
-        tr_key: str,
-        switch: MTSwitch,
-        *,
-        obj_name: str,
-        parent: QWidget | None = None,
-    ) -> None:
-        super().__init__(parent)
-        self._switch = switch
-        self.setObjectName(f"{obj_name}_Switch_Row_Setting")
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-
-        self._main_layout = create_layout(LayoutType.HBOX, parent=self)
-
-        self._label = MTLabel(
-            tr_key=tr_key,
-            obj_name=f"{obj_name}_Label",
-        )
-        self._label.setAlignment(
-            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
-        )
-
-        self._main_layout.addWidget(self._label)
-        self._main_layout.addStretch()
-        self._main_layout.addWidget(self._switch)
-
-    @property
-    def label(self) -> MTLabel:
-        return self._label
-
-    @property
-    def switch(self) -> MTSwitch:
-        return self._switch
-
-    def resizeEvent(self, event: QResizeEvent) -> None:
-        super().resizeEvent(event)
-        available_height = max(12, self.height())
-        self._switch.sync_size(
-            bounds_height=available_height - 2, bounds_width=max(1, self.width() // 3)
-        )
-
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        if event.button() == Qt.MouseButton.LeftButton:
-            point = event.position().toPoint()
-            if self.rect().contains(point):
-                child = self.childAt(point)
-                if child is not None and (
-                    child is self._switch or self._switch.isAncestorOf(child)
-                ):
-                    super().mouseReleaseEvent(event)
-                    return
-
-                if self._switch.isEnabled():
-                    self._switch.setChecked(not self._switch.isChecked())
-                    event.accept()
-                    return
-
-        super().mouseReleaseEvent(event)
-
-
 class MTComboBoxSetting(MTWidget):
     def __init__(
         self,
@@ -1051,263 +735,3 @@ class MTComboBoxSetting(MTWidget):
         self._config.set(self._cfg_key, value)
         if callable(self._on_changed):
             self._on_changed(str(value))
-
-
-class MTTextSetting(MTWidget):
-    def __init__(
-        self,
-        config: Config | ConfigLoader,
-        tr_key: str,
-        cfg_key: str,
-        default: str,
-        parent: QWidget | None = None,
-    ) -> None:
-        super().__init__(parent)
-
-        self._config = config
-        self._cfg_key = cfg_key
-        obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, "_", self._cfg_key)
-        self.setObjectName(f"{obj_name}_Text_Setting")
-        self.setProperty("rainbowBorderTarget", False)
-
-        self._main_layout = create_layout(LayoutType.HBOX, parent=self)
-
-        self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
-        self._label.setAlignment(
-            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
-        )
-        self._label.setSizePolicy(
-            QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred
-        )
-
-        self._line_edit = MTLineEdit(obj_name=f"{obj_name}_LineEdit")
-        self._line_edit.setProperty("rainbowBorderTarget", True)
-        self._line_edit.setText(str(self._config.get(self._cfg_key, default=default)))
-        self._line_edit.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
-
-        self._line_edit.editingFinished.connect(self._on_changed)
-        self._config.config_loaded.connect(
-            lambda d=default: self._line_edit.setText(
-                str(self._config.get(self._cfg_key, default=d))
-            )
-        )
-
-        self._main_layout.addWidget(self._label)
-        self._main_layout.addWidget(self._line_edit, 1)
-
-    def _on_changed(self) -> None:
-        self._config.set(self._cfg_key, self._line_edit.text())
-
-
-class MTPathSetting(MTWidget):
-    def __init__(
-        self,
-        config: Config | ConfigLoader,
-        tr_key: str,
-        cfg_key: str,
-        default: str,
-        *,
-        mode: str = "directory",
-        file_filter: str = "",
-        caption: str | None = None,
-        parent: QWidget | None = None,
-    ) -> None:
-        super().__init__(parent)
-
-        self._config = config
-        self._cfg_key = cfg_key
-        self._mode = str(mode).strip().lower() or "directory"
-        self._file_filter = str(file_filter or "")
-        self._caption = (
-            caption.strip() if isinstance(caption, str) and caption.strip() else None
-        )
-        obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, "_", self._cfg_key)
-        self.setObjectName(f"{obj_name}_Path_Setting")
-        self.setProperty("rainbowBorderTarget", False)
-
-        self._main_layout = create_layout(LayoutType.HBOX, parent=self)
-
-        self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
-        self._label.setAlignment(
-            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
-        )
-        self._label.setSizePolicy(
-            QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred
-        )
-
-        self._line_edit = MTLineEdit(obj_name=f"{obj_name}_LineEdit")
-        self._line_edit.setProperty("rainbowBorderTarget", True)
-        self._line_edit.setText(str(self._config.get(self._cfg_key, default=default)))
-        self._line_edit.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
-
-        self._browse_button = MTButton(tr_key="", obj_name=f"{obj_name}_Browse_Button")
-        self._browse_button.setProperty("rainbowBorderTarget", True)
-        self._browse_button.setText("")
-        self._browse_button.set_text_icon(
-            source=str(PATH_FOLDER_ICON),
-            align="center",
-            size=QSize(18, 18),
-            spacing=0.0,
-        )
-        self._browse_button.setSizePolicy(
-            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
-        )
-
-        self._line_edit.editingFinished.connect(self._on_changed)
-        self._browse_button.clicked.connect(self._browse_path)
-        self._config.config_loaded.connect(
-            lambda d=default: self._line_edit.setText(
-                str(self._config.get(self._cfg_key, default=d))
-            )
-        )
-
-        self._main_layout.addWidget(self._label)
-        self._main_layout.addWidget(self._line_edit, 1)
-        self._main_layout.addWidget(self._browse_button)
-
-    def _on_changed(self) -> None:
-        self._config.set(self._cfg_key, self._line_edit.text())
-
-    def _browse_path(self) -> None:
-        caption = self._caption or self._label.text().strip() or "Select path"
-        start_path = self._dialog_start_path()
-
-        selected_path = ""
-        if self._mode == "open-file":
-            selected_path, _ = QFileDialog.getOpenFileName(
-                self,
-                caption,
-                start_path,
-                self._file_filter,
-            )
-        elif self._mode == "save-file":
-            selected_path, _ = QFileDialog.getSaveFileName(
-                self,
-                caption,
-                start_path,
-                self._file_filter,
-            )
-        else:
-            selected_path = QFileDialog.getExistingDirectory(
-                self,
-                caption,
-                start_path,
-            )
-
-        if not selected_path:
-            return
-
-        self._line_edit.setText(selected_path)
-        self._on_changed()
-
-    def _dialog_start_path(self) -> str:
-        text = self._line_edit.text().strip()
-        if not text:
-            return str(PATH_ROOT)
-
-        path = Path(text).expanduser()
-        if path.exists():
-            if path.is_dir():
-                return str(path)
-            return str(path.parent)
-
-        parent = path.parent
-        if parent.exists():
-            return str(parent)
-        return str(PATH_ROOT)
-
-
-class MTSliderSetting(MTWidget):
-    def __init__(
-        self,
-        config: Config | ConfigLoader,
-        tr_key: str,
-        cfg_key: str,
-        min_value: int | float,
-        max_value: int | float,
-        default: int | float,
-        parent: QWidget | None = None,
-    ) -> None:
-        super().__init__(parent)
-
-        self._config = config
-        self._cfg_key = cfg_key
-        if isinstance(default, int):
-            current_value = _config_int(self._config.get(self._cfg_key, default=default), default)
-            min_int = int(min_value)
-            max_int = int(max_value)
-            self._prev_value = current_value if min_int <= current_value <= max_int else default
-        else:
-            current_value = _config_float(self._config.get(self._cfg_key, default=default), default)
-            min_float = float(min_value)
-            max_float = float(max_value)
-            self._prev_value = current_value if min_float <= current_value <= max_float else default
-
-        obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, "_", self._cfg_key)
-        self.setObjectName(f"{obj_name}_Slider_Setting")
-
-        self._main_layout = create_layout(LayoutType.VBOX, parent=self)
-        self._main_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
-        self._info_layout = create_layout(LayoutType.HBOX)
-
-        self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
-        self._label.setAlignment(
-            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
-        )
-
-        if isinstance(default, int):
-            self._spin_box = MTSpinBox(obj_name=f"{obj_name}_SpinBox")
-            self._spin_box.setRange(int(min_value), int(max_value))
-            self._spin_box.setValue(int(self._prev_value))
-        else:
-            self._spin_box = MTDoubleSpinBox(obj_name=f"{obj_name}_DoubleSpinBox")
-            self._spin_box.setRange(float(min_value), float(max_value))
-            self._spin_box.setValue(float(self._prev_value))
-        self._spin_box.setAlignment(
-            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
-        )
-        self._spin_box.setSizePolicy(
-            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred
-        )
-
-        self._slider = MTSlider(obj_name=f"{obj_name}_Slider")
-        self._slider.setRange(int(min_value), int(max_value))
-        self._slider.setValue(int(self._prev_value))
-
-        self._slider.valueChanged.connect(self._spin_box.setValue)
-        self._spin_box.valueChanged.connect(self._slider.setValue)
-        self._spin_box.editingFinished.connect(
-            lambda: self._on_changed(self._spin_box.value())
-        )
-        self._spin_box.editingFinished.connect(self._spin_box.clearFocus)
-        self._slider.sliderReleased.connect(
-            lambda: self._on_changed(self._slider.value())
-        )
-        self._config.config_loaded.connect(
-            lambda d=default: self._slider.setValue(
-                _config_int(self._config.get(self._cfg_key, default=d), int(d))
-            )
-        )
-
-        self._info_layout.addWidget(self._label)
-        self._info_layout.addStretch()
-        self._info_layout.addWidget(self._spin_box)
-        self._main_layout.addLayout(self._info_layout)
-        self._main_layout.addWidget(self._slider)
-
-    def _on_changed(self, value: int | float) -> None:
-        if self._spin_box.value() != self._prev_value:
-            self._prev_value = self._spin_box.value()
-            self._config.set(self._cfg_key, value)
-
-    @property
-    def spin_box(self) -> MTSpinBox | MTDoubleSpinBox:
-        return self._spin_box
-
-    @property
-    def slider(self) -> MTSlider:
-        return self._slider

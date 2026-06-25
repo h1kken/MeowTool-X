@@ -46,4 +46,3 @@ __all__ = (
     'PATH_ASSETS',
     'PATH_LOGS',
 )
-

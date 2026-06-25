@@ -33,19 +33,22 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from src.app.paths import PATH_SRC
 from src.theme.colors import to_qcolor
 from src.theme.gradients import build_background_brush, normalize_gradient_data
 from src.theme.schema.access import coerce_box_sides, coerce_number, object_map, theme_map
 from src.ui.painting import draw_widget_background, new_widget_painter
 from src.translation.mixin import TranslatableComboBoxMixin
 from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.widgets.custom.box import BoxThemeMixin
-from src.ui.widgets.custom.text import MTButton, MTLabel, MTPlainLabel, TextEffectMixin
-from src.ui.widgets.custom.types import WidgetThemeMap
+from src.ui.widgets.box import BoxThemeMixin
+from src.ui.widgets.text import MTButton, MTLabel, MTPlainLabel, TextEffectMixin
+from src.ui.widgets.types import WidgetThemeMap
 
 _GROUP_ITEM_INDENT = '   '
 _GROUP_SECTION_SPACER_HEIGHT = 8
-_DEFAULT_COMBOBOX_ARROW_SOURCE = str(Path(__file__).resolve().parents[3] / 'assets/icons/MTComboBox/arrow_right.svg')
+_DEFAULT_COMBOBOX_ARROW_SOURCE = str(PATH_SRC / 'assets/icons/MTComboBox/arrow_right.svg')
+print(_DEFAULT_COMBOBOX_ARROW_SOURCE)
+input()
 
 
 class MTRadioButton(BoxThemeMixin, QRadioButton):

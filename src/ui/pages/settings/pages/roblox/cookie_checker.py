@@ -11,7 +11,7 @@ from src.ui.widgets import (
     MTTextSetting,
     MTWidget,
 )
-from src.ui.widgets.custom.roblox.cookie_checker import MTCookieCheckerFieldSetting
+from src.ui.widgets.roblox.cookie_checker import MTCookieCheckerFieldSetting
 from src.services.roblox.constants import ROBLOX_COOKIE_CHECKER_MAIN_FIELDS
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 

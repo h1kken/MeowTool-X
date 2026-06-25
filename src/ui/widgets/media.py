@@ -17,8 +17,8 @@ from src.ui.constants import (
 )
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.paths import PATH_APP_ICON
-from src.ui.widgets.custom.containers import MTWidget
-from src.ui.widgets.custom.text import MTLabel
+from src.ui.widgets.containers import MTWidget
+from src.ui.widgets.text import MTLabel
 
 _MEDIA_FIT_CONTAIN = 'contain'
 _MEDIA_FIT_COVER = 'cover'

@@ -1,6 +1,6 @@
 from typing import Callable
 
-from PySide6.QtCore import QTimer, Signal
+from PySide6.QtCore import QTimer, Signal, SignalInstance
 from PySide6.QtGui import QShowEvent
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
@@ -63,7 +63,7 @@ class SettingsPage(MTWidget):
             page.setSizePolicy(
                 QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
             )
-            presence_signal = getattr(page, "presence_path_changed", None)
+            presence_signal: SignalInstance | None = getattr(page, "presence_path_changed", None)
             if presence_signal is not None:
                 def _forward_presence_path(*_args: object) -> None:
                     self._emit_presence_path()

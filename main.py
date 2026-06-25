@@ -4,14 +4,12 @@ from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
 from src.config.manager import config
-from src.db import initialize_database
+from src.db.init import initialize_database
 from src.translation.constants import SYSTEM_LOCALE
 from src.translation.manager import translator
 from src.ui.windows.main_window import MainWindow
-from src.utils.constants import (
-    PATH_DEFAULT_THEME,
-    PROGRAM_NAME,
-)
+from src.theme.paths import PATH_DEFAULT_THEME
+from src.utils.constants.app import PROGRAM_NAME
 
 
 def _finish_startup(window: MainWindow) -> None:

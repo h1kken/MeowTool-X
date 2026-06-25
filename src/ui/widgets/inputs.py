@@ -40,9 +40,9 @@ from src.theme.schema.access import coerce_box_sides, coerce_number, theme_map
 from src.translation.manager import translator as t
 from src.theme.rainbow.palette import sample_rainbow_color
 from src.ui.painting import configure_painter, draw_widget_background, new_widget_painter
-from src.ui.widgets.custom.box import BoxThemeMixin
-from src.ui.widgets.custom.text import TextEffectMixin
-from src.ui.widgets.custom.types import WidgetThemeMap
+from src.ui.widgets.box import BoxThemeMixin
+from src.ui.widgets.text import TextEffectMixin
+from src.ui.widgets.types import WidgetThemeMap
 
 
 def _text_render_width(widget: QWidget, values: tuple[str, ...]) -> int:

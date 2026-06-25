@@ -11,7 +11,7 @@ from PySide6.QtGui import QPalette
 
 from src.translation.mixin import TranslatableMixin
 from src.ui.painting import configure_painter, draw_widget_background
-from src.ui.widgets.custom.box import BoxThemeMixin
+from src.ui.widgets.box import BoxThemeMixin
 
 TextEffectState: TypeAlias = dict[str, object]
 TextLayerDrawer: TypeAlias = Callable[[QPainter, QRectF], None]

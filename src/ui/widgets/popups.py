@@ -6,12 +6,12 @@ from PySide6.QtWidgets import QApplication, QBoxLayout, QLayout, QSizePolicy, QW
 
 from src.ui.painting import new_widget_painter
 from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.widgets.custom.containers import MTWidget
-from src.ui.widgets.custom.types import PopupPlacement
+from src.ui.widgets.containers import MTWidget
+from src.ui.widgets.types import PopupPlacement
 
 
 class _PopupBackdrop(MTWidget):
-    def __init__(self, popup: 'MTPopup', parent: QWidget) -> None:
+    def __init__(self, popup: MTPopup, parent: QWidget) -> None:
         super().__init__(parent=parent, obj_name=f'{popup.objectName()}_Backdrop_Widget')
         self._popup = popup
         self.setProperty('popupBackdrop', True)
