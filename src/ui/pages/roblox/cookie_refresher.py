@@ -11,9 +11,9 @@ class RobloxCookieRefresherPage(MTWidget):
 
         main_layout = create_layout(LayoutType.VBOX, parent=self)
 
-        lbl = MTLabel(tr_key='RBX_C_RFRSHR', obj_name='Main_Roblox_Cookie_Refresher_Title_Label')
+        lbl = MTLabel(tr_key='CK_RFRSHR', obj_name='Main_Roblox_Cookie_Refresher_Title_Label')
         main_layout.addWidget(lbl)
 
-        btn = MTButton(tr_key='Рефрешить', obj_name='Main_Roblox_Cookie_Refresher_Start_Button')
+        btn = MTButton(tr_key='CK_RFRSHR_STRT', obj_name='Main_Roblox_Cookie_Refresher_Start_Button')
         # btn.clicked.connect(RobloxCookieRefresher)
         main_layout.addWidget(btn)

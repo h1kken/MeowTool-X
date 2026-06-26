@@ -16,13 +16,11 @@ from src.ui.widgets import (
 )
 from src.config.loader import ConfigLoader
 from src.config.manager import Config
-from src.ui.widgets.helpers import icon, positive_int, repolish, measure, theme_icon_path
+from src.ui.widgets.main.helpers import icon, positive_int, repolish, measure, theme_icon_path
 from src.ui.widgets import MTComboBox
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 
-SETTING_ROW_HEIGHT = 0
 SETTING_ROW_GAP = 0
-SLIDER_COMPACT_PART_HEIGHT = 0
 COLLAPSIBLE_TOGGLE_BUTTON_SIZE = 20
 COLLAPSIBLE_TOGGLE_ICON_SIZE = 18
 COLUMN_REBALANCE_EVENT_TYPES = {

@@ -9,7 +9,6 @@ from PySide6.QtWidgets import (
 )
 
 
-
 class PageController:
     def __init__(self, layout: QLayout) -> None:
         self._layout = layout
@@ -20,15 +19,14 @@ class PageController:
         self._change_callbacks: list[Callable[[str], None]] = []
 
     def add_page(
-        self, key: str, page: QWidget, *, object_name: str | None = None
+        self, key: str, page: QWidget, *, obj_name: str | None = None
     ) -> None:
+        page.hide()
         self._pages[key] = page
         self._layout.addWidget(page)
 
-        if object_name:
-            page.setObjectName(object_name)
-
-        page.hide()
+        if obj_name:
+            page.setObjectName(obj_name)
 
     def bind_tab(self, key: str, button: QAbstractButton) -> None:
         self._tabs[key] = button
@@ -68,7 +66,7 @@ class PageController:
 
     def current_page(self) -> QWidget | None:
         if self._current_page is None:
-            return None
+            return
         return self._pages.get(self._current_page)
 
     def on_change(self, callback: Callable[[str], None]) -> None:

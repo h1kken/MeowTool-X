@@ -5,7 +5,7 @@ from typing import Any
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget
 
-from src.ui.widgets.media import MTMediaWidget
+from src.ui.widgets.main.media import MTMediaWidget
 
 
 class ThemeMediaOverlay(MTMediaWidget):

@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QApplication, QBoxLayout, QLayout, QSizePolicy, QW
 
 from src.ui.painting import new_widget_painter
 from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.widgets.containers import MTWidget
+from src.ui.widgets.main.containers import MTWidget
 from src.ui.widgets.types import PopupPlacement
 
 

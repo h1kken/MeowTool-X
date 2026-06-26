@@ -8,4 +8,4 @@ class RobloxLogPassCheckerPage(MTWidget):
         super().__init__()
 
         main_layout = create_layout(LayoutType.VBOX, parent=self)
-        main_layout.addWidget(MTLabel(tr_key='RBX_LP_CHKR', obj_name='Main_Roblox_LogPass_Checker_Title_Label'))
+        main_layout.addWidget(MTLabel(tr_key='LP_CHCKR', obj_name='Main_Roblox_LogPass_Checker_Title_Label'))

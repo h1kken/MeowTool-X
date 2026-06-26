@@ -19,13 +19,7 @@ from src.ui.widgets import (
     MTWidget,
 )
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
-from src.ui.widgets.helpers import config_float, config_int
-
-SETTING_ROW_HEIGHT = 0
-SETTING_ROW_GAP = 0
-SLIDER_COMPACT_PART_HEIGHT = 0
-COLLAPSIBLE_TOGGLE_BUTTON_SIZE = 20
-COLLAPSIBLE_TOGGLE_ICON_SIZE = 18
+from src.ui.widgets.main.helpers import config_float, config_int
 
 
 class MTTextSetting(MTWidget):

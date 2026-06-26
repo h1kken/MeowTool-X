@@ -15,7 +15,7 @@ from src.theme.gradients import (
 from src.theme.rainbow.palette import sample_rainbow_color
 from src.theme.schema.access import coerce_positive_int, theme_map
 from src.ui.painting import new_widget_painter
-from src.ui.widgets.containers import MTWidget
+from src.ui.widgets.main.containers import MTWidget
 from src.ui.widgets.types import WidgetThemeMap
 
 

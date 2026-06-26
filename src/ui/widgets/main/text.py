@@ -11,7 +11,7 @@ from PySide6.QtGui import QPalette
 
 from src.translation.mixin import TranslatableMixin
 from src.ui.painting import configure_painter, draw_widget_background
-from src.ui.widgets.box import BoxThemeMixin
+from src.ui.widgets.main.box import BoxThemeMixin
 
 TextEffectState: TypeAlias = dict[str, object]
 TextLayerDrawer: TypeAlias = Callable[[QPainter, QRectF], None]
@@ -996,8 +996,6 @@ class TextEffectMixin(_TextEffectBase):
 
 
 class MTPlainLabel(BoxThemeMixin, TextEffectMixin, QLabel):
-    PAINTED_BOX_THEME = False
-
     def __init__(self, text: str = '', parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(text, parent)
         self.init_box_theme()
@@ -1033,8 +1031,6 @@ class MTPlainLabel(BoxThemeMixin, TextEffectMixin, QLabel):
 
 
 class MTLabel(BoxThemeMixin, TextEffectMixin, TranslatableMixin, QLabel):
-    PAINTED_BOX_THEME = False
-
     def __init__(self, tr_key: str, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(tr_key, parent)
         self.init_box_theme()
@@ -1070,15 +1066,14 @@ class MTLabel(BoxThemeMixin, TextEffectMixin, TranslatableMixin, QLabel):
 
 
 class MTButton(BoxThemeMixin, TextEffectMixin, TranslatableMixin, QPushButton):
-    PAINTED_BOX_THEME = False
-
     def __init__(
         self,
-        tr_key: str,
+        *,
         parent: QWidget | None = None,
+        tr_key: str = '',
+        obj_name: str = '',
         checkable: bool = False,
         checked: bool = False,
-        obj_name: str = '',
     ) -> None:
         super().__init__(tr_key, parent)
         self.setFlat(True)

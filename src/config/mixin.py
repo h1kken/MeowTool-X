@@ -17,7 +17,6 @@ from src.config.utils import convert_value
 from src.utils.filesystem import FS, del_safe, get_safe, set_safe
 from src.utils.logging import logger
 
-_CONFIG_DEFAULT_SENTINEL = object()
 TDefault = TypeVar("TDefault")
 
 
@@ -27,26 +26,25 @@ class GetConfigMixin:
         key: str,
         *,
         sep: str = ">",
-        default: TDefault | object = _CONFIG_DEFAULT_SENTINEL,
+        default: TDefault | object = CONFIG_MISSING_DEFAULT,
     ) -> object | TDefault | None:
-        missing = _CONFIG_DEFAULT_SENTINEL
-        value = get_safe(self.data, key, sep=sep, default=missing)
+        value = get_safe(self.data, key, sep=sep, default=CONFIG_MISSING_DEFAULT)
 
-        if value is not missing:
-            logger.debug(f"Loaded '{value}' from '{key.replace(sep, ' > ')}'")
+        if value is not CONFIG_MISSING_DEFAULT:
+            logger.debug(f"Loaded ({type(value).__name__}) '{value}' from '{key.replace(sep, ' > ')}'")
             return value
 
-        if default is not missing:
-            logger.debug(f"Loaded fallback '{default}' from explicit default for '{key.replace(sep, ' > ')}'")
+        if default is not CONFIG_MISSING_DEFAULT:
+            logger.debug(f"Loaded fallback ({type(default).__name__}) '{default}' for '{key.replace(sep, ' > ')}'")
             return default
 
-        default_value = get_safe(self.defaults, key, sep=sep, default=missing)
-        if default_value is not missing:
+        default_value = get_safe(self.defaults, key, sep=sep, default=CONFIG_MISSING_DEFAULT)
+        if default_value is not CONFIG_MISSING_DEFAULT:
             resolved_default = convert_value(None, cast(ConfigValue, default_value))
-            logger.debug(f"Loaded fallback '{resolved_default}' from defaults for '{key.replace(sep, ' > ')}'")
+            logger.debug(f"Loaded fallback ({type(resolved_default).__name__}) '{resolved_default}' for '{key.replace(sep, ' > ')}'")
             return resolved_default
 
-        logger.debug(f"Loaded 'None' from '{key.replace(sep, ' > ')}'")
+        logger.debug(f"Loaded 'None' for '{key.replace(sep, ' > ')}'")
         return None
 
 
@@ -90,7 +88,7 @@ class SaveConfigMixin:
                 continue
             yield key, value
 
-    def _dump_dict(
+    def dump_dict(
         self,
         old_data: ConfigMap,
         defaults: ConfigMap | None = None,
@@ -103,7 +101,7 @@ class SaveConfigMixin:
             if isinstance(value, dict):
                 new_data.append(f"{indent_prefix}{key}")
                 new_data.extend(
-                    self._dump_dict(
+                    self.dump_dict(
                         value,
                         child_defaults if isinstance(child_defaults, dict) else None,
                         indent + 1,
@@ -114,14 +112,6 @@ class SaveConfigMixin:
                     value = "Yes" if value else "No"
                 new_data.append(f"{indent_prefix}{key}: {value}")
         return new_data
-
-    def dump_dict(
-        self,
-        old_data: ConfigMap,
-        defaults: ConfigMap | None = None,
-        indent: int = 0,
-    ) -> list[str]:
-        return self._dump_dict(old_data, defaults, indent)
 
     def save(self: ConfigMixinHost) -> None:
         FS.ensure_dir(PATH_CONFIGS)

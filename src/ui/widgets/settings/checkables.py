@@ -15,21 +15,16 @@ from src.ui.widgets import (
 from src.ui.widgets import MTSwitch
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 
-SETTING_ROW_HEIGHT = 0
-SETTING_ROW_GAP = 0
-SLIDER_COMPACT_PART_HEIGHT = 0
-COLLAPSIBLE_TOGGLE_BUTTON_SIZE = 20
-COLLAPSIBLE_TOGGLE_ICON_SIZE = 18
-
 
 class MTCheckBoxSetting(MTWidget):
     def __init__(
         self,
         config: Config | ConfigLoader,
-        tr_key: str,
-        cfg_key: str,
-        default: bool,
+        *,
         parent: QWidget | None = None,
+        tr_key: str = '',
+        cfg_key: str = '',
+        default: bool = False,
     ) -> None:
         super().__init__(parent)
 

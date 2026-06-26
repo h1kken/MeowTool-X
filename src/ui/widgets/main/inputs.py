@@ -40,8 +40,8 @@ from src.theme.schema.access import coerce_box_sides, coerce_number, theme_map
 from src.translation.manager import translator as t
 from src.theme.rainbow.palette import sample_rainbow_color
 from src.ui.painting import configure_painter, draw_widget_background, new_widget_painter
-from src.ui.widgets.box import BoxThemeMixin
-from src.ui.widgets.text import TextEffectMixin
+from src.ui.widgets.main.box import BoxThemeMixin
+from src.ui.widgets.main.text import TextEffectMixin
 from src.ui.widgets.types import WidgetThemeMap
 
 
@@ -689,8 +689,6 @@ class MTSlider(QSlider):
         painter.end()
 
 class MTLineEdit(BoxThemeMixin, TextEffectMixin, QLineEdit):
-    PAINTED_BOX_THEME = False
-
     _OVERFLOW_SCROLL_DELAY = 0.55
     _OVERFLOW_SCROLL_EDGE_PAUSE = 0.85
     _OVERFLOW_SCROLL_SPEED = 28.0
@@ -1003,8 +1001,6 @@ class MTLineEdit(BoxThemeMixin, TextEffectMixin, QLineEdit):
 
 
 class MTSpinBox(BoxThemeMixin, QSpinBox):
-    PAINTED_BOX_THEME = False
-
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent)
         self.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
@@ -1044,8 +1040,6 @@ class MTSpinBox(BoxThemeMixin, QSpinBox):
 
 
 class MTDoubleSpinBox(BoxThemeMixin, QDoubleSpinBox):
-    PAINTED_BOX_THEME = False
-
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent)
         self.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)

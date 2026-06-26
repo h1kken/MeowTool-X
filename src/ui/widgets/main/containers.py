@@ -40,20 +40,16 @@ from src.theme.schema.access import coerce_box_sides, coerce_number, object_map,
 from src.ui.painting import draw_widget_background, new_widget_painter
 from src.translation.mixin import TranslatableComboBoxMixin
 from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.widgets.box import BoxThemeMixin
-from src.ui.widgets.text import MTButton, MTLabel, MTPlainLabel, TextEffectMixin
+from src.ui.widgets.main.box import BoxThemeMixin
+from src.ui.widgets.main.text import MTButton, MTLabel, MTPlainLabel, TextEffectMixin
 from src.ui.widgets.types import WidgetThemeMap
 
 _GROUP_ITEM_INDENT = '   '
 _GROUP_SECTION_SPACER_HEIGHT = 8
 _DEFAULT_COMBOBOX_ARROW_SOURCE = str(PATH_SRC / 'assets/icons/MTComboBox/arrow_right.svg')
-print(_DEFAULT_COMBOBOX_ARROW_SOURCE)
-input()
 
 
 class MTRadioButton(BoxThemeMixin, QRadioButton):
-    PAINTED_BOX_THEME = False
-
     def __init__(self, text: str = '', parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(text, parent)
         self.init_box_theme()
@@ -112,8 +108,6 @@ class _MTComboPopupItem(MTButton):
 
 
 class _MTComboPopup(BoxThemeMixin, QFrame):
-    PAINTED_BOX_THEME = False
-
     def __init__(self, combo_box: 'MTComboBox') -> None:
         super().__init__(
             combo_box,
@@ -194,8 +188,6 @@ class _MTComboPopup(BoxThemeMixin, QFrame):
 
 
 class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWidget):
-    PAINTED_BOX_THEME = False
-
     currentIndexChanged = Signal(int)
     currentTextChanged = Signal(str)
     activated = Signal(int)
@@ -1228,8 +1220,6 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
 
 
 class MTScrollArea(BoxThemeMixin, QScrollArea):
-    PAINTED_BOX_THEME = False
-
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent)
         self.init_box_theme()

@@ -10,8 +10,8 @@ class RobloxTimeBoosterPage(MTWidget):
         super().__init__()
 
         main_layout = create_layout(LayoutType.VBOX, parent=self)
-        main_layout.addWidget(MTLabel(tr_key='RBX_TM_BSTR', obj_name='Main_Roblox_Time_Booster_Title_Label'))
+        main_layout.addWidget(MTLabel(tr_key='TM_BSTR', obj_name='Main_Roblox_Time_Booster_Title_Label'))
 
-        btn = MTButton(tr_key='Бустить', obj_name='Main_Roblox_Time_Booster_Start_Button')
+        btn = MTButton(tr_key='TM_BSTR_STRT', obj_name='Main_Roblox_Time_Booster_Start_Button')
         # btn.clicked.connect(RobloxTimeBooster)
         main_layout.addWidget(btn)

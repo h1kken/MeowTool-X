@@ -8,4 +8,4 @@ class RobloxAutoReggerPage(MTWidget):
         super().__init__()
 
         main_layout = create_layout(LayoutType.VBOX, parent=self)
-        main_layout.addWidget(MTLabel(tr_key='RBX_A_RGGR', obj_name='Main_Roblox_Auto_Regger_Title_Label'))
+        main_layout.addWidget(MTLabel(tr_key='AT_RGGR', obj_name='Main_Roblox_Auto_Regger_Title_Label'))

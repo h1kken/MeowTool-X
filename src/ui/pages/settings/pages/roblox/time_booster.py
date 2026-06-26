@@ -1,9 +1,9 @@
 from src.config.manager import config
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets import (
+    MTWidget,
     MTCollapsibleContainer,
     MTColumnsSetting,
-    MTWidget,
     MTSliderSetting,
     MTSwitchSetting,
 )

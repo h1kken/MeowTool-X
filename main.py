@@ -13,7 +13,7 @@ from src.utils.constants.app import PROGRAM_NAME
 
 
 def _finish_startup(window: MainWindow) -> None:
-    window.preload_settings_pages()
+    # window.preload_settings_pages()
     window.start_discord_presence()
     window.resume_theme_events()
 

@@ -8,7 +8,7 @@ class RobloxCookieCheckerPage(MTWidget):
         super().__init__()
 
         main_layout = create_layout(LayoutType.VBOX, parent=self)
-        main_layout.addWidget(MTLabel(tr_key='RBX_C_CHCKR', obj_name='Main_Roblox_Cookie_Checker_Title_Label'))
+        main_layout.addWidget(MTLabel(tr_key='CK_CHCKR', obj_name='Main_Roblox_Cookie_Checker_Title_Label'))
 
-        btn = MTButton(tr_key='Чекать', obj_name='Main_Roblox_Cookie_Checker_Start_Button')
+        btn = MTButton(tr_key='CK_CHCKR_STRT', obj_name='Main_Roblox_Cookie_Checker_Start_Button')
         main_layout.addWidget(btn)

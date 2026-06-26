@@ -31,10 +31,10 @@ class RobloxCookieSorterPage(MTWidget):
         self._drop_zone.text_dropped.connect(self._add_source_text)
         main_layout.addWidget(self._drop_zone)
 
-        self._sort_btn = MTButton(tr_key='RBX_C_SORT', obj_name='Roblox_Cookie_Sorter_Start_Button')
+        self._sort_btn = MTButton(tr_key='CK_SRTR_STRT', obj_name='Roblox_Cookie_Sorter_Start_Button')
         self._sort_btn.clicked.connect(self._start_sorting)
 
-        self._status_label = MTLabel(tr_key='RBX_C_STATUS', obj_name='Roblox_Cookie_Sorter_Status')
+        self._status_label = MTLabel(tr_key='CK_SRTR_STATUS', obj_name='Roblox_Cookie_Sorter_Status')
         main_layout.addWidget(self._status_label)
 
     def _add_source_files(self, paths: list[Path]) -> None:

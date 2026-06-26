@@ -1,7 +1,4 @@
-from typing import Callable
-
-from PySide6.QtCore import QTimer, Signal, SignalInstance
-from PySide6.QtGui import QShowEvent
+from PySide6.QtCore import Signal, SignalInstance
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
 from src.ui.controllers import PageController
@@ -21,7 +18,7 @@ from src.ui.widgets import MTButton, MTWidget
 class SettingsPage(MTWidget):
     presence_path_changed = Signal(str)
 
-    PAGE_SPECS: list[tuple[str, str, type[QWidget]]] = [
+    _PAGES: list[tuple[str, str, type[QWidget]]] = [
         ("Main", "MAIN", SettingsMainPage),
         ("Outputs", "OUTPUTS", SettingsOutputsPage),
         ("Proxy", "PROXY", SettingsProxyPage),
@@ -30,7 +27,6 @@ class SettingsPage(MTWidget):
         ("Config", "CONFIG", SettingsConfigPage),
         ("Theme", "THEME", SettingsThemePage),
     ]
-    HEAVY_TAB_KEYS: tuple[str, ...] = ("CONFIG", "THEME")
 
     def __init__(
         self,
@@ -38,8 +34,6 @@ class SettingsPage(MTWidget):
         current_theme_name: str | None = None,
     ):
         super().__init__()
-        self._heavy_tabs_preloaded = False
-        self._heavy_tab_keys: list[str] = []
         self._tab_names_by_key: dict[str, str] = {}
         self._pages_by_key: dict[str, QWidget] = {}
         self._current_theme_name = current_theme_name
@@ -52,8 +46,7 @@ class SettingsPage(MTWidget):
 
         self._page_controller = PageController(main_layout)
 
-        first_key: str | None = None
-        for obj_name, tr_key, PageClass in self.PAGE_SPECS:
+        for obj_name, tr_key, PageClass in self._PAGES:
             self._tab_names_by_key[tr_key] = obj_name
             if PageClass is SettingsThemePage:
                 page = PageClass(autoload_name=self._current_theme_name)
@@ -70,56 +63,17 @@ class SettingsPage(MTWidget):
 
                 presence_signal.connect(_forward_presence_path)
             self._page_controller.add_page(
-                tr_key, page, object_name=f"Settings_{obj_name}_Page"
+                tr_key, page, obj_name=f"Settings_{obj_name}_Page"
             )
 
             btn = MTButton(tr_key=tr_key, obj_name=f"Settings_{obj_name}_Tab_Button")
             self._page_controller.bind_tab(tr_key, btn)
             tabs_layout.addWidget(btn)
 
-            if tr_key in self.HEAVY_TAB_KEYS:
-                self._heavy_tab_keys.append(tr_key)
-
-            if first_key is None:
-                first_key = tr_key
-
         tabs_layout.addStretch()
+        self._page_controller.show(self._PAGES[0][1])  # show the first page
         self._page_controller.on_change(lambda _key: self._emit_presence_path())
-
-        if first_key is not None:
-            self._page_controller.show(first_key)
-            self._emit_presence_path()
-
-    def showEvent(self, event: QShowEvent) -> None:
-        super().showEvent(event)
-        if self._heavy_tabs_preloaded:
-            return
-        self._heavy_tabs_preloaded = True
-        QTimer.singleShot(0, self._preload_heavy_tabs)
-
-    def preload_heavy_tabs(
-        self,
-        progress_callback: Callable[[int, int, str], None] | None = None,
-    ) -> None:
-        if self._heavy_tabs_preloaded:
-            return
-        self._heavy_tabs_preloaded = True
-        self._preload_heavy_tabs(progress_callback=progress_callback)
-
-    def _preload_heavy_tabs(
-        self,
-        progress_callback: Callable[[int, int, str], None] | None = None,
-    ) -> None:
-        def _relay_progress(current: int, total: int, key: str) -> None:
-            if not callable(progress_callback):
-                return
-
-            tab_name = self._tab_names_by_key.get(key, key)
-            progress_callback(current, total, f"Prewarming settings: {tab_name}")
-
-        self._page_controller.preload(
-            *self._heavy_tab_keys, progress_callback=_relay_progress
-        )
+        self._emit_presence_path()
 
     def current_presence_path(self) -> str:
         top_key = self._page_controller.current_key()

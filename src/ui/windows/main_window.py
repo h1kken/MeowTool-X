@@ -3,10 +3,11 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, cast
 
-from PySide6.QtCore import QSize, Qt, QTimer
+from PySide6.QtCore import QSize, QTimer
 from PySide6.QtGui import QCloseEvent, QIcon, QMoveEvent, QResizeEvent, QShowEvent
 from PySide6.QtWidgets import QBoxLayout, QMainWindow, QSizePolicy, QWidget
 
+from src.ui.widgets import SidebarButton, SidebarCategory
 from src.config.loader import config_loader
 from src.config.manager import config
 from src.services.discord.rich_presence import DiscordPresenceManager
@@ -54,84 +55,15 @@ from src.utils.constants.app import PROGRAM_NAME
 from src.utils.filesystem import FS
 
 
-class _SidebarNavButton(MTButton):
-    def __init__(
-        self, *, tr_key: str, obj_name: str, parent: QWidget | None = None
-    ) -> None:
-        self._sidebar_full_text = ""
-        self._expanded_alignment = (
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
-        )
-        super().__init__(tr_key=tr_key, obj_name=obj_name, parent=parent)
-        self.setAlignment(self._expanded_alignment)
-
-    def setText(self, text: str) -> None:
-        self._sidebar_full_text = str(text)
-        super().setText(self._sidebar_full_text)
-        self.setToolTip("")
-        self.updateGeometry()
-        self.update()
-
-
-class _SidebarCategorySection(MTWidget):
-    def __init__(
-        self,
-        *,
-        obj_name: str,
-        parent: QWidget | None = None,
-    ) -> None:
-        super().__init__(obj_name=f"{obj_name}_Category_Widget", parent=parent)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
-
-        self._main_layout = create_layout(LayoutType.VBOX, parent=self)
-        self._main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-
-        self._header_button = MTButton(
-            tr_key="",
-            obj_name=f"{obj_name}_Category_Header_Button",
-            parent=self,
-        )
-        self._header_button.setProperty("rainbowBorderTarget", False)
-        self._header_button.setProperty("rainbowBorderExcluded", True)
-        self._header_button.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
-
-        self._content_widget = MTWidget(
-            obj_name=f"{obj_name}_Category_Content_Widget", parent=self
-        )
-        self._content_widget.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum
-        )
-        self._content_layout = create_layout(
-            LayoutType.VBOX, parent=self._content_widget
-        )
-        self._content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-
-        self._main_layout.addWidget(self._header_button)
-        self._main_layout.addWidget(self._content_widget)
-
-    def add_button(self, button: QWidget) -> None:
-        self._content_layout.addWidget(button)
-        self.updateGeometry()
-
-    def header_button(self) -> MTButton:
-        return self._header_button
-
-
 class MainWindow(QMainWindow):
-    _MAIN_PAGE_SPECS: list[SidebarSectionSpec] = [
+    _PAGES: list[SidebarSectionSpec] = [
         (
-            "PRX",
-            "Sidebar_Proxy",
-            [
+            "PRX", "Sidebar_Proxy", [
                 ("Proxy_Checker", "CHCKR", ProxyCheckerPage),
             ],
         ),
         (
-            "RBX",
-            "Sidebar_Roblox",
-            [
+            "RBX", "Sidebar_Roblox", [
                 ("Roblox_Cookie_Sorter", "CK_SRTR", RobloxCookieSorterPage),
                 ("Roblox_Cookie_Checker", "CK_CHCKR", RobloxCookieCheckerPage),
                 ("Roblox_Cookie_Refresher", "CK_RFRSHR", RobloxCookieRefresherPage),
@@ -141,7 +73,7 @@ class MainWindow(QMainWindow):
                 # ('Roblox_Time_Booster', 'TM_BSTR', RobloxTimeBoosterPage),
             ],
         ),
-        (None, None, None),
+        ("", "", None),
         ("Settings", "STNGS", SettingsPage),
     ]
     _SIDEBAR_CATEGORY_ICON_NAMES: dict[str, str] = {
@@ -161,9 +93,7 @@ class MainWindow(QMainWindow):
         self._theme_auto_save_timer = QTimer(self)
         self._theme_auto_save_timer.setSingleShot(True)
         self._theme_auto_save_timer.setInterval(THEME_AUTO_SAVE_DEBOUNCE_MS)
-        self._theme_auto_save_timer.timeout.connect(
-            self.auto_save_current_theme_if_enabled
-        )
+        self._theme_auto_save_timer.timeout.connect(self.auto_save_current_theme_if_enabled)
 
         self._window_move_idle_timer = QTimer(self)
         self._window_move_idle_timer.setSingleShot(True)
@@ -183,8 +113,8 @@ class MainWindow(QMainWindow):
 
         self._sidebar_widget: MTWidget | None = None
         self._sidebar_media: SidebarMediaWidget | None = None
-        self._sidebar_buttons: list[_SidebarNavButton] = []
-        self._sidebar_categories: list[_SidebarCategorySection] = []
+        self._sidebar_buttons: list[SidebarButton] = []
+        self._sidebar_categories: list[SidebarCategory] = []
         self._sidebar_width_locked = False
 
         self._runtime_theme_preferences_cache: tuple[bool, int, str] | None = None
@@ -195,10 +125,8 @@ class MainWindow(QMainWindow):
 
         self.setObjectName("Main_Window")
         self.setWindowTitle(PROGRAM_NAME)
-        if PATH_APP_ICON.is_file():
-            self.setWindowIcon(QIcon(str(PATH_APP_ICON)))
+        self.setWindowIcon(QIcon(str(PATH_APP_ICON)))
         self.resize(WINDOW_X, WINDOW_Y)
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         self._build_window_shell()
 
@@ -272,14 +200,14 @@ class MainWindow(QMainWindow):
         page_label = obj_name.replace("_", " ")
         page = self._create_main_page(obj_name, tr_key, page_class)
         self._page_controller.add_page(
-            tr_key, page, object_name=f"Main_{obj_name}_Page"
+            tr_key, page, obj_name=f"Main_{obj_name}_Page"
         )
         return page, page_label
 
     def _create_sidebar_button(
         self, obj_name: str, tr_key: str, page_label: str
-    ) -> _SidebarNavButton:
-        button = _SidebarNavButton(tr_key=tr_key, obj_name=f"Sidebar_{obj_name}_Button")
+    ) -> SidebarButton:
+        button = SidebarButton(tr_key=tr_key, obj_name=f"Sidebar_{obj_name}_Button")
         self._apply_default_sidebar_button_icon(button, obj_name)
         self._page_controller.bind_tab(tr_key, button)
         button.clicked.connect(
@@ -320,8 +248,8 @@ class MainWindow(QMainWindow):
         *,
         parent: QWidget,
         sidebar_layout: QBoxLayout,
-    ) -> tuple[_SidebarCategorySection, str | None, str | None]:
-        category = _SidebarCategorySection(
+    ) -> tuple[SidebarCategory, str | None, str | None]:
+        category = SidebarCategory(
             obj_name=category_obj_name,
             parent=parent,
         )
@@ -393,8 +321,8 @@ class MainWindow(QMainWindow):
         first_key: str | None = None
         first_page_label: str | None = None
 
-        for category_name, category_obj_name, page_specs in self._MAIN_PAGE_SPECS:
-            if category_name is None or category_obj_name is None or page_specs is None:
+        for category_name, category_obj_name, page_specs in self._PAGES:
+            if page_specs is None:
                 self._sidebar_buttons_layout.addStretch()
                 continue
 
@@ -452,7 +380,9 @@ class MainWindow(QMainWindow):
         )
 
     def _apply_default_sidebar_category_icon(
-        self, category: _SidebarCategorySection, category_obj_name: str
+        self,
+        category: SidebarCategory,
+        category_obj_name: str
     ) -> None:
         icon_name = self._SIDEBAR_CATEGORY_ICON_NAMES.get(category_obj_name)
         if not isinstance(icon_name, str) or not icon_name.strip():
@@ -549,11 +479,6 @@ class MainWindow(QMainWindow):
             self.set_theme(PATH_DEFAULT_THEME.stem, persist=False)
         self._lock_sidebar_width_once()
         return self.current_theme_name()
-
-    def preload_settings_pages(self) -> None:
-        if self._settings_page is None:
-            return
-        self._settings_page.preload_heavy_tabs()
 
     def start_discord_presence(self) -> None:
         if self._discord_presence_manager is not None:
