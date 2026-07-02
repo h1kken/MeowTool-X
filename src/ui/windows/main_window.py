@@ -154,9 +154,7 @@ class MainWindow(QMainWindow):
             self._deferred_theme_auto_save = True
 
     def _on_window_move_idle(self) -> None:
-        if self._deferred_theme_auto_save and getattr(
-            config_loader, "auto_save_theme", False
-        ):
+        if self._deferred_theme_auto_save and config_loader.auto_save_theme:
             self._deferred_theme_auto_save = False
             self._theme_auto_save_timer.start()
             return
@@ -444,7 +442,7 @@ class MainWindow(QMainWindow):
     def _on_settings_presence_path_changed(self, label: str) -> None:
         normalized = str(label).strip() or "Settings"
         self._settings_presence_label = normalized
-        current_key = getattr(self._page_controller, "current_key", lambda: None)()
+        current_key = self._page_controller.current_key()
         if current_key == "STNGS":
             self._set_discord_presence_page(normalized)
 
@@ -495,24 +493,21 @@ class MainWindow(QMainWindow):
         self._theme_manager.resume_theme_changed(flush=True)
 
     def current_theme_name(self) -> str:
-        current = str(getattr(self, "_current_theme_name", "")).strip()
+        current = str(self._current_theme_name).strip()
         if current:
             return current
-        initial = str(getattr(self, "_initial_theme_name", "")).strip()
+        initial = str(self._initial_theme_name).strip()
         return initial or PATH_DEFAULT_THEME.stem
 
     def theme_on_load_name(self) -> str:
-        if not self._theme_autoload_enabled():
+        if not bool(
+            config.get("Theme>Autoload Selected Theme", default=THEME_AUTOLOAD_FALLBACK)
+        ):
             return PATH_DEFAULT_THEME.stem
         configured = str(
             config.get("General>Theme", default=PATH_DEFAULT_THEME.stem)
         ).strip()
         return configured or PATH_DEFAULT_THEME.stem
-
-    def _theme_autoload_enabled(self) -> bool:
-        return bool(
-            config.get("Theme>Autoload Selected Theme", default=THEME_AUTOLOAD_FALLBACK)
-        )
 
     def _on_config_loaded(self) -> None:
         self._invalidate_runtime_theme_preferences_cache()
@@ -539,9 +534,7 @@ class MainWindow(QMainWindow):
         self._current_theme_name = theme_path.stem
         self._theme_manager.apply()
         self._reload_main_animations_from_theme()
-        self._apply_runtime_theme_preferences_for_controller(
-            getattr(self, "_rainbow_runtime", None)
-        )
+        self._apply_runtime_theme_preferences_for_controller(self._rainbow_runtime)
 
         if persist:
             current = str(config.get("General>Theme", default=""))
@@ -640,7 +633,7 @@ class MainWindow(QMainWindow):
         return [grouped[key] for key in order]
 
     def request_auto_save_current_theme_if_enabled(self) -> None:
-        if not getattr(config_loader, "auto_save_theme", False):
+        if not config_loader.auto_save_theme:
             return
 
         if self._window_move_idle_timer.isActive():
@@ -650,7 +643,7 @@ class MainWindow(QMainWindow):
         self._theme_auto_save_timer.start()
 
     def auto_save_current_theme_if_enabled(self) -> Path | None:
-        if not getattr(config_loader, "auto_save_theme", False):
+        if not config_loader.auto_save_theme:
             return None
 
         return self.save_current_theme_as(self.current_theme_name())
@@ -682,9 +675,7 @@ class MainWindow(QMainWindow):
         enabled, duration, palette = preferences
         self._window_header.set_title_rainbow(enabled, duration, palette=palette)
 
-        self._apply_runtime_theme_preferences_for_controller(
-            getattr(self, "_rainbow_runtime", None), preferences
-        )
+        self._apply_runtime_theme_preferences_for_controller(self._rainbow_runtime, preferences)
 
     def _build_theme_payload_from_manager(self) -> dict[str, Any]:
         if self._theme_manager is None:
@@ -706,15 +697,6 @@ class MainWindow(QMainWindow):
         parser = ThemeManager(self, emit_theme_changed=False)
         parser.load(payload, merge_with_default=False)
         return parser.current_theme_widgets()
-
-    def _rainbow_mode_enabled(self) -> bool:
-        return self._runtime_theme_preferences()[0]
-
-    def _rainbow_cycle_duration(self) -> int:
-        return self._runtime_theme_preferences()[1]
-
-    def _rainbow_palette(self) -> str:
-        return self._runtime_theme_preferences()[2]
 
     def _runtime_theme_preferences(self) -> tuple[bool, int, str]:
         if self._runtime_theme_preferences_cache is not None:

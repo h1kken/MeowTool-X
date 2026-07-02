@@ -70,8 +70,7 @@ class PageController:
         return self._pages.get(self._current_page)
 
     def on_change(self, callback: Callable[[str], None]) -> None:
-        if callable(callback):
-            self._change_callbacks.append(callback)
+        self._change_callbacks.append(callback)
 
     def preload(
         self,
@@ -105,7 +104,7 @@ class PageController:
                     QApplication.processEvents()
                     page.setVisible(False)
 
-                if callable(progress_callback):
+                if progress_callback is not None:
                     progress_callback(index, total, key)
         finally:
             if current_key is not None and current_key in self._pages:

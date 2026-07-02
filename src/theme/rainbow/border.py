@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QWidget
 
-from src.theme.colors import normalize_color_or_raw, to_qcolor
+from src.theme.colors import normalize_color, to_qcolor
 
 CSS_BLOCK_PATTERN = re.compile(r'([^{}]+)\{([^{}]*)\}', re.DOTALL)
 CSS_DECLARATION_PATTERN = re.compile(r'([a-zA-Z-]+)\s*:\s*([^;{}]+)')
@@ -364,4 +364,4 @@ def parse_measure_value(value: Any) -> float | None:
     except ValueError:
         return None
 def _format_qss_color(color: QColor) -> str:
-    return normalize_color_or_raw(color)
+    return normalize_color(color, fallback_raw=True)

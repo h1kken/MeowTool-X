@@ -1,21 +1,28 @@
 from dataclasses import dataclass
 
 from PySide6.QtCore import QEvent, QPoint, QRectF, Qt, QTimer
-from PySide6.QtGui import QColor, QPaintEvent, QPainter, QPainterPath, QPen, QResizeEvent
+from PySide6.QtGui import QColor, QPaintEvent, QPainter, QPen, QResizeEvent
 from PySide6.QtWidgets import QCheckBox, QSizePolicy, QWidget
 
 from src.theme.colors import to_qcolor
 from src.theme.gradients import (
     adjust_gradient_data,
     adjust_qcolor,
-    build_background_brush,
     clone_gradient_data,
     normalize_gradient_data,
 )
 from src.theme.rainbow.palette import sample_rainbow_color
 from src.theme.schema.access import coerce_positive_int, theme_map
+from src.ui.fonts import apply_font_antialiasing
 from src.ui.painting import new_widget_painter
 from src.ui.widgets.main.containers import MTWidget
+from src.ui.widgets.main.paint_primitives import (
+    parse_non_negative_float,
+    parse_pen_style,
+    resolve_fill_brush,
+    resolve_uniform_radius,
+    rounded_rect_path,
+)
 from src.ui.widgets.types import WidgetThemeMap
 
 
@@ -41,6 +48,9 @@ class _SwitchRainbowState:
 
 
 class MTSwitch(QCheckBox):
+    _track: MTWidget | None = None
+    _handle: MTWidget | None = None
+
     def __init__(
         self,
         text: str = '',
@@ -52,6 +62,7 @@ class MTSwitch(QCheckBox):
         obj_name: str = '',
     ) -> None:
         super().__init__(text, parent)
+        apply_font_antialiasing(self)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setContentsMargins(0, 0, 0, 0)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -146,11 +157,6 @@ class MTSwitch(QCheckBox):
         self.setFixedSize(*self._default_size)
         self._sync_visuals(animate=False)
 
-    def _set_color(self, attr_name: str, color_value: str) -> None:
-        color = to_qcolor(color_value)
-        if color is not None:
-            setattr(self, attr_name, color)
-
     def apply_theme(self, data: WidgetThemeMap) -> None:
         track_data = theme_map(data.get('track'))
         if track_data is not None:
@@ -160,17 +166,17 @@ class MTSwitch(QCheckBox):
             checked_background = theme_map(checked_data.get('background')) or {}
             unchecked_background = theme_map(unchecked_data.get('background')) or {}
             checked_color = checked_data.get('color')
-            if isinstance(checked_color, str):
-                self._set_color('_checked_color', checked_color)
+            if isinstance(checked_color, str) and (color := to_qcolor(checked_color)) is not None:
+                self._checked_color = color
             checked_bg_color = checked_background.get('color')
-            if isinstance(checked_bg_color, str):
-                self._set_color('_checked_color', checked_bg_color)
+            if isinstance(checked_bg_color, str) and (color := to_qcolor(checked_bg_color)) is not None:
+                self._checked_color = color
             unchecked_color = unchecked_data.get('color')
-            if isinstance(unchecked_color, str):
-                self._set_color('_unchecked_color', unchecked_color)
+            if isinstance(unchecked_color, str) and (color := to_qcolor(unchecked_color)) is not None:
+                self._unchecked_color = color
             unchecked_bg_color = unchecked_background.get('color')
-            if isinstance(unchecked_bg_color, str):
-                self._set_color('_unchecked_color', unchecked_bg_color)
+            if isinstance(unchecked_bg_color, str) and (color := to_qcolor(unchecked_bg_color)) is not None:
+                self._unchecked_color = color
             if 'gradient' in checked_background:
                 self._checked_background_gradient = theme_map(normalize_gradient_data(checked_background.get('gradient')))
             if 'gradient' in unchecked_background:
@@ -197,27 +203,53 @@ class MTSwitch(QCheckBox):
             checked_background = theme_map(checked_data.get('background')) or {}
             unchecked_background = theme_map(unchecked_data.get('background')) or {}
             handle_color = handle_data.get('color')
-            if isinstance(handle_color, str):
-                self._set_color('_handle_color', handle_color)
+            if isinstance(handle_color, str) and (color := to_qcolor(handle_color)) is not None:
+                self._handle_color = color
             handle_bg_color = handle_background.get('color')
-            if isinstance(handle_bg_color, str):
-                self._set_color('_handle_color', handle_bg_color)
-            self._checked_handle_color = self._state_color(checked_data, checked_background)
-            self._unchecked_handle_color = self._state_color(unchecked_data, unchecked_background)
+            if isinstance(handle_bg_color, str) and (color := to_qcolor(handle_bg_color)) is not None:
+                self._handle_color = color
+            self._checked_handle_color = next(
+                (
+                    color
+                        for raw in (checked_background.get('color'), checked_data.get('color'))
+                            if isinstance(raw, str) and (color := to_qcolor(raw)) is not None
+                ),
+                None,
+            )
+            self._unchecked_handle_color = next(
+                (
+                    color
+                        for raw in (unchecked_background.get('color'), unchecked_data.get('color'))
+                            if isinstance(raw, str) and (color := to_qcolor(raw)) is not None
+                ),
+                None,
+            )
             if 'gradient' in handle_background:
                 self._handle_background_gradient = theme_map(normalize_gradient_data(handle_background.get('gradient')))
-            if 'gradient' in checked_background:
-                self._checked_handle_background_gradient = theme_map(normalize_gradient_data(checked_background.get('gradient')))
-            if 'gradient' in unchecked_background:
-                self._unchecked_handle_background_gradient = theme_map(normalize_gradient_data(unchecked_background.get('gradient')))
             brightness = handle_background.get('brightness')
             if isinstance(brightness, (int, float)):
                 self._appearance.handle_background_brightness = max(0.0, min(float(brightness), 1.0))
             saturation = handle_background.get('saturation')
             if isinstance(saturation, (int, float)):
                 self._appearance.handle_background_saturation = max(0.0, min(float(saturation), 1.0))
-            self._apply_handle_state_adjustments(checked_background, checked=True)
-            self._apply_handle_state_adjustments(unchecked_background, checked=False)
+                
+            if 'gradient' in checked_background:
+                self._checked_handle_background_gradient = theme_map(normalize_gradient_data(checked_background.get('gradient')))
+            brightness = checked_background.get('brightness')
+            if isinstance(brightness, (int, float)):
+                self._appearance.checked_handle_background_brightness = max(0.0, min(float(brightness), 1.0))
+            saturation = checked_background.get('saturation')
+            if isinstance(saturation, (int, float)):
+                self._appearance.checked_handle_background_saturation = max(0.0, min(float(saturation), 1.0))
+                
+            if 'gradient' in unchecked_background:
+                self._unchecked_handle_background_gradient = theme_map(normalize_gradient_data(unchecked_background.get('gradient')))
+            brightness = unchecked_background.get('brightness')
+            if isinstance(brightness, (int, float)):
+                self._appearance.unchecked_handle_background_brightness = max(0.0, min(float(brightness), 1.0))
+            saturation = unchecked_background.get('saturation')
+            if isinstance(saturation, (int, float)):
+                self._appearance.unchecked_handle_background_saturation = max(0.0, min(float(saturation), 1.0))
 
         size_data = theme_map(data.get('size')) or {}
         width = coerce_positive_int(size_data.get('width', size_data.get('w')))
@@ -236,33 +268,6 @@ class MTSwitch(QCheckBox):
             self._margin = min(margin, limit)
 
         self._sync_visuals(animate=False)
-
-    def _state_color(self, state_data: WidgetThemeMap, background_data: WidgetThemeMap) -> QColor | None:
-        for raw in (background_data.get('color'), state_data.get('color')):
-            if isinstance(raw, str):
-                color = to_qcolor(raw)
-                if color is not None:
-                    return color
-        return None
-
-    def _apply_handle_state_adjustments(self, background_data: WidgetThemeMap, *, checked: bool) -> None:
-        brightness_attr = (
-            'checked_handle_background_brightness'
-            if checked else
-            'unchecked_handle_background_brightness'
-        )
-        saturation_attr = (
-            'checked_handle_background_saturation'
-            if checked else
-            'unchecked_handle_background_saturation'
-        )
-        brightness = background_data.get('brightness')
-        if isinstance(brightness, (int, float)):
-            setattr(self._appearance, brightness_attr, max(0.0, min(float(brightness), 1.0)))
-        saturation = background_data.get('saturation')
-        if isinstance(saturation, (int, float)):
-            setattr(self._appearance, saturation_attr, max(0.0, min(float(saturation), 1.0)))
-
     def setChecked(self, checked: bool) -> None:
         previous = self.isChecked()
         super().setChecked(bool(checked))
@@ -282,7 +287,7 @@ class MTSwitch(QCheckBox):
 
     def changeEvent(self, event: QEvent) -> None:
         super().changeEvent(event)
-        if not hasattr(self, '_track') or not hasattr(self, '_handle'):
+        if self._track is None or self._handle is None:
             return
         if self._syncing_visuals:
             return
@@ -330,17 +335,12 @@ class MTSwitch(QCheckBox):
     def _visual_checked(self) -> bool:
         return bool(self._visual_checked_state)
 
-    def _apply_fallback_colors(self) -> None:
-        self.update()
+    def _part_key(self, part: str) -> str | None:
+        part_key = str(part).strip()
+        return part_key if part_key in {'handle', 'track'} else None
 
-    def current_part_color(self, part: str) -> QColor | None:
-        key = str(part).strip()
-        if key == 'handle':
-            if isinstance(self._animated_handle_color, QColor) and self._animated_handle_color.isValid():
-                return QColor(self._animated_handle_color)
-            checked = self._visual_checked()
-            state_color = self._checked_handle_color if checked else self._unchecked_handle_color
-            color = state_color if isinstance(state_color, QColor) and state_color.isValid() else self._handle_color
+    def _part_adjustments(self, part: str, checked: bool) -> tuple[float, float]:
+        if part == 'handle':
             brightness = (
                 self._appearance.checked_handle_background_brightness
                 if checked else
@@ -351,76 +351,90 @@ class MTSwitch(QCheckBox):
                 if checked else
                 self._appearance.unchecked_handle_background_saturation
             )
-            return adjust_qcolor(
-                color,
-                brightness=self._appearance.handle_background_brightness if brightness is None else brightness,
-                saturation=self._appearance.handle_background_saturation if saturation is None else saturation,
+            return (
+                self._appearance.handle_background_brightness if brightness is None else float(brightness),
+                self._appearance.handle_background_saturation if saturation is None else float(saturation),
             )
-        if key == 'track':
-            checked = self._visual_checked()
-            color = self._checked_color if checked else self._unchecked_color
-            brightness = self._appearance.checked_background_brightness if checked else self._appearance.unchecked_background_brightness
-            saturation = self._appearance.checked_background_saturation if checked else self._appearance.unchecked_background_saturation
-            return adjust_qcolor(color, brightness=brightness, saturation=saturation)
-        return None
+        return (
+            self._appearance.checked_background_brightness
+            if checked else
+            self._appearance.unchecked_background_brightness,
+            self._appearance.checked_background_saturation
+            if checked else
+            self._appearance.unchecked_background_saturation,
+        )
 
-    def current_part_gradient(self, part: str) -> WidgetThemeMap | None:
-        key = str(part).strip()
-        if key == 'handle':
-            checked = self._visual_checked()
-            gradient = (
+    def _part_state_color(self, part: str, checked: bool) -> QColor | None:
+        if part == 'handle':
+            if isinstance(self._animated_handle_color, QColor) and self._animated_handle_color.isValid():
+                return QColor(self._animated_handle_color)
+            state_color = self._checked_handle_color if checked else self._unchecked_handle_color
+            if isinstance(state_color, QColor) and state_color.isValid():
+                return QColor(state_color)
+            return QColor(self._handle_color) if self._handle_color.isValid() else None
+        color = self._checked_color if checked else self._unchecked_color
+        return QColor(color) if color.isValid() else None
+
+    def _part_state_gradient(self, part: str, checked: bool) -> WidgetThemeMap | None:
+        if part == 'handle':
+            if isinstance(self._animated_handle_color, QColor) and self._animated_handle_color.isValid():
+                return None
+            return theme_map(
                 self._checked_handle_background_gradient
                 if checked else
                 self._unchecked_handle_background_gradient
-            )
-            if gradient is None:
-                gradient = self._handle_background_gradient
-            brightness = (
-                self._appearance.checked_handle_background_brightness
-                if checked else
-                self._appearance.unchecked_handle_background_brightness
-            )
-            saturation = (
-                self._appearance.checked_handle_background_saturation
-                if checked else
-                self._appearance.unchecked_handle_background_saturation
-            )
-            return adjust_gradient_data(
-                gradient,
-                brightness=self._appearance.handle_background_brightness if brightness is None else brightness,
-                saturation=self._appearance.handle_background_saturation if saturation is None else saturation,
-            )
-        if key == 'track':
-            checked = self._visual_checked()
-            gradient = self._checked_background_gradient if checked else self._unchecked_background_gradient
-            brightness = self._appearance.checked_background_brightness if checked else self._appearance.unchecked_background_brightness
-            saturation = self._appearance.checked_background_saturation if checked else self._appearance.unchecked_background_saturation
-            return adjust_gradient_data(gradient, brightness=brightness, saturation=saturation)
-        return None
+            ) or theme_map(self._handle_background_gradient)
+        return theme_map(
+            self._checked_background_gradient
+            if checked else
+            self._unchecked_background_gradient
+        )
+
+    def current_part_color(self, part: str) -> QColor | None:
+        part_key = self._part_key(part)
+        if part_key is None:
+            return None
+        checked = self._visual_checked()
+        color = self._part_state_color(part_key, checked)
+        if color is None:
+            return None
+        brightness, saturation = self._part_adjustments(part_key, checked)
+        return adjust_qcolor(color, brightness=brightness, saturation=saturation)
+
+    def current_part_gradient(self, part: str) -> WidgetThemeMap | None:
+        part_key = self._part_key(part)
+        if part_key is None:
+            return None
+        checked = self._visual_checked()
+        gradient = self._part_state_gradient(part_key, checked)
+        brightness, saturation = self._part_adjustments(part_key, checked)
+        return adjust_gradient_data(gradient, brightness=brightness, saturation=saturation)
 
     def set_part_color(self, part: str, value: object) -> bool:
         color = to_qcolor(value)
         if color is None:
             return False
 
-        key = str(part).strip()
-        if key == 'handle':
-            self._handle_color = QColor(color)
+        part_key = self._part_key(part)
+        if part_key is None:
+            return False
+
+        base_color = QColor(color)
+        if part_key == 'handle':
+            self._handle_color = QColor(base_color)
             self._checked_handle_color = None
             self._unchecked_handle_color = None
             self._handle_background_gradient = None
             self._checked_handle_background_gradient = None
             self._unchecked_handle_background_gradient = None
-            self._animated_handle_color = None
-        elif key == 'track':
-            self._checked_color = QColor(color)
-            self._unchecked_color = QColor(color)
+            self._animated_handle_color = QColor(base_color)
+        else:
+            self._checked_color = QColor(base_color)
+            self._unchecked_color = QColor(base_color)
             self._checked_background_gradient = None
             self._unchecked_background_gradient = None
-        else:
-            return False
 
-        self._apply_fallback_colors()
+        self.update()
         return True
 
     def set_part_gradient(self, part: str, value: object) -> bool:
@@ -428,19 +442,20 @@ class MTSwitch(QCheckBox):
         if gradient is None:
             return False
 
-        key = str(part).strip()
-        if key == 'handle':
+        part_key = self._part_key(part)
+        if part_key is None:
+            return False
+
+        if part_key == 'handle':
             self._handle_background_gradient = gradient
             self._checked_handle_background_gradient = None
             self._unchecked_handle_background_gradient = None
             self._animated_handle_color = None
-        elif key == 'track':
+        else:
             self._checked_background_gradient = clone_gradient_data(gradient)
             self._unchecked_background_gradient = clone_gradient_data(gradient)
-        else:
-            return False
 
-        self._apply_fallback_colors()
+        self.update()
         return True
 
     def set_part_style_value(self, part: str, path: tuple[str, ...], value: object) -> bool:
@@ -462,7 +477,6 @@ class MTSwitch(QCheckBox):
     def clear_handle_rainbow(self) -> None:
         self._rainbow.handle_phase = 0.0
         self._animated_handle_color = None
-        self._apply_fallback_colors()
         self.update()
 
     def set_handle_rainbow_saturation(self, value: float) -> None:
@@ -490,20 +504,25 @@ class MTSwitch(QCheckBox):
         return float(self._rainbow.handle_phase)
 
     def has_visible_parts_theme(self) -> bool:
-        return (
-            self._has_visible_color(self._checked_color)
-            or self._has_visible_color(self._unchecked_color)
-            or self._has_visible_color(self._handle_color)
-            or self._has_visible_color(self._checked_handle_color)
-            or self._has_visible_color(self._unchecked_handle_color)
-            or isinstance(self._checked_background_gradient, dict)
-            or isinstance(self._unchecked_background_gradient, dict)
-            or isinstance(self._handle_background_gradient, dict)
-            or isinstance(self._checked_handle_background_gradient, dict)
-            or isinstance(self._unchecked_handle_background_gradient, dict)
-            or bool(self._track_border_rule)
-            or bool(self._handle_border_rule)
-        )
+        for color in (
+            self._handle_color,
+            self._checked_handle_color,
+            self._unchecked_handle_color,
+            self._checked_color,
+            self._unchecked_color,
+        ):
+            if self._has_visible_color(color):
+                return True
+        for gradient in (
+            self._handle_background_gradient,
+            self._checked_handle_background_gradient,
+            self._unchecked_handle_background_gradient,
+            self._checked_background_gradient,
+            self._unchecked_background_gradient,
+        ):
+            if isinstance(gradient, dict):
+                return True
+        return bool(self._track_border_rule) or bool(self._handle_border_rule)
 
     def _has_visible_color(self, color: QColor | None) -> bool:
         return isinstance(color, QColor) and color.isValid() and color.alpha() > 0
@@ -530,11 +549,14 @@ class MTSwitch(QCheckBox):
     def _draw_part(self, painter: QPainter, rect: QRectF, part: str) -> None:
         if not rect.isValid() or rect.width() <= 0 or rect.height() <= 0:
             return
+        part_key = self._part_key(part)
+        if part_key is None:
+            return
 
         painter.save()
-        painter.setBrush(self._part_brush(part, rect))
+        painter.setBrush(self._part_brush(part_key, rect))
 
-        border_rule = self._track_border_rule if part == 'track' else self._handle_border_rule
+        border_rule = self._handle_border_rule if part_key == 'handle' else self._track_border_rule
         border_width, border_style, border_color = self._parse_border_rule(border_rule)
         if border_width > 0.0 and border_style != Qt.PenStyle.NoPen and border_color.isValid():
             pen = QPen(border_color, border_width)
@@ -547,22 +569,17 @@ class MTSwitch(QCheckBox):
             painter.setPen(Qt.PenStyle.NoPen)
             inset = 0.0
 
-        radius_value = self._track_radius if part == 'track' else self._handle_radius
+        radius_value = self._handle_radius if part_key == 'handle' else self._track_radius
         draw_rect = rect.adjusted(inset, inset, -inset, -inset)
-        painter.drawPath(self._rounded_path(draw_rect, self._resolve_radius_float(draw_rect, radius_value)))
+        painter.drawPath(rounded_rect_path(draw_rect, resolve_uniform_radius(draw_rect, radius_value)))
         painter.restore()
 
     def _part_brush(self, part: str, rect: QRectF) -> QColor | Qt.BrushStyle | object:
-        gradient = self.current_part_gradient(part)
-        if gradient is not None:
-            brush = build_background_brush(rect, {'gradient': gradient})
-            if brush is not None:
-                return brush
-
-        color = self.current_part_color(part)
-        if isinstance(color, QColor) and color.isValid():
-            return color
-        return Qt.BrushStyle.NoBrush
+        return resolve_fill_brush(
+            rect,
+            color=self.current_part_color(part),
+            gradient=self.current_part_gradient(part),
+        )
 
     def _parse_border_rule(self, rule: str) -> tuple[float, Qt.PenStyle, QColor]:
         text = str(rule or '').strip()
@@ -574,60 +591,10 @@ class MTSwitch(QCheckBox):
         if len(parts) < 3:
             return 0.0, Qt.PenStyle.NoPen, QColor()
 
-        width = self._parse_float_px(parts[0])
-        style = self._pen_style(parts[1])
+        width = parse_non_negative_float(parts[0])
+        style = parse_pen_style(parts[1])
         color = to_qcolor(' '.join(parts[2:]))
         return width, style, color if color is not None else QColor()
-
-    def _parse_float_px(self, value: object) -> float:
-        if isinstance(value, (int, float)):
-            return max(0.0, float(value))
-        text = str(value or '').strip().lower()
-        if text.endswith('px'):
-            text = text[:-2].strip()
-        try:
-            return max(0.0, float(text))
-        except ValueError:
-            return 0.0
-
-    def _pen_style(self, value: object) -> Qt.PenStyle:
-        text = str(value).strip().lower()
-        match text:
-            case 'none':
-                return Qt.PenStyle.NoPen
-            case 'dash' | 'dashed':
-                return Qt.PenStyle.DashLine
-            case 'dot' | 'dotted':
-                return Qt.PenStyle.DotLine
-            case 'dashdot':
-                return Qt.PenStyle.DashDotLine
-            case 'dashdotdot':
-                return Qt.PenStyle.DashDotDotLine
-            case _:
-                return Qt.PenStyle.SolidLine
-
-    def _resolve_radius_float(self, rect: QRectF, value: str) -> float:
-        text = str(value or '').strip().lower()
-        max_radius = max(0.0, min(rect.width(), rect.height()) / 2.0)
-        if not text:
-            return 0.0
-        if text.endswith('%'):
-            try:
-                return max(0.0, min(max_radius, (min(rect.width(), rect.height()) * float(text[:-1].strip())) / 100.0))
-            except ValueError:
-                return 0.0
-        if text.endswith('px'):
-            text = text[:-2].strip()
-        try:
-            return max(0.0, min(max_radius, float(text)))
-        except ValueError:
-            return 0.0
-
-    def _rounded_path(self, rect: QRectF, radius: float) -> QPainterPath:
-        path = QPainterPath()
-        if rect.isValid() and rect.width() > 0 and rect.height() > 0:
-            path.addRoundedRect(rect, radius, radius)
-        return path
 
     def _part_frame_rules(self, data: WidgetThemeMap) -> tuple[str, str]:
         border = theme_map(data.get('border')) or {}
@@ -644,9 +611,14 @@ class MTSwitch(QCheckBox):
         if self._checked_state_cache is checked:
             return
 
+        track = self._track
+        handle = self._handle
+        if track is None or handle is None:
+            return
+
         self._checked_state_cache = checked
         checked_value = 'true' if checked else 'false'
-        for widget in (self, self._track, self._handle):
+        for widget in (self, track, handle):
             widget.setProperty('checked', checked_value)
             if widget.property('unchecked') is not None:
                 widget.setProperty('unchecked', None)

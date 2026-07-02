@@ -5,24 +5,28 @@ import re
 from copy import deepcopy
 from dataclasses import replace
 from time import monotonic
-from typing import Any, Callable, cast
+from typing import Any, cast
 
 from PySide6.QtCore import (
     QAbstractAnimation,
     QEvent,
     QObject,
     QParallelAnimationGroup,
-    QRect,
     Qt,
     QTimer,
 )
 from PySide6.QtGui import QColor, QCursor, QMouseEvent, QPalette, QWheelEvent
-from PySide6.QtWidgets import QApplication, QAbstractSlider, QLayout, QSlider, QWidget
+from PySide6.QtWidgets import QApplication, QAbstractButton, QAbstractScrollArea, QAbstractSlider, QLayout, QSlider, QWidget
 
 from src.theme.colors import normalize_color, to_qcolor
 from src.theme.constants import EVENT_ACTIONS
 from src.theme.qss.targets import resolve_target_widgets
 from src.theme.schema.access import coerce_float, object_map, theme_map
+from src.ui.widgets.main.box import BoxThemeMixin
+from src.ui.widgets.main.checkables import MTSwitch
+from src.ui.widgets.main.containers import MTComboBox
+from src.ui.widgets.main.inputs import MTSlider
+from src.ui.widgets.settings.containers import MTCollapsibleContainer
 
 from .helpers import (
     clone_gradient,
@@ -57,10 +61,6 @@ def _widget_or_none(value: QObject | QWidget) -> QWidget | None:
 
 def _slider_or_none(value: object) -> QAbstractSlider | None:
     return value if isinstance(value, QAbstractSlider) else None
-
-
-def _rect_or_none(value: object) -> QRect | None:
-    return value if isinstance(value, QRect) else None
 
 class AnimationManager(QObject):
     def __init__(self, root: QWidget):
@@ -303,37 +303,33 @@ class AnimationManager(QObject):
         shared_rainbow_widgets = set(self._shared_rainbow_bindings)
 
         for widget, slot in self._tab_toggle_slots.items():
-            toggled = getattr(widget, 'toggled', None)
-            if toggled is None:
+            if not isinstance(widget, QAbstractButton):
                 continue
             try:
-                toggled.disconnect(slot)
+                widget.toggled.disconnect(slot)
             except (RuntimeError, TypeError):
                 pass
 
         for widget, slot in self._toggle_action_slots.items():
-            toggled = getattr(widget, 'toggled', None)
-            if toggled is None:
+            if not isinstance(widget, QAbstractButton):
                 continue
             try:
-                toggled.disconnect(slot)
+                widget.toggled.disconnect(slot)
             except (RuntimeError, TypeError):
                 pass
 
         for widget, slots in self._popup_action_slots.items():
-            opened = getattr(widget, 'popupOpened', None)
-            closed = getattr(widget, 'popupClosed', None)
+            if not isinstance(widget, MTComboBox):
+                continue
             open_slot, close_slot = slots
-            if opened is not None:
-                try:
-                    opened.disconnect(open_slot)
-                except (RuntimeError, TypeError):
-                    pass
-            if closed is not None:
-                try:
-                    closed.disconnect(close_slot)
-                except (RuntimeError, TypeError):
-                    pass
+            try:
+                widget.popupOpened.disconnect(open_slot)
+            except (RuntimeError, TypeError):
+                pass
+            try:
+                widget.popupClosed.disconnect(close_slot)
+            except (RuntimeError, TypeError):
+                pass
 
         for widget, groups in self._animations.items():
             for group in groups.values():
@@ -396,18 +392,18 @@ class AnimationManager(QObject):
         self._runtime_rainbow_duration_ms = duration
 
         for widget in resolve_target_widgets(self._root, 'MTSwitch', include_window=True):
+            if not isinstance(widget, MTSwitch):
+                continue
             if widget.property('rainbowBorderExcluded') is True:
                 continue
             if widget.property('rainbowBorderTarget') is False:
                 continue
-            has_visible_parts_theme = getattr(widget, 'has_visible_parts_theme', None)
-            if callable(has_visible_parts_theme) and not has_visible_parts_theme():
+            if not widget.has_visible_parts_theme():
                 self._reset_widget_animation_state(widget, had_shared_rainbow=True)
                 continue
             self._ensure_runtime_widget_filter(widget)
             self._runtime_rainbow_widgets.add(widget)
-            is_checked = getattr(widget, 'isChecked', None)
-            if callable(is_checked) and bool(is_checked()):
+            if widget.isChecked():
                 self._set_shared_rainbow_active(widget, duration, 0.0, True)
             else:
                 self._reset_widget_animation_state(widget, had_shared_rainbow=True)
@@ -571,28 +567,19 @@ class AnimationManager(QObject):
         if not had_shared_rainbow and not {'parts.handle.rainbow', 'parts.sub_page.rainbow'} & set(cache):
             return
 
-        clearer = getattr(widget, 'clear_slider_line_rainbow', None)
-        if not callable(clearer):
-            clearer = getattr(widget, 'clear_handle_rainbow', None)
-        if callable(clearer):
+        if isinstance(widget, MTSlider):
             try:
-                clearer()
+                widget.clear_slider_line_rainbow()
                 widget.update()
             except RuntimeError:
                 return
             return
-
-        setter = getattr(widget, 'set_slider_line_rainbow', None)
-        if not callable(setter):
-            setter = getattr(widget, 'set_handle_rainbow', None)
-        if not callable(setter):
-            return
-
-        try:
-            setter(0.0)
-            widget.update()
-        except RuntimeError:
-            return
+        if isinstance(widget, MTSwitch):
+            try:
+                widget.clear_handle_rainbow()
+                widget.update()
+            except RuntimeError:
+                return
 
     def _register_widget(self, widget: QWidget) -> None:
         self._animations.setdefault(widget, {})
@@ -617,48 +604,37 @@ class AnimationManager(QObject):
             self._locked_tabs.add(widget)
 
     def _viewport_for_widget(self, widget: QWidget) -> QWidget | None:
-        viewport_getter = getattr(widget, 'viewport', None)
-        if not callable(viewport_getter):
+        if not isinstance(widget, QAbstractScrollArea):
             return None
         try:
-            viewport = viewport_getter()
+            return widget.viewport()
         except RuntimeError:
             return None
-        return viewport if isinstance(viewport, QWidget) else None
 
     def _bind_tab_toggle(self, widget: QWidget) -> None:
-        if not bool(widget.property('pageTab')):
+        if not bool(widget.property('pageTab')) or not isinstance(widget, QAbstractButton):
             return
-
-        toggled = getattr(widget, 'toggled', None)
-        if toggled is None or widget in self._tab_toggle_slots:
+        if widget in self._tab_toggle_slots:
             return
 
         def slot(checked: object) -> None:
             self._on_tab_toggled(widget, bool(checked))
         self._tab_toggle_slots[widget] = slot
-        toggled.connect(slot)
+        widget.toggled.connect(slot)
 
     def _bind_toggle_action(self, widget: QWidget) -> None:
-        if bool(widget.property('pageTab')):
+        if bool(widget.property('pageTab')) or not isinstance(widget, QAbstractButton):
             return
-
-        toggled = getattr(widget, 'toggled', None)
-        is_checkable = getattr(widget, 'isCheckable', None)
-        if toggled is None or not callable(is_checkable):
-            return
-        if not bool(is_checkable()) or widget in self._toggle_action_slots:
+        if not widget.isCheckable() or widget in self._toggle_action_slots:
             return
 
         def slot(checked: object) -> None:
             self._on_widget_toggled(widget, bool(checked))
         self._toggle_action_slots[widget] = slot
-        toggled.connect(slot)
+        widget.toggled.connect(slot)
 
     def _bind_popup_actions(self, widget: QWidget) -> None:
-        opened = getattr(widget, 'popupOpened', None)
-        closed = getattr(widget, 'popupClosed', None)
-        if opened is None or closed is None or widget in self._popup_action_slots:
+        if not isinstance(widget, MTComboBox) or widget in self._popup_action_slots:
             return
 
         def open_slot() -> None:
@@ -667,8 +643,8 @@ class AnimationManager(QObject):
         def close_slot() -> None:
             self._play(widget, 'close')
         self._popup_action_slots[widget] = (open_slot, close_slot)
-        opened.connect(open_slot)
-        closed.connect(close_slot)
+        widget.popupOpened.connect(open_slot)
+        widget.popupClosed.connect(close_slot)
 
     def _on_widget_toggled(self, widget: QWidget, checked: bool) -> None:
         self._play_checkable_state(widget, force=True)
@@ -697,14 +673,9 @@ class AnimationManager(QObject):
         self._apply_widget_style(widget)
 
     def _is_locked_tab(self, widget: QWidget) -> bool:
-        if not bool(widget.property('pageTab')):
+        if not bool(widget.property('pageTab')) or not isinstance(widget, QAbstractButton):
             return False
-
-        is_checkable = getattr(widget, 'isCheckable', None)
-        is_checked = getattr(widget, 'isChecked', None)
-        if callable(is_checkable) and callable(is_checked):
-            return bool(is_checkable() and is_checked())
-        return False
+        return bool(widget.isCheckable() and widget.isChecked())
 
     def _sync_initial_state_actions(self, widget: QWidget) -> None:
         groups = self._animations.get(widget)
@@ -718,11 +689,9 @@ class AnimationManager(QObject):
         if widget.isEnabled() and 'enabled' in groups:
             self._apply_action_final_state(widget, 'enabled')
 
-        is_checkable = getattr(widget, 'isCheckable', None)
-        is_checked = getattr(widget, 'isChecked', None)
-        if not callable(is_checkable) or not callable(is_checked):
+        if not isinstance(widget, QAbstractButton):
             return
-        if not bool(is_checkable()):
+        if not widget.isCheckable():
             return
 
         action = self._resolve_checkable_state_action(widget, groups)
@@ -866,15 +835,13 @@ class AnimationManager(QObject):
         return color
 
     def _set_shared_widget_rainbow_phase(self, widget: QWidget, phase: float) -> None:
-        slider_setter = getattr(widget, 'set_slider_line_rainbow', None)
-        if callable(slider_setter):
-            slider_setter(float(phase))
+        if isinstance(widget, MTSlider):
+            widget.set_slider_line_rainbow(float(phase))
             self._cache.setdefault(widget, {})['parts.sub_page.rainbow'] = float(phase)
             return
 
-        handle_setter = getattr(widget, 'set_handle_rainbow', None)
-        if callable(handle_setter):
-            handle_setter(float(phase))
+        if isinstance(widget, MTSwitch):
+            widget.set_handle_rainbow(float(phase))
             self._cache.setdefault(widget, {})['parts.handle.rainbow'] = float(phase)
 
     def _update_shared_rainbow_widgets(self) -> None:
@@ -1351,9 +1318,8 @@ class AnimationManager(QObject):
             if not isinstance(start_grad, dict) and spec.property_key.startswith('parts.'):
                 tokens = spec.property_key.split('.')
                 if len(tokens) == 4 and tokens[2] == 'background' and tokens[3] == 'gradient':
-                    getter = getattr(widget, 'current_part_gradient', None)
-                    if callable(getter):
-                        start_grad = theme_map(getter(tokens[1]))
+                    if isinstance(widget, (MTSlider, MTSwitch, MTComboBox)):
+                        start_grad = theme_map(widget.current_part_gradient(tokens[1]))
             start_grad_map = theme_map(cast(object, start_grad))
             if start_grad_map is None:
                 end_map = theme_map(spec.end)
@@ -1383,8 +1349,9 @@ class AnimationManager(QObject):
         tokens = spec.property_key.split('.')
         if len(tokens) != 4 or tokens[2] != 'background' or tokens[3] != 'gradient':
             return False
-        setter = getattr(widget, 'set_part_gradient', None)
-        return bool(callable(setter) and setter(tokens[1], gradient))
+        if isinstance(widget, (MTSlider, MTSwitch, MTComboBox)):
+            return bool(widget.set_part_gradient(tokens[1], gradient))
+        return False
 
     def _append_number_animation(
         self,
@@ -1669,7 +1636,10 @@ class AnimationManager(QObject):
                 running_group.state() == QAbstractAnimation.State.Running
                 for group_name, running_group in groups.items()
             )
-            if not has_running_conflict and self._action_final_state_matches(widget, action):
+            specs = self._action_specs.get(widget, {}).get(action, [])
+            if not has_running_conflict and specs and all(
+                self._spec_final_state_matches(widget, spec) for spec in specs
+            ):
                 return
 
         self._activate_action_properties(widget, action)
@@ -1706,14 +1676,12 @@ class AnimationManager(QObject):
         return True
 
     def _resolve_checkable_state_action(self, widget: QWidget, groups: dict[str, QParallelAnimationGroup]) -> str | None:
-        is_checkable = getattr(widget, 'isCheckable', None)
-        is_checked = getattr(widget, 'isChecked', None)
-        if not callable(is_checkable) or not callable(is_checked):
+        if not isinstance(widget, QAbstractButton):
             return None
-        if not bool(is_checkable()):
+        if not widget.isCheckable():
             return None
 
-        if bool(is_checked()) and 'checked' in groups:
+        if widget.isChecked() and 'checked' in groups:
             return 'checked'
 
         if widget in self._hovered_widgets and 'hover' in groups:
@@ -1819,10 +1787,9 @@ class AnimationManager(QObject):
     def _normalize_number_target(self, widget: QWidget, property_key: str, value: float) -> float:
         if property_key.startswith('parts.'):
             tokens = property_key.split('.')
-            normalizer = getattr(widget, 'normalize_part_metric', None)
-            if callable(normalizer) and len(tokens) >= 3:
+            if isinstance(widget, MTCollapsibleContainer) and len(tokens) >= 3:
                 try:
-                    normalized = normalizer(tokens[1], tuple(tokens[2:]), float(value))
+                    normalized = widget.normalize_part_metric(tokens[1], tuple(tokens[2:]), float(value))
                 except (RuntimeError, TypeError, ValueError):
                     return float(value)
                 return coerce_float(normalized, float(value)) or float(value)
@@ -1834,11 +1801,10 @@ class AnimationManager(QObject):
         tokens = property_key.split('.')
         if len(tokens) < 3:
             return
-        handler = getattr(widget, 'handle_part_animation_state', None)
-        if not callable(handler):
+        if not isinstance(widget, MTCollapsibleContainer):
             return
         try:
-            handler(tokens[1], tuple(tokens[2:]), bool(active))
+            widget.handle_part_animation_state(tokens[1], tuple(tokens[2:]), bool(active))
         except RuntimeError:
             return
 
@@ -1846,8 +1812,7 @@ class AnimationManager(QObject):
         if widget in self._pending_checkable_reconcile_widgets:
             return
 
-        is_checkable = getattr(widget, 'isCheckable', None)
-        if not callable(is_checkable) or not bool(is_checkable()):
+        if not isinstance(widget, QAbstractButton) or not widget.isCheckable():
             return
         if widget not in self._animations:
             return
@@ -1962,7 +1927,8 @@ class AnimationManager(QObject):
                 return
             if self._has_running_equivalent_action(widget, action, groups):
                 return
-            if self._action_final_state_matches(widget, action):
+            specs = self._action_specs.get(widget, {}).get(action, [])
+            if specs and all(self._spec_final_state_matches(widget, spec) for spec in specs):
                 return
             if group is not None:
                 self._start_action_group(widget, action, group, groups, force=True)
@@ -2015,35 +1981,26 @@ class AnimationManager(QObject):
 
         self._activate_action_properties(widget, action)
         for spec in specs:
-            self._apply_spec_final_state(widget, spec, action)
-
-    def _apply_spec_final_state(self, widget: QWidget, spec: AnimationSpec, action: str) -> None:
-        match spec.kind:
-            case 'color':
-                self._apply_color_final_state(widget, spec, action)
-            case 'gradient':
-                self._apply_gradient_final_state(widget, spec, action)
-            case 'number':
-                self._apply_number_final_state(widget, spec)
-            case _:
-                return
-
-    def _apply_color_final_state(self, widget: QWidget, spec: AnimationSpec, action: str) -> None:
-        value = normalize_color(spec.end) or QColor(spec.end).name()
-        self._set_style_value(widget, spec.css_property, value, source_action=action)
-        self._cache.setdefault(widget, {})[spec.property_key] = QColor(spec.end)
-
-    def _apply_gradient_final_state(self, widget: QWidget, spec: AnimationSpec, action: str) -> None:
-        end_map = theme_map(spec.end)
-        if end_map is None:
-            return
-
-        if self._apply_part_gradient_final_state(widget, spec.property_key, end_map):
-            self._cache.setdefault(widget, {})[spec.property_key] = clone_gradient(end_map)
-            return
-
-        self._set_style_value(widget, spec.css_property, gradient_to_qss(end_map), source_action=action)
-        self._cache.setdefault(widget, {})[spec.property_key] = clone_gradient(end_map)
+            match spec.kind:
+                case 'color':
+                    value = normalize_color(spec.end) or QColor(spec.end).name()
+                    self._set_style_value(widget, spec.css_property, value, source_action=action)
+                    self._cache.setdefault(widget, {})[spec.property_key] = QColor(spec.end)
+                case 'gradient':
+                    end_map = theme_map(spec.end)
+                    if end_map is None:
+                        continue
+                    if self._apply_part_gradient_final_state(widget, spec.property_key, end_map):
+                        self._cache.setdefault(widget, {})[spec.property_key] = clone_gradient(end_map)
+                        continue
+                    self._set_style_value(widget, spec.css_property, gradient_to_qss(end_map), source_action=action)
+                    self._cache.setdefault(widget, {})[spec.property_key] = clone_gradient(end_map)
+                case 'number':
+                    target_value = self._normalize_number_target(widget, spec.property_key, float(spec.end))
+                    self._set_number_property(widget, spec.property_key, target_value)
+                    self._cache.setdefault(widget, {})[spec.property_key] = float(target_value)
+                case _:
+                    continue
 
     def _apply_part_gradient_final_state(self, widget: QWidget, property_key: str, gradient: dict[str, Any]) -> bool:
         if not property_key.startswith('parts.'):
@@ -2051,20 +2008,9 @@ class AnimationManager(QObject):
         tokens = property_key.split('.')
         if len(tokens) != 4 or tokens[2] != 'background' or tokens[3] != 'gradient':
             return False
-        setter = getattr(widget, 'set_part_gradient', None)
-        return bool(callable(setter) and setter(tokens[1], gradient))
-
-    def _apply_number_final_state(self, widget: QWidget, spec: AnimationSpec) -> None:
-        target_value = self._normalize_number_target(widget, spec.property_key, float(spec.end))
-        self._set_number_property(widget, spec.property_key, target_value)
-        self._cache.setdefault(widget, {})[spec.property_key] = float(target_value)
-
-    def _action_final_state_matches(self, widget: QWidget, action: str) -> bool:
-        specs = self._action_specs.get(widget, {}).get(action, [])
-        if not specs:
-            return False
-
-        return all(self._spec_final_state_matches(widget, spec) for spec in specs)
+        if isinstance(widget, (MTSlider, MTSwitch, MTComboBox)):
+            return bool(widget.set_part_gradient(tokens[1], gradient))
+        return False
 
     def _spec_final_state_matches(self, widget: QWidget, spec: AnimationSpec) -> bool:
         match spec.kind:
@@ -2159,49 +2105,55 @@ class AnimationManager(QObject):
         return changed
 
     def _set_box_style_value(self, widget: QWidget, css_property: str, value: str) -> bool:
-        if not isinstance(getattr(widget, '_box_theme', None), dict):
+        if not isinstance(widget, BoxThemeMixin) or not isinstance(widget.box_theme_state(), dict):
             return False
 
         if css_property in {'background', 'background-color'}:
-            setter = getattr(widget, 'set_box_background_color', None)
-            return bool(setter(value)) if callable(setter) else False
+            return bool(widget.set_box_background_color(value))
 
         if css_property == 'border-color':
-            setter = getattr(widget, 'set_box_border_color', None)
-            return bool(setter(value)) if callable(setter) else False
+            return bool(widget.set_box_border_color(value))
 
         if css_property == 'border-width':
-            setter = getattr(widget, 'set_box_border', None)
-            return bool(setter(width=value)) if callable(setter) else False
+            return bool(widget.set_box_border(width=value))
 
         if css_property == 'border-radius':
-            setter = getattr(widget, 'set_box_border', None)
-            return bool(setter(radius=value)) if callable(setter) else False
+            return bool(widget.set_box_border(radius=value))
 
         return False
 
     def _set_text_style_value(self, widget: QWidget, css_property: str, value: str) -> bool:
-        if css_property == 'text.border-color':
-            setter = getattr(widget, 'set_text_border_color', None)
-            return bool(setter(value)) if callable(setter) else False
-
-        if css_property == 'text.border-width':
-            setter = getattr(widget, 'set_text_border_width', None)
-            return bool(setter(value)) if callable(setter) else False
-
+        _ = (widget, css_property, value)
         return False
 
     def _set_parts_style_value(self, widget: QWidget, css_property: str, value: str) -> bool:
         if self._is_runtime_handle_rainbow_active(widget, css_property):
             return True
 
-        parts = css_property.split('.', 2)
-        if len(parts) == 3 and parts[0] == 'parts':
-            _, part, css_name = parts
+        direct_setter = widget.set_part_style_value if isinstance(widget, (MTSlider, MTSwitch, MTComboBox)) else None
+
+        direct_parts = css_property.split('.', 2)
+        if len(direct_parts) == 3 and direct_parts[0] == 'parts' and direct_setter is not None:
+            _, part, css_name = direct_parts
             if css_name.startswith('states.'):
-                return self._set_nested_part_style_value(widget, part, css_name, value)
-            if css_name in {'color', 'background-color', 'border-color'}:
-                if self._set_part_color(widget, part, css_name, value):
+                chunks = css_name.split('.')
+                if len(chunks) == 3 and chunks[0] == 'states':
+                    prefix = ('states', chunks[1])
+                    nested_path = {
+                        'background-color': (*prefix, 'background', 'color'),
+                        'background': (*prefix, 'background', 'gradient'),
+                        'color': (*prefix, 'text', 'color'),
+                        'border-color': (*prefix, 'border', 'color'),
+                    }.get(chunks[2])
+                    if nested_path is not None:
+                        return bool(direct_setter(part, nested_path, value))
+            elif css_name in {'color', 'background-color', 'border-color'}:
+                color_path = {
+                    'color': ('color',),
+                    'background-color': ('background', 'color'),
+                    'border-color': ('border', 'color'),
+                }.get(css_name)
+                if color_path is not None and direct_setter(part, color_path, value):
                     return True
 
         mapped = self._map_parts_css_property(widget, css_property)
@@ -2209,53 +2161,30 @@ class AnimationManager(QObject):
             self._set_slider_style_value(widget, mapped, value)
             return True
 
-        parts = mapped.split('.', 2)
-        if len(parts) != 3:
+        mapped_parts = mapped.split('.', 2)
+        if len(mapped_parts) != 3 or direct_setter is None:
             return False
 
-        _, part, css_name = parts
+        _, part, css_name = mapped_parts
         if css_name.startswith('states.'):
-            return self._set_nested_part_style_value(widget, part, css_name, value)
+            chunks = css_name.split('.')
+            if len(chunks) != 3 or chunks[0] != 'states':
+                return False
+            prefix = ('states', chunks[1])
+            nested_path = {
+                'background-color': (*prefix, 'background', 'color'),
+                'background': (*prefix, 'background', 'gradient'),
+                'color': (*prefix, 'text', 'color'),
+                'border-color': (*prefix, 'border', 'color'),
+            }.get(chunks[2])
+            return bool(nested_path and direct_setter(part, nested_path, value))
         if css_name in {'color', 'background-color', 'border-color'}:
-            return self._set_part_color(widget, part, css_name, value)
-        return False
-
-    def _set_nested_part_style_value(self, widget: QWidget, part: str, css_name: str, value: str) -> bool:
-        setter = getattr(widget, 'set_part_style_value', None)
-        if not callable(setter):
-            return False
-
-        path = self._nested_part_style_path(css_name)
-        return bool(path and setter(part, path, value))
-
-    def _nested_part_style_path(self, css_name: str) -> tuple[str, ...] | None:
-        chunks = css_name.split('.')
-        if len(chunks) != 3 or chunks[0] != 'states':
-            return None
-
-        prefix = ('states', chunks[1])
-        match chunks[2]:
-            case 'background-color':
-                return (*prefix, 'background', 'color')
-            case 'background':
-                return (*prefix, 'background', 'gradient')
-            case 'color':
-                return (*prefix, 'text', 'color')
-            case 'border-color':
-                return (*prefix, 'border', 'color')
-            case _:
-                return None
-
-    def _set_part_color(self, widget: QWidget, part: str, css_name: str, value: str) -> bool:
-        setter = getattr(widget, 'set_part_style_value', None)
-        if not callable(setter):
-            return False
-        if css_name == 'color':
-            return bool(setter(part, ('color',), value))
-        if css_name == 'background-color':
-            return bool(setter(part, ('background', 'color'), value))
-        if css_name == 'border-color':
-            return bool(setter(part, ('border', 'color'), value))
+            color_path = {
+                'color': ('color',),
+                'background-color': ('background', 'color'),
+                'border-color': ('border', 'color'),
+            }.get(css_name)
+            return bool(color_path and direct_setter(part, color_path, value))
         return False
 
     def _is_runtime_handle_rainbow_active(self, widget: QWidget, css_property: str) -> bool:
@@ -2266,12 +2195,11 @@ class AnimationManager(QObject):
         if css_name not in {'color', 'background-color'}:
             return False
 
-        getter = getattr(widget, 'current_handle_rainbow', None)
-        if not callable(getter):
+        if not isinstance(widget, MTSwitch):
             return False
 
         try:
-            value = getter()
+            value = widget.current_handle_rainbow()
         except RuntimeError:
             return False
         return (coerce_float(value, 0.0) or 0.0) > 0.0
@@ -2429,9 +2357,24 @@ class AnimationManager(QObject):
         return QColor(fallback)
 
     def _sample_override_color(self, widget: QWidget, css_property: str) -> QColor | None:
-        box_color = self._sample_box_theme_color(widget, css_property)
-        if isinstance(box_color, QColor):
-            return box_color
+        state = None
+        if isinstance(widget, BoxThemeMixin):
+            try:
+                state = widget.box_theme_state()
+            except RuntimeError:
+                state = None
+        state_map = theme_map(state)
+        if state_map is not None:
+            if css_property in {'background', 'background-color'}:
+                background = theme_map(state_map.get('background')) or {}
+                color = background.get('color')
+                if isinstance(color, QColor) and color.isValid():
+                    return color
+            elif css_property == 'border-color':
+                border = theme_map(state_map.get('border')) or {}
+                color = border.get('color')
+                if isinstance(color, QColor) and color.isValid():
+                    return color
 
         if css_property.startswith('parts.'):
             mapped = self._map_parts_css_property(widget, css_property)
@@ -2442,12 +2385,12 @@ class AnimationManager(QObject):
                 if len(parts) == 3:
                     _, part, css_name = parts
                     if css_name in {'color', 'background-color', 'border-color'} or css_name.startswith('states.'):
-                        getter = getattr(widget, 'current_part_color', None)
-                        if callable(getter):
-                            try:
-                                color = getter(part, css_name)
-                            except TypeError:
-                                color = getter(part)
+                        if isinstance(widget, MTComboBox):
+                            color = widget.current_part_color(part, css_name)
+                            if color.isValid():
+                                return color
+                        elif isinstance(widget, (MTSlider, MTSwitch)):
+                            color = widget.current_part_color(part)
                             if isinstance(color, QColor) and color.isValid():
                                 return color
                 return None
@@ -2459,121 +2402,68 @@ class AnimationManager(QObject):
             raw = self._slider_style_overrides.get(widget, {}).get(part, {}).get(css_name)
         else:
             raw = self._style_overrides.get(widget, {}).get(css_property)
-        return self._qcolor_from_raw(raw)
-
-    def _sample_box_theme_color(self, widget: QWidget, css_property: str) -> QColor | None:
-        state = None
-        box_theme_state = getattr(widget, 'box_theme_state', None)
-        if callable(box_theme_state):
-            try:
-                state = box_theme_state()
-            except RuntimeError:
-                state = None
-        state_map = theme_map(state)
-        if state_map is None:
-            return None
-
-        match css_property:
-            case 'background' | 'background-color':
-                background = theme_map(state_map.get('background')) or {}
-                color = background.get('color')
-            case 'border-color':
-                border = theme_map(state_map.get('border')) or {}
-                color = border.get('color')
-            case _:
-                return None
-
-        return QColor(color) if isinstance(color, QColor) and color.isValid() else None
+        return to_qcolor(raw) if isinstance(raw, str) else None
 
     def _sample_style_color(self, styles: dict[str, Any], property_key: str) -> QColor | None:
-        raw = self._style_color_value(styles, property_key)
-        return self._qcolor_from_raw(raw)
-
-    def _qcolor_from_raw(self, raw: object) -> QColor | None:
-        if not isinstance(raw, str):
-            return None
-        return to_qcolor(raw)
-
-    def _style_color_value(self, styles: dict[str, Any], property_key: str) -> Any:
-        if property_key.startswith('parts.'):
-            return self._get_parts_style_color(styles, property_key)
+        raw: Any = None
         if property_key.startswith('slider.'):
-            return self._get_slider_color_value(styles, property_key)
-        return self._get_base_style_color(styles, property_key)
-
-    def _get_base_style_color(self, styles: dict[str, Any], property_key: str) -> Any:
-        match property_key:
-            case 'background.color':
-                background = theme_map(styles.get('background'))
-                return None if background is None else background.get('color')
-            case 'color':
-                text = theme_map(styles.get('text'))
-                return None if text is None else text.get('color')
-            case 'text.border.color':
-                text = theme_map(styles.get('text'))
-                if text is None:
-                    return None
-                border = theme_map(text.get('border')) or {}
-                return border.get('color')
-            case 'border.color':
-                border = theme_map(styles.get('border'))
-                return None if border is None else border.get('color')
-            case _:
-                return None
-
-    def _get_slider_color_value(self, styles: dict[str, Any], property_key: str) -> Any:
-        tokens = property_key.split('.')
-        if len(tokens) != 4:
-            return None
-        _, part, group, key = tokens
-        if part not in {'groove', 'sub_page', 'add_page', 'handle'}:
-            return None
-        if group not in {'background', 'border'} or key != 'color':
-            return None
-        return self._get_slider_style_value(styles, part, group, key)
-
-    def _get_parts_style_color(self, styles: dict[str, Any], property_key: str) -> Any:
-        parts_theme = theme_map(styles.get('parts')) or {}
-        tokens = property_key.split('.')
-        if len(tokens) < 3:
-            return None
-        part = tokens[1]
-        suffix = tokens[2:]
-
-        if suffix == ['color']:
-            part_data = theme_map(parts_theme.get(part))
-            if part_data is not None:
-                return part_data.get('color')
-        if suffix == ['background', 'color']:
-            if part in {'groove', 'sub_page', 'add_page', 'handle'}:
-                return self._get_slider_style_value(styles, part, 'background', 'color')
-            part_data = theme_map(parts_theme.get(part))
-            if part_data is not None:
-                bg = theme_map(part_data.get('background')) or {}
-                return bg.get('color')
-        if suffix == ['text', 'color']:
-            part_data = theme_map(parts_theme.get(part))
-            if part_data is not None:
-                text = theme_map(part_data.get('text')) or {}
-                return text.get('color')
-        if suffix == ['border', 'color']:
-            if part in {'groove', 'sub_page', 'add_page', 'handle'}:
-                return self._get_slider_style_value(styles, part, 'border', 'color')
-            part_data = theme_map(parts_theme.get(part))
-            if part_data is not None:
-                border = theme_map(part_data.get('border')) or {}
-                return border.get('color')
-        return None
-
-    def _get_slider_style_value(self, styles: dict[str, Any], part: str, group: str, key: str) -> Any:
-        parts_theme = theme_map(styles.get('parts')) or {}
-        part_data = theme_map(parts_theme.get(part))
-        if part_data is None:
-            return None
-        group_data = theme_map(part_data.get(group))
-        if group_data is None:
-            return None
-        return group_data.get(key)
+            tokens = property_key.split('.')
+            if len(tokens) == 4:
+                _, part, group, key = tokens
+                if (
+                    part in {'groove', 'sub_page', 'add_page', 'handle'}
+                    and group in {'background', 'border'}
+                    and key == 'color'
+                ):
+                    parts_theme = theme_map(styles.get('parts')) or {}
+                    part_data = theme_map(parts_theme.get(part))
+                    group_data = theme_map(None if part_data is None else part_data.get(group))
+                    if group_data is not None:
+                        raw = group_data.get('color')
+        elif property_key.startswith('parts.'):
+            tokens = property_key.split('.')
+            if len(tokens) >= 3:
+                parts_theme = theme_map(styles.get('parts')) or {}
+                part = tokens[1]
+                suffix = tokens[2:]
+                part_data = theme_map(parts_theme.get(part))
+                if suffix == ['color']:
+                    if part_data is not None:
+                        raw = part_data.get('color')
+                elif suffix == ['background', 'color']:
+                    if part in {'groove', 'sub_page', 'add_page', 'handle'}:
+                        group_data = theme_map(None if part_data is None else part_data.get('background'))
+                        if group_data is not None:
+                            raw = group_data.get('color')
+                    elif part_data is not None:
+                        background = theme_map(part_data.get('background')) or {}
+                        raw = background.get('color')
+                elif suffix == ['text', 'color']:
+                    if part_data is not None:
+                        text = theme_map(part_data.get('text')) or {}
+                        raw = text.get('color')
+                elif suffix == ['border', 'color']:
+                    if part in {'groove', 'sub_page', 'add_page', 'handle'}:
+                        group_data = theme_map(None if part_data is None else part_data.get('border'))
+                        if group_data is not None:
+                            raw = group_data.get('color')
+                    elif part_data is not None:
+                        border = theme_map(part_data.get('border')) or {}
+                        raw = border.get('color')
+        else:
+            match property_key:
+                case 'background.color':
+                    background = theme_map(styles.get('background'))
+                    raw = None if background is None else background.get('color')
+                case 'color':
+                    text = theme_map(styles.get('text'))
+                    raw = None if text is None else text.get('color')
+                case 'border.color':
+                    border = theme_map(styles.get('border'))
+                    raw = None if border is None else border.get('color')
+                case _:
+                    raw = None
+        return to_qcolor(raw) if isinstance(raw, str) else None
 
     def _sample_style_gradient(
         self,
@@ -2582,31 +2472,18 @@ class AnimationManager(QObject):
         *,
         fallback: dict[str, Any],
     ) -> dict[str, Any] | None:
-        source = self._gradient_style_source(styles, property_key)
+        source: dict[str, Any] | None = None
+        if property_key == 'background.gradient':
+            source = theme_map(styles.get('background'))
+        elif property_key.startswith('parts.'):
+            tokens = property_key.split('.')
+            if len(tokens) == 4 and tokens[2] == 'background' and tokens[3] == 'gradient':
+                parts_theme = theme_map(styles.get('parts')) or {}
+                part_data = theme_map(parts_theme.get(tokens[1])) or {}
+                source = theme_map(part_data.get('background'))
         if source is None:
             return None
-        if (gradient := self._normalized_gradient_value(source)) is not None:
-            return gradient
-        color_data = source.get('color')
-        if isinstance(color_data, str):
-            color = to_qcolor(color_data)
-            if color is not None:
-                return self._build_solid_start_gradient(color, fallback)
-        return None
 
-    def _gradient_style_source(self, styles: dict[str, Any], property_key: str) -> dict[str, Any] | None:
-        if property_key == 'background.gradient':
-            return theme_map(styles.get('background'))
-        if not property_key.startswith('parts.'):
-            return None
-        tokens = property_key.split('.')
-        if len(tokens) != 4 or tokens[2] != 'background' or tokens[3] != 'gradient':
-            return None
-        parts_theme = theme_map(styles.get('parts')) or {}
-        part_data = theme_map(parts_theme.get(tokens[1])) or {}
-        return theme_map(part_data.get('background'))
-
-    def _normalized_gradient_value(self, source: dict[str, Any]) -> dict[str, Any] | None:
         gradient_data = source.get('gradient')
         gradient_map = object_map(gradient_data)
         if gradient_map is not None:
@@ -2616,15 +2493,12 @@ class AnimationManager(QObject):
         color_map = object_map(color_data)
         if color_map is not None:
             return normalize_gradient(color_map)
-        return None
 
-    def _build_solid_start_gradient(self, color: QColor, template: dict[str, Any]) -> dict[str, Any]:
-        gradient = clone_gradient(template)
-        gradient['stops'] = [
-            (float(pos), QColor(color))
-            for pos, _ in gradient.get('stops', [])
-        ]
-        return gradient
+        if isinstance(color_data, str) and (color := to_qcolor(color_data)) is not None:
+            gradient = clone_gradient(fallback)
+            gradient['stops'] = [(float(pos), QColor(color)) for pos, _ in gradient.get('stops', [])]
+            return gradient
+        return None
 
     def _sample_number(self, widget: QWidget, property_key: str, *, fallback: float) -> float:
         match property_key:
@@ -2632,15 +2506,10 @@ class AnimationManager(QObject):
                 return self._sample_border_width(widget, fallback=fallback)
             case 'border.radius':
                 return self._sample_border_radius(widget, fallback=fallback)
-            case 'text.border.width':
-                return self._sample_text_border_width(widget, fallback=fallback)
-            case 'text.spacing':
-                getter = getattr(widget, '_text_spacing_value', None)
-                if callable(getter):
-                    return coerce_float(getter(), float(fallback)) or float(fallback)
-                return float(fallback)
             case 'padding.left' | 'padding.top' | 'padding.right' | 'padding.bottom':
-                return float(self._padding_box(widget)[self._box_side_index(property_key.rsplit('.', 1)[-1])])
+                side = property_key.rsplit('.', 1)[-1]
+                index = {'left': 0, 'top': 1, 'right': 2, 'bottom': 3}.get(side, 0)
+                return float(self._padding_box(widget)[index])
             case 'layout.spacing':
                 layout = widget.layout()
                 return float(layout.spacing()) if isinstance(layout, QLayout) else float(fallback)
@@ -2649,7 +2518,8 @@ class AnimationManager(QObject):
                 if isinstance(layout, QLayout):
                     margins = layout.contentsMargins()
                     side = property_key.rsplit('.', 1)[-1]
-                    return float((margins.left(), margins.top(), margins.right(), margins.bottom())[self._box_side_index(side)])
+                    index = {'left': 0, 'top': 1, 'right': 2, 'bottom': 3}.get(side, 0)
+                    return float((margins.left(), margins.top(), margins.right(), margins.bottom())[index])
                 return float(fallback)
             case 'widget.width':
                 return float(widget.width())
@@ -2674,15 +2544,15 @@ class AnimationManager(QObject):
             case 'widget.y':
                 return float(widget.y())
             case 'scroll.vertical':
-                scrollbar_getter = getattr(widget, 'verticalScrollBar', None)
-                if callable(scrollbar_getter) and (scrollbar := scrollbar_getter()) is not None:
+                if isinstance(widget, QAbstractScrollArea):
+                    scrollbar = widget.verticalScrollBar()
                     slider = _slider_or_none(scrollbar)
                     if slider is not None:
                         return float(slider.value())
                 return float(fallback)
             case 'scroll.horizontal':
-                scrollbar_getter = getattr(widget, 'horizontalScrollBar', None)
-                if callable(scrollbar_getter) and (scrollbar := scrollbar_getter()) is not None:
+                if isinstance(widget, QAbstractScrollArea):
+                    scrollbar = widget.horizontalScrollBar()
                     slider = _slider_or_none(scrollbar)
                     if slider is not None:
                         return float(slider.value())
@@ -2697,18 +2567,21 @@ class AnimationManager(QObject):
                 pass
         if property_key.startswith('parts.'):
             tokens = property_key.split('.')
-            if len(tokens) >= 3:
-                getter = getattr(widget, 'current_part_metric', None)
-                if callable(getter):
-                    try:
-                        metric = getter(tokens[1], tuple(tokens[2:]), fallback)
-                    except (RuntimeError, TypeError, ValueError):
-                        return float(fallback)
-                    return coerce_float(metric, float(fallback)) or float(fallback)
+            if len(tokens) >= 3 and isinstance(widget, (MTComboBox, MTCollapsibleContainer)):
+                try:
+                    metric = widget.current_part_metric(tokens[1], tuple(tokens[2:]), fallback)
+                except (RuntimeError, TypeError, ValueError):
+                    return float(fallback)
+                return coerce_float(metric, float(fallback)) or float(fallback)
         return float(fallback)
 
     def _sample_border_width(self, widget: QWidget, *, fallback: float) -> float:
-        state = self._safe_box_theme_state(widget)
+        state = {}
+        if isinstance(widget, BoxThemeMixin):
+            try:
+                state = theme_map(widget.box_theme_state()) or {}
+            except RuntimeError:
+                state = {}
         border = theme_map(state.get('border'))
         if border is not None:
             width = border.get('width')
@@ -2722,7 +2595,12 @@ class AnimationManager(QObject):
         return self._parse_measure_value(width_text) or float(fallback)
 
     def _sample_border_radius(self, widget: QWidget, *, fallback: float) -> float:
-        state = self._safe_box_theme_state(widget)
+        state = {}
+        if isinstance(widget, BoxThemeMixin):
+            try:
+                state = theme_map(widget.box_theme_state()) or {}
+            except RuntimeError:
+                state = {}
         radius = state.get('radius')
         value = self._parse_measure_value(radius)
         if value is not None:
@@ -2735,50 +2613,16 @@ class AnimationManager(QObject):
         declarations = self._collect_widget_declarations(widget)
         return self._parse_measure_value(declarations.get('border-radius')) or float(fallback)
 
-    def _sample_text_border_width(self, widget: QWidget, *, fallback: float) -> float:
-        getter = cast(Callable[[], object] | None, getattr(widget, 'text_border_state', None))
-        state = getter() if callable(getter) else None
-        if (state_map := theme_map(state)) is not None:
-            width = state_map.get('width')
-            if isinstance(width, (int, float)):
-                return float(width)
-        return float(fallback)
-
-    def _safe_box_theme_state(self, widget: QWidget) -> dict[str, Any]:
-        getter = getattr(widget, 'box_theme_state', None)
-        if not callable(getter):
-            return {}
-        try:
-            state = getter()
-        except RuntimeError:
-            return {}
-        return theme_map(state) or {}
-
     def _sample_slider_metric(self, widget: QWidget, metric: str, *, fallback: float) -> float:
-        option_factory = getattr(widget, '_create_option_slider', None)
-        handle_rect_getter = getattr(widget, '_handle_rect', None)
-        groove_rect_getter = getattr(widget, '_groove_rect', None)
-        orientation_getter = getattr(widget, 'orientation', None)
-        if not callable(option_factory) or not callable(handle_rect_getter) or not callable(groove_rect_getter):
+        if not isinstance(widget, MTSlider):
             return float(fallback)
 
-        try:
-            option = option_factory()
-            handle_rect = _rect_or_none(handle_rect_getter(option))
-            groove_rect = _rect_or_none(groove_rect_getter(option))
-        except Exception:
-            return float(fallback)
-        if handle_rect is None or groove_rect is None:
-            return float(fallback)
-
-        orientation = orientation_getter() if callable(orientation_getter) else None
-        horizontal = orientation == 1
         if metric == 'groove':
-            return float(groove_rect.height() if horizontal else groove_rect.width())
+            return widget.current_part_metric('groove', 'size', fallback)
         if metric == 'handle_width':
-            return float(handle_rect.width())
+            return widget.current_part_metric('handle', 'width', fallback)
         if metric == 'handle_height':
-            return float(handle_rect.height())
+            return widget.current_part_metric('handle', 'height', fallback)
         return float(fallback)
 
     def _resolve_wheel_scroll_delta(self, widget: QWidget, spec: AnimationSpec) -> float:
@@ -2789,9 +2633,11 @@ class AnimationManager(QObject):
             return 0.0
 
         distance = abs(float(spec.end))
-        scrollbar_getter_name = 'verticalScrollBar' if axis == 'vertical' else 'horizontalScrollBar'
-        scrollbar_getter = getattr(widget, scrollbar_getter_name, None)
-        scrollbar = _slider_or_none(scrollbar_getter()) if callable(scrollbar_getter) else None
+        scrollbar = None
+        if isinstance(widget, QAbstractScrollArea):
+            scrollbar = _slider_or_none(
+                widget.verticalScrollBar() if axis == 'vertical' else widget.horizontalScrollBar()
+            )
 
         if abs(delta) >= 1.0:
             steps = delta / 120.0
@@ -2821,13 +2667,6 @@ class AnimationManager(QObject):
                 if not self._set_box_style_value(widget, 'border-radius', f'{max(0.0, value):g}px'):
                     widget.setProperty('_themeBorderRadius', f'{max(0.0, value):g}px')
                     self._set_style_value(widget, 'border-radius', f'{max(0.0, value):g}px')
-            case 'text.border.width':
-                if not self._set_text_style_value(widget, 'text.border-width', f'{max(0.0, value):g}px'):
-                    return
-            case 'text.spacing':
-                setter = getattr(widget, 'set_text_spacing', None)
-                if callable(setter):
-                    setter(float(value))
             case 'padding.left' | 'padding.top' | 'padding.right' | 'padding.bottom':
                 self._set_padding_side(widget, property_key.rsplit('.', 1)[-1], max(0, rounded))
             case 'layout.spacing':
@@ -2870,42 +2709,35 @@ class AnimationManager(QObject):
             case 'widget.y':
                 widget.move(widget.x(), rounded)
             case 'scroll.vertical':
-                scrollbar_getter = getattr(widget, 'verticalScrollBar', None)
-                if callable(scrollbar_getter) and (scrollbar := scrollbar_getter()) is not None:
+                if isinstance(widget, QAbstractScrollArea):
+                    scrollbar = widget.verticalScrollBar()
                     slider = _slider_or_none(scrollbar)
                     if slider is not None:
                         slider.setValue(max(slider.minimum(), min(slider.maximum(), rounded)))
             case 'scroll.horizontal':
-                scrollbar_getter = getattr(widget, 'horizontalScrollBar', None)
-                if callable(scrollbar_getter) and (scrollbar := scrollbar_getter()) is not None:
+                if isinstance(widget, QAbstractScrollArea):
+                    scrollbar = widget.horizontalScrollBar()
                     slider = _slider_or_none(scrollbar)
                     if slider is not None:
                         slider.setValue(max(slider.minimum(), min(slider.maximum(), rounded)))
             case 'parts.groove.size':
-                setter = getattr(widget, 'set_part_metric', None)
-                if callable(setter) and setter('groove', 'size', float(max(0, rounded))):
+                if isinstance(widget, MTSlider) and widget.set_part_metric('groove', 'size', float(max(0, rounded))):
                     return
                 self._set_style_value(widget, 'parts.groove.size', f'{max(0, rounded)}px')
             case 'parts.handle.width':
-                setter = getattr(widget, 'set_part_metric', None)
-                if callable(setter) and setter('handle', 'width', float(max(0, rounded))):
+                if isinstance(widget, MTSlider) and widget.set_part_metric('handle', 'width', float(max(0, rounded))):
                     return
                 self._set_style_value(widget, 'parts.handle.width', f'{max(0, rounded)}px')
             case 'parts.handle.height':
-                setter = getattr(widget, 'set_part_metric', None)
-                if callable(setter) and setter('handle', 'height', float(max(0, rounded))):
+                if isinstance(widget, MTSlider) and widget.set_part_metric('handle', 'height', float(max(0, rounded))):
                     return
                 self._set_style_value(widget, 'parts.handle.height', f'{max(0, rounded)}px')
             case _ if property_key.startswith('parts.'):
                 tokens = property_key.split('.')
-                setter = getattr(widget, 'set_part_metric', None)
-                if callable(setter) and len(tokens) >= 3 and setter(tokens[1], tuple(tokens[2:]), float(max(0, value))):
+                if isinstance(widget, (MTComboBox, MTCollapsibleContainer)) and len(tokens) >= 3 and widget.set_part_metric(tokens[1], tuple(tokens[2:]), float(max(0, value))):
                     return
             case _:
                 return
-
-    def _box_side_index(self, side: str) -> int:
-        return {'left': 0, 'top': 1, 'right': 2, 'bottom': 3}.get(side, 0)
 
     def _padding_box(self, widget: QWidget) -> tuple[int, int, int, int]:
         raw = widget.property('_themePaddingBox')
@@ -2923,7 +2755,8 @@ class AnimationManager(QObject):
 
     def _set_padding_side(self, widget: QWidget, side: str, value: int) -> None:
         values = list(self._padding_box(widget))
-        values[self._box_side_index(side)] = max(0, int(value))
+        index = {'left': 0, 'top': 1, 'right': 2, 'bottom': 3}.get(side, 0)
+        values[index] = max(0, int(value))
         widget.setProperty('_themePaddingBox', tuple(values))
         widget.updateGeometry()
         widget.update()
@@ -2936,6 +2769,7 @@ class AnimationManager(QObject):
 
         margins = layout.contentsMargins()
         values = [margins.left(), margins.top(), margins.right(), margins.bottom()]
-        values[self._box_side_index(side)] = max(0, int(value))
+        index = {'left': 0, 'top': 1, 'right': 2, 'bottom': 3}.get(side, 0)
+        values[index] = max(0, int(value))
         layout.setContentsMargins(*values)
         widget.updateGeometry()

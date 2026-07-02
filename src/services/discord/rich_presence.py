@@ -234,7 +234,7 @@ class DiscordPresenceManager(QObject):
             rpc.close()
         except Exception:
             pass
-        loop = getattr(rpc, 'loop', None)
+        loop = rpc.loop
         if loop is not None:
             try:
                 if not loop.is_closed():

@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from src.config.loader import config_loader
 from src.config.manager import config
 from src.theme.rainbow.palette import rainbow_palette_names
@@ -129,9 +131,6 @@ class SettingsMiscPage(MTWidget):
         )
         return self._rainbow_palette_setting
 
-    def _is_rainbow_mode_enabled(self) -> bool:
-        return bool(config.get("Misc>Rainbow Mode>Enabled", default=False))
-
     def _read_rainbow_cycle_duration(self) -> int:
         value = config.get("Misc>Rainbow Mode>Cycle Duration", default=5000)
         if isinstance(value, bool):
@@ -144,15 +143,12 @@ class SettingsMiscPage(MTWidget):
             return 5000
 
     def _sync_rainbow_settings_state(self) -> None:
-        enabled = self._is_rainbow_mode_enabled()
+        enabled = bool(config.get("Misc>Rainbow Mode>Enabled", default=False))
         self._rainbow_cycle_duration_setting.setEnabled(enabled)
         self._rainbow_palette_setting.setEnabled(enabled)
 
     def _apply_runtime_theme_preferences(self) -> None:
-        window = self.window()
-        reapply = getattr(window, "reapply_runtime_theme_preferences", None)
-        if callable(reapply):
-            reapply()
+        cast(Any, self.window()).reapply_runtime_theme_preferences()
 
     def _on_rainbow_mode_toggled(self, checked: bool) -> None:
         self._sync_rainbow_settings_state()
@@ -163,9 +159,9 @@ class SettingsMiscPage(MTWidget):
         if current == self._last_applied_rainbow_cycle_duration:
             return
         self._last_applied_rainbow_cycle_duration = current
-        if self._is_rainbow_mode_enabled():
+        if bool(config.get("Misc>Rainbow Mode>Enabled", default=False)):
             self._apply_runtime_theme_preferences()
 
     def _on_rainbow_palette_changed(self, _value: str) -> None:
-        if self._is_rainbow_mode_enabled():
+        if bool(config.get("Misc>Rainbow Mode>Enabled", default=False)):
             self._apply_runtime_theme_preferences()

@@ -9,6 +9,7 @@ from PySide6.QtGui import QBrush, QColor, QPainter, QPainterPath, QPen
 from src.theme.gradients import build_background_brush, normalize_gradient_data
 from src.theme.schema.access import coerce_number, theme_map
 from src.theme.schema.types import ThemeMap
+from src.ui.widgets.main.paint_primitives import parse_pen_style
 
 
 ThemeState = ThemeMap
@@ -24,17 +25,22 @@ else:
         pass
 
 class BoxThemeMixin(_BoxThemeBase):
+    PAINTED_BOX_THEME = True
+    _box_theme: ThemeState | None = None
+
     def init_box_theme(self) -> None:
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self._box_theme: ThemeState | None = None
+        self._box_theme = None
 
     def apply_box_theme(self, theme: ThemeState) -> None:
         background = theme_map(theme.get('background')) or {}
         border = theme_map(theme.get('border')) or {}
+        background_mapping = theme_map(background) or {}
+        border_mapping = theme_map(border) or {}
         self._box_theme = {
             'background': self._normalize_background(background),
             'border': self._normalize_border(border),
-            'radius': self._resolve_radius_source(background, border),
+            'radius': border_mapping.get('radius', background_mapping.get('radius', 0.0)),
         }
         self.update()
 
@@ -43,10 +49,10 @@ class BoxThemeMixin(_BoxThemeBase):
         self.update()
 
     def has_box_theme(self) -> bool:
-        return theme_map(getattr(self, '_box_theme', None)) is not None
+        return theme_map(self._box_theme) is not None
 
     def box_theme_state(self) -> ThemeState | None:
-        theme = theme_map(getattr(self, '_box_theme', None))
+        theme = theme_map(self._box_theme)
         return deepcopy(theme) if theme is not None else None
 
     def restore_box_theme_state(self, state: ThemeState | None) -> None:
@@ -117,12 +123,18 @@ class BoxThemeMixin(_BoxThemeBase):
         return True
 
     def draw_box_theme(self, painter: QPainter, rect: QRectF | None = None) -> None:
-        theme = theme_map(getattr(self, '_box_theme', None))
+        theme = theme_map(self._box_theme)
         if theme is None:
             return
 
         border = theme_map(theme.get('border')) or {}
-        max_border_width = self._max_border_width(border)
+        max_border_width = max(
+            [self._theme_measure(border.get('width'), default=0.0)] + [
+                max(0.0, float(side_data.get('width', -1.0) or -1.0))
+                for side in _BOX_BORDER_SIDES
+                if (side_data := self._side_border_data(border, side)) is not None
+            ]
+        )
         rect = QRectF(rect if rect is not None else self.rect()).adjusted(
             max_border_width / 2.0,
             max_border_width / 2.0,
@@ -137,11 +149,36 @@ class BoxThemeMixin(_BoxThemeBase):
         path.addRoundedRect(rect, radius, radius)
 
         background = theme_map(theme.get('background')) or {}
-        self._draw_background(painter, path, rect, background)
-        self._draw_border(painter, path, rect, border)
+        painter.save()
+        brush = build_background_brush(rect, {'gradient': background.get('gradient')})
+        if brush is None:
+            color = background.get('color')
+            if isinstance(color, QColor) and color.isValid():
+                painter.fillPath(path, color)
+        else:
+            painter.fillPath(path, brush)
+        painter.restore()
+
+        width = max(0.0, float(border.get('width', 0.0) or 0.0))
+        color = border.get('color')
+        gradient = border.get('gradient')
+        style = parse_pen_style(border.get('style', 'solid'))
+        brush = self._border_brush(rect, color=color, gradient=gradient)
+        if width > 0.0 and brush is not None and style != Qt.PenStyle.NoPen:
+            painter.save()
+            pen = QPen(brush, width)
+            pen.setStyle(style)
+            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            painter.setPen(pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawPath(path)
+            painter.restore()
+
+        self._draw_side_borders(painter, rect, border)
 
     def _ensure_box_theme(self) -> ThemeState:
-        theme = theme_map(getattr(self, '_box_theme', None))
+        theme = theme_map(self._box_theme)
         if theme is None:
             self._box_theme = {
                 'background': self._normalize_background({}),
@@ -205,41 +242,6 @@ class BoxThemeMixin(_BoxThemeBase):
             'color': match.group(3).strip(),
         }
 
-    def _resolve_radius_source(self, background: Any, border: Any) -> Any:
-        background_mapping = theme_map(background) or {}
-        border_mapping = theme_map(border) or {}
-        return border_mapping.get('radius', background_mapping.get('radius', 0.0))
-
-    def _draw_background(self, painter: QPainter, path: QPainterPath, rect: QRectF, background: dict[str, Any]) -> None:
-        painter.save()
-        brush = build_background_brush(rect, {'gradient': background.get('gradient')})
-        if brush is None:
-            color = background.get('color')
-            if isinstance(color, QColor) and color.isValid():
-                painter.fillPath(path, color)
-        else:
-            painter.fillPath(path, brush)
-        painter.restore()
-
-    def _draw_border(self, painter: QPainter, path: QPainterPath, rect: QRectF, border: dict[str, Any]) -> None:
-        width = max(0.0, float(border.get('width', 0.0) or 0.0))
-        color = border.get('color')
-        gradient = border.get('gradient')
-        style = self._pen_style(border.get('style', 'solid'))
-        brush = self._border_brush(rect, color=color, gradient=gradient)
-        if width > 0.0 and brush is not None and style != Qt.PenStyle.NoPen:
-            painter.save()
-            pen = QPen(brush, width)
-            pen.setStyle(style)
-            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-            painter.setPen(pen)
-            painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.drawPath(path)
-            painter.restore()
-
-        self._draw_side_borders(painter, rect, border)
-
     def _draw_side_borders(self, painter: QPainter, rect: QRectF, border: dict[str, Any]) -> None:
         for side in _BOX_BORDER_SIDES:
             side_data = self._side_border_data(border, side)
@@ -252,7 +254,7 @@ class BoxThemeMixin(_BoxThemeBase):
 
             color = side_data.get('color') or border.get('color')
             gradient = side_data.get('gradient') or border.get('gradient')
-            style = self._pen_style(side_data.get('style') or border.get('style', 'solid'))
+            style = parse_pen_style(side_data.get('style') or border.get('style', 'solid'))
             brush = self._border_brush(rect, color=color, gradient=gradient)
             if width <= 0.0 or brush is None or style == Qt.PenStyle.NoPen:
                 continue
@@ -275,17 +277,6 @@ class BoxThemeMixin(_BoxThemeBase):
                     painter.drawLine(QPointF(rect.left() + half, rect.top()), QPointF(rect.left() + half, rect.bottom()))
             painter.restore()
 
-    def _max_border_width(self, border: dict[str, Any]) -> float:
-        values = [self._theme_measure(border.get('width'), default=0.0)]
-        for side in _BOX_BORDER_SIDES:
-            side_data = self._side_border_data(border, side)
-            if side_data is not None:
-                values.append(max(0.0, float(side_data.get('width', -1.0) or -1.0)))
-        return max(values or [0.0])
-
-    def _side_has_any_border_value(self, side_data: dict[str, Any]) -> bool:
-        return any(side_data.get(key) not in (None, '', -1.0) for key in ('color', 'gradient', 'width', 'style'))
-
     def _side_border_data(self, border: dict[str, Any], side: str) -> ThemeState | None:
         return theme_map(border.get(side))
 
@@ -293,7 +284,10 @@ class BoxThemeMixin(_BoxThemeBase):
         result: list[ThemeState] = []
         for side in _BOX_BORDER_SIDES:
             side_data = self._side_border_data(border, side)
-            if side_data is not None and self._side_has_any_border_value(side_data):
+            if side_data is not None and any(
+                side_data.get(key) not in (None, '', -1.0)
+                for key in ('color', 'gradient', 'width', 'style')
+            ):
                 result.append(side_data)
         return result
 
@@ -303,7 +297,7 @@ class BoxThemeMixin(_BoxThemeBase):
             brush = build_background_brush(rect, {'gradient': gradient_map})
             if isinstance(brush, QBrush):
                 return brush
-        if self._valid_color(color):
+        if isinstance(color, QColor) and color.isValid() and color.alpha() > 0:
             return QBrush(color)
         return None
 
@@ -325,20 +319,3 @@ class BoxThemeMixin(_BoxThemeBase):
         color = QColor(value)
         return QColor(color) if color.isValid() else None
 
-    def _valid_color(self, color: Any) -> bool:
-        return isinstance(color, QColor) and color.isValid() and color.alpha() > 0
-
-    def _pen_style(self, value: object) -> Qt.PenStyle:
-        match str(value or 'solid').strip().lower().replace('_', '-'):
-            case 'none' | 'no' | 'transparent':
-                return Qt.PenStyle.NoPen
-            case 'dash' | 'dashed':
-                return Qt.PenStyle.DashLine
-            case 'dot' | 'dotted':
-                return Qt.PenStyle.DotLine
-            case 'dash-dot' | 'dashdot':
-                return Qt.PenStyle.DashDotLine
-            case 'dash-dot-dot' | 'dashdotdot':
-                return Qt.PenStyle.DashDotDotLine
-            case _:
-                return Qt.PenStyle.SolidLine

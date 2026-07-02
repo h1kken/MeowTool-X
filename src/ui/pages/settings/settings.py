@@ -12,6 +12,8 @@ from src.ui.pages.settings.pages import (
     SettingsConfigPage,
     SettingsThemePage,
 )
+from src.ui.pages.settings.pages.proxy.proxy import SettingsProxyPage
+from src.ui.pages.settings.pages.roblox.roblox import SettingsRobloxPage
 from src.ui.widgets import MTButton, MTWidget
 
 
@@ -56,8 +58,8 @@ class SettingsPage(MTWidget):
             page.setSizePolicy(
                 QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
             )
-            presence_signal: SignalInstance | None = getattr(page, "presence_path_changed", None)
-            if presence_signal is not None:
+            if isinstance(page, (SettingsProxyPage, SettingsRobloxPage)):
+                presence_signal: SignalInstance = page.presence_path_changed
                 def _forward_presence_path(*_args: object) -> None:
                     self._emit_presence_path()
 
@@ -82,9 +84,8 @@ class SettingsPage(MTWidget):
 
         top_label = self._tab_names_by_key.get(top_key, top_key)
         page = self._pages_by_key.get(top_key)
-        subpage_getter = getattr(page, "current_presence_subpage", None)
-        if callable(subpage_getter):
-            subpage = str(subpage_getter()).strip()
+        if isinstance(page, (SettingsProxyPage, SettingsRobloxPage)):
+            subpage = str(page.current_presence_subpage()).strip()
             if subpage and subpage != top_label:
                 return f"Settings: {top_label} > {subpage}"
         return f"Settings: {top_label}"

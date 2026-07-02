@@ -14,7 +14,7 @@ from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QWidget
 
 from src.app.paths import PATH_ROOT
-from src.theme.colors import normalize_color, normalize_color_or_raw, to_qcolor
+from src.theme.colors import normalize_color, to_qcolor
 from src.theme.constants import GRADIENT_DIRECTIONS, SUPPORTED_BG_MEDIA_EXTENSIONS
 from src.theme.paths import PATH_FONTS
 from src.theme.qss.normalizer import StyleNormalizer
@@ -88,7 +88,7 @@ class QssBuilder(StyleNormalizer):
 
         if (text_data := theme_map(data_dict.get('text'))) is not None:
             if (text_color := text_data.get('color')):
-                rules.append(f'color: {normalize_color_or_raw(text_color)};')
+                rules.append(f'color: {normalize_color(text_color, fallback_raw=True)};')
             if (font_data := theme_map(text_data.get('font'))) is not None:
                 if (family := font_data.get('family')):
                     if (resolved_family := self.resolve_font_family(str(family))):
@@ -123,7 +123,7 @@ class QssBuilder(StyleNormalizer):
         if data is None:
             return None
         if isinstance(data, str):
-            return f'background-color: {normalize_color_or_raw(data)};'
+            return f'background-color: {normalize_color(data, fallback_raw=True)};'
         if (gradient_data := theme_map(data)) is not None and (
             gradient := self.build_gradient(gradient_data)
         ):
@@ -212,7 +212,7 @@ class QssBuilder(StyleNormalizer):
         rules: list[str] = []
         width = self.normalize_measure(data.get('width')) or ''
         style = str(data.get('style', '')).strip()
-        color = normalize_color_or_raw(data.get('color', '')) if str(data.get('color', '')).strip() else ''
+        color = normalize_color(data.get('color', ''), fallback_raw=True) if str(data.get('color', '')).strip() else ''
         if all((width, style, color)):
             rules.append(f'border: {width} {style} {color};')
         else:
@@ -238,7 +238,7 @@ class QssBuilder(StyleNormalizer):
         width = self.normalize_measure(side_data.get('width', data.get(f'{side}_width', ''))) or ''
         style = str(side_data.get('style', data.get(f'{side}_style', ''))).strip()
         color_value = side_data.get('color', data.get(f'{side}_color', ''))
-        color = normalize_color_or_raw(color_value) if str(color_value).strip() else ''
+        color = normalize_color(color_value, fallback_raw=True) if str(color_value).strip() else ''
 
         if not any((width, style, color)):
             return []

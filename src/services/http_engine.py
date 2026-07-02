@@ -139,7 +139,7 @@ class NativeHttpEngine:
     ) -> list[JsonObject] | list[list[JsonObject]]:
         collected: list[Any] = []
         for chunk in self.iter_chunked(requests, chunk_size=chunk_size):
-            if callable(on_chunk):
+            if on_chunk is not None:
                 on_chunk(chunk)
             if flatten:
                 collected.extend(chunk)

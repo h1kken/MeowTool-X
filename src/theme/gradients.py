@@ -8,7 +8,7 @@ from typing import Any, TypeAlias, cast
 from PySide6.QtCore import QRectF
 from PySide6.QtGui import QBrush, QColor, QGradient, QLinearGradient, QRadialGradient
 
-from src.theme.colors import normalize_color, normalize_color_or_raw, to_qcolor
+from src.theme.colors import normalize_color, to_qcolor
 from src.theme.constants import GRADIENT_DIRECTIONS
 
 GradientMap: TypeAlias = dict[str, Any]
@@ -194,7 +194,7 @@ def build_background_qss_rule(data: Any) -> str | None:
 
     color = background_data.get("color")
     if isinstance(color, str) and color.strip():
-        return f"background-color: {normalize_color_or_raw(color)};"
+        return f"background-color: {normalize_color(color, fallback_raw=True)};"
 
     return None
 

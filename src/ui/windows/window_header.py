@@ -1,180 +1,37 @@
 from __future__ import annotations
 
-import sys
-from time import monotonic
-from typing import cast
+from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QSize, Qt
+from PySide6.QtGui import QIcon, QMouseEvent, QResizeEvent
+from PySide6.QtWidgets import QApplication, QBoxLayout, QSizePolicy, QWidget
 
-from PySide6.QtCore import QAbstractNativeEventFilter, QEvent, QObject, QPoint, QRect, QRectF, QSize, Qt, QTimer
-from PySide6.QtGui import QBrush, QColor, QFontMetricsF, QIcon, QLinearGradient, QMouseEvent, QPaintEvent, QPainterPath, QResizeEvent
-from PySide6.QtWidgets import (
-    QAbstractButton,
-    QAbstractSlider,
-    QAbstractSpinBox,
-    QApplication,
-    QBoxLayout,
-    QComboBox,
-    QLineEdit,
-    QSizePolicy,
-    QWidget,
-)
-
-from src.theme.rainbow.palette import sample_rainbow_color
 from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.painting import draw_widget_background, new_widget_painter
 from src.ui.paths import PATH_HEADER_ICONS
 from src.ui.widgets import MTButton, MTPlainLabel, MTWidget
 
-if sys.platform.startswith('win'):
-    import ctypes
-    from ctypes import wintypes
-
-    GWL_STYLE = -16
-    WM_NCHITTEST = 0x0084
-    HTCLIENT = 1
-    HTLEFT = 10
-    HTRIGHT = 11
-    HTTOP = 12
-    HTTOPLEFT = 13
-    HTTOPRIGHT = 14
-    HTBOTTOM = 15
-    HTBOTTOMLEFT = 16
-    HTBOTTOMRIGHT = 17
-    HTCAPTION = 2
-    GA_ROOT = 2
-    WS_THICKFRAME = 0x00040000
-    WS_MINIMIZEBOX = 0x00020000
-    WS_MAXIMIZEBOX = 0x00010000
-    SWP_NOSIZE = 0x0001
-    SWP_NOMOVE = 0x0002
-    SWP_NOZORDER = 0x0004
-    SWP_FRAMECHANGED = 0x0020
-    LONG_PTR = ctypes.c_longlong if ctypes.sizeof(ctypes.c_void_p) == 8 else ctypes.c_long
-    MSG = wintypes.MSG
-
-    _USER32 = ctypes.windll.user32
-    _USER32.GetAncestor.argtypes = [wintypes.HWND, wintypes.UINT]
-    _USER32.GetAncestor.restype = wintypes.HWND
-    _USER32.GetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int]
-    _USER32.GetWindowLongPtrW.restype = LONG_PTR
-    _USER32.SetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int, LONG_PTR]
-    _USER32.SetWindowLongPtrW.restype = LONG_PTR
-    _USER32.SetWindowPos.argtypes = [
-        wintypes.HWND,
-        wintypes.HWND,
-        ctypes.c_int,
-        ctypes.c_int,
-        ctypes.c_int,
-        ctypes.c_int,
-        wintypes.UINT,
-    ]
-    _USER32.SetWindowPos.restype = wintypes.BOOL
-
-
-class _FramelessWindowNativeEventFilter(QAbstractNativeEventFilter):
-    def __init__(self) -> None:
-        super().__init__()
-        self._headers: dict[int, MTWindowHeader] = {}
-
-    def register(self, header: MTWindowHeader) -> None:
-        try:
-            handle = int(header.window().winId())
-        except RuntimeError:
-            return
-        self._headers[handle] = header
-
-    def unregister(self, header: MTWindowHeader) -> None:
-        stale_handles = [handle for handle, item in self._headers.items() if item is header]
-        for handle in stale_handles:
-            self._headers.pop(handle, None)
-
-    def nativeEventFilter(self, event_type: object, message: int | object) -> tuple[bool, int]:
-        if not sys.platform.startswith('win'):
-            return False, 0
-        if not isinstance(message, int):
-            return False, 0
-
-        try:
-            msg = MSG.from_address(message)
-        except (TypeError, ValueError, OSError):
-            return False, 0
-
-        if msg.hWnd is None:
-            return False, 0
-
-        hwnd = int(msg.hWnd)
-        header = self._headers.get(hwnd)
-        if header is None:
-            root_hwnd = _USER32.GetAncestor(hwnd, GA_ROOT)
-            if root_hwnd:
-                header = self._headers.get(int(root_hwnd))
-        if header is None:
-            return False, 0
-
-        if msg.message == WM_NCHITTEST:
-            result = header.native_hit_test(int(msg.lParam))
-            if result is None:
-                return False, 0
-            return True, int(result)
-
-        return False, 0
-
-
-_native_event_filter: _FramelessWindowNativeEventFilter | None = None
-
-
-def _enable_native_resize_frame(window: QWidget) -> None:
-    if not sys.platform.startswith('win'):
-        return
-
-    hwnd = int(window.winId())
-    style = int(_USER32.GetWindowLongPtrW(hwnd, GWL_STYLE))
-    resizable_style = style | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX
-    if resizable_style != style:
-        _USER32.SetWindowLongPtrW(hwnd, GWL_STYLE, resizable_style)
-    _USER32.SetWindowPos(
-        hwnd,
-        0,
-        0,
-        0,
-        0,
-        0,
-        SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
-    )
-
-
-def _install_native_event_filter() -> _FramelessWindowNativeEventFilter | None:
-    global _native_event_filter
-    if not sys.platform.startswith('win'):
-        return None
-    if _native_event_filter is not None:
-        return _native_event_filter
-    app = QApplication.instance()
-    if app is None:
-        return None
-    _native_event_filter = _FramelessWindowNativeEventFilter()
-    app.installNativeEventFilter(_native_event_filter)
-    return _native_event_filter
-
-
-def _header_icon(name: str) -> QIcon:
-    path = PATH_HEADER_ICONS / f'{name}.svg'
-    return QIcon(str(path)) if path.is_file() else QIcon()
+_HEADER_RESIZE_MARGIN = 8
+_QT_MAX_SIZE = 16_777_215
 
 
 class _HeaderIconButton(MTButton):
     def __init__(self, *, obj_name: str, icon_name: str) -> None:
         super().__init__(tr_key='', obj_name=obj_name)
+        self.setText('')
         self.setProperty('rainbowBorderExcluded', True)
         self.setCursor(Qt.CursorShape.ArrowCursor)
         self.setFlat(True)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.setIcon(_header_icon(icon_name))
-        self.setIconSize(QSize(14, 14))
         self.setMinimumSize(18, 18)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.set_icon_by_name(icon_name)
 
     def set_icon_by_name(self, icon_name: str) -> None:
-        self.setIcon(_header_icon(icon_name))
+        icon_path = PATH_HEADER_ICONS / f'{icon_name}.svg'
+        icon = QIcon(str(icon_path))
+        if icon.isNull():
+            self.setIcon(QIcon())
+            return
+        self.setIcon(icon)
+        self.setIconSize(QSize(14, 14))
 
 
 class _HeaderTitleLabel(MTPlainLabel):
@@ -186,137 +43,60 @@ class _HeaderTitleLabel(MTPlainLabel):
         obj_name: str = '',
     ) -> None:
         super().__init__(text, parent, obj_name=obj_name)
-        self.set_force_text_path_render(True)
-        self._ribbon_enabled = False
-        self._ribbon_duration_ms = 5000
-        self._ribbon_palette = 'Classic'
-        self._ribbon_saturation = 1.0
-        self._ribbon_epoch = monotonic()
-        self._ribbon_timer = QTimer(self)
-        self._ribbon_timer.setInterval(16)
-        self._ribbon_timer.timeout.connect(self.update)
 
     def setAlignment(self, alignment: Qt.AlignmentFlag) -> None:
         super().setAlignment(alignment)
-        if (parent := self.parentWidget()) is not None:
-            sync = getattr(parent, '_sync_title_geometry', None)
-            if callable(sync) and hasattr(parent, '_buttons_host'):
-                sync()
+        parent = self.parentWidget()
+        if isinstance(parent, MTWindowHeader):
+            parent.sync_title_geometry()
 
-    def set_rainbow_enabled(self, enabled: bool, duration_ms: int | float, saturation: float = 0.6, palette: str = 'Classic') -> None:
-        was_enabled = self._ribbon_enabled
-        previous_phase = self._phase() if was_enabled else 0.0
-        self._ribbon_enabled = bool(enabled)
-        self._ribbon_duration_ms = max(1, int(round(float(duration_ms))))
-        self._ribbon_palette = str(palette).strip() or 'Classic'
-        self._ribbon_saturation = max(0.0, min(float(saturation), 1.0))
-        self._ribbon_epoch = monotonic() - ((previous_phase * float(self._ribbon_duration_ms)) / 1000.0)
-        if self._ribbon_enabled:
-            if not self._ribbon_timer.isActive():
-                self._ribbon_timer.start()
-        else:
-            self._ribbon_timer.stop()
-        self.update()
+    def set_rainbow_enabled(
+        self,
+        enabled: bool,
+        duration_ms: int | float,
+        saturation: float = 0.6,
+        palette: str = 'Classic',
+    ) -> None:
+        _ = (enabled, duration_ms, saturation, palette)
 
-    def paintEvent(self, event: QPaintEvent) -> None:
-        painter = new_widget_painter(self, text_antialias=True)
-        painter.setFont(self.font())
 
-        draw_widget_background(self, painter)
+class _HeaderResizeGrip(QWidget):
+    def __init__(
+        self,
+        header: 'MTWindowHeader',
+        edges: Qt.Edge,
+        *,
+        obj_name: str,
+        cursor: Qt.CursorShape,
+    ) -> None:
+        super().__init__(header.window())
+        self._header = header
+        self._edges = edges
+        self.setObjectName(obj_name)
+        self.setMouseTracking(True)
+        self.setCursor(cursor)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
 
-        text = self.text()
-        if not text.strip():
-            painter.end()
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._header.begin_resize(self._edges, event.globalPosition().toPoint())
+            event.accept()
             return
+        super().mousePressEvent(event)
 
-        rect = QRectF(self.contentsRect())
-        if not self._ribbon_enabled:
-            self._draw_themed_icon_text(
-                painter,
-                rect,
-                self.alignment(),
-                text,
-                self.palette().windowText().color(),
-            )
-            painter.end()
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if event.buttons() & Qt.MouseButton.LeftButton:
+            self._header.update_manual_resize(event.globalPosition().toPoint())
+            event.accept()
             return
+        super().mouseMoveEvent(event)
 
-        metrics = QFontMetricsF(self.font())
-        baseline_y = self._text_baseline_y(rect, metrics)
-        path = QPainterPath()
-        path.addText(0.0, baseline_y, self.font(), text)
-        path_bounds = path.boundingRect()
-
-        if path_bounds.isEmpty():
-            painter.end()
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._header.finish_manual_resize()
+            event.accept()
             return
-
-        text_left = self._text_left(rect, metrics.horizontalAdvance(text))
-        path.translate(text_left - path_bounds.left(), 0.0)
-        path_bounds = path.boundingRect()
-
-        phase = self._phase()
-        gradient = QLinearGradient(
-            path_bounds.left(),
-            rect.center().y(),
-            path_bounds.right(),
-            rect.center().y(),
-        )
-        sample_count = 48
-        for sample_index in range(sample_count + 1):
-            offset = sample_index / sample_count
-            gradient.setColorAt(
-                offset,
-                sample_rainbow_color(
-                    offset - phase,
-                    palette=self._ribbon_palette,
-                    saturation=self._ribbon_saturation,
-                ),
-            )
-
-        border = getattr(self, '_text_border', None)
-        if isinstance(border, dict):
-            border_map = cast(dict[str, object], border)
-            raw_border_color = border_map.get('color')
-            raw_border_width = border_map.get('width', 0.0)
-            raw_border_style = border_map.get('style', 'solid')
-            border_color = raw_border_color if isinstance(raw_border_color, QColor) else None
-            border_width = float(raw_border_width if isinstance(raw_border_width, (int, float)) else 0.0)
-            border_style = self._pen_style(raw_border_style)
-            if isinstance(border_color, QColor) and border_color.isValid() and border_color.alpha() > 0 and border_width > 0.0 and border_style != Qt.PenStyle.NoPen:
-                self._draw_text_outline(
-                    painter,
-                    path,
-                    fill=QBrush(gradient),
-                    border_color=border_color,
-                    border_width=border_width,
-                    border_style=border_style,
-                )
-                painter.end()
-                return
-
-        painter.fillPath(path, gradient)
-        painter.end()
-
-    def _text_left(self, rect: QRectF, text_width: float) -> float:
-        alignment = self.alignment()
-        if alignment & Qt.AlignmentFlag.AlignRight:
-            return rect.right() - text_width
-        if alignment & Qt.AlignmentFlag.AlignHCenter:
-            return rect.left() + ((rect.width() - text_width) / 2.0)
-        return rect.left()
-
-    def _text_baseline_y(self, rect: QRectF, metrics: QFontMetricsF) -> float:
-        alignment = self.alignment()
-        if alignment & Qt.AlignmentFlag.AlignTop:
-            return rect.top() + metrics.ascent()
-        if alignment & Qt.AlignmentFlag.AlignBottom:
-            return rect.bottom() - metrics.descent()
-        return rect.y() + ((rect.height() - metrics.height()) / 2.0) + metrics.ascent()
-
-    def _phase(self) -> float:
-        elapsed_ms = (monotonic() - self._ribbon_epoch) * 1000.0
-        return (elapsed_ms % float(self._ribbon_duration_ms)) / float(self._ribbon_duration_ms)
+        super().mouseReleaseEvent(event)
 
 
 class MTWindowHeader(MTWidget):
@@ -331,24 +111,41 @@ class MTWindowHeader(MTWidget):
     ) -> None:
         super().__init__(parent=window, obj_name=obj_name)
         self._window = window
-        self._resize_border = 2
-        self._resize_border_over_header_buttons = 0
-        self._maximized_drag_pending = False
+        self._resize_margin = _HEADER_RESIZE_MARGIN
         self._drag_press_pos = QPoint()
-        self._native_filter = _install_native_event_filter()
+        self._maximized_drag_pending = False
+        self._manual_move_active = False
+        self._manual_move_offset = QPoint()
+        self._manual_resize_active = False
+        self._manual_resize_edges: Qt.Edge | None = None
+        self._manual_resize_start_global = QPoint()
+        self._manual_resize_start_geometry = QRect()
+
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setMouseTracking(True)
+        self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
 
         layout = create_layout(LayoutType.HBOX, parent=self)
 
-        self._title_label = _HeaderTitleLabel(title or window.windowTitle(), self, obj_name=f'{obj_name}_Title')
-        self._title_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-        self._title_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self._title_label = _HeaderTitleLabel(
+            title or window.windowTitle(),
+            self,
+            obj_name=f'{obj_name}_Title',
+        )
+        self._title_label.setAlignment(
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
+        )
+        self._title_label.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents, True
+        )
 
         layout.addStretch(1)
 
         self._buttons_host = MTWidget(parent=self, obj_name=f'{obj_name}_Buttons')
         self._buttons_host.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
-        self._buttons_host.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        self._buttons_host.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding
+        )
         buttons_layout = create_layout(LayoutType.HBOX, parent=self._buttons_host)
         layout.addWidget(self._buttons_host)
 
@@ -378,34 +175,27 @@ class MTWindowHeader(MTWidget):
         self._close_button.clicked.connect(self._window.close)
         buttons_layout.addWidget(self._close_button)
 
-        _enable_native_resize_frame(window)
-        window.installEventFilter(self)
-        if self._native_filter is not None:
-            self._native_filter.register(self)
-        def _on_window_destroyed(*_args: object) -> None:
-            self._unregister_native_filter()
-
-        window.destroyed.connect(_on_window_destroyed)
+        self._window.installEventFilter(self)
+        self._resize_grips = self._create_resize_grips()
         self.sync_window_meta()
         self._sync_title_geometry()
+        self._sync_resize_grips()
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
-        if obj is self._window and event.type() in {
-            QEvent.Type.Show,
-            QEvent.Type.WinIdChange,
-        }:
-            _enable_native_resize_frame(self._window)
-            if self._native_filter is not None:
-                self._native_filter.register(self)
-
         if obj is self._window:
-            if event.type() == QEvent.Type.Close:
-                self._unregister_native_filter()
-            if event.type() in {
-                QEvent.Type.WindowTitleChange,
-                QEvent.Type.WindowStateChange,
-            }:
-                self.sync_window_meta()
+            match event.type():
+                case QEvent.Type.Show | QEvent.Type.Resize:
+                    self._sync_resize_grips()
+                case QEvent.Type.WindowTitleChange | QEvent.Type.WindowStateChange:
+                    self.sync_window_meta()
+                    self._manual_move_active = False
+                    self._maximized_drag_pending = False
+                    self.finish_manual_resize()
+                    self._sync_resize_grips()
+                case QEvent.Type.Close:
+                    self.finish_manual_resize()
+                case _:
+                    pass
         return super().eventFilter(obj, event)
 
     def resizeEvent(self, event: QResizeEvent) -> None:
@@ -414,39 +204,53 @@ class MTWindowHeader(MTWidget):
         self._buttons_host.raise_()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        if event.button() == Qt.MouseButton.LeftButton and self._should_handle_header_drag(event.position().toPoint()):
-            self._maximized_drag_pending = self._window.isMaximized()
-            self._drag_press_pos = event.position().toPoint()
-        else:
-            self._maximized_drag_pending = False
-        super().mousePressEvent(event)
+        if (
+            event.button() != Qt.MouseButton.LeftButton
+            or not self._should_handle_header_drag(event.position().toPoint())
+        ):
+            super().mousePressEvent(event)
+            return
+
+        self._drag_press_pos = event.position().toPoint()
+        self._manual_move_active = False
+        self._maximized_drag_pending = self._window.isMaximized()
+
+        if not self._maximized_drag_pending:
+            if not self._start_system_move():
+                self._begin_manual_move(event.globalPosition().toPoint())
+            event.accept()
+            return
+
+        event.accept()
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if (
-            self._maximized_drag_pending and
-            (event.buttons() & Qt.MouseButton.LeftButton) and
-            self._should_handle_header_drag(event.position().toPoint())
+        if self._manual_move_active and (event.buttons() & Qt.MouseButton.LeftButton):
+            self._update_manual_move(event.globalPosition().toPoint())
+            event.accept()
+            return
+
+        if self._maximized_drag_pending and (
+            event.buttons() & Qt.MouseButton.LeftButton
         ):
             moved = event.position().toPoint() - self._drag_press_pos
             if moved.manhattanLength() >= QApplication.startDragDistance():
-                self._restore_from_maximized_drag(event)
+                self._restore_from_maximized_drag(event.globalPosition().toPoint())
                 event.accept()
                 return
+
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
+            self._manual_move_active = False
             self._maximized_drag_pending = False
         super().mouseReleaseEvent(event)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
         if (
-            event.button() == Qt.MouseButton.LeftButton and
-            self._should_handle_header_drag(event.position().toPoint())
+            event.button() == Qt.MouseButton.LeftButton
+            and self._should_handle_header_drag(event.position().toPoint())
         ):
-            if sys.platform.startswith('win') and self._native_filter is not None:
-                event.ignore()
-                return
             self._toggle_maximized()
             event.accept()
             return
@@ -455,15 +259,90 @@ class MTWindowHeader(MTWidget):
     def set_header_title(self, title: str) -> None:
         self._title_label.setText(str(title or ''))
 
-    def set_title_rainbow(self, enabled: bool, duration_ms: int | float, palette: str = 'Classic') -> None:
-        self._title_label.set_rainbow_enabled(bool(enabled), duration_ms, palette=palette)
+    def sync_title_geometry(self) -> None:
+        self._sync_title_geometry()
+
+    def set_title_rainbow(
+        self,
+        enabled: bool,
+        duration_ms: int | float,
+        palette: str = 'Classic',
+    ) -> None:
+        self._title_label.set_rainbow_enabled(
+            bool(enabled), duration_ms, palette=palette
+        )
 
     def sync_window_meta(self) -> None:
         self._title_label.setText(self._window.windowTitle())
-
         if self._maximize_button is not None:
-            is_maximized = self._window.isMaximized()
-            self._maximize_button.set_icon_by_name('minimize' if is_maximized else 'maximize')
+            self._maximize_button.set_icon_by_name(
+                'minimize' if self._window.isMaximized() else 'maximize'
+            )
+        self._sync_title_geometry()
+
+    def begin_resize(self, edges: Qt.Edge, global_pos: QPoint) -> None:
+        if self._window.isMaximized() or self._window.isFullScreen():
+            return
+        if self._start_system_resize(edges):
+            return
+        self._manual_resize_active = True
+        self._manual_resize_edges = edges
+        self._manual_resize_start_global = QPoint(global_pos)
+        self._manual_resize_start_geometry = QRect(self._window.geometry())
+
+    def update_manual_resize(self, global_pos: QPoint) -> None:
+        if not self._manual_resize_active or self._manual_resize_edges is None:
+            return
+
+        start = self._manual_resize_start_geometry
+        dx = global_pos.x() - self._manual_resize_start_global.x()
+        dy = global_pos.y() - self._manual_resize_start_global.y()
+
+        x = start.x()
+        y = start.y()
+        width = start.width()
+        height = start.height()
+
+        min_width = max(1, self._window.minimumWidth())
+        min_height = max(1, self._window.minimumHeight())
+        max_width = self._window.maximumWidth()
+        max_height = self._window.maximumHeight()
+
+        if self._manual_resize_edges & Qt.Edge.LeftEdge:
+            x += dx
+            width -= dx
+        elif self._manual_resize_edges & Qt.Edge.RightEdge:
+            width += dx
+
+        if self._manual_resize_edges & Qt.Edge.TopEdge:
+            y += dy
+            height -= dy
+        elif self._manual_resize_edges & Qt.Edge.BottomEdge:
+            height += dy
+
+        if width < min_width:
+            if self._manual_resize_edges & Qt.Edge.LeftEdge:
+                x = start.right() - min_width + 1
+            width = min_width
+        elif 0 < max_width < _QT_MAX_SIZE and width > max_width:
+            if self._manual_resize_edges & Qt.Edge.LeftEdge:
+                x = start.right() - max_width + 1
+            width = max_width
+
+        if height < min_height:
+            if self._manual_resize_edges & Qt.Edge.TopEdge:
+                y = start.bottom() - min_height + 1
+            height = min_height
+        elif 0 < max_height < _QT_MAX_SIZE and height > max_height:
+            if self._manual_resize_edges & Qt.Edge.TopEdge:
+                y = start.bottom() - max_height + 1
+            height = max_height
+
+        self._window.setGeometry(x, y, width, height)
+
+    def finish_manual_resize(self) -> None:
+        self._manual_resize_active = False
+        self._manual_resize_edges = None
 
     def _toggle_maximized(self) -> None:
         if self._window.isMaximized():
@@ -471,9 +350,9 @@ class MTWindowHeader(MTWidget):
         else:
             self._window.showMaximized()
         self.sync_window_meta()
+        self._sync_resize_grips()
 
-    def _restore_from_maximized_drag(self, event: QMouseEvent) -> None:
-        global_pos = event.globalPosition().toPoint()
+    def _restore_from_maximized_drag(self, global_pos: QPoint) -> None:
         old_width = max(1, self._window.width())
         press_ratio = max(0.0, min(1.0, self._drag_press_pos.x() / old_width))
 
@@ -481,9 +360,12 @@ class MTWindowHeader(MTWidget):
         restored_width = max(1, normal_geometry.width() or self._window.width())
         restored_height = max(1, normal_geometry.height() or self._window.height())
         target_x = global_pos.x() - int(round(restored_width * press_ratio))
-        target_y = global_pos.y() - min(self._drag_press_pos.y(), max(0, restored_height - 1))
+        target_y = global_pos.y() - min(
+            self._drag_press_pos.y(), max(0, restored_height - 1)
+        )
 
-        if (screen := QApplication.screenAt(global_pos)) is not None:
+        screen = QApplication.screenAt(global_pos)
+        if screen is not None:
             available = screen.availableGeometry()
             max_x = max(available.left(), available.right() - restored_width + 1)
             max_y = max(available.top(), available.bottom() - restored_height + 1)
@@ -495,138 +377,120 @@ class MTWindowHeader(MTWidget):
         self._window.move(target_x, target_y)
 
         self._maximized_drag_pending = False
-        handle = self._window.windowHandle()
-        handle.startSystemMove()
+        if not self._start_system_move():
+            self._begin_manual_move(global_pos)
 
-    def _unregister_native_filter(self) -> None:
-        if self._native_filter is None:
-            return
-        self._native_filter.unregister(self)
+    def _begin_manual_move(self, global_pos: QPoint) -> None:
+        frame_top_left = self._window.frameGeometry().topLeft()
+        self._manual_move_offset = global_pos - frame_top_left
+        self._manual_move_active = True
 
-    def native_hit_test(self, lparam: int) -> int | None:
-        if not sys.platform.startswith('win'):
-            return None
-        if not self._window.isVisible():
-            return None
+    def _update_manual_move(self, global_pos: QPoint) -> None:
+        target = global_pos - self._manual_move_offset
+        self._window.move(target)
 
-        global_pos = self._global_pos_from_lparam(lparam)
-        if global_pos is None:
-            return None
-
-        if (edge_hit := self._hit_test_resize_edges(global_pos)) is not None:
-            return edge_hit
-
-        if self._is_over_interactive_widget(global_pos):
-            return HTCLIENT
-
-        if (header_hit := self._hit_test_header(global_pos)) is not None:
-            return header_hit
-
-        return None
-
-    def _global_pos_from_lparam(self, lparam: int) -> QPoint | None:
-        if not sys.platform.startswith('win'):
-            return None
-        import ctypes
-
-        x = ctypes.c_short(lparam & 0xFFFF).value
-        y = ctypes.c_short((lparam >> 16) & 0xFFFF).value
-        return QPoint(int(x), int(y))
-
-    def _is_over_interactive_widget(self, global_pos: QPoint) -> bool:
-        local_pos = self._window.mapFromGlobal(global_pos)
-        if not self._window.rect().contains(local_pos):
+    def _start_system_move(self) -> bool:
+        if self._window.isFullScreen():
+            return False
+        try:
+            return bool(self._window.windowHandle().startSystemMove())
+        except RuntimeError:
             return False
 
-        child = self._window.childAt(local_pos)
-        while child is not None:
-            if isinstance(child, (QAbstractButton, QLineEdit, QAbstractSpinBox, QComboBox, QAbstractSlider)):
-                return True
-            child = child.parentWidget()
-        return False
-
-    def _hit_test_resize_edges(self, global_pos: QPoint) -> int | None:
-        edges = self._resize_edges_at(global_pos)
-        if edges is None:
-            return None
-
-        left = bool(edges & Qt.Edge.LeftEdge)
-        right = bool(edges & Qt.Edge.RightEdge)
-        top = bool(edges & Qt.Edge.TopEdge)
-        bottom = bool(edges & Qt.Edge.BottomEdge)
-
-        if top and left:
-            return HTTOPLEFT
-        if top and right:
-            return HTTOPRIGHT
-        if bottom and left:
-            return HTBOTTOMLEFT
-        if bottom and right:
-            return HTBOTTOMRIGHT
-        if left:
-            return HTLEFT
-        if right:
-            return HTRIGHT
-        if top:
-            return HTTOP
-        if bottom:
-            return HTBOTTOM
-        return None
-
-    def _resize_edges_at(self, global_pos: QPoint) -> Qt.Edge | None:
-        if self._window.isMaximized() or self._window.isFullScreen():
-            return None
-
-        local_pos = self._window.mapFromGlobal(global_pos)
-        rect = self._window.rect()
-        if not rect.contains(local_pos):
-            return None
-
-        border = self._resize_border_for_position(global_pos)
-        left = local_pos.x() <= border
-        right = local_pos.x() >= rect.width() - border - 1
-        top = local_pos.y() <= border
-        bottom = local_pos.y() >= rect.height() - border - 1
-
-        edges = None
-        if left:
-            edges = Qt.Edge.LeftEdge
-        elif right:
-            edges = Qt.Edge.RightEdge
-
-        if top:
-            edges = Qt.Edge.TopEdge if edges is None else edges | Qt.Edge.TopEdge
-        elif bottom:
-            edges = Qt.Edge.BottomEdge if edges is None else edges | Qt.Edge.BottomEdge
-
-        return edges
-
-    def _resize_border_for_position(self, global_pos: QPoint) -> int:
-        if self._point_in_widget(self._buttons_host, global_pos):
-            return max(0, int(self._resize_border_over_header_buttons))
-        return max(0, int(self._resize_border))
-
-    def _hit_test_header(self, global_pos: QPoint) -> int | None:
-        if not self.isVisible():
-            return None
-
-        local_pos = self.mapFromGlobal(global_pos)
-        if not self.rect().contains(local_pos):
-            return None
-
-        if self._point_in_widget(self._buttons_host, global_pos):
-            return HTCLIENT
-
-        if self._window.isMaximized():
-            return HTCLIENT
-
-        return HTCAPTION
+    def _start_system_resize(self, edges: Qt.Edge) -> bool:
+        try:
+            return bool(self._window.windowHandle().startSystemResize(edges))
+        except RuntimeError:
+            return False
 
     def _should_handle_header_drag(self, local_pos: QPoint) -> bool:
         child = self.childAt(local_pos)
-        if isinstance(child, QAbstractButton):
-            return False
-        return True
+        return not isinstance(child, MTButton)
+
+    def _create_resize_grips(self) -> list[_HeaderResizeGrip]:
+        obj_name = self.objectName().strip() or 'Window_Header'
+        grips = [
+            _HeaderResizeGrip(
+                self,
+                Qt.Edge.LeftEdge,
+                obj_name=f'{obj_name}_Resize_Left_Grip',
+                cursor=Qt.CursorShape.SizeHorCursor,
+            ),
+            _HeaderResizeGrip(
+                self,
+                Qt.Edge.RightEdge,
+                obj_name=f'{obj_name}_Resize_Right_Grip',
+                cursor=Qt.CursorShape.SizeHorCursor,
+            ),
+            _HeaderResizeGrip(
+                self,
+                Qt.Edge.TopEdge,
+                obj_name=f'{obj_name}_Resize_Top_Grip',
+                cursor=Qt.CursorShape.SizeVerCursor,
+            ),
+            _HeaderResizeGrip(
+                self,
+                Qt.Edge.BottomEdge,
+                obj_name=f'{obj_name}_Resize_Bottom_Grip',
+                cursor=Qt.CursorShape.SizeVerCursor,
+            ),
+            _HeaderResizeGrip(
+                self,
+                Qt.Edge.TopEdge | Qt.Edge.LeftEdge,
+                obj_name=f'{obj_name}_Resize_Top_Left_Grip',
+                cursor=Qt.CursorShape.SizeFDiagCursor,
+            ),
+            _HeaderResizeGrip(
+                self,
+                Qt.Edge.TopEdge | Qt.Edge.RightEdge,
+                obj_name=f'{obj_name}_Resize_Top_Right_Grip',
+                cursor=Qt.CursorShape.SizeBDiagCursor,
+            ),
+            _HeaderResizeGrip(
+                self,
+                Qt.Edge.BottomEdge | Qt.Edge.LeftEdge,
+                obj_name=f'{obj_name}_Resize_Bottom_Left_Grip',
+                cursor=Qt.CursorShape.SizeBDiagCursor,
+            ),
+            _HeaderResizeGrip(
+                self,
+                Qt.Edge.BottomEdge | Qt.Edge.RightEdge,
+                obj_name=f'{obj_name}_Resize_Bottom_Right_Grip',
+                cursor=Qt.CursorShape.SizeFDiagCursor,
+            ),
+        ]
+        for grip in grips:
+            grip.hide()
+        return grips
+
+    def _sync_resize_grips(self) -> None:
+        if not self._window.isVisible():
+            return
+
+        margin = max(1, int(self._resize_margin))
+        rect = self._window.rect()
+        width = max(0, rect.width())
+        height = max(0, rect.height())
+        enabled = not (self._window.isMaximized() or self._window.isFullScreen())
+
+        geometries = [
+            QRect(0, margin, margin, max(0, height - (margin * 2))),
+            QRect(max(0, width - margin), margin, margin, max(0, height - (margin * 2))),
+            QRect(margin, 0, max(0, width - (margin * 2)), margin),
+            QRect(margin, max(0, height - margin), max(0, width - (margin * 2)), margin),
+            QRect(0, 0, margin, margin),
+            QRect(max(0, width - margin), 0, margin, margin),
+            QRect(0, max(0, height - margin), margin, margin),
+            QRect(max(0, width - margin), max(0, height - margin), margin, margin),
+        ]
+
+        for grip, geometry in zip(self._resize_grips, geometries, strict=False):
+            grip.setGeometry(geometry)
+            if enabled:
+                grip.show()
+                grip.raise_()
+            else:
+                grip.hide()
 
     def _sync_title_geometry(self) -> None:
         right_reserved = max(0, self._buttons_host.width())
@@ -638,13 +502,6 @@ class MTWindowHeader(MTWidget):
             x = 0
             width = max(0, self.width() - right_reserved)
         self._title_label.setGeometry(QRect(x, 0, width, self.height()))
-
-    @staticmethod
-    def _point_in_widget(widget: QWidget | None, global_pos: QPoint) -> bool:
-        if widget is None or not widget.isVisible():
-            return False
-        local_pos = widget.mapFromGlobal(global_pos)
-        return widget.rect().contains(local_pos)
 
 
 def apply_frameless_window_header(

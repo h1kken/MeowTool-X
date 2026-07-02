@@ -17,6 +17,8 @@ from src.theme.rainbow.border import (
     mix_border_color,
 )
 from src.theme.rainbow.palette import sample_rainbow_color
+from src.ui.widgets.main.box import BoxThemeMixin
+from src.ui.widgets import MTSlider, MTSwitch
 
 _FADE_DURATION_MS = 200.0
 _FALLBACK_BORDER_WIDTH = 1.0
@@ -34,7 +36,6 @@ _DEFAULT_BORDER_TARGET_SELECTORS: tuple[str, ...] = (
     'MTButton',
 )
 _RUNTIME_BORDER_TARGET_PROPERTY = '_rainbowRuntimeBorderTarget'
-_RUNTIME_TEXT_ICON_TARGET_PROPERTY = '_rainbowRuntimeTextIconTarget'
 
 
 class RainbowRuntimeController(QObject):
@@ -50,10 +51,8 @@ class RainbowRuntimeController(QObject):
         self._epoch = monotonic()
         self._last_tick_time = monotonic()
         self._filtered_widgets: set[QWidget] = set()
-        self._switches: set[QWidget] = set()
-        self._sliders: set[QWidget] = set()
-        self._text_icon_targets: set[QWidget] = set()
-        self._text_icon_base_states: dict[QWidget, dict[str, object] | None] = {}
+        self._switches: set[MTSwitch] = set()
+        self._sliders: set[MTSlider] = set()
         self._setting_overlays: dict[QWidget, DashBorderOverlay] = {}
         self._setting_base_styles: dict[QWidget, str] = {}
         self._setting_states: dict[QWidget, dict[str, float]] = {}
@@ -103,9 +102,6 @@ class RainbowRuntimeController(QObject):
 
         for widget in list(self._switches | self._sliders):
             self._clear_widget_rainbow(widget)
-        for widget in list(self._text_icon_targets):
-            self._clear_text_icon_rainbow(widget)
-
         for overlay in list(self._setting_overlays.values()):
             try:
                 overlay.hide()
@@ -125,8 +121,6 @@ class RainbowRuntimeController(QObject):
         self._filtered_widgets.clear()
         self._switches.clear()
         self._sliders.clear()
-        self._text_icon_targets.clear()
-        self._text_icon_base_states.clear()
         self._setting_overlays.clear()
         self._setting_base_styles.clear()
         self._setting_states.clear()
@@ -175,7 +169,6 @@ class RainbowRuntimeController(QObject):
     def _rebuild_targets(self) -> None:
         previous_switches = set(self._switches)
         previous_sliders = set(self._sliders)
-        previous_text_icon_targets = set(self._text_icon_targets)
         previous_filtered = set(self._filtered_widgets)
         previous_states = {
             widget: dict(state)
@@ -185,9 +178,6 @@ class RainbowRuntimeController(QObject):
 
         for widget in list(previous_switches | previous_sliders):
             self._clear_widget_rainbow(widget)
-        for widget in list(previous_text_icon_targets):
-            self._clear_text_icon_rainbow(widget)
-
         for overlay in list(self._setting_overlays.values()):
             try:
                 overlay.hide()
@@ -200,8 +190,6 @@ class RainbowRuntimeController(QObject):
 
         self._switches.clear()
         self._sliders.clear()
-        self._text_icon_targets.clear()
-        self._text_icon_base_states.clear()
         self._setting_overlays.clear()
         self._setting_base_styles.clear()
         self._setting_states.clear()
@@ -209,29 +197,16 @@ class RainbowRuntimeController(QObject):
         self._syncing_native_border_styles.clear()
 
         for widget in resolve_target_widgets(self._root, 'MTSwitch', include_window=True):
+            if not isinstance(widget, MTSwitch):
+                continue
             self._install_filter(widget, current_filtered)
             self._switches.add(widget)
 
         for widget in resolve_target_widgets(self._root, 'MTSlider', include_window=True):
+            if not isinstance(widget, MTSlider):
+                continue
             self._install_filter(widget, current_filtered)
             self._sliders.add(widget)
-
-        for widget in resolve_target_widgets(self._root, 'MTButton', include_window=True):
-            if not bool(widget.property('rainbowCheckedTextIconTarget')):
-                continue
-            self._install_filter(widget, current_filtered)
-            self._text_icon_targets.add(widget)
-            text_icon_state = getattr(widget, 'text_icon_state', None)
-            raw_text_icon_state = text_icon_state() if callable(text_icon_state) else None
-            self._text_icon_base_states[widget] = (
-                cast(dict[str, object], raw_text_icon_state)
-                if isinstance(raw_text_icon_state, dict)
-                else None
-            )
-            try:
-                widget.setProperty(_RUNTIME_TEXT_ICON_TARGET_PROPERTY, True)
-            except RuntimeError:
-                continue
 
         for widget in self._iter_border_target_widgets():
             config = detect_border_config(
@@ -243,8 +218,6 @@ class RainbowRuntimeController(QObject):
                 box_border_visible = self._box_theme_has_visible_border(widget)
                 if box_border_visible and self._prepare_box_painted_config(widget, config):
                     pass
-                elif isinstance(text_config := self._detect_text_border_config(widget), dict):
-                    config = text_config
             self._install_filter(widget, current_filtered)
             try:
                 widget.setProperty(_RUNTIME_BORDER_TARGET_PROPERTY, True)
@@ -287,7 +260,7 @@ class RainbowRuntimeController(QObject):
                 continue
         self._filtered_widgets = current_filtered
 
-        if self._switches or self._sliders or self._text_icon_targets or self._setting_states:
+        if self._switches or self._sliders or self._setting_states:
             self._tick()
             if not self._timer.isActive():
                 self._timer.start()
@@ -325,8 +298,7 @@ class RainbowRuntimeController(QObject):
                 continue
             if not widget.isVisible():
                 continue
-            is_checked = getattr(widget, 'isChecked', None)
-            if callable(is_checked) and bool(is_checked()):
+            if widget.isChecked():
                 self._set_widget_rainbow(widget, phase)
             else:
                 self._clear_widget_rainbow(widget)
@@ -338,21 +310,6 @@ class RainbowRuntimeController(QObject):
             if not widget.isVisible():
                 continue
             self._set_widget_rainbow(widget, phase)
-
-        for widget in list(self._text_icon_targets):
-            if not self._widget_is_alive(widget):
-                self._clear_text_icon_rainbow(widget)
-                self._text_icon_targets.discard(widget)
-                self._text_icon_base_states.pop(widget, None)
-                continue
-            if not widget.isVisible():
-                self._clear_text_icon_rainbow(widget)
-                continue
-            is_checked = getattr(widget, 'isChecked', None)
-            if callable(is_checked) and bool(is_checked()):
-                self._set_text_icon_rainbow(widget, phase)
-            else:
-                self._clear_text_icon_rainbow(widget)
 
         color = sample_rainbow_color(
             phase,
@@ -422,64 +379,34 @@ class RainbowRuntimeController(QObject):
         return (elapsed_ms % float(self._duration_ms)) / float(self._duration_ms)
 
     def _set_widget_rainbow(self, widget: QWidget, phase: float) -> None:
-        palette_setter = getattr(widget, 'set_slider_line_rainbow_palette', None)
-        if not callable(palette_setter):
-            palette_setter = getattr(widget, 'set_handle_rainbow_palette', None)
-        if callable(palette_setter):
+        if isinstance(widget, MTSlider):
             try:
-                palette_setter(self._palette)
+                widget.set_slider_line_rainbow_palette(self._palette)
+                widget.set_slider_line_rainbow_saturation(self._saturation)
+                widget.set_slider_line_rainbow(float(phase))
             except RuntimeError:
                 return
-        saturation_setter = getattr(widget, 'set_slider_line_rainbow_saturation', None)
-        if not callable(saturation_setter):
-            saturation_setter = getattr(widget, 'set_handle_rainbow_saturation', None)
-        if callable(saturation_setter):
+            return
+        if isinstance(widget, MTSwitch):
             try:
-                saturation_setter(self._saturation)
-            except RuntimeError:
-                return
-        setter = getattr(widget, 'set_slider_line_rainbow', None)
-        if not callable(setter):
-            setter = getattr(widget, 'set_handle_rainbow', None)
-        if callable(setter):
-            try:
-                setter(float(phase))
+                widget.set_handle_rainbow_palette(self._palette)
+                widget.set_handle_rainbow_saturation(self._saturation)
+                widget.set_handle_rainbow(float(phase))
             except RuntimeError:
                 return
 
     def _clear_widget_rainbow(self, widget: QWidget) -> None:
-        clearer = getattr(widget, 'clear_slider_line_rainbow', None)
-        if not callable(clearer):
-            clearer = getattr(widget, 'clear_handle_rainbow', None)
-        if callable(clearer):
+        if isinstance(widget, MTSlider):
             try:
-                clearer()
+                widget.clear_slider_line_rainbow()
             except RuntimeError:
                 return
-
-    def _set_text_icon_rainbow(self, widget: QWidget, phase: float) -> None:
-        setter = getattr(widget, 'set_text_icon_color', None)
-        if not callable(setter):
             return
-        try:
-            setter(
-                sample_rainbow_color(
-                    phase,
-                    palette=self._palette,
-                    saturation=self._saturation,
-                )
-            )
-        except RuntimeError:
-            return
-
-    def _clear_text_icon_rainbow(self, widget: QWidget) -> None:
-        restore_text_icon_state = getattr(widget, 'restore_text_icon_state', None)
-        if not callable(restore_text_icon_state):
-            return
-        try:
-            restore_text_icon_state(self._text_icon_base_states.get(widget))
-        except RuntimeError:
-            return
+        if isinstance(widget, MTSwitch):
+            try:
+                widget.clear_handle_rainbow()
+            except RuntimeError:
+                return
 
     def _widget_is_alive(self, widget: QWidget) -> bool:
         try:
@@ -578,7 +505,7 @@ class RainbowRuntimeController(QObject):
         state = self._setting_states.get(widget)
         if not isinstance(config, dict) or not config.get('native') or not isinstance(state, dict):
             return
-        if config.get('text_border') or config.get('box_painted'):
+        if config.get('box_painted'):
             return
 
         try:
@@ -608,8 +535,6 @@ class RainbowRuntimeController(QObject):
             config['native_applied'] = False
             return
 
-        if self._sync_text_border_color(widget, config, color, opacity):
-            return
         if self._sync_custom_box_border_color(widget, config, color, opacity):
             return
 
@@ -627,13 +552,12 @@ class RainbowRuntimeController(QObject):
         config['native_applied'] = True
 
     def _sync_custom_box_border_color(self, widget: QWidget, config: dict[str, Any], color: QColor, opacity: float) -> bool:
-        set_box_border = getattr(widget, 'set_box_border', None)
-        if not callable(set_box_border):
+        if not isinstance(widget, BoxThemeMixin):
             return False
 
         mixed = mix_border_color(self._base_border_color(config), color, opacity)
         try:
-            if not set_box_border(
+            if not widget.set_box_border(
                 color=mixed,
                 width=config.get('width'),
                 radius=config.get('radius'),
@@ -646,41 +570,18 @@ class RainbowRuntimeController(QObject):
         config['native_applied'] = True
         return True
 
-    def _sync_text_border_color(self, widget: QWidget, config: dict[str, Any], color: QColor, opacity: float) -> bool:
-        if not config.get('text_border'):
-            return False
-
-        setter = getattr(widget, 'set_text_border_color', None)
-        if not callable(setter):
-            return False
-
-        mixed = mix_border_color(self._base_border_color(config), color, opacity)
-        try:
-            if not setter(mixed):
-                return False
-        except RuntimeError:
-            return False
-
-        config['native_applied'] = True
-        return True
-
     def _restore_native_border(self, widget: QWidget) -> None:
         config = self._setting_configs.get(widget)
         if not isinstance(config, dict) or not config.get('native_applied'):
-            return
-        if config.get('text_border'):
-            self._restore_text_border(widget, config)
-            config['native_applied'] = False
             return
         if config.get('box_painted'):
             self._restore_box_border(widget, config)
             config['native_applied'] = False
             return
-        set_box_border = getattr(widget, 'set_box_border', None)
-        if callable(set_box_border):
+        if isinstance(widget, BoxThemeMixin):
             base_color = self._base_border_color(config)
             if base_color:
-                set_box_border(color=base_color)
+                widget.set_box_border(color=base_color)
                 config['native_applied'] = False
                 return
         base_style = self._setting_base_styles.get(widget, '')
@@ -697,9 +598,7 @@ class RainbowRuntimeController(QObject):
     def _restore_runtime_border(self, widget: QWidget) -> None:
         config = self._setting_configs.get(widget)
         if isinstance(config, dict):
-            if config.get('text_border'):
-                self._restore_text_border(widget, config)
-            elif config.get('box_painted'):
+            if config.get('box_painted'):
                 self._restore_box_border(widget, config)
 
         base_style = self._setting_base_styles.get(widget, '')
@@ -710,62 +609,29 @@ class RainbowRuntimeController(QObject):
         except RuntimeError:
             pass
 
-    def _detect_text_border_config(self, widget: QWidget) -> dict[str, Any] | None:
-        state_getter = getattr(widget, 'text_border_state', None)
-        if not callable(state_getter):
-            return None
-
-        raw_state = state_getter()
-        if not isinstance(raw_state, dict):
-            return None
-        state = cast(dict[str, Any], raw_state)
-
-        color = state.get('color')
-        width = state.get('width')
-        if not isinstance(color, QColor) or not color.isValid() or color.alpha() <= 0:
-            return None
-        if not isinstance(width, (int, float)) or float(width) <= 0.0:
-            return None
-
-        return {
-            'native': True,
-            'text_border': True,
-            'width': float(width),
-            'style': str(state.get('style', 'solid') or 'solid'),
-            'radius': 0.0,
-            'inset': 0.0,
-            'border_color': QColor(color),
-            'border_color_text': color.name(QColor.NameFormat.HexRgb),
-            'text_border_state': state,
-            'native_applied': False,
-        }
-
     def _prepare_box_painted_config(self, widget: QWidget, config: dict[str, Any]) -> bool:
-        set_box_border = getattr(widget, 'set_box_border', None)
-        state_getter = getattr(widget, 'box_theme_state', None)
-        if not callable(set_box_border) or not callable(state_getter):
+        if not isinstance(widget, BoxThemeMixin):
             return False
 
         config['native'] = True
         config['box_painted'] = True
-        config['box_theme_state'] = state_getter()
+        config['box_theme_state'] = widget.box_theme_state()
         config['border_color_text'] = '#00000000'
         return True
 
     def _box_theme_has_visible_border(self, widget: QWidget) -> bool:
-        state_getter = getattr(widget, 'box_theme_state', None)
-        if not callable(state_getter):
+        if not isinstance(widget, BoxThemeMixin):
             return False
 
-        raw_state = state_getter()
+        raw_state = widget.box_theme_state()
         if not isinstance(raw_state, dict):
             return False
-        state = cast(dict[str, Any], raw_state)
+        state: dict[str, Any] = raw_state
 
         border = state.get('border')
         if not isinstance(border, dict):
             return False
-        border_data = cast(dict[str, Any], border)
+        border_data: dict[str, Any] = cast(dict[str, Any], border)
 
         if self._border_part_is_visible(border_data):
             return True
@@ -791,28 +657,21 @@ class RainbowRuntimeController(QObject):
         color = data.get('color')
         return isinstance(color, QColor) and color.isValid() and color.alpha() > 0
 
-    def _restore_text_border(self, widget: QWidget, config: dict[str, Any]) -> None:
-        restore = getattr(widget, 'restore_text_border_state', None)
-        if not callable(restore):
-            return
-        try:
-            restore(config.get('text_border_state'))
-        except RuntimeError:
-            pass
-
     def _restore_box_border(self, widget: QWidget, config: dict[str, Any]) -> None:
-        state_getter = getattr(widget, 'box_theme_state', None)
-        restore = getattr(widget, 'restore_box_theme_state', None)
-        if not callable(state_getter) or not callable(restore):
+        if not isinstance(widget, BoxThemeMixin):
             return
 
         raw_saved_state = config.get('box_theme_state')
         if not isinstance(raw_saved_state, dict):
             return
-        saved_state = cast(dict[str, Any], raw_saved_state)
+        saved_state: dict[str, Any] = cast(dict[str, Any], raw_saved_state)
 
-        raw_current_state = state_getter()
-        current_state = cast(dict[str, Any], raw_current_state) if isinstance(raw_current_state, dict) else None
+        raw_current_state = widget.box_theme_state()
+        current_state: dict[str, Any] | None = (
+            raw_current_state
+            if isinstance(raw_current_state, dict) else
+            None
+        )
         state = deepcopy(current_state) if current_state is not None else deepcopy(saved_state)
         border = saved_state.get('border')
         if isinstance(border, dict):
@@ -821,7 +680,7 @@ class RainbowRuntimeController(QObject):
             state['radius'] = deepcopy(saved_state.get('radius'))
 
         try:
-            restore(state)
+            widget.restore_box_theme_state(state)
         except RuntimeError:
             pass
 

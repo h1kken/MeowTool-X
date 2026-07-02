@@ -30,12 +30,7 @@ THEME_STYLE_SPEC: dict[str, Any] = {
             'align',
             'align.focused',
             'align.unfocused',
-            'spacing',
-            'letter_spacing',
-            'letter-spacing',
             'font',
-            'shadow',
-            'border',
             'icon'
         ),
         'padding': 'inner widget content padding',

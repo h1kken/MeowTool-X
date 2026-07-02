@@ -5,7 +5,7 @@ from PySide6.QtCore import QObject, QSize, Qt, QUrl
 from PySide6.QtGui import QMovie, QPixmap, QResizeEvent
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
-from PySide6.QtWidgets import QSizePolicy, QWidget
+from PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 
 from src.app.paths import PATH_ROOT
 from src.ui.constants import (
@@ -25,64 +25,6 @@ _MEDIA_FIT_COVER = 'cover'
 _MEDIA_FIT_STRETCH = 'stretch'
 _MEDIA_FIT_CENTER = 'center'
 _DEFAULT_MEDIA_FIT = _MEDIA_FIT_CONTAIN
-
-
-def _extract_media_source(data: dict[str, Any]) -> str:
-    direct_source = data.get('source')
-    if isinstance(direct_source, str) and direct_source.strip():
-        return direct_source.strip()
-
-    icon_data = data.get('icon')
-    if isinstance(icon_data, dict):
-        icon_mapping = cast(dict[str, Any], icon_data)
-        icon_source = icon_mapping.get('source')
-        if isinstance(icon_source, str) and icon_source.strip():
-            return icon_source.strip()
-
-    return ''
-
-
-def _normalize_fit(value: object) -> str:
-    token = str(value or '').strip().lower()
-    if token in (_MEDIA_FIT_CONTAIN, ''):
-        return _MEDIA_FIT_CONTAIN
-    if token == _MEDIA_FIT_COVER:
-        return _MEDIA_FIT_COVER
-    if token in (_MEDIA_FIT_STRETCH, 'fill'):
-        return _MEDIA_FIT_STRETCH
-    if token in (_MEDIA_FIT_CENTER, 'free'):
-        return _MEDIA_FIT_CENTER
-    return _DEFAULT_MEDIA_FIT
-
-
-def _normalize_margins(value: int | tuple[int, int, int, int]) -> tuple[int, int, int, int]:
-    if isinstance(value, tuple):
-        if len(value) == 4:
-            return (
-                int(max(0, value[0])),
-                int(max(0, value[1])),
-                int(max(0, value[2])),
-                int(max(0, value[3])),
-            )
-        return 0, 0, 0, 0
-    margin = max(0, int(value))
-    return margin, margin, margin, margin
-
-
-def _resolve_media_path(source: str) -> Path | None:
-    if not source:
-        return None
-
-    candidate = Path(source).expanduser()
-    candidates = [candidate]
-    if not candidate.is_absolute():
-        candidates.append(PATH_ROOT / candidate)
-
-    for path in candidates:
-        if path.exists() and path.is_file():
-            return path
-
-    return None
 
 
 class MTVideoWidget(QVideoWidget):
@@ -127,7 +69,16 @@ class MTMediaWidget(MTWidget):
         self._media_player: MTMediaPlayer | None = None
         self._source = ''
         self._fit = _DEFAULT_MEDIA_FIT
-        self._content_margins = _normalize_margins(content_margins)
+        if isinstance(content_margins, tuple) and len(content_margins) == 4:
+            self._content_margins: tuple[int, int, int, int] = (
+                int(max(0, content_margins[0])),
+                int(max(0, content_margins[1])),
+                int(max(0, content_margins[2])),
+                int(max(0, content_margins[3])),
+            )
+        else:
+            margin = max(0, int(content_margins))
+            self._content_margins = (margin, margin, margin, margin)
         self._transparent_for_mouse = bool(transparent_for_mouse)
         self._image_obj_name = image_obj_name
         self._video_obj_name = video_obj_name
@@ -139,7 +90,7 @@ class MTMediaWidget(MTWidget):
         if self._transparent_for_mouse:
             self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
-        self._layout = create_layout(
+        self._layout: QVBoxLayout = create_layout(
             LayoutType.VBOX,
             parent=self,
             margins=self._content_margins,
@@ -169,11 +120,30 @@ class MTMediaWidget(MTWidget):
         self._clear_media_layer()
 
     def apply_media_theme(self, data: dict[str, Any]) -> None:
-        source = _extract_media_source(data)
+        source = ''
+        direct_source = data.get('source')
+        if isinstance(direct_source, str) and direct_source.strip():
+            source = direct_source.strip()
+        else:
+            icon_data = data.get('icon')
+            if isinstance(icon_data, dict):
+                icon_source = cast(dict[str, Any], icon_data).get('source')
+                if isinstance(icon_source, str) and icon_source.strip():
+                    source = icon_source.strip()
         if source or 'source' in data or isinstance(data.get('icon'), dict):
             self._source = source
         if 'fit' in data:
-            self._fit = _normalize_fit(data.get('fit'))
+            token = str(data.get('fit') or '').strip().lower()
+            if token in (_MEDIA_FIT_CONTAIN, ''):
+                self._fit = _MEDIA_FIT_CONTAIN
+            elif token == _MEDIA_FIT_COVER:
+                self._fit = _MEDIA_FIT_COVER
+            elif token in (_MEDIA_FIT_STRETCH, 'fill'):
+                self._fit = _MEDIA_FIT_STRETCH
+            elif token in (_MEDIA_FIT_CENTER, 'free'):
+                self._fit = _MEDIA_FIT_CENTER
+            else:
+                self._fit = _DEFAULT_MEDIA_FIT
 
         self._apply_current_media()
 
@@ -186,7 +156,14 @@ class MTMediaWidget(MTWidget):
         self._refresh_visuals()
 
     def _apply_current_media(self) -> None:
-        path = _resolve_media_path(self._source)
+        if not self._source:
+            path = None
+        else:
+            candidate = Path(self._source).expanduser()
+            candidates = [candidate]
+            if not candidate.is_absolute():
+                candidates.append(PATH_ROOT / candidate)
+            path = next((item for item in candidates if item.exists() and item.is_file()), None)
         if path is None:
             self._clear_media_layer()
             return

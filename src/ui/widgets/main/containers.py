@@ -35,13 +35,15 @@ from PySide6.QtWidgets import (
 
 from src.app.paths import PATH_SRC
 from src.theme.colors import to_qcolor
-from src.theme.gradients import build_background_brush, normalize_gradient_data
+from src.theme.gradients import normalize_gradient_data
 from src.theme.schema.access import coerce_box_sides, coerce_number, object_map, theme_map
+from src.ui.fonts import apply_font_antialiasing
 from src.ui.painting import draw_widget_background, new_widget_painter
 from src.translation.mixin import TranslatableComboBoxMixin
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets.main.box import BoxThemeMixin
-from src.ui.widgets.main.text import MTButton, MTLabel, MTPlainLabel, TextEffectMixin
+from src.ui.widgets.main.paint_primitives import parse_pen_style, resolve_fill_brush, rounded_rect_path
+from src.ui.widgets.main.text import MTButton, MTLabel, MTPlainLabel
 from src.ui.widgets.types import WidgetThemeMap
 
 _GROUP_ITEM_INDENT = '   '
@@ -49,9 +51,23 @@ _GROUP_SECTION_SPACER_HEIGHT = 8
 _DEFAULT_COMBOBOX_ARROW_SOURCE = str(PATH_SRC / 'assets/icons/MTComboBox/arrow_right.svg')
 
 
+def _draw_aligned_text(
+    painter: QPainter,
+    rect: QRectF,
+    alignment: Qt.AlignmentFlag,
+    text: str,
+    color: QColor,
+) -> None:
+    painter.save()
+    painter.setPen(color)
+    painter.drawText(rect, int(alignment), text)
+    painter.restore()
+
+
 class MTRadioButton(BoxThemeMixin, QRadioButton):
     def __init__(self, text: str = '', parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(text, parent)
+        apply_font_antialiasing(self)
         self.init_box_theme()
 
         if obj_name:
@@ -187,7 +203,7 @@ class _MTComboPopup(BoxThemeMixin, QFrame):
         self.setMask(QRegion(path.toFillPolygon().toPolygon()))
 
 
-class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWidget):
+class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
     currentIndexChanged = Signal(int)
     currentTextChanged = Signal(str)
     activated = Signal(int)
@@ -196,12 +212,11 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
 
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent)
+        apply_font_antialiasing(self)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.init_box_theme()
-        self.init_text_effects()
-        self.set_force_text_path_render(True)
         self._items: list[dict[str, Any]] = []
         self._current_index = -1
         self._default_parts: dict[str, WidgetThemeMap] = self._build_default_parts()
@@ -223,17 +238,19 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
         self.sync_content_width()
 
     def sizeHint(self) -> QSize:
-        return self._content_size_hint()
-
-    def minimumSizeHint(self) -> QSize:
-        return self._content_size_hint()
-
-    def _content_size_hint(self) -> QSize:
         text = self.currentText()
-        text_width = self._visual_text_size(text).width() if text else 1
+        text_width = self.fontMetrics().horizontalAdvance(text) if text else 1
         return QSize(
             max(1, text_width + int(round(self._button_width()))),
-            max(1, self._visual_text_size(text).height() if text else self.fontMetrics().height()),
+            max(1, self.fontMetrics().height()),
+        )
+
+    def minimumSizeHint(self) -> QSize:
+        text = self.currentText()
+        text_width = self.fontMetrics().horizontalAdvance(text) if text else 1
+        return QSize(
+            max(1, text_width + int(round(self._button_width()))),
+            max(1, self.fontMetrics().height()),
         )
 
     def addItem(self, text: str, userData: object = None) -> None:
@@ -374,10 +391,13 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
                 content_width = 0
             case 'current':
                 current_text = self.currentText()
-                content_width = self._visual_text_size(current_text).width() if current_text else 0
+                content_width = self.fontMetrics().horizontalAdvance(current_text) if current_text else 0
             case _:
                 for index in range(self.count()):
-                    content_width = max(content_width, self._visual_text_size(self.itemText(index)).width())
+                    content_width = max(
+                        content_width,
+                        self.fontMetrics().horizontalAdvance(self.itemText(index)),
+                    )
 
         target_width = max(self._content_width_floor, content_width + int(round(self._button_width())))
         self.setMinimumWidth(target_width)
@@ -396,19 +416,13 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
     def content_width_mode(self) -> str:
         return self._content_width_mode
 
-    def _popup_object_name(self) -> str:
+    def popup_object_name(self) -> str:
         base_name = self.objectName().strip() or type(self).__name__
         return f'{base_name}_Popup'
 
-    def _popup_item_object_name(self, index: int) -> str:
+    def popup_item_object_name(self, index: int) -> str:
         base_name = self.objectName().strip() or type(self).__name__
         return f'{base_name}_Popup_Item_{index}'
-
-    def popup_object_name(self) -> str:
-        return self._popup_object_name()
-
-    def popup_item_object_name(self, index: int) -> str:
-        return self._popup_item_object_name(index)
 
     def combo_parts(self) -> dict[str, WidgetThemeMap]:
         return self._parts
@@ -479,9 +493,6 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
     def _existing_part_data(self, part: str) -> WidgetThemeMap | None:
         return self._parts.get(part)
 
-    def _item_states(self) -> WidgetThemeMap | None:
-        return theme_map(self._part_data('item').get('states'))
-
     def apply_theme(self, data: WidgetThemeMap) -> None:
         button = theme_map(data.get('button')) or {}
         icon = theme_map(data.get('icon')) or {}
@@ -531,7 +542,21 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
         if (text := theme_map(data.get('text'))) is not None:
             self._apply_popup_item_theme('item', {'text': text})
         if (selection := theme_map(data.get('selection'))) is not None:
-            self._apply_popup_item_state_theme('selected', selection)
+            states = theme_map(self._part_data('item').get('states'))
+            state = theme_map(None if states is None else states.get('selected'))
+            if state is not None:
+                background = theme_map(selection.get('background')) or {}
+                text = theme_map(selection.get('text')) or {}
+                border = theme_map(selection.get('border')) or {}
+                if (color := to_qcolor(background.get('color'))) is not None:
+                    state['background_color'] = color
+                    state['background_gradient'] = None
+                if isinstance((gradient := normalize_gradient_data(background.get('gradient'))), dict):
+                    state['background_gradient'] = gradient
+                if (text_color := to_qcolor(text.get('color'))) is not None:
+                    state['text_color'] = text_color
+                if (border_color := to_qcolor(border.get('color'))) is not None:
+                    state['border_color'] = border_color
         self._apply_popup_view_theme()
         self.update()
 
@@ -539,7 +564,21 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
         base_theme = {key: value for key, value in data.items() if key not in {'selection', 'qss'}}
         self._apply_popup_item_theme('item', base_theme)
         if (selection := theme_map(data.get('selection'))) is not None:
-            self._apply_popup_item_state_theme('selected', selection)
+            states = theme_map(self._part_data('item').get('states'))
+            state = theme_map(None if states is None else states.get('selected'))
+            if state is not None:
+                background = theme_map(selection.get('background')) or {}
+                text = theme_map(selection.get('text')) or {}
+                border = theme_map(selection.get('border')) or {}
+                if (color := to_qcolor(background.get('color'))) is not None:
+                    state['background_color'] = color
+                    state['background_gradient'] = None
+                if isinstance((gradient := normalize_gradient_data(background.get('gradient'))), dict):
+                    state['background_gradient'] = gradient
+                if (text_color := to_qcolor(text.get('color'))) is not None:
+                    state['text_color'] = text_color
+                if (border_color := to_qcolor(border.get('color'))) is not None:
+                    state['border_color'] = border_color
         self._apply_popup_view_theme()
         self.update()
 
@@ -561,10 +600,10 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
         if border.get('radius') is not None:
             part_data['border_radius'] = border.get('radius')
         if part == 'popup':
-            if (width := coerce_number(data.get('width'))) is not None:
-                part_data['width'] = max(0.0, width)
-            if (height := coerce_number(data.get('height'))) is not None:
-                part_data['height'] = max(0.0, height)
+            if (metric_value := coerce_number(data.get('width'))) is not None:
+                part_data['width'] = max(0.0, metric_value)
+            if (metric_value := coerce_number(data.get('height'))) is not None:
+                part_data['height'] = max(0.0, metric_value)
 
     def _apply_popup_item_theme(self, part: str, data: WidgetThemeMap) -> None:
         self._apply_popup_part_theme(part, data)
@@ -579,41 +618,38 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
 
         states = theme_map(data.get('states')) or {}
         for state_name in ('hover', 'selected'):
-            self._apply_popup_item_state_theme(state_name, states.get(state_name))
-
-    def _apply_popup_item_state_theme(self, state_name: str, data: object) -> None:
-        state_theme = theme_map(data)
-        if state_theme is None:
-            return
-
-        state = self._item_state_data(state_name)
-        if state is None:
-            return
-
-        background = theme_map(state_theme.get('background')) or {}
-        text = theme_map(state_theme.get('text')) or {}
-        border = theme_map(state_theme.get('border')) or {}
-        if (color := to_qcolor(background.get('color'))) is not None:
-            state['background_color'] = color
-            state['background_gradient'] = None
-        if isinstance((gradient := normalize_gradient_data(background.get('gradient'))), dict):
-            state['background_gradient'] = gradient
-        if (text_color := to_qcolor(text.get('color'))) is not None:
-            state['text_color'] = text_color
-        if (border_color := to_qcolor(border.get('color'))) is not None:
-            state['border_color'] = border_color
-
-    def _item_state_data(self, state_name: str) -> WidgetThemeMap | None:
-        states = self._item_states()
-        if states is None:
-            return None
-        state = states.get(state_name)
-        return theme_map(state)
+            state_theme = theme_map(states.get(state_name))
+            state_map = theme_map(self._part_data('item').get('states'))
+            state = theme_map(None if state_map is None else state_map.get(state_name))
+            if state_theme is None or state is None:
+                continue
+            background = theme_map(state_theme.get('background')) or {}
+            text = theme_map(state_theme.get('text')) or {}
+            border = theme_map(state_theme.get('border')) or {}
+            if (color := to_qcolor(background.get('color'))) is not None:
+                state['background_color'] = color
+                state['background_gradient'] = None
+            if isinstance((gradient := normalize_gradient_data(background.get('gradient'))), dict):
+                state['background_gradient'] = gradient
+            if (text_color := to_qcolor(text.get('color'))) is not None:
+                state['text_color'] = text_color
+            if (border_color := to_qcolor(border.get('color'))) is not None:
+                state['border_color'] = border_color
 
     def current_part_color(self, part: str, css_name: str = 'background-color') -> QColor:
         if part == 'item' and css_name.startswith('states.'):
-            color = self._item_state_color(css_name)
-            return QColor(color) if isinstance(color, QColor) and color.isValid() else QColor()
+            path = css_name.split('.')
+            state_map = theme_map(self._part_data('item').get('states'))
+            state = theme_map(None if state_map is None else state_map.get(path[1])) if len(path) == 3 and path[0] == 'states' else None
+            if state is not None:
+                key = {
+                    'background-color': 'background_color',
+                    'color': 'text_color',
+                    'border-color': 'border_color',
+                }.get(path[2])
+                color = state.get(key) if key is not None else None
+                return QColor(color) if isinstance(color, QColor) and color.isValid() else QColor()
+            return QColor()
 
         data = self._existing_part_data(part)
         if data is None:
@@ -628,28 +664,6 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
         if isinstance(color, QColor) and color.isValid():
             return QColor(color)
         return QColor()
-
-    def _item_state_color(self, css_name: str) -> QColor | None:
-        path = css_name.split('.')
-        if len(path) != 3 or path[0] != 'states':
-            return None
-
-        state = self._item_state_data(path[1])
-        if state is None:
-            return None
-
-        match path[2]:
-            case 'background-color':
-                key = 'background_color'
-            case 'color':
-                key = 'text_color'
-            case 'border-color':
-                key = 'border_color'
-            case _:
-                return None
-
-        color = state.get(key)
-        return color if isinstance(color, QColor) else None
 
     def set_part_color(self, part: str, value: object, css_name: str = 'background-color') -> bool:
         color = to_qcolor(value)
@@ -706,7 +720,8 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
         return False
 
     def _set_item_state_style_value(self, state_name: str, path: tuple[str, ...], value: object) -> bool:
-        state = self._item_state_data(state_name)
+        state_map = theme_map(self._part_data('item').get('states'))
+        state = theme_map(None if state_map is None else state_map.get(state_name))
         if state is None:
             return False
 
@@ -755,24 +770,31 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
         data = self._existing_part_data(part)
         if data is None:
             return float(fallback)
-        if metric_path == ('border', 'width'):
-            return float(coerce_number(data.get('border_width')) or fallback)
-        if metric_path == ('border', 'radius'):
-            radius = data.get('border_radius')
-            radius_value = coerce_number(radius)
-            return float(radius_value if radius_value is not None else fallback)
-        if metric_path == ('width',):
-            if part == 'popup':
-                return float(self._popup_target_width())
-            return float(coerce_number(data.get('width')) or fallback)
-        if metric_path == ('size',):
-            return float(coerce_number(data.get('size')) or fallback)
-        if metric_path == ('rotation',):
-            return float(coerce_number(data.get('rotation')) or fallback)
-        if metric_path == ('height',):
-            if part == 'popup':
-                return float(self._popup_target_height())
-            return float(coerce_number(data.get('height')) or fallback)
+        part_key = str(part).strip()
+        normalized_path = tuple(metric_path)
+        if part_key == 'popup' and normalized_path == ('width',):
+            return float(self.popup_target_width())
+        if part_key == 'popup' and normalized_path == ('height',):
+            return float(self.popup_target_height())
+        if normalized_path == ('border', 'width'):
+            data_key = 'border_width'
+        elif normalized_path == ('border', 'radius'):
+            data_key = 'border_radius'
+        elif normalized_path == ('width',):
+            data_key = 'width'
+        elif normalized_path == ('size',):
+            data_key = 'size'
+        elif normalized_path == ('rotation',):
+            data_key = 'rotation'
+        elif normalized_path == ('height',):
+            data_key = 'height'
+        else:
+            return float(fallback)
+        metric_value = coerce_number(data.get(data_key))
+        if normalized_path == ('border', 'radius'):
+            return float(metric_value if metric_value is not None else fallback)
+        if metric_value is not None:
+            return float(metric_value)
         return float(fallback)
 
     def set_part_metric(self, part: str, metric_path: tuple[str, ...] | str, value: float) -> bool:
@@ -781,50 +803,48 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
             return False
         if isinstance(metric_path, str):
             metric_path = (metric_path,)
+        part_key = str(part).strip()
+        normalized_path = tuple(metric_path)
 
-        if metric_path == ('border', 'width') and 'border_width' in data:
+        if normalized_path == ('border', 'width') and 'border_width' in data:
             data['border_width'] = max(0.0, float(value))
-        elif metric_path == ('border', 'radius') and 'border_radius' in data:
+            self._refresh_part(part_key)
+            return True
+        if normalized_path == ('border', 'radius') and 'border_radius' in data:
             data['border_radius'] = max(0.0, float(value))
-        elif metric_path == ('width',) and part == 'button':
-            data['width'] = max(0.0, float(value))
+            self._refresh_part(part_key)
+            return True
+
+        metric_value = float(value)
+        if part_key == 'button' and normalized_path == ('width',):
+            data['width'] = max(0.0, metric_value)
             self.sync_content_width()
-        elif metric_path == ('width',) and part == 'popup':
-            data['width'] = max(0.0, float(value))
-        elif metric_path == ('size',) and part == 'icon':
-            data['size'] = max(0.0, float(value))
-        elif metric_path == ('rotation',) and part == 'icon':
-            data['rotation'] = float(value)
-        elif metric_path == ('height',) and part == 'popup':
-            data['height'] = max(0.0, float(value))
-        elif metric_path == ('height',) and part == 'item':
-            data['height'] = max(1.0, float(value))
+        elif part_key == 'popup' and normalized_path == ('width',):
+            data['width'] = max(0.0, metric_value)
+        elif part_key == 'popup' and normalized_path == ('height',):
+            data['height'] = max(0.0, metric_value)
+        elif part_key == 'icon' and normalized_path == ('size',):
+            data['size'] = max(0.0, metric_value)
+        elif part_key == 'icon' and normalized_path == ('rotation',):
+            data['rotation'] = metric_value
+        elif part_key == 'item' and normalized_path == ('height',):
+            data['height'] = max(1.0, metric_value)
         else:
             return False
-        self._refresh_part(part)
+        self._refresh_part(part_key)
         return True
 
     def _refresh_part(self, part: str) -> None:
         if part in {'popup', 'item'}:
             self._apply_popup_view_theme()
             try:
-                self._sync_popup_geometry()
+                self.sync_popup_geometry()
                 self._popup.update()
                 self._popup.sync_items()
             except RuntimeError:
                 pass
         self.update()
         self.updateGeometry()
-
-    def _part_background_brush(self, part: str, rect: QRectF):
-        data = self._part_data(part)
-        brush = build_background_brush(rect, {'gradient': data.get('background_gradient')})
-        if brush is not None:
-            return brush
-        color = data.get('background_color')
-        if isinstance(color, QColor) and color.isValid():
-            return color
-        return Qt.BrushStyle.NoBrush
 
     def _apply_popup_view_theme(self) -> None:
         try:
@@ -834,113 +854,65 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
         except RuntimeError:
             return
 
-    def _popup_item_height(self) -> int:
+    def popup_item_height(self) -> int:
         height = self._part_data('item').get('height')
         if isinstance(height, (int, float)) and float(height) > 0:
             return int(round(float(height)))
         return max(1, self.fontMetrics().height())
 
-    def popup_item_height(self) -> int:
-        return self._popup_item_height()
-
-    def _popup_content_height(self) -> int:
-        return max(0, self.count() * self._popup_item_height())
-
-    def _popup_target_width(self) -> int:
+    def popup_target_width(self) -> int:
         requested = coerce_number(self._part_data('popup').get('width'))
         if requested is not None:
             return max(0, int(round(requested)))
         return max(1, self.width())
 
-    def popup_target_width(self) -> int:
-        return self._popup_target_width()
-
-    def _popup_target_height(self) -> int:
+    def popup_target_height(self) -> int:
         requested = coerce_number(self._part_data('popup').get('height'))
-        content_height = self._popup_content_height()
+        content_height = max(0, self.count() * self.popup_item_height())
         if requested is not None:
             if content_height > 0:
                 return max(0, min(int(round(requested)), content_height))
             return max(0, int(round(requested)))
         return max(1, content_height)
 
-    def popup_target_height(self) -> int:
-        return self._popup_target_height()
-
-    def _sync_popup_geometry(self) -> None:
+    def sync_popup_geometry(self) -> None:
         try:
             self._popup.isVisible()
         except RuntimeError:
             return
 
-        width = max(1, self._popup_target_width())
-        height = max(1, self._popup_target_height())
+        width = max(1, self.popup_target_width())
+        height = max(1, self.popup_target_height())
         self._popup.setFixedWidth(width)
         self._popup.setFixedHeight(height)
         self._popup.move(self.mapToGlobal(QPoint(0, self.height())))
         self._popup.apply_shape_mask()
 
-    def sync_popup_geometry(self) -> None:
-        self._sync_popup_geometry()
-
-    def _popup_item_value(self, state_name: str | None, key: str) -> object:
-        value = None
-        state = self._item_state_data(state_name) if state_name else None
-        if state is not None:
-            value = state.get(key)
-        if isinstance(value, QColor) and value.isValid():
-            return value
-        if value is not None and key == 'background_gradient':
-            return value
-        return self._part_data('item').get(key)
-
-    def _draw_popup_item_background(self, painter: QPainter, rect: QRectF, state_name: str | None) -> None:
-        item_part = self._part_data('item')
-        color = self._popup_item_value(state_name, 'background_color')
-        border_color = self._popup_item_value(state_name, 'border_color')
-        border_width = float(coerce_number(item_part.get('border_width')) or 0.0)
-        border_style = self._pen_style(item_part.get('border_style', 'solid'))
-        radius = self._resolve_radius(item_part.get('border_radius'), rect)
-
-        painter.save()
-        brush = build_background_brush(rect, {'gradient': self._popup_item_value(state_name, 'background_gradient')})
-        if brush is not None:
-            painter.setBrush(brush)
-        elif isinstance(color, QColor) and color.isValid():
-            painter.setBrush(color)
-        else:
-            painter.setBrush(Qt.BrushStyle.NoBrush)
-
-        if border_width > 0 and isinstance(border_color, QColor) and border_color.isValid() and border_style != Qt.PenStyle.NoPen:
-            pen = QPen(border_color, border_width)
-            pen.setStyle(border_style)
-            painter.setPen(pen)
-            inset = border_width / 2.0
-        else:
-            painter.setPen(Qt.PenStyle.NoPen)
-            inset = 0.0
-
-        draw_rect = rect.adjusted(inset, inset, -inset, -inset)
-        painter.drawPath(self._rounded_path(draw_rect, radius))
-        painter.restore()
-
     def draw_popup_item_background(self, painter: QPainter, rect: QRectF, state_name: str | None) -> None:
-        self._draw_popup_item_background(painter, rect, state_name)
-
-    def _draw_popup_background(self, painter: QPainter, rect: QRectF) -> None:
-        popup = self._part_data('popup')
-        border_width = float(coerce_number(popup.get('border_width')) or 0.0)
-        border_color = popup.get('border_color')
-        border_style = self._pen_style(popup.get('border_style', 'solid'))
+        item_part = self._part_data('item')
+        state_map = theme_map(self._part_data('item').get('states'))
+        state = theme_map(None if state_map is None or state_name is None else state_map.get(state_name))
+        color = state.get('background_color') if state is not None else None
+        border_color = state.get('border_color') if state is not None else None
+        gradient = state.get('background_gradient') if state is not None else None
+        if not (isinstance(color, QColor) and color.isValid()):
+            color = item_part.get('background_color')
+        if not (isinstance(border_color, QColor) and border_color.isValid()):
+            border_color = item_part.get('border_color')
+        if gradient is None:
+            gradient = item_part.get('background_gradient')
+        border_width = float(coerce_number(item_part.get('border_width')) or 0.0)
+        border_style = parse_pen_style(item_part.get('border_style', 'solid'))
+        radius = self.resolve_radius(item_part.get('border_radius'), rect)
 
         painter.save()
-        brush = build_background_brush(rect, {'gradient': popup.get('background_gradient')})
-        if brush is not None:
-            painter.setBrush(brush)
-        elif isinstance((background := popup.get('background_color')), QColor) and background.isValid():
-            painter.setBrush(background)
-        else:
-            painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.setBrush(
+            resolve_fill_brush(
+                rect,
+                color=color if isinstance(color, QColor) and color.isValid() else None,
+                gradient=gradient,
+            )
+        )
 
         if border_width > 0 and isinstance(border_color, QColor) and border_color.isValid() and border_style != Qt.PenStyle.NoPen:
             pen = QPen(border_color, border_width)
@@ -952,15 +924,45 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
             inset = 0.0
 
         draw_rect = rect.adjusted(inset, inset, -inset, -inset)
-        radius = self._resolve_radius(popup.get('border_radius'), draw_rect)
-        painter.drawPath(self._rounded_path(draw_rect, radius))
+        painter.drawPath(self.rounded_path(draw_rect, radius))
         painter.restore()
 
     def draw_popup_background(self, painter: QPainter, rect: QRectF) -> None:
-        self._draw_popup_background(painter, rect)
+        popup = self._part_data('popup')
+        border_width = float(coerce_number(popup.get('border_width')) or 0.0)
+        border_color = popup.get('border_color')
+        border_style = parse_pen_style(popup.get('border_style', 'solid'))
 
-    def _draw_popup_item_text(self, painter: QPainter, rect: QRectF, state_name: str | None, text: str) -> None:
-        color = self._popup_item_value(state_name, 'text_color')
+        painter.save()
+        background = popup.get('background_color')
+        painter.setBrush(
+            resolve_fill_brush(
+                rect,
+                color=background if isinstance(background, QColor) and background.isValid() else None,
+                gradient=popup.get('background_gradient'),
+            )
+        )
+
+        if border_width > 0 and isinstance(border_color, QColor) and border_color.isValid() and border_style != Qt.PenStyle.NoPen:
+            pen = QPen(border_color, border_width)
+            pen.setStyle(border_style)
+            painter.setPen(pen)
+            inset = border_width / 2.0
+        else:
+            painter.setPen(Qt.PenStyle.NoPen)
+            inset = 0.0
+
+        draw_rect = rect.adjusted(inset, inset, -inset, -inset)
+        radius = self.resolve_radius(popup.get('border_radius'), draw_rect)
+        painter.drawPath(self.rounded_path(draw_rect, radius))
+        painter.restore()
+
+    def draw_popup_item_text(self, painter: QPainter, rect: QRectF, state_name: str | None, text: str) -> None:
+        state_map = theme_map(self._part_data('item').get('states'))
+        state = theme_map(None if state_map is None or state_name is None else state_map.get(state_name))
+        color = state.get('text_color') if state is not None else None
+        if not (isinstance(color, QColor) and color.isValid()):
+            color = self._part_data('item').get('text_color')
         if not isinstance(color, QColor) or not color.isValid():
             color = self.palette().color(self.foregroundRole())
 
@@ -974,7 +976,7 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
             -float(coerce_number(right) or 0.0),
             -float(coerce_number(bottom) or 0.0),
         )
-        self._draw_themed_text(
+        _draw_aligned_text(
             painter,
             text_rect,
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
@@ -982,9 +984,6 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
             color,
         )
         painter.restore()
-
-    def draw_popup_item_text(self, painter: QPainter, rect: QRectF, state_name: str | None, text: str) -> None:
-        self._draw_popup_item_text(painter, rect, state_name, text)
 
     def paintEvent(self, event: QPaintEvent) -> None:
         painter = new_widget_painter(self, text_antialias=True, smooth_pixmap=True)
@@ -1021,18 +1020,15 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         if self._popup.isVisible():
-            self._sync_popup_geometry()
+            self.sync_popup_geometry()
             self._popup.raise_()
 
-    def _activate_popup_item(self, index: int) -> None:
+    def activate_popup_item(self, index: int) -> None:
         self.setCurrentIndex(index)
         self.activated.emit(index)
         self.hidePopup()
 
-    def activate_popup_item(self, index: int) -> None:
-        self._activate_popup_item(index)
-
-    def _on_popup_hidden(self) -> None:
+    def on_popup_hidden(self) -> None:
         close_notified = self._popup_close_notified
         self._popup_close_notified = False
         if self._popup_hide_expected:
@@ -1041,9 +1037,6 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
             self._suppress_next_mouse_press = self.rect().contains(self.mapFromGlobal(QCursor.pos()))
         if not close_notified:
             self.popupClosed.emit()
-
-    def on_popup_hidden(self) -> None:
-        self._on_popup_hidden()
 
     def _finalize_popup_hide(self) -> None:
         if not self._popup.isVisible():
@@ -1065,7 +1058,7 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
         )
         painter.save()
         painter.setFont(self.font())
-        self._draw_themed_text(
+        _draw_aligned_text(
             painter,
             text_rect,
             self._alignment,
@@ -1079,12 +1072,19 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
             return
 
         painter.save()
-        painter.setBrush(self._part_background_brush('button', rect))
-
         button_part = self._part_data('button')
+        background_color = button_part.get('background_color')
+        painter.setBrush(
+            resolve_fill_brush(
+                rect,
+                color=background_color if isinstance(background_color, QColor) and background_color.isValid() else None,
+                gradient=button_part.get('background_gradient'),
+            )
+        )
+
         border_width = float(coerce_number(button_part.get('border_width')) or 0.0)
         border_color = button_part.get('border_color')
-        border_style = self._pen_style(button_part.get('border_style', 'solid'))
+        border_style = parse_pen_style(button_part.get('border_style', 'solid'))
         if border_width > 0 and isinstance(border_color, QColor) and border_color.isValid() and border_style != Qt.PenStyle.NoPen:
             pen = QPen(border_color, border_width)
             pen.setStyle(border_style)
@@ -1095,8 +1095,8 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
             inset = 0.0
 
         draw_rect = rect.adjusted(inset, inset, -inset, -inset)
-        radius = self._resolve_radius(button_part.get('border_radius'), draw_rect)
-        painter.drawPath(self._rounded_path(draw_rect, radius))
+        radius = self.resolve_radius(button_part.get('border_radius'), draw_rect)
+        painter.drawPath(self.rounded_path(draw_rect, radius))
         painter.restore()
 
     def _draw_arrow_part(self, painter: QPainter, button_rect: QRectF) -> None:
@@ -1168,7 +1168,7 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
     def _button_width(self) -> float:
         return max(0.0, coerce_number(self._part_data('button').get('width')) or 0.0)
 
-    def _resolve_radius(self, value: object, rect: QRectF) -> float:
+    def resolve_radius(self, value: object, rect: QRectF) -> float:
         base = max(0.0, min(rect.width(), rect.height()) / 2.0)
         if value is None:
             return 0.0
@@ -1189,39 +1189,13 @@ class MTComboBox(BoxThemeMixin, TextEffectMixin, TranslatableComboBoxMixin, QWid
                 return 0.0
         return 0.0
 
-    def resolve_radius(self, value: object, rect: QRectF) -> float:
-        return self._resolve_radius(value, rect)
-
-    def _rounded_path(self, rect: QRectF, radius: float) -> QPainterPath:
-        path = QPainterPath()
-        if not rect.isValid() or rect.width() <= 0 or rect.height() <= 0:
-            return path
-        path.addRoundedRect(rect, radius, radius)
-        return path
-
     def rounded_path(self, rect: QRectF, radius: float) -> QPainterPath:
-        return self._rounded_path(rect, radius)
-
-    def _pen_style(self, value: object) -> Qt.PenStyle:
-        text = str(value).strip().lower()
-        match text:
-            case 'none':
-                return Qt.PenStyle.NoPen
-            case 'dash' | 'dashed':
-                return Qt.PenStyle.DashLine
-            case 'dot' | 'dotted':
-                return Qt.PenStyle.DotLine
-            case 'dashdot':
-                return Qt.PenStyle.DashDotLine
-            case 'dashdotdot':
-                return Qt.PenStyle.DashDotDotLine
-            case _:
-                return Qt.PenStyle.SolidLine
-
+        return rounded_rect_path(rect, radius)
 
 class MTScrollArea(BoxThemeMixin, QScrollArea):
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent)
+        apply_font_antialiasing(self)
         self.init_box_theme()
         self.setWidgetResizable(True)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -1237,28 +1211,23 @@ class MTScrollArea(BoxThemeMixin, QScrollArea):
 
     def apply_box_theme(self, theme: dict[str, Any]) -> None:
         content = self.widget()
-        apply_box_theme = getattr(content, 'apply_box_theme', None)
-        if callable(apply_box_theme):
+        if isinstance(content, BoxThemeMixin):
             self._box_theme = None
-            apply_box_theme(theme)
+            content.apply_box_theme(theme)
             self.viewport().update()
             return
         super().apply_box_theme(theme)
 
     def clear_box_theme(self) -> None:
         content = self.widget()
-        clear_box_theme = getattr(content, 'clear_box_theme', None)
-        if callable(clear_box_theme):
-            clear_box_theme()
+        if isinstance(content, BoxThemeMixin):
+            content.clear_box_theme()
         super().clear_box_theme()
-
-    def paintEvent(self, event: QPaintEvent) -> None:
-        super().paintEvent(event)
-
 
 class MTWidget(BoxThemeMixin, QWidget):
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent)
+        apply_font_antialiasing(self)
         self.init_box_theme()
 
         if obj_name:

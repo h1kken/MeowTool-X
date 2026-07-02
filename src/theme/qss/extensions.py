@@ -44,9 +44,7 @@ CSS_PROPERTIES: dict[str, str] = {
     'text_decoration': 'text-decoration',
     'text_align': 'text-align',
     'line_height': 'line-height',
-    'letter_spacing': 'letter-spacing',
     'text_transform': 'text-transform',
-    'text_shadow': 'text-shadow',
     
     # Spacing
     'margin': 'margin',

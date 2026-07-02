@@ -80,7 +80,7 @@ class BaseHttpClient:
                 raise
             except (ClientError, asyncio.TimeoutError, OSError, RuntimeError) as error:
                 last_error = error
-                status = getattr(response, 'status', 'ERR')
+                status = response.status if response is not None else 'ERR'
                 logger.exception(f'[{method.upper()}:{status}] URL: {url}')
                 if attempt < HTTP_CLIENT_MAX_RETRIES:
                     delay = min(

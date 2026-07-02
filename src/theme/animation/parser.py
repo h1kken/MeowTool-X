@@ -179,17 +179,6 @@ def _expand_shorthand(action: str, prop: str, value: Any, common: dict[str, Any]
             case 'text':
                 if 'color' in mapping:
                     specs.append({'on': action, 'property': 'color', 'to': mapping['color'], **common})
-                if 'spacing' in mapping:
-                    specs.append({'on': action, 'property': 'text.spacing', 'to': mapping['spacing'], **common})
-                if 'letter_spacing' in mapping:
-                    specs.append({'on': action, 'property': 'text.spacing', 'to': mapping['letter_spacing'], **common})
-                if 'letter-spacing' in mapping:
-                    specs.append({'on': action, 'property': 'text.spacing', 'to': mapping['letter-spacing'], **common})
-                border = theme_map(mapping.get('border')) or {}
-                if 'color' in border:
-                    specs.append({'on': action, 'property': 'text.border.color', 'to': border['color'], **common})
-                if 'width' in border:
-                    specs.append({'on': action, 'property': 'text.border.width', 'to': border['width'], **common})
             case 'border':
                 if 'color' in mapping:
                     specs.append({'on': action, 'property': 'border.color', 'to': mapping['color'], **common})
@@ -509,10 +498,6 @@ def _normalize_property(prop: str) -> tuple[str, str, str] | None:
         'color': 'color',
         'text': 'color',
         'text_color': 'color',
-        'text_border_color': 'text.border.color',
-        'text_border_width': 'text.border.width',
-        'text_spacing': 'text.spacing',
-        'letter_spacing': 'text.spacing',
         'border_color': 'border.color',
         'border_width': 'border.width',
         'border_radius': 'border.radius',
@@ -570,12 +555,6 @@ def _normalize_property(prop: str) -> tuple[str, str, str] | None:
             return canonical, 'color', 'color'
         case 'border.color':
             return canonical, 'color', 'border-color'
-        case 'text.border.color':
-            return canonical, 'color', 'text.border-color'
-        case 'text.border.width':
-            return canonical, 'number', ''
-        case 'text.spacing':
-            return canonical, 'number', ''
         case 'border.width':
             return canonical, 'number', ''
         case 'border.radius':

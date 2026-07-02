@@ -119,14 +119,9 @@ class MTColumnsSetting(MTScrollArea):
 
     def _attach_tab_observers(self, tab: QWidget) -> None:
         tab.installEventFilter(self)
-        toggled = getattr(tab, "toggled", None)
-        if toggled is None:
+        if not isinstance(tab, MTCollapsibleContainer):
             return
-
-        try:
-            toggled.connect(self._on_tab_toggled)
-        except Exception:
-            return
+        tab.toggled.connect(self._on_tab_toggled)
 
     def _on_tab_toggled(self, *_args: object) -> None:
         self.request_rebalance()
@@ -173,12 +168,9 @@ class MTColumnsSetting(MTScrollArea):
                 layout.activate()
 
     def _estimated_tab_height(self, tab: QWidget) -> int:
-        height_hint = getattr(tab, "effective_height_hint", None)
-        if callable(height_hint):
+        if isinstance(tab, MTCollapsibleContainer):
             try:
-                result = height_hint()
-                if isinstance(result, (int, float)):
-                    return max(1, int(result))
+                return max(1, int(tab.effective_height_hint()))
             except Exception:
                 pass
 
@@ -300,7 +292,7 @@ class MTCollapsibleContainer(MTWidget):
 
     def reset_theme(self) -> None:
         self._reset_toggle_arrow_theme_values()
-        if not self._uses_theme_icon_rotation_animation():
+        if not bool(self.property("_themeAnimatedArrowRotation")):
             self._toggle_arrow_rotation = (
                 self._toggle_arrow_expanded_rotation
                 if self._toggle_button.isChecked()
@@ -349,7 +341,7 @@ class MTCollapsibleContainer(MTWidget):
         if (parsed_expanded := measure(expanded_rotation)) is not None:
             self._toggle_arrow_expanded_rotation = parsed_expanded
 
-        if not self._uses_theme_icon_rotation_animation():
+        if not bool(self.property("_themeAnimatedArrowRotation")):
             self._toggle_arrow_rotation = (
                 self._toggle_arrow_expanded_rotation
                 if self._toggle_button.isChecked()
@@ -365,7 +357,7 @@ class MTCollapsibleContainer(MTWidget):
         self._header_widget.setProperty("expanded", checked)
         self._toggle_button.setProperty("expanded", checked)
 
-        if self._uses_theme_content_height_animation():
+        if bool(self.property("_themeAnimatedContentHeight")):
             if checked:
                 self._content_widget.setMaximumHeight(0)
                 self._content_widget.setVisible(True)
@@ -373,7 +365,7 @@ class MTCollapsibleContainer(MTWidget):
         else:
             target_height = self._content_target_height() if checked else 0
             self.set_part_metric("content", ("height",), float(target_height))
-        if self._uses_theme_icon_rotation_animation():
+        if bool(self.property("_themeAnimatedArrowRotation")):
             self._refresh_toggle_icon()
         else:
             target_rotation = (
@@ -578,12 +570,6 @@ class MTCollapsibleContainer(MTWidget):
             return resolved_value
         return float(value)
 
-    def _uses_theme_content_height_animation(self) -> bool:
-        return bool(self.property("_themeAnimatedContentHeight"))
-
-    def _uses_theme_icon_rotation_animation(self) -> bool:
-        return bool(self.property("_themeAnimatedArrowRotation"))
-
     def handle_part_animation_state(
         self, part: str, path: tuple[str, ...], active: bool
     ) -> None:
@@ -731,5 +717,5 @@ class MTComboBoxSetting(MTWidget):
         if value is None:
             value = self._combo_box.currentText()
         self._config.set(self._cfg_key, value)
-        if callable(self._on_changed):
+        if self._on_changed is not None:
             self._on_changed(str(value))

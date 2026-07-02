@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+from typing import Any, cast
+
 from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QRectF, QSize, Qt, Signal
-from PySide6.QtGui import QCursor, QHideEvent, QMouseEvent, QPaintEvent, QPainterPath, QRegion, QResizeEvent, QShowEvent, QWheelEvent
+from PySide6.QtGui import QCursor, QHideEvent, QMouseEvent, QPaintEvent, QRegion, QResizeEvent, QShowEvent, QWheelEvent
 from PySide6.QtWidgets import QApplication, QBoxLayout, QLayout, QSizePolicy, QWidget
 
 from src.ui.painting import new_widget_painter
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets.main.containers import MTWidget
+from src.ui.widgets.main.paint_primitives import rounded_rect_path
 from src.ui.widgets.types import PopupPlacement
 
 
@@ -126,15 +129,11 @@ class MTPopup(MTWidget):
     def sync_theme(self) -> None:
         parent_widget = self.parentWidget()
         parent_window = parent_widget.window() if isinstance(parent_widget, QWidget) else None
-        theme_manager = getattr(parent_window, '_theme_manager', None)
+        theme_manager = cast(Any, parent_window)._theme_manager if isinstance(parent_window, QWidget) else None
         if theme_manager is not None:
-            apply_to_subtree = getattr(theme_manager, 'apply_to_subtree', None)
-            if callable(apply_to_subtree):
-                apply_to_subtree(self)
-                if self._backdrop is not None:
-                    apply_to_subtree(self._backdrop)
-            else:
-                theme_manager.apply()
+            theme_manager.apply_to_subtree(self)
+            if self._backdrop is not None:
+                theme_manager.apply_to_subtree(self._backdrop)
         self._apply_shape_mask()
 
     def show_for(
@@ -308,8 +307,7 @@ class MTPopup(MTWidget):
             return
 
         rect = QRectF(self.rect())
-        path = QPainterPath()
-        path.addRoundedRect(rect, radius, radius)
+        path = rounded_rect_path(rect, radius)
         self.setMask(QRegion(path.toFillPolygon().toPolygon()))
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
@@ -337,7 +335,7 @@ class MTPopup(MTWidget):
         parent_widget = self.parentWidget()
         if isinstance(parent_widget, QWidget):
             parent_window = parent_widget.window()
-            host = getattr(parent_window, '_popup_modal_host', None)
+            host = cast(Any, parent_window)._popup_modal_host
             if isinstance(host, QWidget):
                 return host
             return parent_window

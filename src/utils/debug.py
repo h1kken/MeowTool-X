@@ -74,7 +74,7 @@ def _dump_object_tree_recursive(
     progress_callback: Callable[[int, int, QObject], None] | None = None,
 ) -> None:
     state['visited'] += 1
-    if callable(progress_callback):
+    if progress_callback is not None:
         progress_callback(state['visited'], total_nodes, obj)
     prefix = '  ' * indent
     obj_name = obj.objectName() or '<no name>'

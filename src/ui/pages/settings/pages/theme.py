@@ -1,7 +1,7 @@
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from PySide6.QtCore import QFileSystemWatcher, QSignalBlocker, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
@@ -342,16 +342,9 @@ class SettingsThemePage(MTWidget):
         return enabled
 
     def _read_applied_name(self) -> str:
-        window = self.window()
-        if callable(
-            read_current_theme_name := getattr(window, "current_theme_name", None)
-        ):
-            return self._normalize_theme_name(read_current_theme_name())
-
-        current = getattr(window, "_current_theme_name", "")
-        if isinstance(current, str) and current.strip():
-            return self._normalize_theme_name(current)
-        return self._normalize_theme_name(self._applied_name)
+        window = cast(Any, self.window())
+        current = str(window.current_theme_name()).strip()
+        return self._normalize_theme_name(current or self._applied_name)
 
     def _pick_target_name(
         self, names: list[str], preferred: str | None = None
@@ -388,24 +381,14 @@ class SettingsThemePage(MTWidget):
             self._reapply_window_theme()
 
     def _reapply_window_theme(self) -> None:
-        window = self.window()
-        theme_manager = getattr(window, "_theme_manager", None)
+        window = cast(Any, self.window())
+        theme_manager = window._theme_manager
         if theme_manager is None:
             return
 
         theme_manager.apply()
-        if callable(
-            reload_animations := getattr(
-                window, "_reload_main_animations_from_theme", None
-            )
-        ):
-            reload_animations()
-        if callable(
-            reapply_runtime := getattr(
-                window, "reapply_runtime_theme_preferences", None
-            )
-        ):
-            reapply_runtime()
+        window._reload_main_animations_from_theme()
+        window.reapply_runtime_theme_preferences()
 
     def _sync_actions_state(self) -> None:
         selected = self._current_selected_name()
@@ -444,9 +427,7 @@ class SettingsThemePage(MTWidget):
                 has_selection and autoload_enabled and selected == autoload
             )
         with QSignalBlocker(self._auto_save_switch):
-            self._auto_save_switch.setChecked(
-                bool(getattr(config_loader, "auto_save_theme", False))
-            )
+            self._auto_save_switch.setChecked(bool(config_loader.auto_save_theme))
 
     def _on_themes_dir_changed(self, _path: str) -> None:
         self._refresh_timer.start()
@@ -474,11 +455,9 @@ class SettingsThemePage(MTWidget):
         if not (selected := self._current_selected_name()):
             return
 
-        if callable(set_theme := getattr(self.window(), "set_theme", None)):
-            set_theme(selected, persist=False)
-            self._applied_name = self._read_applied_name()
-        else:
-            self._applied_name = selected
+        window = cast(Any, self.window())
+        window.set_theme(selected, persist=False)
+        self._applied_name = self._read_applied_name()
 
         self._autoload_name = self._read_autoload_name()
         self._sync_actions_state()
@@ -487,13 +466,10 @@ class SettingsThemePage(MTWidget):
         if not (selected := self._current_selected_name()):
             return
 
-        window = self.window()
-        if callable(
-            save_current_theme_as := getattr(window, "save_current_theme_as", None)
-        ):
-            if save_current_theme_as(selected) is None:
-                return
-            self._refresh_themes(preferred=selected)
+        window = cast(Any, self.window())
+        if window.save_current_theme_as(selected) is None:
+            return
+        self._refresh_themes(preferred=selected)
 
     def _normalize_new_name(self, value: str) -> str:
         name = normalize_theme_name(value)
@@ -595,10 +571,8 @@ class SettingsThemePage(MTWidget):
             self._set_autoload_name(new_name)
 
         applied = self._applied_name
-        if applied == old_name and callable(
-            set_theme := getattr(self.window(), "set_theme", None)
-        ):
-            set_theme(new_name, persist=False)
+        if applied == old_name:
+            cast(Any, self.window()).set_theme(new_name, persist=False)
             self._applied_name = self._read_applied_name()
 
         self._cancel_rename_edit()
@@ -624,11 +598,8 @@ class SettingsThemePage(MTWidget):
             self._set_autoload_name(PATH_DEFAULT_THEME.stem)
 
         if self._applied_name == selected:
-            if callable(set_theme := getattr(self.window(), "set_theme", None)):
-                set_theme(PATH_DEFAULT_THEME.stem, persist=False)
-                self._applied_name = self._read_applied_name()
-            else:
-                self._applied_name = PATH_DEFAULT_THEME.stem
+            cast(Any, self.window()).set_theme(PATH_DEFAULT_THEME.stem, persist=False)
+            self._applied_name = self._read_applied_name()
         self._cancel_delete_confirm()
         self._refresh_themes(preferred=self._applied_name)
 

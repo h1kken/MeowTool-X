@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Literal
 
 type WidgetThemeMap = dict[str, object]

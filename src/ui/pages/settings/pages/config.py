@@ -1,6 +1,7 @@
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 from PySide6.QtCore import QFileSystemWatcher, QSignalBlocker, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
@@ -333,24 +334,14 @@ class SettingsConfigPage(MTWidget):
             self._reapply_window_theme()
 
     def _reapply_window_theme(self) -> None:
-        window = self.window()
-        theme_manager = getattr(window, "_theme_manager", None)
+        window = cast(Any, self.window())
+        theme_manager = window._theme_manager
         if theme_manager is None:
             return
 
         theme_manager.apply()
-        if callable(
-            reload_animations := getattr(
-                window, "_reload_main_animations_from_theme", None
-            )
-        ):
-            reload_animations()
-        if callable(
-            reapply_runtime := getattr(
-                window, "reapply_runtime_theme_preferences", None
-            )
-        ):
-            reapply_runtime()
+        window._reload_main_animations_from_theme()
+        window.reapply_runtime_theme_preferences()
 
     def _sync_actions_state(self) -> None:
         selected = self._current_selected_name()
@@ -384,9 +375,7 @@ class SettingsConfigPage(MTWidget):
         with QSignalBlocker(self._autoload_checkbox):
             self._autoload_checkbox.setChecked(has_selection and selected == autoload)
         with QSignalBlocker(self._auto_save_checkbox):
-            self._auto_save_checkbox.setChecked(
-                bool(getattr(config_loader, "auto_save_config", False))
-            )
+            self._auto_save_checkbox.setChecked(bool(config_loader.auto_save_config))
 
     def _on_selection_changed(self, *_args: object) -> None:
         self._sync_actions_state()
