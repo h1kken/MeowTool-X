@@ -120,12 +120,12 @@ class MTSwitch(QCheckBox):
             self.setObjectName(obj_name)
 
         self.setChecked(checked)
-        self._sync_visuals(animate=False)
+        self._sync_visuals()
 
     def sync_size(self, *, bounds_width: int | None = None, bounds_height: int | None = None) -> None:
         target_size = self._theme_fixed_size or self._default_size
         self.setFixedSize(*target_size)
-        self._sync_visuals(animate=False)
+        self._sync_visuals()
 
     def _resolve_initial_color(self, value: str | None, fallback: QColor) -> QColor:
         if isinstance(value, str) and value.strip():
@@ -155,7 +155,7 @@ class MTSwitch(QCheckBox):
         self._handle_radius = '0px'
         self._theme_fixed_size = None
         self.setFixedSize(*self._default_size)
-        self._sync_visuals(animate=False)
+        self._sync_visuals()
 
     def apply_theme(self, data: WidgetThemeMap) -> None:
         track_data = theme_map(data.get('track'))
@@ -267,14 +267,14 @@ class MTSwitch(QCheckBox):
             limit = max(0, (min(self.width(), self.height()) // 2) - 1)
             self._margin = min(margin, limit)
 
-        self._sync_visuals(animate=False)
+        self._sync_visuals()
     def setChecked(self, checked: bool) -> None:
         previous = self.isChecked()
         super().setChecked(bool(checked))
         current = self.isChecked()
         if previous != current:
             if self.signalsBlocked():
-                self._sync_visuals(animate=False)
+                self._sync_visuals()
             return
         return
 
@@ -283,7 +283,7 @@ class MTSwitch(QCheckBox):
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
-        self._sync_visuals(animate=False)
+        self._sync_visuals()
 
     def changeEvent(self, event: QEvent) -> None:
         super().changeEvent(event)
@@ -296,13 +296,13 @@ class MTSwitch(QCheckBox):
             QEvent.Type.PaletteChange,
             QEvent.Type.EnabledChange,
         ):
-            self._sync_visuals(animate=False, sync_state_props=False)
+            self._sync_visuals(sync_state_props=False)
 
     def _on_toggled(self, _: bool) -> None:
         self._sync_checked_properties()
         self._queue_visual_state_sync(self.isChecked())
 
-    def _sync_visuals(self, *, animate: bool, sync_state_props: bool = True) -> None:
+    def _sync_visuals(self, *, animate: bool = False, sync_state_props: bool = True) -> None:
         if self._syncing_visuals:
             return
 
