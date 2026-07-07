@@ -31,7 +31,6 @@ from src.theme.types import (
     ThemeChangePayload,
     ThemeWidgetsMap,
 )
-from src.ui.fonts import apply_font_antialiasing
 from src.ui.widgets.main.inputs import MTLineEdit
 from src.ui.widgets.main.box import BoxThemeMixin
 from src.ui.widgets.main.checkables import MTSwitch
@@ -149,6 +148,7 @@ class ThemeManager(QObject):
             collect_animations=True,
         )
         self._root.setStyleSheet('\n'.join(qss_parts))
+        self._refresh_bound_checkable_state_widgets()
         self._emit_theme_changed(animations, deepcopy(self._theme_widgets()))
 
     def apply_to_subtree(self, root: QWidget) -> None:
@@ -275,6 +275,14 @@ class ThemeManager(QObject):
         return cast(ThemeWidgetsMap, theme_map(source.get('widgets')) or {})
 
     def _reset_runtime_styles(self) -> None:
+        for widget, base_qss in self._checkable_state_style_base_qss.items():
+            try:
+                widget.setStyleSheet(base_qss)
+                widget.updateGeometry()
+                widget.update()
+            except RuntimeError:
+                continue
+
         for widget, original in self._styled_rainbow_target_widgets.items():
             try:
                 widget.setProperty('rainbowBorderTarget', original)
@@ -453,6 +461,10 @@ class ThemeManager(QObject):
         self._media_overlays.clear()
         self._media_overlay_filters.clear()
 
+    def _refresh_bound_checkable_state_widgets(self) -> None:
+        for widget in list(self._checkable_state_style_slots):
+            self._refresh_checkable_state_widget(widget)
+
     def _has_checkable_state_styles(self, styles: ThemeMap) -> bool:
         return theme_map(styles.get('checked')) is not None or theme_map(styles.get('unchecked')) is not None
 
@@ -589,10 +601,9 @@ class ThemeManager(QObject):
         return True
 
     def _set_font_if_changed(self, widget: QWidget, font: QFont) -> bool:
-        target_font = apply_font_antialiasing(font)
-        if widget.font() == target_font:
+        if widget.font() == font:
             return False
-        widget.setFont(target_font)
+        widget.setFont(font)
         return True
 
     def _apply_theme_helper_properties(self, styles: ThemeMap, widgets: list[QWidget]) -> None:

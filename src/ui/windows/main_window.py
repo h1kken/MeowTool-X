@@ -3,14 +3,19 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, cast
 
-from PySide6.QtCore import QSize, QTimer
+from PySide6.QtCore import QSize, QTimer, Signal
 from PySide6.QtGui import QCloseEvent, QIcon, QMoveEvent, QResizeEvent, QShowEvent
 from PySide6.QtWidgets import QBoxLayout, QMainWindow, QSizePolicy, QWidget
 
+from src.app.paths import (
+    PATH_APP_ICON,
+    PATH_DEFAULT_THEME,
+    PATH_SIDEBAR_ICONS_SRC,
+    PATH_THEMES_USER,
+)
 from src.ui.widgets import SidebarButton, SidebarCategory
-from src.config.loader import config_loader
-from src.config.manager import config
-from src.services.discord.rich_presence import DiscordPresenceManager
+from src.config.loader import ConfigLoader
+from src.config.manager import Config
 from src.theme.animation.manager import AnimationManager
 from src.theme.constants import (
     THEME_AUTOLOAD_FALLBACK,
@@ -19,7 +24,6 @@ from src.theme.constants import (
     THEME_RUNTIME_RAINBOW_PALETTE_FALLBACK,
 )
 from src.theme.manager import ThemeManager
-from src.theme.paths import PATH_DEFAULT_THEME, PATH_THEMES_USER
 from src.theme.rainbow.runtime import RainbowRuntimeController
 from src.theme.storage.io import (
     find_theme_file_by_name,
@@ -47,15 +51,17 @@ from src.ui.constants import (
     WINDOW_X,
     WINDOW_Y,
 )
-from src.ui.paths import PATH_APP_ICON, PATH_SIDEBAR_ICONS
 from src.ui.widgets import MTButton, MTWidget, SidebarMediaWidget
 from src.ui.windows.types import PageSpec, SidebarSectionSpec
 from src.ui.windows.window_header import apply_frameless_window_header
-from src.utils.constants.app import PROGRAM_NAME
+from src.app.constants import PROGRAM_NAME
 from src.utils.filesystem import FS
+from src.translation.manager import TranslationManager
 
 
 class MainWindow(QMainWindow):
+    presence_page_changed = Signal(str)
+
     _PAGES: list[SidebarSectionSpec] = [
         (
             "PRX", "Sidebar_Proxy", [
@@ -88,8 +94,17 @@ class MainWindow(QMainWindow):
         "Settings": "settings.svg",
     }
 
-    def __init__(self):
+    def __init__(
+        self,
+        *,
+        config_loader: ConfigLoader,
+        config: Config,
+        translator: TranslationManager,
+    ) -> None:
         super().__init__()
+        self._config_loader = config_loader
+        self._config = config
+        self._translator = translator
         self._theme_auto_save_timer = QTimer(self)
         self._theme_auto_save_timer.setSingleShot(True)
         self._theme_auto_save_timer.setInterval(THEME_AUTO_SAVE_DEBOUNCE_MS)
@@ -102,11 +117,10 @@ class MainWindow(QMainWindow):
 
         self._deferred_theme_auto_save = False
         self._settings_page: SettingsPage | None = None
-        self._discord_presence_manager: DiscordPresenceManager | None = None
         self._animation_manager: AnimationManager | None = None
         self._rainbow_runtime: RainbowRuntimeController | None = None
         self._theme_manager: ThemeManager | None = None
-        self._discord_presence_page = "Startup"
+        self._presence_page = "Startup"
         self._settings_presence_label = "Settings"
 
         self._current_theme_name = ""
@@ -130,8 +144,8 @@ class MainWindow(QMainWindow):
 
         self._build_window_shell()
 
-        config.config_loaded.connect(self._on_config_loaded)
-        config.value_changed.connect(self._on_config_value_changed)
+        self._config.config_loaded.connect(self._on_config_loaded)
+        self._config.value_changed.connect(self._on_config_value_changed)
 
         FS.ensure_dir(PATH_THEMES_USER)
 
@@ -154,15 +168,13 @@ class MainWindow(QMainWindow):
             self._deferred_theme_auto_save = True
 
     def _on_window_move_idle(self) -> None:
-        if self._deferred_theme_auto_save and config_loader.auto_save_theme:
+        if self._deferred_theme_auto_save and self._config_loader.auto_save_theme:
             self._deferred_theme_auto_save = False
             self._theme_auto_save_timer.start()
             return
         self._deferred_theme_auto_save = False
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        if self._discord_presence_manager is not None:
-            self._discord_presence_manager.shutdown()
         super().closeEvent(event)
 
     def showEvent(self, event: QShowEvent) -> None:
@@ -180,12 +192,20 @@ class MainWindow(QMainWindow):
         page_class: type[QWidget],
     ) -> QWidget:
         if tr_key == "STNGS":
-            page = SettingsPage(current_theme_name=self._initial_theme_name)
+            page = SettingsPage(
+                config_loader=self._config_loader,
+                config=self._config,
+                translator=self._translator,
+                current_theme_name=self._initial_theme_name,
+            )
             self._settings_page = page
             page.presence_path_changed.connect(
                 self._on_settings_presence_path_changed
             )
             return page
+
+        if page_class is RobloxCookieSorterPage:
+            return page_class(config=self._config)
 
         return page_class()
 
@@ -209,8 +229,8 @@ class MainWindow(QMainWindow):
         self._apply_default_sidebar_button_icon(button, obj_name)
         self._page_controller.bind_tab(tr_key, button)
         button.clicked.connect(
-            lambda _=False, label=page_label, key=tr_key: self._set_discord_presence_page(
-                self._settings_discord_presence_label() if key == "STNGS" else label
+            lambda _=False, label=page_label, key=tr_key: self._set_presence_page(
+                self._settings_presence_label_text() if key == "STNGS" else label
             )
         )
         self._sidebar_buttons.append(button)
@@ -355,7 +375,7 @@ class MainWindow(QMainWindow):
 
         if first_key is not None:
             self._page_controller.show(first_key)
-            self._set_discord_presence_page(
+            self._set_presence_page(
                 first_page_label or MAIN_WINDOW_PAGE_LABEL_FALLBACK
             )
 
@@ -366,7 +386,7 @@ class MainWindow(QMainWindow):
         if not isinstance(icon_name, str) or not icon_name.strip():
             return
 
-        icon_path = PATH_SIDEBAR_ICONS / icon_name.strip()
+        icon_path = PATH_SIDEBAR_ICONS_SRC / icon_name.strip()
         if not icon_path.is_file():
             return
 
@@ -386,7 +406,7 @@ class MainWindow(QMainWindow):
         if not isinstance(icon_name, str) or not icon_name.strip():
             return
 
-        icon_path = PATH_SIDEBAR_ICONS / icon_name.strip()
+        icon_path = PATH_SIDEBAR_ICONS_SRC / icon_name.strip()
         if not icon_path.is_file():
             return
 
@@ -426,13 +446,14 @@ class MainWindow(QMainWindow):
         self._sidebar_widget.setFixedWidth(target_width)
         self._sidebar_width_locked = True
 
-    def _set_discord_presence_page(self, page_label: str) -> None:
+    def _set_presence_page(self, page_label: str) -> None:
         normalized = str(page_label).strip() or MAIN_WINDOW_PAGE_LABEL_FALLBACK
-        self._discord_presence_page = normalized
-        if self._discord_presence_manager is not None:
-            self._discord_presence_manager.set_page(normalized)
+        if normalized == self._presence_page:
+            return
+        self._presence_page = normalized
+        self.presence_page_changed.emit(normalized)
 
-    def _settings_discord_presence_label(self) -> str:
+    def _settings_presence_label_text(self) -> str:
         if isinstance(self._settings_page, SettingsPage):
             label = str(self._settings_page.current_presence_path()).strip()
             if label:
@@ -444,7 +465,7 @@ class MainWindow(QMainWindow):
         self._settings_presence_label = normalized
         current_key = self._page_controller.current_key()
         if current_key == "STNGS":
-            self._set_discord_presence_page(normalized)
+            self._set_presence_page(normalized)
 
     def init_runtime_controllers(self) -> None:
         if self._animation_manager is None:
@@ -478,19 +499,19 @@ class MainWindow(QMainWindow):
         self._lock_sidebar_width_once()
         return self.current_theme_name()
 
-    def start_discord_presence(self) -> None:
-        if self._discord_presence_manager is not None:
-            self._discord_presence_manager.set_page(self._discord_presence_page)
-            return
-
-        self._discord_presence_manager = DiscordPresenceManager(self)
-        self._discord_presence_manager.set_page(self._discord_presence_page)
-        self._discord_presence_manager.start()
+    @property
+    def theme_manager(self) -> ThemeManager:
+        if self._theme_manager is None:
+            raise RuntimeError("Theme manager is not initialized.")
+        return self._theme_manager
 
     def resume_theme_events(self) -> None:
         if self._theme_manager is None:
             return
         self._theme_manager.resume_theme_changed(flush=True)
+
+    def current_presence_page(self) -> str:
+        return self._presence_page
 
     def current_theme_name(self) -> str:
         current = str(self._current_theme_name).strip()
@@ -501,11 +522,14 @@ class MainWindow(QMainWindow):
 
     def theme_on_load_name(self) -> str:
         if not bool(
-            config.get("Theme>Autoload Selected Theme", default=THEME_AUTOLOAD_FALLBACK)
+            self._config.get(
+                "Theme>Autoload Selected Theme",
+                default=THEME_AUTOLOAD_FALLBACK,
+            )
         ):
             return PATH_DEFAULT_THEME.stem
         configured = str(
-            config.get("General>Theme", default=PATH_DEFAULT_THEME.stem)
+            self._config.get("General>Theme", default=PATH_DEFAULT_THEME.stem)
         ).strip()
         return configured or PATH_DEFAULT_THEME.stem
 
@@ -532,16 +556,25 @@ class MainWindow(QMainWindow):
 
         self._theme_manager.load(theme_path, merge_with_default=False)
         self._current_theme_name = theme_path.stem
-        self._theme_manager.apply()
-        self._reload_main_animations_from_theme()
-        self._apply_runtime_theme_preferences_for_controller(self._rainbow_runtime)
+        self.reapply_loaded_theme()
 
         if persist:
-            current = str(config.get("General>Theme", default=""))
+            current = str(self._config.get("General>Theme", default=""))
             if current != theme_path.stem:
-                config.set("General>Theme", theme_path.stem)
+                self._config.set("General>Theme", theme_path.stem)
 
         return True
+
+    def reapply_loaded_theme(self) -> None:
+        if self._theme_manager is None:
+            return
+        self._theme_manager.apply()
+        self._reload_main_animations_from_theme()
+        self.reapply_runtime_theme_preferences()
+        self.update()
+        central = self.centralWidget()
+        central.update()
+        central.updateGeometry()
 
     def save_current_theme_as(self, theme_name: str) -> Path | None:
         if self._theme_manager is None:
@@ -633,7 +666,7 @@ class MainWindow(QMainWindow):
         return [grouped[key] for key in order]
 
     def request_auto_save_current_theme_if_enabled(self) -> None:
-        if not config_loader.auto_save_theme:
+        if not self._config_loader.auto_save_theme:
             return
 
         if self._window_move_idle_timer.isActive():
@@ -643,7 +676,7 @@ class MainWindow(QMainWindow):
         self._theme_auto_save_timer.start()
 
     def auto_save_current_theme_if_enabled(self) -> Path | None:
-        if not config_loader.auto_save_theme:
+        if not self._config_loader.auto_save_theme:
             return None
 
         return self.save_current_theme_as(self.current_theme_name())
@@ -703,7 +736,7 @@ class MainWindow(QMainWindow):
             return self._runtime_theme_preferences_cache
 
         enabled = bool(
-            config.get(
+            self._config.get(
                 "Misc>Rainbow Mode>Enabled",
                 default=THEME_RUNTIME_RAINBOW_ENABLED_FALLBACK,
             )
@@ -711,7 +744,7 @@ class MainWindow(QMainWindow):
         try:
             duration = max(
                 1000,
-                int(str(config.get(
+                int(str(self._config.get(
                     "Misc>Rainbow Mode>Cycle Duration",
                     default=THEME_RUNTIME_RAINBOW_DURATION_FALLBACK,
                 ))),
@@ -721,7 +754,7 @@ class MainWindow(QMainWindow):
 
         palette = (
             str(
-                config.get(
+                self._config.get(
                     "Misc>Rainbow Mode>Palette",
                     default=THEME_RUNTIME_RAINBOW_PALETTE_FALLBACK,
                 )

@@ -35,26 +35,11 @@ def adjust_qcolor(
     color: QColor,
     *,
     brightness: float = 1.0,
-    saturation: float = 1.0,
 ) -> QColor:
     if not color.isValid():
         return QColor()
 
     result = QColor(color)
-    saturation = clamp_unit_float(saturation)
-    if saturation < 0.999:
-        gray = round(
-            (result.red() * 0.299)
-            + (result.green() * 0.587)
-            + (result.blue() * 0.114)
-        )
-        result = QColor(
-            round(gray + (result.red() - gray) * saturation),
-            round(gray + (result.green() - gray) * saturation),
-            round(gray + (result.blue() - gray) * saturation),
-            result.alpha(),
-        )
-
     brightness = clamp_unit_float(brightness)
     if brightness >= 0.999:
         return result
@@ -71,7 +56,6 @@ def adjust_gradient_data(
     data: Any,
     *,
     brightness: float = 1.0,
-    saturation: float = 1.0,
 ) -> GradientMap | None:
     gradient = normalize_gradient_data(data)
     if gradient is None:
@@ -79,7 +63,7 @@ def adjust_gradient_data(
 
     adjusted = deepcopy(gradient)
     adjusted["stops"] = [
-        [float(pos), adjust_qcolor(color, brightness=brightness, saturation=saturation)]
+        [float(pos), adjust_qcolor(color, brightness=brightness)]
         for pos, color in parse_gradient_stops(gradient.get("stops"))
     ]
     return adjusted

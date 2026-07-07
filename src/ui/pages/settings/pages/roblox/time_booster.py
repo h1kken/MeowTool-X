@@ -1,4 +1,6 @@
-from src.config.manager import config
+from __future__ import annotations
+
+from src.config.manager import Config
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets import (
     MTWidget,
@@ -10,8 +12,9 @@ from src.ui.widgets import (
 
 
 class SettingsRobloxTimeBoosterPage(MTWidget):
-    def __init__(self):
+    def __init__(self, *, config: Config) -> None:
         super().__init__()
+        self._config = config
 
         main_layout = create_layout(LayoutType.VBOX, parent=self)
 
@@ -21,13 +24,13 @@ class SettingsRobloxTimeBoosterPage(MTWidget):
                 obj_name="Settings_Roblox_Transaction_Analysis_Settings",
                 widgets=[
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="Firstly check for valid",
                         cfg_key="Roblox>Transaction Analysis>Firstly Check For Valid",
                         default=False,
                     ),
                     MTSliderSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="Valid threads",
                         cfg_key="Roblox>Transaction Analysis>Valid Threads",
                         min_value=1,
@@ -35,7 +38,7 @@ class SettingsRobloxTimeBoosterPage(MTWidget):
                         default=50,
                     ),
                     MTSliderSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="Main threads",
                         cfg_key="Roblox>Transaction Analysis>Main Threads",
                         min_value=1,
@@ -43,7 +46,7 @@ class SettingsRobloxTimeBoosterPage(MTWidget):
                         default=25,
                     ),
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="Indent by the longest name",
                         cfg_key="Roblox>Transaction Analysis>Indent By The Longest Name",
                         default=False,

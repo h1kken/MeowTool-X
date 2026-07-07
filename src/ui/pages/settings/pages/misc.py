@@ -1,7 +1,7 @@
 from typing import Any, cast
 
-from src.config.loader import config_loader
-from src.config.manager import config
+from src.config.loader import ConfigLoader
+from src.config.manager import Config
 from src.theme.rainbow.palette import rainbow_palette_names
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets import (
@@ -16,8 +16,10 @@ from src.config.enums import ConfigLoaderKey as CLKey
 
 
 class SettingsMiscPage(MTWidget):
-    def __init__(self):
+    def __init__(self, *, config_loader: ConfigLoader, config: Config) -> None:
         super().__init__()
+        self._config_loader = config_loader
+        self._config = config
         self._last_applied_rainbow_cycle_duration = self._read_rainbow_cycle_duration()
 
         main_layout = create_layout(LayoutType.VBOX, parent=self)
@@ -28,31 +30,31 @@ class SettingsMiscPage(MTWidget):
                 obj_name="Settings_Misc_Debugger",
                 widgets=[
                     MTSwitchSetting(
-                        config=config_loader,
+                        config=self._config_loader,
                         tr_key="DEBUG",
                         cfg_key=CLKey.MISC_DEBUGGER_DEBUG,
                         default=False,
                     ),
                     MTSwitchSetting(
-                        config=config_loader,
+                        config=self._config_loader,
                         tr_key="INFO",
                         cfg_key=CLKey.MISC_DEBUGGER_INFO,
                         default=False,
                     ),
                     MTSwitchSetting(
-                        config=config_loader,
+                        config=self._config_loader,
                         tr_key="WARNING",
                         cfg_key=CLKey.MISC_DEBUGGER_WARNING,
                         default=False,
                     ),
                     MTSwitchSetting(
-                        config=config_loader,
+                        config=self._config_loader,
                         tr_key="ERROR",
                         cfg_key=CLKey.MISC_DEBUGGER_ERROR,
                         default=False,
                     ),
                     MTSwitchSetting(
-                        config=config_loader,
+                        config=self._config_loader,
                         tr_key="EXCEPTION",
                         cfg_key=CLKey.MISC_DEBUGGER_EXCEPTION,
                         default=False,
@@ -73,7 +75,7 @@ class SettingsMiscPage(MTWidget):
                 obj_name="Settings_Misc_Discord_RPC",
                 widgets=[
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="ENBL_DS_RPC",
                         cfg_key="Outputs>Discord Presence>Enable Presence",
                         default=False,
@@ -87,7 +89,7 @@ class SettingsMiscPage(MTWidget):
 
     def _build_rainbow_mode_setting(self) -> MTSwitchSetting:
         self._rainbow_mode_setting = MTSwitchSetting(
-            config=config,
+            config=self._config,
             tr_key="ENBLD",
             cfg_key="Misc>Rainbow Mode>Enabled",
             default=False,
@@ -99,7 +101,7 @@ class SettingsMiscPage(MTWidget):
 
     def _build_rainbow_cycle_duration_setting(self) -> MTSliderSetting:
         self._rainbow_cycle_duration_setting = MTSliderSetting(
-            config,
+            self._config,
             tr_key="RNBW_CCL_DRTN_MS",
             cfg_key="Misc>Rainbow Mode>Cycle Duration",
             min_value=1000,
@@ -119,7 +121,7 @@ class SettingsMiscPage(MTWidget):
 
     def _build_rainbow_palette_setting(self) -> MTComboBoxSetting:
         self._rainbow_palette_setting = MTComboBoxSetting(
-            config,
+            self._config,
             tr_key="RNBW_PLT",
             cfg_key="Misc>Rainbow Mode>Palette",
             items=rainbow_palette_names(),
@@ -132,7 +134,7 @@ class SettingsMiscPage(MTWidget):
         return self._rainbow_palette_setting
 
     def _read_rainbow_cycle_duration(self) -> int:
-        value = config.get("Misc>Rainbow Mode>Cycle Duration", default=5000)
+        value = self._config.get("Misc>Rainbow Mode>Cycle Duration", default=5000)
         if isinstance(value, bool):
             return 5000
         if not isinstance(value, (int, float, str)):
@@ -143,7 +145,7 @@ class SettingsMiscPage(MTWidget):
             return 5000
 
     def _sync_rainbow_settings_state(self) -> None:
-        enabled = bool(config.get("Misc>Rainbow Mode>Enabled", default=False))
+        enabled = bool(self._config.get("Misc>Rainbow Mode>Enabled", default=False))
         self._rainbow_cycle_duration_setting.setEnabled(enabled)
         self._rainbow_palette_setting.setEnabled(enabled)
 
@@ -159,9 +161,9 @@ class SettingsMiscPage(MTWidget):
         if current == self._last_applied_rainbow_cycle_duration:
             return
         self._last_applied_rainbow_cycle_duration = current
-        if bool(config.get("Misc>Rainbow Mode>Enabled", default=False)):
+        if bool(self._config.get("Misc>Rainbow Mode>Enabled", default=False)):
             self._apply_runtime_theme_preferences()
 
     def _on_rainbow_palette_changed(self, _value: str) -> None:
-        if bool(config.get("Misc>Rainbow Mode>Enabled", default=False)):
+        if bool(self._config.get("Misc>Rainbow Mode>Enabled", default=False)):
             self._apply_runtime_theme_preferences()

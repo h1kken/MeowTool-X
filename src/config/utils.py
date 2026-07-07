@@ -11,9 +11,7 @@ def _count_indent_levels(raw_line: str) -> int:
     if not leading:
         return 0
 
-    indent_unit = (
-        max(1, len(CONFIG_INDENT)) if CONFIG_INDENT and CONFIG_INDENT.isspace() else 2
-    )
+    indent_unit = max(1, len(CONFIG_INDENT)) if CONFIG_INDENT and CONFIG_INDENT.isspace() else 2
     tab_levels = leading.count("\t")
     space_levels = leading.count(" ") // indent_unit
     return tab_levels + space_levels

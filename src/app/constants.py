@@ -1,6 +1,7 @@
 import sys
 
 PROGRAM_NAME = 'MeowTool... Meow :3'
+APP_DIRNAME = 'MeowTool-X'
 
 ASCII_MEOWTOOL = rf'''
 {'‾' * 140}
@@ -18,6 +19,7 @@ def _is_console_stream(stream: object) -> bool:
     isatty = getattr(stream, 'isatty', None)
     if not callable(isatty):
         return False
+    
     try:
         return bool(isatty())
     except Exception:
@@ -27,4 +29,4 @@ def _is_console_stream(stream: object) -> bool:
 IS_LAUNCHED_WITH_CONSOLE = _is_console_stream(sys.stdout)
 
 
-__all__ = [name for name in globals() if name.isupper()]
+__all__ = tuple(name for name in globals() if name.isupper())

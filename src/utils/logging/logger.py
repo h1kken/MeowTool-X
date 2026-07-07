@@ -9,7 +9,7 @@ from typing import Any, cast
 import loguru
 
 from src.app.paths import PATH_ROOT
-from src.utils.constants.app import ASCII_MEOWTOOL, IS_LAUNCHED_WITH_CONSOLE, PROGRAM_NAME
+from src.app.constants import ASCII_MEOWTOOL, IS_LAUNCHED_WITH_CONSOLE, PROGRAM_NAME
 from src.utils.constants.log import (
     DATE_LOGGER_FORMAT,
     LOGGER_INDENT_FUNCTION,

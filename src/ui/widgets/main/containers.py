@@ -37,7 +37,6 @@ from src.app.paths import PATH_SRC
 from src.theme.colors import to_qcolor
 from src.theme.gradients import normalize_gradient_data
 from src.theme.schema.access import coerce_box_sides, coerce_number, object_map, theme_map
-from src.ui.fonts import apply_font_antialiasing
 from src.ui.painting import draw_widget_background, new_widget_painter
 from src.translation.mixin import TranslatableComboBoxMixin
 from src.ui.layouts.factory import LayoutType, create_layout
@@ -67,7 +66,6 @@ def _draw_aligned_text(
 class MTRadioButton(BoxThemeMixin, QRadioButton):
     def __init__(self, text: str = '', parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(text, parent)
-        apply_font_antialiasing(self)
         self.init_box_theme()
 
         if obj_name:
@@ -212,7 +210,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
 
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent)
-        apply_font_antialiasing(self)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
@@ -1195,7 +1192,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
 class MTScrollArea(BoxThemeMixin, QScrollArea):
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent)
-        apply_font_antialiasing(self)
         self.init_box_theme()
         self.setWidgetResizable(True)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -1227,7 +1223,6 @@ class MTScrollArea(BoxThemeMixin, QScrollArea):
 class MTWidget(BoxThemeMixin, QWidget):
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent)
-        apply_font_antialiasing(self)
         self.init_box_theme()
 
         if obj_name:

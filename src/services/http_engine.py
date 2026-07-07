@@ -15,7 +15,7 @@ from src.services.http.types import (
     RequestLike,
 )
 
-from src.utils.constants.app import IS_LAUNCHED_WITH_CONSOLE
+from src.app.constants import IS_LAUNCHED_WITH_CONSOLE
 from src.utils.logging import logger
 
 
@@ -257,35 +257,38 @@ def build_config_from_app_config(
     config_source: Any | None = None,
     **overrides: Any,
 ) -> NativeHttpEngineConfig:
-    if config_source is None:
-        from src.config.manager import config as config_source
+    def _read(key: str, default: Any) -> Any:
+        getter = getattr(config_source, "get", None)
+        if callable(getter):
+            return getter(key, default=default)
+        return default
 
     config = NativeHttpEngineConfig(
         concurrency_profile=(
             str(
-                config_source.get(
+                _read(
                     "HTTP Engine>Concurrency Profile",
-                    default=APP_CONFIG_DEFAULTS["concurrency_profile"],
+                    APP_CONFIG_DEFAULTS["concurrency_profile"],
                 )
             ).strip()
             or str(APP_CONFIG_DEFAULTS["concurrency_profile"])
         ),
         max_concurrency=int(
-            config_source.get(
+            _read(
                 "HTTP Engine>Max Concurrency",
-                default=APP_CONFIG_DEFAULTS["max_concurrency"],
+                APP_CONFIG_DEFAULTS["max_concurrency"],
             )
         ),
         per_proxy_max_in_flight=int(
-            config_source.get(
+            _read(
                 "HTTP Engine>Per Proxy Max In Flight",
-                default=APP_CONFIG_DEFAULTS["per_proxy_max_in_flight"],
+                APP_CONFIG_DEFAULTS["per_proxy_max_in_flight"],
             )
         ),
         direct_max_in_flight=int(
-            config_source.get(
+            _read(
                 "HTTP Engine>Direct Max In Flight",
-                default=APP_CONFIG_DEFAULTS["direct_max_in_flight"],
+                APP_CONFIG_DEFAULTS["direct_max_in_flight"],
             )
         ),
     )

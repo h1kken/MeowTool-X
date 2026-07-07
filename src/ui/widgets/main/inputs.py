@@ -30,9 +30,8 @@ from src.theme.gradients import (
     normalize_gradient_data,
 )
 from src.theme.schema.access import coerce_box_sides, coerce_number, theme_map
-from src.translation.manager import translator as t
+from src.translation.manager import get_translator
 from src.theme.rainbow.palette import sample_rainbow_color
-from src.ui.fonts import apply_font_antialiasing
 from src.ui.painting import new_widget_painter
 from src.ui.widgets.main.box import BoxThemeMixin
 from src.ui.widgets.main.paint_primitives import parse_pen_style, resolve_fill_brush
@@ -83,14 +82,12 @@ _SLIDER_RAINBOW_GRADIENT_DISABLED_PARTS: frozenset[str] = frozenset({'sub_page'}
 class MTSlider(QSlider):
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(Qt.Orientation.Horizontal, parent)
-        apply_font_antialiasing(self)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setMouseTracking(True)
         self._dragging_anywhere = False
         self._drag_offset = 0
         self._slider_line_rainbow_phase = 0.0
         self._runtime_rainbow_palette = 'Pastel'
-        self._runtime_rainbow_saturation = 1.0
         self._rainbow_line_color: QColor | None = None
         self._animated_handle_color: QColor | None = None
         self._default_parts = self._build_default_parts()
@@ -124,7 +121,6 @@ class MTSlider(QSlider):
                 'border_radius': None,
                 'size': 6.0,
                 'brightness': 1.0,
-                'saturation': 1.0,
             },
             'sub_page': {
                 'background_color': QColor(transparent),
@@ -134,7 +130,6 @@ class MTSlider(QSlider):
                 'border_style': 'solid',
                 'border_radius': None,
                 'brightness': 1.0,
-                'saturation': 1.0,
             },
             'add_page': {
                 'background_color': QColor(transparent),
@@ -144,7 +139,6 @@ class MTSlider(QSlider):
                 'border_style': 'solid',
                 'border_radius': None,
                 'brightness': 1.0,
-                'saturation': 1.0,
             },
             'handle': {
                 'background_color': QColor(transparent),
@@ -157,7 +151,6 @@ class MTSlider(QSlider):
                 'height': 14.0,
                 'margin': (-4.0, 0.0, -4.0, 0.0),
                 'brightness': 1.0,
-                'saturation': 1.0,
             },
         }
 
@@ -308,15 +301,11 @@ class MTSlider(QSlider):
         value = self._part_value(part, 'brightness', 1.0)
         return max(0.0, min(float(value), 1.0)) if isinstance(value, (int, float)) else 1.0
 
-    def _part_saturation(self, part: str) -> float:
-        value = self._part_value(part, 'saturation', 1.0)
-        return max(0.0, min(float(value), 1.0)) if isinstance(value, (int, float)) else 1.0
-
     def _adjust_part_color(self, part: str, color: QColor) -> QColor:
-        return adjust_qcolor(color, brightness=self._part_brightness(part), saturation=self._part_saturation(part))
+        return adjust_qcolor(color, brightness=self._part_brightness(part))
 
     def _adjust_part_gradient(self, part: str, gradient: WidgetThemeMap | None) -> WidgetThemeMap | None:
-        return adjust_gradient_data(gradient, brightness=self._part_brightness(part), saturation=self._part_saturation(part))
+        return adjust_gradient_data(gradient, brightness=self._part_brightness(part))
 
     def current_part_color(self, part: str) -> QColor:
         part_key = str(part).strip()
@@ -503,15 +492,6 @@ class MTSlider(QSlider):
         self._rainbow_line_color = None
         self.update()
 
-    def set_slider_line_rainbow_saturation(self, value: float) -> None:
-        try:
-            self._runtime_rainbow_saturation = max(0.0, min(float(value), 1.0))
-        except (TypeError, ValueError):
-            self._runtime_rainbow_saturation = 1.0
-        if isinstance(self._rainbow_line_color, QColor):
-            self._rainbow_line_color = self._sample_rainbow_color(self._slider_line_rainbow_phase)
-            self.update()
-
     def set_slider_line_rainbow_palette(self, value: str) -> None:
         self._runtime_rainbow_palette = str(value or 'Pastel').strip() or 'Pastel'
         if isinstance(self._rainbow_line_color, QColor):
@@ -524,7 +504,6 @@ class MTSlider(QSlider):
     def reset_theme(self) -> None:
         self._slider_line_rainbow_phase = 0.0
         self._runtime_rainbow_palette = 'Pastel'
-        self._runtime_rainbow_saturation = 1.0
         self._parts = deepcopy(self._default_parts)
         self._rainbow_line_color = None
         self._animated_handle_color = None
@@ -555,9 +534,6 @@ class MTSlider(QSlider):
             brightness = background.get('brightness')
             if isinstance(brightness, (int, float)):
                 self._parts[part]['brightness'] = max(0.0, min(float(brightness), 1.0))
-            saturation = background.get('saturation')
-            if isinstance(saturation, (int, float)):
-                self._parts[part]['saturation'] = max(0.0, min(float(saturation), 1.0))
             if part == 'groove':
                 if (size := coerce_number(part_data.get('size'))) is not None:
                     self._parts[part]['size'] = max(1.0, size)
@@ -577,7 +553,6 @@ class MTSlider(QSlider):
         return sample_rainbow_color(
             phase,
             palette=self._runtime_rainbow_palette,
-            saturation=self._runtime_rainbow_saturation,
         )
 
     def _rounded_path(self, rect: QRectF, tl: float, tr: float, br: float, bl: float) -> QPainterPath:
@@ -695,7 +670,6 @@ class MTLineEdit(BoxThemeMixin, QLineEdit):
 
     def __init__(self, text: str = '', parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(text, parent)
-        apply_font_antialiasing(self)
         self._focused_alignment: Qt.AlignmentFlag | None = None
         self._unfocused_alignment: Qt.AlignmentFlag | None = None
         self._theme_text_color_override: QColor | None = None
@@ -705,7 +679,7 @@ class MTLineEdit(BoxThemeMixin, QLineEdit):
         self.setTextMargins(0, 0, 0, 0)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.init_box_theme()
-        t.language_changed.connect(self._update_placeholder_translation)
+        get_translator().language_changed.connect(self._update_placeholder_translation)
 
         if obj_name:
             self.setObjectName(obj_name)
@@ -762,7 +736,7 @@ class MTLineEdit(BoxThemeMixin, QLineEdit):
     def _update_placeholder_translation(self) -> None:
         if not self._placeholder_tr_key:
             return
-        self.setPlaceholderText(t.tr(self._placeholder_tr_key))
+        self.setPlaceholderText(get_translator().tr(self._placeholder_tr_key))
 
     def focusInEvent(self, event: QFocusEvent) -> None:
         super().focusInEvent(event)
@@ -790,12 +764,10 @@ class MTLineEdit(BoxThemeMixin, QLineEdit):
 class MTSpinBox(BoxThemeMixin, QSpinBox):
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent)
-        apply_font_antialiasing(self)
         self.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
         self.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self.setFrame(False)
         self.lineEdit().setTextMargins(0, 0, 0, 0)
-        apply_font_antialiasing(self.lineEdit())
         self.init_box_theme()
 
         if obj_name:
@@ -834,12 +806,10 @@ class MTSpinBox(BoxThemeMixin, QSpinBox):
 class MTDoubleSpinBox(BoxThemeMixin, QDoubleSpinBox):
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent)
-        apply_font_antialiasing(self)
         self.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
         self.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self.setFrame(False)
         self.lineEdit().setTextMargins(0, 0, 0, 0)
-        apply_font_antialiasing(self.lineEdit())
         self.init_box_theme()
 
         if obj_name:

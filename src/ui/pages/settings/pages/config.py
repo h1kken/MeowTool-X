@@ -7,13 +7,13 @@ from PySide6.QtCore import QFileSystemWatcher, QSignalBlocker, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QLayout, QSizePolicy, QStackedWidget
 
+from src.app.paths import PATH_CONFIGS_USER
 from src.config.constants import (
     CONFIG_DEFAULT_NAME,
     CONFIGS_REFRESH_DEBOUNCE_MS,
 )
-from src.config.loader import config_loader
-from src.config.manager import config
-from src.config.paths import PATH_CONFIGS
+from src.config.loader import ConfigLoader
+from src.config.manager import Config
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets import (
     MTButton,
@@ -32,9 +32,11 @@ from src.utils.filesystem.constants import FILENAME_SPECIAL_CHARS
 
 
 class SettingsConfigPage(MTWidget):
-    def __init__(self):
+    def __init__(self, *, config_loader: ConfigLoader, config: Config) -> None:
         super().__init__()
-        FS.ensure_dir(PATH_CONFIGS)
+        self._config_loader = config_loader
+        self._config = config
+        FS.ensure_dir(PATH_CONFIGS_USER)
         self._autoload_name = self._read_autoload_name()
 
         main_layout = create_layout(LayoutType.VBOX, parent=self)
@@ -55,7 +57,7 @@ class SettingsConfigPage(MTWidget):
         self._build_actions_column()
 
         self._watcher = QFileSystemWatcher(self)
-        self._watcher.addPath(str(PATH_CONFIGS))
+        self._watcher.addPath(str(PATH_CONFIGS_USER))
         self._refresh_timer = QTimer(self)
         self._refresh_timer.setSingleShot(True)
         self._refresh_timer.setInterval(CONFIGS_REFRESH_DEBOUNCE_MS)
@@ -79,9 +81,9 @@ class SettingsConfigPage(MTWidget):
         self._delete_cancel_button.clicked.connect(self._cancel_delete_confirm)
         self._open_location_button.clicked.connect(self._open_selected_location)
 
-        config.config_loaded.connect(self._on_config_loaded)
+        self._config.config_loaded.connect(self._on_config_loaded)
 
-        self._refresh_configs(preferred=config.name)
+        self._refresh_configs(preferred=self._config.name)
 
     def _build_actions_column(self) -> None:
         layout = create_layout(LayoutType.VBOX, parent=self._actions_column)
@@ -276,7 +278,7 @@ class SettingsConfigPage(MTWidget):
 
     def _iter_config_names(self) -> list[str]:
         names: list[str] = []
-        for file_path in PATH_CONFIGS.glob("*.txt"):
+        for file_path in PATH_CONFIGS_USER.glob("*.txt"):
             if not file_path.is_file():
                 continue
             stem = file_path.stem
@@ -293,12 +295,15 @@ class SettingsConfigPage(MTWidget):
         selected = self._current_selected_name()
         if not selected:
             return None
-        return PATH_CONFIGS / f"{selected}.txt"
+        return PATH_CONFIGS_USER / f"{selected}.txt"
 
     def _read_autoload_name(self) -> str:
         return (
             str(
-                config_loader.get(CLKey.LOADER_CONFIG_ON_LOAD, default=CONFIG_DEFAULT_NAME)
+                self._config_loader.get(
+                    CLKey.LOADER_CONFIG_ON_LOAD,
+                    default=CONFIG_DEFAULT_NAME,
+                )
             ).strip()
             or CONFIG_DEFAULT_NAME
         )
@@ -307,14 +312,14 @@ class SettingsConfigPage(MTWidget):
         normalized = str(value).strip() or CONFIG_DEFAULT_NAME
         if normalized == self._autoload_name:
             return self._autoload_name
-        config_loader.set(CLKey.LOADER_CONFIG_ON_LOAD, normalized)
+        self._config_loader.set(CLKey.LOADER_CONFIG_ON_LOAD, normalized)
         self._autoload_name = normalized
         return normalized
 
     def _pick_target_name(
         self, names: list[str], preferred: str | None = None
     ) -> str | None:
-        for candidate in (preferred, self._current_selected_name(), config.name):
+        for candidate in (preferred, self._current_selected_name(), self._config.name):
             if candidate in names:
                 return candidate
         return names[0] if names else None
@@ -334,19 +339,16 @@ class SettingsConfigPage(MTWidget):
             self._reapply_window_theme()
 
     def _reapply_window_theme(self) -> None:
-        window = cast(Any, self.window())
-        theme_manager = window._theme_manager
-        if theme_manager is None:
+        window = self.window()
+        if window is self:
             return
-
-        theme_manager.apply()
-        window._reload_main_animations_from_theme()
-        window.reapply_runtime_theme_preferences()
+        window = cast(Any, window)
+        window.reapply_loaded_theme()
 
     def _sync_actions_state(self) -> None:
         selected = self._current_selected_name()
         autoload = self._autoload_name
-        loaded = config.name
+        loaded = self._config.name
 
         self._selected_value.setText(selected or "-")
         self._loaded_value.setText(loaded or "-")
@@ -375,7 +377,7 @@ class SettingsConfigPage(MTWidget):
         with QSignalBlocker(self._autoload_checkbox):
             self._autoload_checkbox.setChecked(has_selection and selected == autoload)
         with QSignalBlocker(self._auto_save_checkbox):
-            self._auto_save_checkbox.setChecked(bool(config_loader.auto_save_config))
+            self._auto_save_checkbox.setChecked(bool(self._config_loader.auto_save_config))
 
     def _on_selection_changed(self, *_args: object) -> None:
         self._sync_actions_state()
@@ -404,16 +406,16 @@ class SettingsConfigPage(MTWidget):
         self._sync_actions_state()
 
     def _on_auto_save_toggled(self, checked: bool) -> None:
-        config_loader.set(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES, bool(checked))
+        self._config_loader.set(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES, bool(checked))
         self._sync_actions_state()
 
     def _save_selected_config(self) -> None:
         selected = self._current_selected_name()
         if not selected:
             return
-        if selected != config.name:
-            config.load(selected)
-        config.save()
+        if selected != self._config.name:
+            self._config.load(selected)
+        self._config.save()
         self._refresh_configs(preferred=selected)
 
     def _normalize_new_name(self, value: str) -> str:
@@ -440,9 +442,9 @@ class SettingsConfigPage(MTWidget):
         if not name:
             return
 
-        config.create_config(name)
+        self._config.create_config(name)
         self._cancel_create_edit()
-        self._refresh_configs(preferred=config.name)
+        self._refresh_configs(preferred=self._config.name)
 
     def _start_rename_edit(self) -> None:
         selected = self._current_selected_name()
@@ -471,7 +473,7 @@ class SettingsConfigPage(MTWidget):
             self._cancel_rename_edit()
             return
         new_name = self._normalize_new_name(self._rename_edit_line.text())
-        if not new_name or not config.rename(selected, new_name):
+        if not new_name or not self._config.rename(selected, new_name):
             return
 
         if self._autoload_name == selected:
@@ -484,7 +486,7 @@ class SettingsConfigPage(MTWidget):
         selected = self._current_selected_name()
         if not selected:
             return
-        config.load(selected)
+        self._config.load(selected)
         self._refresh_configs(preferred=selected)
 
     def _delete_selected_config(self) -> None:
@@ -496,9 +498,9 @@ class SettingsConfigPage(MTWidget):
         if self._autoload_name == selected:
             self._set_autoload_name(CONFIG_DEFAULT_NAME)
 
-        config.delete(selected)
+        self._config.delete(selected)
         self._cancel_delete_confirm()
-        self._refresh_configs(preferred=config.name)
+        self._refresh_configs(preferred=self._config.name)
 
     def _open_selected_location(self) -> None:
         config_path = self._selected_config_path()
@@ -515,4 +517,4 @@ class SettingsConfigPage(MTWidget):
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(config_path).parent)))
 
     def _on_config_loaded(self) -> None:
-        self._refresh_configs(preferred=config.name)
+        self._refresh_configs(preferred=self._config.name)

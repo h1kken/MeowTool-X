@@ -7,7 +7,7 @@ from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 
-from src.app.paths import PATH_ROOT
+from src.app.paths import PATH_APP_ICON, PATH_ROOT
 from src.ui.constants import (
     SIDEBAR_MEDIA_GIF_EXTENSIONS,
     SIDEBAR_MEDIA_HEIGHT,
@@ -16,7 +16,6 @@ from src.ui.constants import (
     SIDEBAR_MEDIA_VIDEO_EXTENSIONS,
 )
 from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.paths import PATH_APP_ICON
 from src.ui.widgets.main.containers import MTWidget
 from src.ui.widgets.main.text import MTLabel
 

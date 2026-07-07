@@ -7,8 +7,6 @@ from contextlib import contextmanager
 from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.db.paths import PATH_APP_DATABASE
-
 _engine: Engine | None = None
 _session_factory: sessionmaker[Session] | None = None
 
@@ -20,7 +18,7 @@ def _configure_sqlite(dbapi_connection: sqlite3.Connection, _record: object) -> 
 
 
 def database_url() -> str:
-    return f"sqlite:///{PATH_APP_DATABASE.as_posix()}"
+    return f"sqlite:///mt.db"
 
 
 def get_engine() -> Engine:

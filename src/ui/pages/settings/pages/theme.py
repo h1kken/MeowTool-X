@@ -7,10 +7,10 @@ from PySide6.QtCore import QFileSystemWatcher, QSignalBlocker, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QLayout, QSizePolicy, QStackedWidget
 
+from src.app.paths import PATH_DEFAULT_THEME, PATH_THEMES_SRC, PATH_THEMES_USER
 from src.config.constants import CONFIGS_REFRESH_DEBOUNCE_MS
-from src.config.loader import config_loader
-from src.config.manager import config
-from src.theme.paths import PATH_DEFAULT_THEME, PATH_THEMES_SOURCE, PATH_THEMES_USER
+from src.config.loader import ConfigLoader
+from src.config.manager import Config
 from src.theme.storage.io import (
     find_theme_file_by_name,
     iter_theme_files,
@@ -37,8 +37,16 @@ from src.config.enums import ConfigLoaderKey as CLKey
 
 
 class SettingsThemePage(MTWidget):
-    def __init__(self, *, autoload_name: str | None = None):
+    def __init__(
+        self,
+        *,
+        config_loader: ConfigLoader,
+        config: Config,
+        autoload_name: str | None = None,
+    ) -> None:
         super().__init__()
+        self._config_loader = config_loader
+        self._config = config
         FS.ensure_dir(PATH_THEMES_USER)
 
         self._themes_by_name: dict[str, Path] = {}
@@ -93,7 +101,7 @@ class SettingsThemePage(MTWidget):
         self._delete_cancel_button.clicked.connect(self._cancel_delete_confirm)
         self._open_location_button.clicked.connect(self._open_selected_location)
 
-        config.config_loaded.connect(self._on_config_loaded)
+        self._config.config_loaded.connect(self._on_config_loaded)
 
         self._refresh_themes(preferred=self._autoload_name)
 
@@ -291,8 +299,8 @@ class SettingsThemePage(MTWidget):
     def _build_theme_map(self) -> dict[str, Path]:
         theme_map: dict[str, Path] = {}
 
-        if PATH_THEMES_SOURCE.exists():
-            for path in iter_theme_files(PATH_THEMES_SOURCE):
+        if PATH_THEMES_SRC.exists():
+            for path in iter_theme_files(PATH_THEMES_SRC):
                 theme_map[path.stem] = path
 
         for path in iter_theme_files(PATH_THEMES_USER):
@@ -315,11 +323,11 @@ class SettingsThemePage(MTWidget):
 
     def _read_autoload_name(self) -> str:
         return self._normalize_theme_name(
-            config.get("General>Theme", default=PATH_DEFAULT_THEME.stem)
+            self._config.get("General>Theme", default=PATH_DEFAULT_THEME.stem)
         )
 
     def _read_autoload_enabled(self) -> bool:
-        return bool(config.get("Theme>Autoload Selected Theme", default=True))
+        return bool(self._config.get("Theme>Autoload Selected Theme", default=True))
 
     def _normalize_theme_name(self, value: Any) -> str:
         normalized = normalize_theme_name(str(value or ""))
@@ -329,7 +337,7 @@ class SettingsThemePage(MTWidget):
         normalized = normalize_theme_name(value) or PATH_DEFAULT_THEME.stem
         if normalized == self._autoload_name:
             return self._autoload_name
-        config.set("General>Theme", normalized, force_save=force_save)
+        self._config.set("General>Theme", normalized, force_save=force_save)
         self._autoload_name = normalized
         return normalized
 
@@ -337,12 +345,19 @@ class SettingsThemePage(MTWidget):
         enabled = bool(enabled)
         if enabled == self._autoload_enabled:
             return self._autoload_enabled
-        config.set("Theme>Autoload Selected Theme", enabled, force_save=force_save)
+        self._config.set(
+            "Theme>Autoload Selected Theme",
+            enabled,
+            force_save=force_save,
+        )
         self._autoload_enabled = enabled
         return enabled
 
     def _read_applied_name(self) -> str:
-        window = cast(Any, self.window())
+        window = self.window()
+        if window is self:
+            return self._normalize_theme_name(self._applied_name)
+        window = cast(Any, window)
         current = str(window.current_theme_name()).strip()
         return self._normalize_theme_name(current or self._applied_name)
 
@@ -381,14 +396,11 @@ class SettingsThemePage(MTWidget):
             self._reapply_window_theme()
 
     def _reapply_window_theme(self) -> None:
-        window = cast(Any, self.window())
-        theme_manager = window._theme_manager
-        if theme_manager is None:
+        window = self.window()
+        if window is self:
             return
-
-        theme_manager.apply()
-        window._reload_main_animations_from_theme()
-        window.reapply_runtime_theme_preferences()
+        window = cast(Any, window)
+        window.reapply_loaded_theme()
 
     def _sync_actions_state(self) -> None:
         selected = self._current_selected_name()
@@ -427,7 +439,7 @@ class SettingsThemePage(MTWidget):
                 has_selection and autoload_enabled and selected == autoload
             )
         with QSignalBlocker(self._auto_save_switch):
-            self._auto_save_switch.setChecked(bool(config_loader.auto_save_theme))
+            self._auto_save_switch.setChecked(bool(self._config_loader.auto_save_theme))
 
     def _on_themes_dir_changed(self, _path: str) -> None:
         self._refresh_timer.start()
@@ -448,7 +460,7 @@ class SettingsThemePage(MTWidget):
         self._sync_actions_state()
 
     def _on_auto_save_toggled(self, checked: bool) -> None:
-        config_loader.set(CLKey.SAVER_AUTO_SAVE_THEME_CHANGES, bool(checked))
+        self._config_loader.set(CLKey.SAVER_AUTO_SAVE_THEME_CHANGES, bool(checked))
         self._sync_actions_state()
 
     def _load_selected_theme(self) -> None:

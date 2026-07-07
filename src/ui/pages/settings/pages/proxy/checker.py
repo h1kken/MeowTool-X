@@ -1,4 +1,6 @@
-from src.config.manager import config
+from __future__ import annotations
+
+from src.config.manager import Config
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets import (
     MTCollapsibleContainer,
@@ -10,8 +12,9 @@ from src.ui.widgets import (
 
 
 class SettingsProxyCheckerPage(MTWidget):
-    def __init__(self):
+    def __init__(self, *, config: Config) -> None:
         super().__init__()
+        self._config = config
 
         main_layout = create_layout(LayoutType.VBOX, parent=self)
 
@@ -21,7 +24,7 @@ class SettingsProxyCheckerPage(MTWidget):
                 obj_name="Settings_Proxy_Checker_General",
                 widgets=[
                     MTSliderSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="MAIN_THRDS",
                         cfg_key="Proxy>Checker>General>Main Threads",
                         min_value=1,
@@ -29,7 +32,7 @@ class SettingsProxyCheckerPage(MTWidget):
                         default=50,
                     ),
                     MTSliderSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="MAX_WT_RESP",
                         cfg_key="Proxy>Checker>General>Maximum Wait Response",
                         min_value=1,
@@ -37,13 +40,13 @@ class SettingsProxyCheckerPage(MTWidget):
                         default=10,
                     ),
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="SV_GD_IN_CSTM_FL",
                         cfg_key="Proxy>Checker>General>Save Good In Custom File",
                         default=False,
                     ),
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="SV_WTOUT_PRTCL",
                         cfg_key="Proxy>Checker>General>Save Without Protocol",
                         default=False,

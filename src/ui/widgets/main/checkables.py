@@ -13,7 +13,6 @@ from src.theme.gradients import (
 )
 from src.theme.rainbow.palette import sample_rainbow_color
 from src.theme.schema.access import coerce_positive_int, theme_map
-from src.ui.fonts import apply_font_antialiasing
 from src.ui.painting import new_widget_painter
 from src.ui.widgets.main.containers import MTWidget
 from src.ui.widgets.main.paint_primitives import (
@@ -29,21 +28,15 @@ from src.ui.widgets.types import WidgetThemeMap
 @dataclass(slots=True)
 class _SwitchAppearanceState:
     checked_background_brightness: float = 1.0
-    checked_background_saturation: float = 1.0
     unchecked_background_brightness: float = 1.0
-    unchecked_background_saturation: float = 1.0
     handle_background_brightness: float = 1.0
-    handle_background_saturation: float = 1.0
     checked_handle_background_brightness: float | None = None
-    checked_handle_background_saturation: float | None = None
     unchecked_handle_background_brightness: float | None = None
-    unchecked_handle_background_saturation: float | None = None
 
 
 @dataclass(slots=True)
 class _SwitchRainbowState:
     palette: str = 'Classic'
-    saturation: float = 1.0
     handle_phase: float = 0.0
 
 
@@ -62,7 +55,6 @@ class MTSwitch(QCheckBox):
         obj_name: str = '',
     ) -> None:
         super().__init__(text, parent)
-        apply_font_antialiasing(self)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setContentsMargins(0, 0, 0, 0)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -184,15 +176,9 @@ class MTSwitch(QCheckBox):
             brightness = checked_background.get('brightness')
             if isinstance(brightness, (int, float)):
                 self._appearance.checked_background_brightness = max(0.0, min(float(brightness), 1.0))
-            saturation = checked_background.get('saturation')
-            if isinstance(saturation, (int, float)):
-                self._appearance.checked_background_saturation = max(0.0, min(float(saturation), 1.0))
             brightness = unchecked_background.get('brightness')
             if isinstance(brightness, (int, float)):
                 self._appearance.unchecked_background_brightness = max(0.0, min(float(brightness), 1.0))
-            saturation = unchecked_background.get('saturation')
-            if isinstance(saturation, (int, float)):
-                self._appearance.unchecked_background_saturation = max(0.0, min(float(saturation), 1.0))
 
         handle_data = theme_map(data.get('handle'))
         if handle_data is not None:
@@ -229,27 +215,18 @@ class MTSwitch(QCheckBox):
             brightness = handle_background.get('brightness')
             if isinstance(brightness, (int, float)):
                 self._appearance.handle_background_brightness = max(0.0, min(float(brightness), 1.0))
-            saturation = handle_background.get('saturation')
-            if isinstance(saturation, (int, float)):
-                self._appearance.handle_background_saturation = max(0.0, min(float(saturation), 1.0))
                 
             if 'gradient' in checked_background:
                 self._checked_handle_background_gradient = theme_map(normalize_gradient_data(checked_background.get('gradient')))
             brightness = checked_background.get('brightness')
             if isinstance(brightness, (int, float)):
                 self._appearance.checked_handle_background_brightness = max(0.0, min(float(brightness), 1.0))
-            saturation = checked_background.get('saturation')
-            if isinstance(saturation, (int, float)):
-                self._appearance.checked_handle_background_saturation = max(0.0, min(float(saturation), 1.0))
                 
             if 'gradient' in unchecked_background:
                 self._unchecked_handle_background_gradient = theme_map(normalize_gradient_data(unchecked_background.get('gradient')))
             brightness = unchecked_background.get('brightness')
             if isinstance(brightness, (int, float)):
                 self._appearance.unchecked_handle_background_brightness = max(0.0, min(float(brightness), 1.0))
-            saturation = unchecked_background.get('saturation')
-            if isinstance(saturation, (int, float)):
-                self._appearance.unchecked_handle_background_saturation = max(0.0, min(float(saturation), 1.0))
 
         size_data = theme_map(data.get('size')) or {}
         width = coerce_positive_int(size_data.get('width', size_data.get('w')))
@@ -339,29 +316,18 @@ class MTSwitch(QCheckBox):
         part_key = str(part).strip()
         return part_key if part_key in {'handle', 'track'} else None
 
-    def _part_adjustments(self, part: str, checked: bool) -> tuple[float, float]:
+    def _part_adjustments(self, part: str, checked: bool) -> float:
         if part == 'handle':
             brightness = (
                 self._appearance.checked_handle_background_brightness
                 if checked else
                 self._appearance.unchecked_handle_background_brightness
             )
-            saturation = (
-                self._appearance.checked_handle_background_saturation
-                if checked else
-                self._appearance.unchecked_handle_background_saturation
-            )
-            return (
-                self._appearance.handle_background_brightness if brightness is None else float(brightness),
-                self._appearance.handle_background_saturation if saturation is None else float(saturation),
-            )
-        return (
+            return self._appearance.handle_background_brightness if brightness is None else float(brightness)
+        return float(
             self._appearance.checked_background_brightness
             if checked else
             self._appearance.unchecked_background_brightness,
-            self._appearance.checked_background_saturation
-            if checked else
-            self._appearance.unchecked_background_saturation,
         )
 
     def _part_state_color(self, part: str, checked: bool) -> QColor | None:
@@ -398,8 +364,7 @@ class MTSwitch(QCheckBox):
         color = self._part_state_color(part_key, checked)
         if color is None:
             return None
-        brightness, saturation = self._part_adjustments(part_key, checked)
-        return adjust_qcolor(color, brightness=brightness, saturation=saturation)
+        return adjust_qcolor(color, brightness=self._part_adjustments(part_key, checked))
 
     def current_part_gradient(self, part: str) -> WidgetThemeMap | None:
         part_key = self._part_key(part)
@@ -407,8 +372,7 @@ class MTSwitch(QCheckBox):
             return None
         checked = self._visual_checked()
         gradient = self._part_state_gradient(part_key, checked)
-        brightness, saturation = self._part_adjustments(part_key, checked)
-        return adjust_gradient_data(gradient, brightness=brightness, saturation=saturation)
+        return adjust_gradient_data(gradient, brightness=self._part_adjustments(part_key, checked))
 
     def set_part_color(self, part: str, value: object) -> bool:
         color = to_qcolor(value)
@@ -479,14 +443,6 @@ class MTSwitch(QCheckBox):
         self._animated_handle_color = None
         self.update()
 
-    def set_handle_rainbow_saturation(self, value: float) -> None:
-        try:
-            self._rainbow.saturation = max(0.0, min(float(value), 1.0))
-        except (TypeError, ValueError):
-            self._rainbow.saturation = 1.0
-        if self._rainbow.handle_phase:
-            self.set_handle_rainbow(self._rainbow.handle_phase)
-
     def set_handle_rainbow_palette(self, value: str) -> None:
         self._rainbow.palette = str(value or 'Pastel').strip() or 'Pastel'
         if self._rainbow.handle_phase:
@@ -497,7 +453,6 @@ class MTSwitch(QCheckBox):
             phase,
             palette=self._rainbow.palette,
             brightness=self._appearance.handle_background_brightness,
-            saturation=self._appearance.handle_background_saturation * self._rainbow.saturation,
         )
 
     def current_handle_rainbow(self) -> float:

@@ -1,6 +1,11 @@
+from __future__ import annotations
+
 from PySide6.QtCore import Signal, SignalInstance
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
+from src.config.loader import ConfigLoader
+from src.config.manager import Config
+from src.translation.manager import TranslationManager
 from src.ui.controllers import PageController
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.pages.settings.pages import (
@@ -12,8 +17,6 @@ from src.ui.pages.settings.pages import (
     SettingsConfigPage,
     SettingsThemePage,
 )
-from src.ui.pages.settings.pages.proxy.proxy import SettingsProxyPage
-from src.ui.pages.settings.pages.roblox.roblox import SettingsRobloxPage
 from src.ui.widgets import MTButton, MTWidget
 
 
@@ -33,9 +36,15 @@ class SettingsPage(MTWidget):
     def __init__(
         self,
         *,
+        config_loader: ConfigLoader,
+        config: Config,
+        translator: TranslationManager,
         current_theme_name: str | None = None,
-    ):
+    ) -> None:
         super().__init__()
+        self._config_loader = config_loader
+        self._config = config
+        self._translator = translator
         self._tab_names_by_key: dict[str, str] = {}
         self._pages_by_key: dict[str, QWidget] = {}
         self._current_theme_name = current_theme_name
@@ -50,10 +59,7 @@ class SettingsPage(MTWidget):
 
         for obj_name, tr_key, PageClass in self._PAGES:
             self._tab_names_by_key[tr_key] = obj_name
-            if PageClass is SettingsThemePage:
-                page = PageClass(autoload_name=self._current_theme_name)
-            else:
-                page = PageClass()
+            page = self._create_page(PageClass)
             self._pages_by_key[tr_key] = page
             page.setSizePolicy(
                 QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
@@ -76,6 +82,33 @@ class SettingsPage(MTWidget):
         self._page_controller.show(self._PAGES[0][1])  # show the first page
         self._page_controller.on_change(lambda _key: self._emit_presence_path())
         self._emit_presence_path()
+
+    def _create_page(self, page_class: type[QWidget]) -> QWidget:
+        if page_class is SettingsMainPage:
+            return page_class(config=self._config, translator=self._translator)
+        if page_class is SettingsOutputsPage:
+            return page_class(config=self._config)
+        if page_class is SettingsProxyPage:
+            return page_class(config=self._config)
+        if page_class is SettingsRobloxPage:
+            return page_class(config=self._config)
+        if page_class is SettingsMiscPage:
+            return page_class(
+                config_loader=self._config_loader,
+                config=self._config,
+            )
+        if page_class is SettingsConfigPage:
+            return page_class(
+                config_loader=self._config_loader,
+                config=self._config,
+            )
+        if page_class is SettingsThemePage:
+            return page_class(
+                config_loader=self._config_loader,
+                config=self._config,
+                autoload_name=self._current_theme_name,
+            )
+        return page_class()
 
     def current_presence_path(self) -> str:
         top_key = self._page_controller.current_key()

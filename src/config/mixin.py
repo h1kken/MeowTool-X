@@ -5,13 +5,13 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import TypeVar, cast
 
+from src.app.paths import PATH_CONFIGS_USER
 from src.config.constants import (
     CONFIG_INDENT,
     CONFIG_MISSING_DEFAULT,
     CONFIG_SAVE_RETRY_COUNT,
     CONFIG_SAVE_RETRY_DELAY_SEC,
 )
-from src.config.paths import PATH_CONFIGS
 from src.config.types import ConfigMap, ConfigMixinHost, ConfigValue
 from src.config.utils import convert_value
 from src.utils.filesystem import FS, del_safe, get_safe, set_safe
@@ -114,7 +114,7 @@ class SaveConfigMixin:
         return new_data
 
     def save(self: ConfigMixinHost) -> None:
-        FS.ensure_dir(PATH_CONFIGS)
+        FS.ensure_dir(PATH_CONFIGS_USER)
         lines = self.dump_dict(self.data, self.defaults)
         text = "\n".join(lines)
 

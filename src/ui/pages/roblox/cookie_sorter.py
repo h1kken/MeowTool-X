@@ -2,6 +2,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QThread
 
+from src.config.manager import Config
 from src.services.roblox.cookie_sorter import RobloxCookieSorter
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -9,8 +10,9 @@ from src.ui.widgets import MTButton, MTDropZone, MTLabel, MTWidget
 
 
 class RobloxCookieSorterPage(MTWidget):
-    def __init__(self):
+    def __init__(self, *, config: Config) -> None:
         super().__init__()
+        self._config = config
         self._thread: QThread | None = None
         self._sorter: RobloxCookieSorter | None = None
 
@@ -73,6 +75,7 @@ class RobloxCookieSorterPage(MTWidget):
 
         self._thread = QThread(self)
         self._sorter = RobloxCookieSorter(
+            self._config,
             input_paths=list(self._source_files),
             text_chunks=list(self._source_text_blocks),
             use_default_folder=self._use_default_folder,

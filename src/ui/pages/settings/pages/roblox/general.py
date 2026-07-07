@@ -1,4 +1,6 @@
-from src.config.manager import config
+from __future__ import annotations
+
+from src.config.manager import Config
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets import (
     MTCollapsibleContainer,
@@ -11,8 +13,9 @@ from src.ui.widgets import (
 
 
 class SettingsRobloxGeneralPage(MTWidget):
-    def __init__(self):
+    def __init__(self, *, config: Config) -> None:
         super().__init__()
+        self._config = config
 
         main_layout = create_layout(LayoutType.VBOX, parent=self)
 
@@ -22,13 +25,13 @@ class SettingsRobloxGeneralPage(MTWidget):
                 obj_name="Settings_Roblox_General_Cookie_Parse",
                 widgets=[
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="Add symbols between warning and cookie",
                         cfg_key="Roblox>General>Add Symbols Between Warning And Cookie",
                         default=False,
                     ),
                     MTTextSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="Symbols between warning and cookie",
                         cfg_key="Roblox>General>Symbols Between Warning And Cookie",
                         default="CAEaAhAB.",
@@ -40,13 +43,13 @@ class SettingsRobloxGeneralPage(MTWidget):
                 obj_name="Settings_Roblox_General_Proxy",
                 widgets=[
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="Use proxy",
                         cfg_key="Roblox>General>Proxy>Use Proxy",
                         default=False,
                     ),
                     MTComboBoxSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="Auto protocol if not specified",
                         cfg_key="Roblox>General>Proxy>Auto Protocol If Not Specified",
                         items=["http", "https", "socks4", "socks5"],

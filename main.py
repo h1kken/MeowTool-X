@@ -3,42 +3,27 @@ import sys
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
-from src.config.manager import config
-from src.db.init import initialize_database
-from src.translation.constants import SYSTEM_LOCALE
-from src.translation.manager import translator
+from src.app.bootstrap import bootstrap
+from src.app.constants import PROGRAM_NAME
 from src.ui.windows.main_window import MainWindow
-from src.theme.paths import PATH_DEFAULT_THEME
-from src.utils.constants.app import PROGRAM_NAME
 
 
 def _finish_startup(window: MainWindow) -> None:
-    # window.preload_settings_pages()
-    window.start_discord_presence()
     window.resume_theme_events()
 
 
-def main():
-    # app init
+def main() -> None:
     app = QApplication(sys.argv)
+    app.setStyle('Fusion')
     app.setApplicationName(PROGRAM_NAME)
     
-    # db init
-    initialize_database()
-    
-    # translation load
-    translator.load_language(
-        str(config.get("General>Language", default=SYSTEM_LOCALE)).strip()
-    )
 
-    # window init
-    window = MainWindow()
-    window.build_pages()
-    window.init_runtime_controllers()
-    window.initialize_theme_manager()
-    window.apply_startup_theme(str(config.get("General>Theme", default=PATH_DEFAULT_THEME.stem)).strip())
-    window.show()
-    QTimer.singleShot(0, lambda: _finish_startup(window))
+    services = bootstrap(app)
+
+    services.window.show()
+    services.discord_rpc.start()
+    
+    QTimer.singleShot(0, lambda: _finish_startup(services.window))
     sys.exit(app.exec())
 
 

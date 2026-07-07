@@ -5,9 +5,9 @@ from PySide6.QtCore import QEvent, QObject, QSize, QSignalBlocker, Qt, QTimer, S
 from PySide6.QtGui import QColor, QIcon, QMouseEvent
 from PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 
+from src.app.paths import PATH_CONTAINER_ARROW_ICON
 from src.theme.colors import to_qcolor
 from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.paths import PATH_CONTAINER_ARROW_ICON
 from src.ui.widgets import (
     MTButton,
     MTLabel,

@@ -95,8 +95,8 @@ class AnimationManager(QObject):
         
         self._shared_rainbow_epoch = monotonic()
         self._shared_rainbow_bindings: dict[QWidget, tuple[int, float]] = {}
-        self._shared_widget_border_bindings: dict[QWidget, tuple[int, float, float, float]] = {}
-        self._shared_border_color_bindings: dict[DashBorderOverlay, tuple[int, float, float, float]] = {}
+        self._shared_widget_border_bindings: dict[QWidget, tuple[int, float, float]] = {}
+        self._shared_border_color_bindings: dict[DashBorderOverlay, tuple[int, float, float]] = {}
         self._shared_gradient_border_bindings: dict[DashBorderOverlay, tuple[int, float]] = {}
         
         self._shared_rainbow_timer = QTimer(self)
@@ -417,7 +417,7 @@ class AnimationManager(QObject):
             self._runtime_rainbow_widgets.add(widget)
             self._set_shared_rainbow_active(widget, duration, 0.0, True)
 
-        base_color = self._sample_shared_rainbow_color(0.0, brightness=0.9, saturation=0.8)
+        base_color = self._sample_shared_rainbow_color(0.0, brightness=0.9)
         setting_widgets: list[QWidget] = []
         seen_setting_widgets: set[QWidget] = set()
         for target in (
@@ -458,7 +458,7 @@ class AnimationManager(QObject):
                     'opacity': 1.0 if self._cursor_over_widget(widget) else 0.0,
                     'target_opacity': 1.0 if self._cursor_over_widget(widget) else 0.0,
                 }
-                self._set_shared_widget_border_active(widget, duration, 0.0, True, brightness=0.9, saturation=0.8)
+                self._set_shared_widget_border_active(widget, duration, 0.0, True, brightness=0.9)
                 continue
 
             overlay = self._runtime_hover_overlays.get(widget)
@@ -487,7 +487,6 @@ class AnimationManager(QObject):
                 0.0,
                 True,
                 brightness=0.9,
-                saturation=0.8,
             )
 
     def _clear_runtime_rainbow_mode(self) -> None:
@@ -742,15 +741,14 @@ class AnimationManager(QObject):
         self._shared_rainbow_bindings.pop(widget, None)
         self._stop_shared_rainbow_timer_if_idle()
 
-    def _set_shared_widget_border_active(self, widget: QWidget, duration_ms: int | float, phase_offset: float, active: bool, brightness: float = 1.0, saturation: float = 1.0) -> None:
+    def _set_shared_widget_border_active(self, widget: QWidget, duration_ms: int | float, phase_offset: float, active: bool, brightness: float = 1.0) -> None:
         if active:
             duration = max(1, int(round(float(duration_ms))))
             brightness = max(0.0, min(float(brightness), 1.0))
-            saturation = max(0.0, min(float(saturation), 1.0))
-            self._shared_widget_border_bindings[widget] = (duration, float(phase_offset), brightness, saturation)
+            self._shared_widget_border_bindings[widget] = (duration, float(phase_offset), brightness)
             self._apply_runtime_widget_border_color(
                 widget,
-                self._sample_shared_rainbow_color(self._shared_rainbow_value(duration, phase_offset), brightness=brightness, saturation=saturation),
+                self._sample_shared_rainbow_color(self._shared_rainbow_value(duration, phase_offset), brightness=brightness),
             )
             self._ensure_shared_rainbow_timer()
             return
@@ -759,13 +757,12 @@ class AnimationManager(QObject):
         self._restore_runtime_widget_border(widget)
         self._stop_shared_rainbow_timer_if_idle()
 
-    def _set_shared_border_color_active(self, overlay: DashBorderOverlay, duration_ms: int | float, phase_offset: float, active: bool, brightness: float = 1.0, saturation: float = 1.0) -> None:
+    def _set_shared_border_color_active(self, overlay: DashBorderOverlay, duration_ms: int | float, phase_offset: float, active: bool, brightness: float = 1.0) -> None:
         if active:
             duration = max(1, int(round(float(duration_ms))))
             brightness = max(0.0, min(float(brightness), 1.0))
-            saturation = max(0.0, min(float(saturation), 1.0))
-            self._shared_border_color_bindings[overlay] = (duration, float(phase_offset), brightness, saturation)
-            overlay.set_color(self._sample_shared_rainbow_color(self._shared_rainbow_value(duration, phase_offset), brightness=brightness, saturation=saturation))
+            self._shared_border_color_bindings[overlay] = (duration, float(phase_offset), brightness)
+            overlay.set_color(self._sample_shared_rainbow_color(self._shared_rainbow_value(duration, phase_offset), brightness=brightness))
             self._ensure_shared_rainbow_timer()
             return
 
@@ -795,7 +792,7 @@ class AnimationManager(QObject):
         phase = self._shared_rainbow_value(duration_ms, phase_offset)
         self._set_shared_widget_rainbow_phase(widget, phase)
 
-    def _sample_shared_rainbow_color(self, phase: float, *, brightness: float = 1.0, saturation: float = 1.0) -> QColor:
+    def _sample_shared_rainbow_color(self, phase: float, *, brightness: float = 1.0) -> QColor:
         normalized = float(phase) % 1.0
         previous_offset, previous_color = _RAINBOW_HANDLE_STOPS[0]
         color = QColor(_RAINBOW_HANDLE_STOPS[-1][1])
@@ -813,16 +810,6 @@ class AnimationManager(QObject):
                 )
                 break
             previous_offset, previous_color = next_offset, next_color
-
-        saturation = max(0.0, min(float(saturation), 1.0))
-        if saturation < 0.999:
-            gray = round((color.red() * 0.299) + (color.green() * 0.587) + (color.blue() * 0.114))
-            color = QColor(
-                round(gray + (color.red() - gray) * saturation),
-                round(gray + (color.green() - gray) * saturation),
-                round(gray + (color.blue() - gray) * saturation),
-                color.alpha(),
-            )
 
         brightness = max(0.0, min(float(brightness), 1.0))
         if brightness < 0.999:
@@ -863,14 +850,14 @@ class AnimationManager(QObject):
         for widget in list(self._shared_widget_border_bindings):
             if widget.parentWidget() is None and widget is not self._root:
                 stale_border_widgets.append(widget)
-        for overlay, (duration, phase_offset, brightness, saturation) in list(self._shared_border_color_bindings.items()):
+        for overlay, (duration, phase_offset, brightness) in list(self._shared_border_color_bindings.items()):
             try:
                 cache_key = (duration, float(phase_offset))
                 phase = phase_cache.get(cache_key)
                 if phase is None:
                     phase = self._shared_rainbow_value(duration, phase_offset)
                     phase_cache[cache_key] = phase
-                overlay.set_color(self._sample_shared_rainbow_color(phase, brightness=brightness, saturation=saturation))
+                overlay.set_color(self._sample_shared_rainbow_color(phase, brightness=brightness))
             except RuntimeError:
                 stale_color_overlays.append(overlay)
         for overlay, (duration, phase_offset) in list(self._shared_gradient_border_bindings.items()):
@@ -906,11 +893,11 @@ class AnimationManager(QObject):
                 if next_opacity <= 0.001:
                     self._restore_runtime_widget_border(widget)
                 else:
-                    duration, phase_offset, brightness, saturation = self._shared_widget_border_bindings.get(widget, (self._runtime_rainbow_duration_ms, 0.0, 0.9, 0.8))
+                    duration, phase_offset, brightness = self._shared_widget_border_bindings.get(widget, (self._runtime_rainbow_duration_ms, 0.0, 0.9))
                     phase = self._shared_rainbow_value(duration, phase_offset)
                     self._apply_runtime_widget_border_color(
                         widget,
-                        self._sample_shared_rainbow_color(phase, brightness=brightness, saturation=saturation),
+                        self._sample_shared_rainbow_color(phase, brightness=brightness),
                         opacity=next_opacity,
                     )
             except RuntimeError:
@@ -1115,7 +1102,7 @@ class AnimationManager(QObject):
         merged = deepcopy(effect)
         provided = set(merged.get('_provided', set()))
 
-        for key in ('offset', 'phase_offset', 'phase_duration', 'opacity', 'brightness', 'saturation', 'width', 'radius', 'inset', 'dash_pattern', 'pen_style', 'seamless'):
+        for key in ('offset', 'phase_offset', 'phase_duration', 'opacity', 'brightness', 'width', 'radius', 'inset', 'dash_pattern', 'pen_style', 'seamless'):
             if key not in provided and key in defaults:
                 merged[key] = deepcopy(defaults[key])
 
@@ -1455,7 +1442,6 @@ class AnimationManager(QObject):
                     effect.get('phase_offset', 0.0),
                     True,
                     brightness=effect.get('brightness', 1.0),
-                    saturation=effect.get('saturation', 1.0),
                 )
             else:
                 self._set_shared_border_color_active(overlay, 0, 0.0, False)

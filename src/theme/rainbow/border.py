@@ -364,4 +364,4 @@ def parse_measure_value(value: Any) -> float | None:
     except ValueError:
         return None
 def _format_qss_color(color: QColor) -> str:
-    return normalize_color(color, fallback_raw=True)
+    return normalize_color(color, fallback_raw=True) or QColor(color).name()

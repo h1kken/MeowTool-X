@@ -1,13 +1,13 @@
 from src.db.base import Base
-from src.db.paths import PATH_DATABASES
+from src.app.paths import PATH_DATABASES_USER
 from src.db.models import load_models
 from src.db.session import get_engine
-from src.utils.filesystem import ensure_dir
+from src.utils.filesystem import FS
 
 
 def initialize_database() -> None:
     load_models()
-    ensure_dir(PATH_DATABASES)
+    FS.ensure_dir(PATH_DATABASES_USER)
     Base.metadata.create_all(get_engine())
 
 

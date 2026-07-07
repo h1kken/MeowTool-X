@@ -85,8 +85,6 @@ def normalize_dash_border(data: Any) -> dict[str, Any] | None:
             provided.add('opacity')
         if 'brightness' in mapping:
             provided.add('brightness')
-        if 'saturation' in mapping:
-            provided.add('saturation')
         if 'phase_offset' in mapping:
             provided.add('phase_offset')
         if any(key in mapping for key in ('phase_duration', 'rainbow_duration', 'period')):
@@ -110,7 +108,6 @@ def normalize_dash_border(data: Any) -> dict[str, Any] | None:
         color = to_qcolor(color_raw)
         opacity = _to_float(mapping.get('opacity', 1.0))
         brightness = _to_float(mapping.get('brightness', 1.0))
-        saturation = _to_float(mapping.get('saturation', 1.0))
         phase_offset = _to_float(mapping.get('phase_offset', mapping.get('offset', 0.0)))
         phase_duration = _to_float(mapping.get('phase_duration', mapping.get('rainbow_duration', mapping.get('period', 5000))))
         width = _to_float(mapping.get('width', 1.0))
@@ -139,7 +136,6 @@ def normalize_dash_border(data: Any) -> dict[str, Any] | None:
             'phase_duration': float(max(1.0, phase_duration if phase_duration is not None else 5000.0)),
             'opacity': _clamp01(opacity if opacity is not None else 1.0),
             'brightness': _clamp01(brightness if brightness is not None else 1.0),
-            'saturation': _clamp01(saturation if saturation is not None else 1.0),
             'width': float(max(0.5, width if width is not None else 1.0)),
             'radius': float(max(0.0, radius if radius is not None else 6.0)),
             'inset': float(max(0.0, inset if inset is not None else 0.5)),
@@ -161,7 +157,6 @@ def normalize_dash_border(data: Any) -> dict[str, Any] | None:
         'phase_duration': 5000.0,
         'opacity': 1.0,
         'brightness': 1.0,
-        'saturation': 1.0,
         'width': 1.0,
         'radius': 6.0,
         'inset': 0.5,

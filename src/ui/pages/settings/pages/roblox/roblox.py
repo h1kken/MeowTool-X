@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
+from src.config.manager import Config
 from src.ui.controllers import PageController
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.pages.settings.pages.roblox import (
@@ -23,8 +26,9 @@ class SettingsRobloxPage(MTWidget):
         ("", "", None),
     ]
     
-    def __init__(self):
+    def __init__(self, *, config: Config) -> None:
         super().__init__()
+        self._config = config
         self._tab_labels_by_key: dict[str, str] = {}
 
         main_layout = create_layout(LayoutType.VBOX, parent=self)
@@ -42,7 +46,7 @@ class SettingsRobloxPage(MTWidget):
 
             self._tab_labels_by_key[tr_key] = str(obj_name).replace("_", " ")
 
-            page = PageClass()
+            page = PageClass(config=self._config)
             page.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             self._page_controller.add_page(tr_key, page, obj_name=f"Settings_Roblox_{obj_name}_Page")
 

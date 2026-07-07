@@ -68,7 +68,6 @@ def sample_rainbow_color(
     palette: str | None = None,
     stops: tuple[tuple[float, str], ...] | None = None,
     brightness: float = 1.0,
-    saturation: float = 1.0,
 ) -> QColor:
     resolved_stops = stops if isinstance(stops, tuple) else resolve_rainbow_stops(palette)
     normalized = float(phase) % 1.0
@@ -90,7 +89,7 @@ def sample_rainbow_color(
             break
         previous_offset, previous_color = next_offset, next_color
 
-    return adjust_qcolor(color, brightness=brightness, saturation=saturation)
+    return adjust_qcolor(color, brightness=brightness)
 
 
 def build_rainbow_gradient_data(
@@ -99,7 +98,6 @@ def build_rainbow_gradient_data(
     palette: str | None = None,
     stops: tuple[tuple[float, str], ...] | None = None,
     brightness: float = 1.0,
-    saturation: float = 1.0,
     angle_degrees: float = 0.0,
     span: float = 0.035,
 ) -> dict[str, object]:
@@ -125,7 +123,6 @@ def build_rainbow_gradient_data(
             palette=palette,
             stops=resolved_stops,
             brightness=brightness,
-            saturation=saturation,
         )
         color.setAlpha(int(alpha))
         shifted.append([float(pos), color.name(QColor.NameFormat.HexArgb)])

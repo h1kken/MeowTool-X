@@ -1,6 +1,7 @@
 # local
 .beta/
 .prod
+tools/
 TODOS.md
 notepad.txt
 

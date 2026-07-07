@@ -4,11 +4,10 @@ from pathlib import Path
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import QFileDialog, QSizePolicy, QWidget
 
-from src.app.paths import PATH_ROOT
+from src.app.paths import PATH_FOLDER_ICON, PATH_ROOT
 from src.config.loader import ConfigLoader
 from src.config.manager import Config
 from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.paths import PATH_FOLDER_ICON
 from src.ui.widgets import (
     MTButton,
     MTDoubleSpinBox,

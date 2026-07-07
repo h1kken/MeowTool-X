@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.theme.paths import PATH_THEMES_SOURCE, PATH_THEMES_USER
+from src.app.paths import PATH_THEMES_SRC, PATH_THEMES_USER
 from src.theme.storage.io import SUPPORTED_THEME_EXTENSIONS, is_theme_file
 
 
@@ -20,11 +20,11 @@ def resolve_theme_path(theme_name: str) -> Path | None:
         candidates.append(raw)
     if raw.suffix.lower() in SUPPORTED_THEME_EXTENSIONS:
         candidates.append(PATH_THEMES_USER / raw.name)
-        candidates.append(PATH_THEMES_SOURCE / raw.name)
+        candidates.append(PATH_THEMES_SRC / raw.name)
     else:
         for extension in SUPPORTED_THEME_EXTENSIONS:
             candidates.append(PATH_THEMES_USER / f'{value}{extension}')
-            candidates.append(PATH_THEMES_SOURCE / f'{value}{extension}')
+            candidates.append(PATH_THEMES_SRC / f'{value}{extension}')
 
     for candidate in candidates:
         if is_theme_file(candidate):

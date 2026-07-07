@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 from PySide6.QtCore import QObject, Signal
 
-from src.config.manager import config
+from src.config.manager import Config
 from src.services.roblox import archive_support
 from src.services.roblox.constants import DATE_ROBLOX_COOKIE_SORTER_FORMAT, ROBLOX_COOKIE_START
 from src.services.roblox.regexes import (
@@ -60,6 +60,7 @@ class RobloxCookieSorter(QObject):
 
     def __init__(
         self,
+        config: Config,
         *,
         input_paths: list[Path] | None = None,
         text_chunks: list[str] | None = None,
@@ -91,11 +92,17 @@ class RobloxCookieSorter(QObject):
         self._counter_incorrect = 0
 
         self._cookie_set: set[str] = set()
-        raw_workers = cast(object, config.get('Roblox>Cookie Sorter>Threads', default=None))
+        raw_workers = cast(
+            object,
+            self._config.get('Roblox>Cookie Sorter>Threads', default=None),
+        )
         if raw_workers is None:
             raw_workers = cast(
                 object,
-                config.get('Roblox>Cookie Sorter>Main Threads', default=self._DEFAULT_SORTER_WORKERS),
+                self._config.get(
+                    'Roblox>Cookie Sorter>Main Threads',
+                    default=self._DEFAULT_SORTER_WORKERS,
+                ),
             )
         if isinstance(raw_workers, tuple):
             tuple_workers = cast(tuple[object, ...], raw_workers)

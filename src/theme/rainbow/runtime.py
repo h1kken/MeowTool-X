@@ -47,7 +47,6 @@ class RainbowRuntimeController(QObject):
         self._enabled = False
         self._duration_ms = 5000
         self._palette = 'Pastel'
-        self._saturation = 0.6
         self._epoch = monotonic()
         self._last_tick_time = monotonic()
         self._filtered_widgets: set[QWidget] = set()
@@ -65,7 +64,7 @@ class RainbowRuntimeController(QObject):
     def bind_animation_manager(self, manager: Any) -> None:
         self._animation_manager = manager
 
-    def set_enabled(self, enabled: bool, duration_ms: int | float, saturation: float = 0.6, palette: str = 'Pastel') -> None:
+    def set_enabled(self, enabled: bool, duration_ms: int | float, palette: str = 'Pastel') -> None:
         if not enabled:
             self.clear()
             return
@@ -75,7 +74,6 @@ class RainbowRuntimeController(QObject):
         self._enabled = True
         self._duration_ms = max(1, int(round(float(duration_ms))))
         self._palette = str(palette or 'Pastel').strip() or 'Pastel'
-        self._saturation = max(0.0, min(float(saturation), 1.0))
         self._epoch = monotonic() - ((previous_phase * float(self._duration_ms)) / 1000.0)
         self._last_tick_time = monotonic()
         self._rebuild_targets()
@@ -239,7 +237,6 @@ class RainbowRuntimeController(QObject):
                     color=sample_rainbow_color(
                         0.0,
                         palette=self._palette,
-                        saturation=self._saturation,
                     ),
                     width=float(config['width']),
                     radius=float(config['radius']),
@@ -314,7 +311,6 @@ class RainbowRuntimeController(QObject):
         color = sample_rainbow_color(
             phase,
             palette=self._palette,
-            saturation=self._saturation,
         )
         for widget in list(self._setting_states.keys()):
             overlay = self._setting_overlays.get(widget)
@@ -382,7 +378,6 @@ class RainbowRuntimeController(QObject):
         if isinstance(widget, MTSlider):
             try:
                 widget.set_slider_line_rainbow_palette(self._palette)
-                widget.set_slider_line_rainbow_saturation(self._saturation)
                 widget.set_slider_line_rainbow(float(phase))
             except RuntimeError:
                 return
@@ -390,7 +385,6 @@ class RainbowRuntimeController(QObject):
         if isinstance(widget, MTSwitch):
             try:
                 widget.set_handle_rainbow_palette(self._palette)
-                widget.set_handle_rainbow_saturation(self._saturation)
                 widget.set_handle_rainbow(float(phase))
             except RuntimeError:
                 return
@@ -524,7 +518,6 @@ class RainbowRuntimeController(QObject):
             sample_rainbow_color(
                 self._phase(),
                 palette=self._palette,
-                saturation=self._saturation,
             ),
             opacity,
         )

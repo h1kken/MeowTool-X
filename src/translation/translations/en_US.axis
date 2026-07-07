@@ -2,12 +2,9 @@
 ! Before you begin, I guess you need to know a little about the project so you can work efficiently.
 ! # Lines starting with "# LABEL=" need to be translated except for the "LABEL=" part and to indicate that it has been translated, you need to remove the "# ", which might be a bit annoying at first, but this will become practical for updating the translation.
 ! There are some things that you shouldn't translate:
-! - The name "MeowTool"
+! - The name "MeowTool X"
 ! - Pairs of curly brackets, e.g. {} or {player}
-! - Folders or files like %appdata%/Stand/Theme
+! - Folders or files like "%appdata%/MeowTool X/Theme"
 ! - Emojis (unless there's a culturally different meaning)
 ! - Technical Terms, i.e. anything that would make less sense if translated
 ! Alright, I think you're ready to unleash your powers now! ;D
-
-# ENTER_CONFIG_NAME=Enter config name
-# ENTER_THEME_NAME=Enter theme name

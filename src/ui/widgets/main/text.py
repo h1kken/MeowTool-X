@@ -5,14 +5,12 @@ from PySide6.QtGui import QColor, QIcon
 from PySide6.QtWidgets import QLabel, QPushButton, QWidget
 
 from src.translation.mixin import TranslatableMixin
-from src.ui.fonts import apply_font_antialiasing
 from src.ui.widgets.main.box import BoxThemeMixin
 class MTPlainLabel(BoxThemeMixin, QLabel):
     PAINTED_BOX_THEME = False
 
     def __init__(self, text: str = '', parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(text, parent)
-        apply_font_antialiasing(self)
         self.init_box_theme()
 
         if obj_name:
@@ -24,7 +22,6 @@ class MTLabel(BoxThemeMixin, TranslatableMixin, QLabel):
 
     def __init__(self, tr_key: str, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(tr_key, parent)
-        apply_font_antialiasing(self)
         self.init_box_theme()
 
         if obj_name:
@@ -44,7 +41,6 @@ class MTButton(BoxThemeMixin, TranslatableMixin, QPushButton):
         checked: bool = False,
     ) -> None:
         super().__init__(tr_key, parent)
-        apply_font_antialiasing(self)
         self.setFlat(True)
         self.setAutoDefault(False)
         self.setDefault(False)

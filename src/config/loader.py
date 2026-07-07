@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import threading
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 
+from src.app.paths import PATH_DEFAULT_CONFIG_LOADER
 from src.config.constants import (
     CONFIG_LOADER_AUTO_SAVE_CONFIG_FALLBACK,
     CONFIG_LOADER_AUTO_SAVE_THEME_FALLBACK,
@@ -14,7 +17,6 @@ from src.config.constants import (
 )
 from src.config.defaults import default_config_loader
 from src.config.mixin import GetConfigMixin, SaveConfigMixin, SetConfigMixin
-from src.config.paths import PATH_CONFIGS
 from src.config.types import ConfigMap
 from src.config.utils import normalize_config, parse_config
 from src.utils.filesystem import FS, get_safe
@@ -28,29 +30,26 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
 
     def __init__(self) -> None:
         super().__init__()
-        self._path: Path = PATH_CONFIGS / ".Loader.txt"
+        self._path: Path = PATH_DEFAULT_CONFIG_LOADER
         self._data: ConfigMap = {}
         self._defaults: ConfigMap = default_config_loader()
+        
         self._save_lock = threading.Lock()
         self.auto_save_config = False
         self.auto_save_theme = False
         self._load()
 
     @property
-    def data(self) -> ConfigMap:
-        return self._data
+    def path(self) -> Path: return self._path
 
     @property
-    def defaults(self) -> ConfigMap:
-        return self._defaults
+    def data(self) -> ConfigMap: return self._data
 
     @property
-    def path(self) -> Path:
-        return self._path
+    def defaults(self) -> ConfigMap: return self._defaults
 
     @property
-    def save_lock(self) -> threading.Lock:
-        return self._save_lock
+    def save_lock(self) -> threading.Lock: return self._save_lock
 
     def set(self, key: str, value: object, *, sep: str = ">") -> None:
         super().set(key, value, sep=sep)
@@ -65,14 +64,15 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         self.value_changed.emit(normalized_key, value)
         self.save()
 
-    def _create_loader(self) -> None:
+    def _ensure_loader_exists(self) -> None:
         if self._path.exists():
             return
-
-        FS.ensure_dir(PATH_CONFIGS)
+        
+        logger.warning("loader not found, creating...")
+        FS.ensure_dir(self._path.parent)
         FS.ensure_file(self._path)
-        logger.info("Loader created")
-        self._load()
+        logger.info("loader created")
+
 
     def _apply_runtime_settings(self) -> None:
         self.auto_save_config = bool(
@@ -138,7 +138,7 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         )
 
     def _load(self) -> None:
-        logger.info("Initializing loader...")
+        self._ensure_loader_exists()
 
         try:
             with self._path.open("r", encoding="utf-8", errors="ignore") as f:
@@ -149,11 +149,5 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             self.save()
             logger.info("Loader initialized")
             self.config_loaded.emit()
-        except FileNotFoundError:
-            logger.warning("Loader not found. Creating...")
-            self._create_loader()
         except (OSError, UnicodeError, ValueError, TypeError) as e:
-            logger.exception(f"Loader can't be initialized. Error: {e}")
-
-
-config_loader = ConfigLoader()
+            logger.exception(f"loader just down: {e}")

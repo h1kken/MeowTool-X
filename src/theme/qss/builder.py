@@ -13,11 +13,11 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QWidget
 
-from src.app.paths import PATH_ROOT
+from src.app.paths import PATH_FONTS_USER, PATH_ROOT
 from src.theme.colors import normalize_color, to_qcolor
 from src.theme.constants import GRADIENT_DIRECTIONS, SUPPORTED_BG_MEDIA_EXTENSIONS
-from src.theme.paths import PATH_FONTS
 from src.theme.qss.normalizer import StyleNormalizer
+from src.theme.qss.targets import parse_selector_chain
 from src.theme.schema.access import theme_map
 
 _FONT_SOURCE_PATTERN = re.compile(r'^url\((?P<value>.+)\)$', re.IGNORECASE)
@@ -53,7 +53,7 @@ class QssBuilder(StyleNormalizer):
         root_widget: QWidget | None = None,
     ) -> str:
         widgets = widgets or []
-        if obj_name != '*' and ('*' in obj_name or obj_name.startswith('MT')):
+        if obj_name != '*' and widgets and self._needs_widget_specific_qss(obj_name):
             return self._build_widget_specific_qss(obj_name, styles, widgets)
 
         if self.contains_resolvable_radius(styles):
@@ -67,17 +67,28 @@ class QssBuilder(StyleNormalizer):
 
         return self._build_qss_block(obj_name, styles, selector)
 
+    def _needs_widget_specific_qss(self, target: str) -> bool:
+        text = str(target).strip()
+        return (
+            '*' in text
+            or text.startswith('MT')
+            or parse_selector_chain(text) is not None
+        )
+
     def build_rules(self, data: Any) -> list[str]:
         if (data_dict := theme_map(data)) is None:
             return []
 
         rules: list[str] = []
+        has_background_rule = False
 
         bg_data = theme_map(data_dict.get('background')) or {}
         if (bg_color := self.build_background_color(bg_data.get('color'))):
             rules.append(bg_color)
+            has_background_rule = True
         if (bg_image := self.build_background_image(bg_data.get('image'))):
             rules.append(bg_image)
+            has_background_rule = True
 
         if (media_data := theme_map(data_dict.get('media'))) is not None:
             source = media_data.get('source')
@@ -85,6 +96,7 @@ class QssBuilder(StyleNormalizer):
                 resolved_source = self.resolve_media_source(source)
                 if (media_bg_image := self.build_background_image(resolved_source)):
                     rules.append(media_bg_image)
+                    has_background_rule = True
 
         if (text_data := theme_map(data_dict.get('text'))) is not None:
             if (text_color := text_data.get('color')):
@@ -114,6 +126,8 @@ class QssBuilder(StyleNormalizer):
         elif (radius_rule := self.build_border_radius_rule(bg_data.get('radius'))):
             rules.append('border: none;')
             rules.append(radius_rule)
+        elif has_background_rule:
+            rules.append('border: none;')
 
         rules.extend(self.build_padding_rules(data_dict))
 
@@ -468,7 +482,7 @@ class QssBuilder(StyleNormalizer):
         return self._resolve_remote_font_path(url, download=False)
 
     def _resolve_remote_font_path(self, url: str, *, download: bool) -> Path | None:
-        PATH_FONTS.mkdir(parents=True, exist_ok=True)
+        PATH_FONTS_USER.mkdir(parents=True, exist_ok=True)
         parsed = urllib.parse.urlparse(url)
         suffix = Path(parsed.path).suffix.lower()
 
@@ -515,7 +529,7 @@ class QssBuilder(StyleNormalizer):
 
     def _cached_url_path(self, url: str, suffix: str) -> Path:
         filename = hashlib.sha256(url.encode('utf-8')).hexdigest() + suffix
-        return PATH_FONTS / filename
+        return PATH_FONTS_USER / filename
 
     def _queue_remote_font_download(self, source: str) -> None:
         url = self._unwrap_url_value(source)

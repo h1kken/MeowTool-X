@@ -24,7 +24,10 @@ class FS:
     @staticmethod
     @log_action('delete folder')
     def delete_folder(path: Path, *, ignore_errors: bool = True) -> None:
-        shutil.rmtree(path, ignore_errors=ignore_errors)
+        try:
+            shutil.rmtree(path, ignore_errors=ignore_errors)
+        except Exception as e:
+            logger.warning(f'failed to delete "{path}": {e}')
 
     @staticmethod
     @log_action('ensure dir', re_raise=True)
@@ -41,11 +44,7 @@ class FS:
 
     @staticmethod
     @log_action('ensure file', re_raise=True)
-    def ensure_file(
-        path: str | Path,
-        *,
-        overwrite: bool = False,
-    ) -> Path:
+    def ensure_file(path: str | Path, *, overwrite: bool = False) -> Path:
         target = Path(path)
         if target.exists():
             if target.is_dir():
@@ -103,17 +102,9 @@ class FS:
 
 def create_start_folders_and_files() -> None:
     for path in START_DIR_PATHS:
-        ensure_dir(PATH_APP_ROOT / path)
+        FS.ensure_dir(PATH_APP_ROOT / path)
     for path in START_FILE_PATHS:
-        ensure_file(PATH_APP_ROOT / path)
-
-
-def ensure_dir(path: str | Path) -> Path:
-    return FS.ensure_dir(Path(path))
-
-
-def ensure_file(path: str | Path, *, overwrite: bool = False) -> Path:
-    return FS.ensure_file(Path(path), overwrite=overwrite)
+        FS.ensure_file(PATH_APP_ROOT / path)
 
 
 def load_json(path: Path) -> JsonObject | None:

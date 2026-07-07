@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from PySide6.QtWidgets import QWidget
 
-from src.config.manager import config
+from src.config.manager import Config
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets import (
     MTButtonSetting,
@@ -16,8 +18,9 @@ from src.services.roblox.constants import ROBLOX_COOKIE_CHECKER_MAIN_FIELDS
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 
 class SettingsRobloxCookieCheckerPage(MTWidget):
-    def __init__(self):
+    def __init__(self, *, config: Config) -> None:
         super().__init__()
+        self._config = config
         self._main_field_switches: list[MTCookieCheckerFieldSetting] = []
 
         main_layout = create_layout(LayoutType.VBOX, parent=self)
@@ -28,13 +31,13 @@ class SettingsRobloxCookieCheckerPage(MTWidget):
                 obj_name="Settings_Roblox_Cookie_Checker",
                 widgets=[
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="FRST_CHCK_FR_VLD",
                         cfg_key="Roblox>Cookie Checker>Firstly Check For Valid",
                         default=False,
                     ),
                     MTSliderSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="VLD_THRDS",
                         cfg_key="Roblox>Cookie Checker>Valid Threads",
                         min_value=1,
@@ -42,7 +45,7 @@ class SettingsRobloxCookieCheckerPage(MTWidget):
                         default=50,
                     ),
                     MTSliderSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="MAIN_THRDS",
                         cfg_key="Roblox>Cookie Checker>Main Threads",
                         min_value=1,
@@ -50,19 +53,19 @@ class SettingsRobloxCookieCheckerPage(MTWidget):
                         default=25,
                     ),
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="OTPT_FLNM_LK_INPT",
                         cfg_key="Roblox>Cookie Checker>Output Filename Like Input",
                         default=False,
                     ),
                     MTTextSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="OTPT_FLNM",
                         cfg_key="Roblox>Cookie Checker>Output Filename",
                         default="output",
                     ),
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="MV_C_TO_THE_NXT_LN",
                         cfg_key="Roblox>Cookie Checker>Move Cookie To The Next Line",
                         default=False,
@@ -94,6 +97,7 @@ class SettingsRobloxCookieCheckerPage(MTWidget):
             field_obj_name = f"Settings_Roblox_Cookie_Checker_Main_{normalized_field_name}"
             
             switch = MTCookieCheckerFieldSetting(
+                config=self._config,
                 field_name=field,
                 tr_key=f"FLD_{normalized_field_name.upper()}",
                 cfg_key=f"Roblox>Cookie Checker>Main>{field}>Enabled",
@@ -121,6 +125,6 @@ class SettingsRobloxCookieCheckerPage(MTWidget):
             f"Roblox>Cookie Checker>Main>{field}>Enabled": to_state
                 for field in ROBLOX_COOKIE_CHECKER_MAIN_FIELDS
         }
-        config.set_many(updates)
+        self._config.set_many(updates)
         for switch in self._main_field_switches:
             switch.set_checked(to_state, emit_signal=False)

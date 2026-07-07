@@ -1,4 +1,6 @@
-from src.config.manager import config
+from __future__ import annotations
+
+from src.config.manager import Config
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets import (
     MTCollapsibleContainer,
@@ -10,8 +12,9 @@ from src.ui.widgets import (
 
 
 class SettingsOutputsPage(MTWidget):
-    def __init__(self):
+    def __init__(self, *, config: Config) -> None:
         super().__init__()
+        self._config = config
 
         main_layout = create_layout(LayoutType.VBOX, parent=self)
 
@@ -21,19 +24,19 @@ class SettingsOutputsPage(MTWidget):
                 obj_name="Settings_Telegram_Bot",
                 widgets=[
                     MTTextSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="TKN",
                         cfg_key="Outputs>Telegram Bot>Token",
                         default="",
                     ),
                     MTTextSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="CHT_ID",
                         cfg_key="Outputs>Telegram Bot>Chat ID",
                         default="",
                     ),
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="SND_RSLTS_TO_TG_BOT",
                         cfg_key="Outputs>Telegram Bot>Send Results To Telegram Bot",
                         default=False,
@@ -46,13 +49,13 @@ class SettingsOutputsPage(MTWidget):
                 obj_name="Settings_Discord_Webhook",
                 widgets=[
                     MTTextSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="URL",
                         cfg_key="Outputs>Discord Webhook>URL",
                         default="",
                     ),
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         tr_key="SND_RSLTS_TO_DS_WBHK",
                         cfg_key="Outputs>Discord Webhook>Send Results To Discord Webhook",
                         default=False,
