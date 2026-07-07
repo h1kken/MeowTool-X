@@ -14,7 +14,6 @@ from src.app.paths import (
     PATH_THEMES_USER,
 )
 from src.ui.widgets import SidebarButton, SidebarCategory
-from src.config.loader import ConfigLoader
 from src.config.manager import Config
 from src.theme.animation.manager import AnimationManager
 from src.theme.constants import (
@@ -97,12 +96,10 @@ class MainWindow(QMainWindow):
     def __init__(
         self,
         *,
-        config_loader: ConfigLoader,
         config: Config,
         translator: TranslationManager,
     ) -> None:
         super().__init__()
-        self._config_loader = config_loader
         self._config = config
         self._translator = translator
         self._theme_auto_save_timer = QTimer(self)
@@ -146,7 +143,6 @@ class MainWindow(QMainWindow):
 
         self._config.config_loaded.connect(self._on_config_loaded)
         self._config.value_changed.connect(self._on_config_value_changed)
-
         FS.ensure_dir(PATH_THEMES_USER)
 
     def resolve_theme_path(self, theme_name: str) -> Path | None:
@@ -168,7 +164,7 @@ class MainWindow(QMainWindow):
             self._deferred_theme_auto_save = True
 
     def _on_window_move_idle(self) -> None:
-        if self._deferred_theme_auto_save and self._config_loader.auto_save_theme:
+        if self._deferred_theme_auto_save and self._config.loader.auto_save_theme:
             self._deferred_theme_auto_save = False
             self._theme_auto_save_timer.start()
             return
@@ -193,7 +189,6 @@ class MainWindow(QMainWindow):
     ) -> QWidget:
         if tr_key == "STNGS":
             page = SettingsPage(
-                config_loader=self._config_loader,
                 config=self._config,
                 translator=self._translator,
                 current_theme_name=self._initial_theme_name,
@@ -489,7 +484,7 @@ class MainWindow(QMainWindow):
             if isinstance(default_payload, dict)
             else self._load_default_theme_payload()
         )
-        self._theme_manager = ThemeManager(self, payload)
+        self._theme_manager = ThemeManager(self, self._config, payload)
         self._theme_manager.suppress_theme_changed()
 
     def apply_startup_theme(self, theme_name: str | None = None) -> str:
@@ -586,9 +581,7 @@ class MainWindow(QMainWindow):
 
         payload = self._theme_payload_for_save()
 
-        output_path = find_theme_file_by_name(
-            PATH_THEMES_USER, name
-        ) or theme_output_path(PATH_THEMES_USER, name)
+        output_path = find_theme_file_by_name(PATH_THEMES_USER, name) or theme_output_path(PATH_THEMES_USER, name)
         FS.ensure_dir(PATH_THEMES_USER)
         try:
             write_theme_payload(output_path, payload)
@@ -666,7 +659,7 @@ class MainWindow(QMainWindow):
         return [grouped[key] for key in order]
 
     def request_auto_save_current_theme_if_enabled(self) -> None:
-        if not self._config_loader.auto_save_theme:
+        if not self._config.loader.auto_save_theme:
             return
 
         if self._window_move_idle_timer.isActive():
@@ -676,7 +669,7 @@ class MainWindow(QMainWindow):
         self._theme_auto_save_timer.start()
 
     def auto_save_current_theme_if_enabled(self) -> Path | None:
-        if not self._config_loader.auto_save_theme:
+        if not self._config.loader.auto_save_theme:
             return None
 
         return self.save_current_theme_as(self.current_theme_name())
@@ -727,7 +720,7 @@ class MainWindow(QMainWindow):
     def _payload_widgets_dict(
         self, payload: dict[str, Any]
     ) -> dict[str, dict[str, Any]]:
-        parser = ThemeManager(self, emit_theme_changed=False)
+        parser = ThemeManager(self, self._config, emit_theme_changed=False)
         parser.load(payload, merge_with_default=False)
         return parser.current_theme_widgets()
 

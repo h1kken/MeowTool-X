@@ -8,10 +8,7 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QLayout, QSizePolicy, QStackedWidget
 
 from src.app.paths import PATH_CONFIGS_USER
-from src.config.constants import (
-    CONFIG_DEFAULT_NAME,
-    CONFIGS_REFRESH_DEBOUNCE_MS,
-)
+from src.config.constants import CONFIGS_REFRESH_DEBOUNCE_MS
 from src.config.loader import ConfigLoader
 from src.config.manager import Config
 from src.ui.layouts.factory import LayoutType, create_layout
@@ -298,15 +295,7 @@ class SettingsConfigPage(MTWidget):
         return PATH_CONFIGS_USER / f"{selected}.txt"
 
     def _read_autoload_name(self) -> str:
-        return (
-            str(
-                self._config_loader.get(
-                    CLKey.LOADER_CONFIG_ON_LOAD,
-                    default=CONFIG_DEFAULT_NAME,
-                )
-            ).strip()
-            or CONFIG_DEFAULT_NAME
-        )
+        return str(self._config_loader.get(CLKey.LOADER_CONFIG_ON_LOAD, default=CONFIG_DEFAULT_NAME)).strip() or CONFIG_DEFAULT_NAME
 
     def _set_autoload_name(self, value: str) -> str:
         normalized = str(value).strip() or CONFIG_DEFAULT_NAME
@@ -498,7 +487,6 @@ class SettingsConfigPage(MTWidget):
         if self._autoload_name == selected:
             self._set_autoload_name(CONFIG_DEFAULT_NAME)
 
-        self._config.delete(selected)
         self._cancel_delete_confirm()
         self._refresh_configs(preferred=self._config.name)
 

@@ -6,7 +6,6 @@ from pathlib import Path
 
 from src.app.constants import APP_DIRNAME
 
-
 def _find_bundle_root() -> Path:
     bundle_path = getattr(sys, '_MEIPASS', None)
     if isinstance(bundle_path, str):

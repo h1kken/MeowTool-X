@@ -5,23 +5,14 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 
+from src.utils.logging import logger
 from src.app.paths import PATH_DEFAULT_CONFIG_LOADER
-from src.config.constants import (
-    CONFIG_LOADER_AUTO_SAVE_CONFIG_FALLBACK,
-    CONFIG_LOADER_AUTO_SAVE_THEME_FALLBACK,
-    CONFIG_LOADER_LOG_DEBUG_FALLBACK,
-    CONFIG_LOADER_LOG_ERROR_FALLBACK,
-    CONFIG_LOADER_LOG_EXCEPTION_FALLBACK,
-    CONFIG_LOADER_LOG_INFO_FALLBACK,
-    CONFIG_LOADER_LOG_WARNING_FALLBACK,
-)
 from src.config.defaults import default_config_loader
 from src.config.mixin import GetConfigMixin, SaveConfigMixin, SetConfigMixin
 from src.config.types import ConfigMap
 from src.config.utils import normalize_config, parse_config
 from src.utils.filesystem import FS, get_safe
 from src.config.enums import ConfigLoaderKey as CLKey
-from src.utils.logging import logger
 
 
 class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
@@ -30,14 +21,13 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
 
     def __init__(self) -> None:
         super().__init__()
-        self._path: Path = PATH_DEFAULT_CONFIG_LOADER
+        self._path = PATH_DEFAULT_CONFIG_LOADER
         self._data: ConfigMap = {}
         self._defaults: ConfigMap = default_config_loader()
-        
         self._save_lock = threading.Lock()
-        self.auto_save_config = False
-        self.auto_save_theme = False
         self._load()
+        self.auto_save_config = self.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES, default=False)
+        self.auto_save_theme = self.get(CLKey.SAVER_AUTO_SAVE_THEME_CHANGES, default=False)
 
     @property
     def path(self) -> Path: return self._path
@@ -61,93 +51,39 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             self.auto_save_theme = bool(value)
         if normalized_key.startswith(CLKey.MISC_DEBUGGER_PATH):
             self._apply_logger_settings()
+        
         self.value_changed.emit(normalized_key, value)
         self.save()
 
-    def _ensure_loader_exists(self) -> None:
-        if self._path.exists():
-            return
-        
-        logger.warning("loader not found, creating...")
-        FS.ensure_dir(self._path.parent)
-        FS.ensure_file(self._path)
-        logger.info("loader created")
-
-
-    def _apply_runtime_settings(self) -> None:
-        self.auto_save_config = bool(
-            get_safe(
-                self._data,
-                CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES,
-                sep=">",
-                default=CONFIG_LOADER_AUTO_SAVE_CONFIG_FALLBACK,
-            )
-        )
-        self.auto_save_theme = bool(
-            get_safe(
-                self._data,
-                CLKey.SAVER_AUTO_SAVE_THEME_CHANGES,
-                sep=">",
-                default=CONFIG_LOADER_AUTO_SAVE_THEME_FALLBACK,
-            )
-        )
-        self._apply_logger_settings()
-
     def _apply_logger_settings(self) -> None:
-        logger.apply_debugger_settings(
+        logger.apply_debug_settings(
             debug=bool(
-                get_safe(
-                    self._data,
-                    CLKey.MISC_DEBUGGER_DEBUG,
-                    sep=">",
-                    default=CONFIG_LOADER_LOG_DEBUG_FALLBACK,
-                )
+                get_safe(self._data, CLKey.MISC_DEBUGGER_DEBUG, sep=">", default=False)
             ),
             info=bool(
-                get_safe(
-                    self._data,
-                    CLKey.MISC_DEBUGGER_ERROR,
-                    sep=">",
-                    default=CONFIG_LOADER_LOG_INFO_FALLBACK,
-                )
+                get_safe(self._data, CLKey.MISC_DEBUGGER_INFO, sep=">", default=False)
             ),
             warning=bool(
-                get_safe(
-                    self._data,
-                    CLKey.MISC_DEBUGGER_EXCEPTION,
-                    sep=">",
-                    default=CONFIG_LOADER_LOG_WARNING_FALLBACK,
-                )
+                get_safe(self._data, CLKey.MISC_DEBUGGER_WARNING, sep=">", default=False)
             ),
             error=bool(
-                get_safe(
-                    self._data,
-                    CLKey.MISC_DEBUGGER_INFO,
-                    sep=">",
-                    default=CONFIG_LOADER_LOG_ERROR_FALLBACK,
-                )
+                get_safe(self._data, CLKey.MISC_DEBUGGER_ERROR, sep=">", default=False)
             ),
             exception=bool(
-                get_safe(
-                    self._data,
-                    CLKey.MISC_DEBUGGER_WARNING,
-                    sep=">",
-                    default=CONFIG_LOADER_LOG_EXCEPTION_FALLBACK,
-                )
+                get_safe(self._data, CLKey.MISC_DEBUGGER_EXCEPTION, sep=">", default=False)
             ),
         )
 
     def _load(self) -> None:
-        self._ensure_loader_exists()
+        FS.ensure_file(self.path)
 
         try:
             with self._path.open("r", encoding="utf-8", errors="ignore") as f:
-                parsed_config_loader = parse_config(f.read())
+                parsed = parse_config(f.read())
 
-            self._data = normalize_config(parsed_config_loader, self._defaults, keep_unknown=False)
-            self._apply_runtime_settings()
+            self._data = normalize_config(parsed, self._defaults)
+            self._apply_logger_settings()
             self.save()
-            logger.info("Loader initialized")
             self.config_loaded.emit()
         except (OSError, UnicodeError, ValueError, TypeError) as e:
-            logger.exception(f"loader just down: {e}")
+            logger.exception(f"Loader error: {e}")

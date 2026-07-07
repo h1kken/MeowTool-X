@@ -1,11 +1,17 @@
+from __future__ import annotations
+
 import sys
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
+import src.app.context as ctx
 from src.app.bootstrap import bootstrap
 from src.app.constants import PROGRAM_NAME
-from src.ui.windows.main_window import MainWindow
+
+if TYPE_CHECKING:
+    from src.ui.windows.main_window import MainWindow
 
 
 def _finish_startup(window: MainWindow) -> None:
@@ -17,13 +23,12 @@ def main() -> None:
     app.setStyle('Fusion')
     app.setApplicationName(PROGRAM_NAME)
     
+    ctx.services = bootstrap(app)
 
-    services = bootstrap(app)
-
-    services.window.show()
-    services.discord_rpc.start()
+    ctx.services.window.show()
+    ctx.services.discord_rpc.start()
     
-    QTimer.singleShot(0, lambda: _finish_startup(services.window))
+    QTimer.singleShot(0, lambda: _finish_startup(ctx.services.window))
     sys.exit(app.exec())
 
 

@@ -8,7 +8,7 @@ from typing import Any, TypeVar, cast
 
 from src.exceptions.json import NotADictionaryError
 from src.app.paths import PATH_APP_ROOT
-from src.utils.decorators import log_action
+from src.utils.logging.decorators import log_action
 from src.utils.filesystem.constants import (
     FILENAME_SPECIAL_CHARS,
     START_DIR_PATHS,
@@ -24,38 +24,31 @@ class FS:
     @staticmethod
     @log_action('delete folder')
     def delete_folder(path: Path, *, ignore_errors: bool = True) -> None:
-        try:
-            shutil.rmtree(path, ignore_errors=ignore_errors)
-        except Exception as e:
-            logger.warning(f'failed to delete "{path}": {e}')
+        shutil.rmtree(path, ignore_errors=ignore_errors)
 
     @staticmethod
-    @log_action('ensure dir', re_raise=True)
-    def ensure_dir(
-        path: str | Path,
-    ) -> Path:
-        target = Path(path)
-        if target.exists():
-            if not target.is_dir():
-                raise NotADirectoryError(target)
-            return target
-        target.mkdir(parents=True, exist_ok=True)
-        return target
+    @log_action('ensure dir')
+    def ensure_dir(path: Path) -> Path:
+        if path.exists():
+            if not path.is_dir():
+                raise NotADirectoryError(path)
+            return path
+        path.mkdir(parents=True, exist_ok=True)
+        return path
 
     @staticmethod
-    @log_action('ensure file', re_raise=True)
-    def ensure_file(path: str | Path, *, overwrite: bool = False) -> Path:
-        target = Path(path)
-        if target.exists():
-            if target.is_dir():
-                raise IsADirectoryError(target)
+    @log_action('ensure file')
+    def ensure_file(path: Path, *, overwrite: bool = False) -> Path:
+        if path.exists():
+            if path.is_dir():
+                raise IsADirectoryError(path)
             if overwrite:
-                target.write_text('', encoding='utf-8')
-            return target
+                path.write_text('', encoding='utf-8')
+            return path
 
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.touch()
-        return target
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+        return path
 
     @staticmethod
     @log_action('copy file')
@@ -64,7 +57,7 @@ class FS:
             shutil.copy(src, dest)
 
     @staticmethod
-    @log_action('replace file', re_raise=True)
+    @log_action('replace file')
     def replace_file(src: Path, dest: Path) -> None:
         src.replace(dest)
 
@@ -100,7 +93,7 @@ class FS:
                 zipf.write(file_path, file_path.relative_to(source_path))
 
 
-def create_start_folders_and_files() -> None:
+def create_start_paths() -> None:
     for path in START_DIR_PATHS:
         FS.ensure_dir(PATH_APP_ROOT / path)
     for path in START_FILE_PATHS:

@@ -1,7 +1,7 @@
 from datetime import date, datetime, time, timezone
 
 from src.services.roblox.constants import ROBLOX_DATE_FORMATS
-from src.utils.constants.datetime import (
+from src.utils.datetime.constants import (
     DATE_FORMAT,
     DATE_TIME_FORMAT,
     DATETIME_EPOCH_THRESHOLD_MS,

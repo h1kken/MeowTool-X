@@ -4,8 +4,11 @@ from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QColor, QIcon
 from PySide6.QtWidgets import QLabel, QPushButton, QWidget
 
+from src.translation.manager import TranslationManager
 from src.translation.mixin import TranslatableMixin
 from src.ui.widgets.main.box import BoxThemeMixin
+
+
 class MTPlainLabel(BoxThemeMixin, QLabel):
     PAINTED_BOX_THEME = False
 
@@ -20,9 +23,17 @@ class MTPlainLabel(BoxThemeMixin, QLabel):
 class MTLabel(BoxThemeMixin, TranslatableMixin, QLabel):
     PAINTED_BOX_THEME = False
 
-    def __init__(self, tr_key: str, parent: QWidget | None = None, *, obj_name: str = '') -> None:
-        super().__init__(tr_key, parent)
+    def __init__(
+        self,
+        tr_key: str,
+        parent: QWidget | None = None,
+        *,
+        obj_name: str = '',
+        translator: TranslationManager | None = None,
+    ) -> None:
+        super().__init__(tr_key, parent, translator=translator)
         self.init_box_theme()
+        self._sync_translator_binding()
 
         if obj_name:
             self.setObjectName(obj_name)
@@ -37,10 +48,11 @@ class MTButton(BoxThemeMixin, TranslatableMixin, QPushButton):
         parent: QWidget | None = None,
         tr_key: str = '',
         obj_name: str = '',
+        translator: TranslationManager | None = None,
         checkable: bool = False,
         checked: bool = False,
     ) -> None:
-        super().__init__(tr_key, parent)
+        super().__init__(tr_key, parent, translator=translator)
         self.setFlat(True)
         self.setAutoDefault(False)
         self.setDefault(False)
@@ -50,6 +62,7 @@ class MTButton(BoxThemeMixin, TranslatableMixin, QPushButton):
         self._text_icon_state: dict[str, object] | None = None
         self._default_text_icon_state: dict[str, object] | None = None
         self._default_text_icon_captured = False
+        self._sync_translator_binding()
 
         if checkable:
             self.setCheckable(True)

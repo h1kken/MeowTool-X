@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from src.app.paths import PATH_TRANSLATIONS_SRC, PATH_TRANSLATIONS_USER
 from src.config.manager import Config
 from src.translation.constants import DEFAULT_LANGUAGE
-from src.translation.manager import TranslationManager, resolve_translation
+from src.translation.manager import TranslationManager
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets import (
     MTCollapsibleContainer,
@@ -80,12 +82,26 @@ class SettingsMainPage(MTWidget):
             result.append((cls._language_display_name(value), value))
         return result
 
+    @staticmethod
+    def _resolve_translation_path(language_name: str) -> Path:
+        normalized = Path(str(language_name).strip()).stem.strip().replace("-", "_")
+        if not normalized:
+            return PATH_TRANSLATIONS_SRC / f"{DEFAULT_LANGUAGE}.axis"
+
+        for candidate in (
+            PATH_TRANSLATIONS_USER / f"{normalized}.axis",
+            PATH_TRANSLATIONS_SRC / f"{normalized}.axis",
+        ):
+            if candidate.is_file():
+                return candidate
+
+        return PATH_TRANSLATIONS_SRC / f"{DEFAULT_LANGUAGE}.axis"
+
     def _on_language_changed(self, language_name: str) -> None:
-        self._translator.load(str(language_name).strip())
+        self._translator.load(self._resolve_translation_path(language_name))
 
     def _apply_runtime_settings(self) -> None:
         self._on_language_changed(
-            resolve_translation(
-                str(self._config.get("General>Language", default=DEFAULT_LANGUAGE)).strip()
-            ).stem
+            str(self._config.get("General>Language", default=DEFAULT_LANGUAGE)).strip()
+            or DEFAULT_LANGUAGE
         )

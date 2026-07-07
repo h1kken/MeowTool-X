@@ -6,17 +6,6 @@ from src.config.constants import CONFIG_COMMENT_SYMBOLS, CONFIG_INDENT
 from src.utils.string import safe_literal_eval
 
 
-def _count_indent_levels(raw_line: str) -> int:
-    leading = raw_line[: len(raw_line) - len(raw_line.lstrip(" \t"))]
-    if not leading:
-        return 0
-
-    indent_unit = max(1, len(CONFIG_INDENT)) if CONFIG_INDENT and CONFIG_INDENT.isspace() else 2
-    tab_levels = leading.count("\t")
-    space_levels = leading.count(" ") // indent_unit
-    return tab_levels + space_levels
-
-
 def parse_config(text: str) -> ConfigMap:
     parsed: ConfigMap = {}
     stack: list[tuple[ConfigMap, int]] = [(parsed, -1)]
@@ -42,13 +31,98 @@ def parse_config(text: str) -> ConfigMap:
     return parsed
 
 
+def normalize_config(
+    user_config: ConfigMap,
+    default_config: ConfigMap,
+    *,
+    keep_unknown: bool = True,
+    recovery_missing: bool = False,
+) -> ConfigMap:
+    validated: ConfigMap = {}
+    
+    for key, default_value in default_config.items():
+        if key not in user_config:
+            if recovery_missing:
+                if isinstance(default_value, dict):
+                    validated[key] = normalize_config(
+                        {},
+                        default_value,
+                        keep_unknown=keep_unknown,
+                        recovery_missing=recovery_missing,
+                    )
+                else:
+                    validated[key] = _clone_default(default_value)
+            continue
+
+        user_value = user_config[key]
+
+        if isinstance(default_value, dict):
+            if isinstance(user_value, dict):
+                validated[key] = normalize_config(
+                    user_value,
+                    default_value,
+                    keep_unknown=keep_unknown,
+                    recovery_missing=recovery_missing,
+                )
+            else:
+                validated[key] = normalize_config(
+                    {},
+                    default_value,
+                    keep_unknown=keep_unknown,
+                    recovery_missing=recovery_missing,
+                )
+        else:
+            validated[key] = cast(ConfigValue, convert_value(user_value, default_value))
+
+    if keep_unknown:
+        for key, user_value in user_config.items():
+            if key in default_config:
+                continue
+            if isinstance(user_value, dict):
+                validated[key] = normalize_config(
+                    user_value,
+                    {},
+                    keep_unknown=True,
+                    recovery_missing=recovery_missing,
+                )
+            else:
+                validated[key] = cast(ConfigValue, convert_value(user_value))
+
+    return validated
+
+
+def convert_value(
+    user_value: object | None = None,
+    default_value: ConfigValue | None = None,
+) -> ConfigValue | object | None:
+    if default_value is not None:
+        return _convert_user_value(user_value, default_value)
+
+    if isinstance(user_value, str):
+        parsed = _convert_to_bool(user_value)
+        if isinstance(parsed, bool):
+            return parsed
+    return user_value
+
+
+def _count_indent_levels(raw_line: str) -> int:
+    leading = raw_line[: len(raw_line) - len(raw_line.lstrip(" \t"))]
+    if not leading:
+        return 0
+
+    indent_unit = max(1, len(CONFIG_INDENT)) if CONFIG_INDENT and CONFIG_INDENT.isspace() else 2
+    tabs = leading.count("\t")
+    spaces = leading.count(" ") // indent_unit
+    return tabs + spaces
+
+
 def _clone_default(default_value: ConfigValue) -> ConfigValue:
     if isinstance(default_value, tuple):
         return deepcopy(default_value[0]) if default_value else None
     return cast(ConfigValue, deepcopy(default_value))
 
 
-def convert_to_bool(user_value: str) -> bool | str:
+def _convert_to_bool(user_value: str) -> bool | str:
     low = user_value.strip().lower()
     if low in ("true", "yes", "да", "on", "+"):
         return True
@@ -63,9 +137,7 @@ def _parse_numeric(value: object) -> object:
     return value
 
 
-def _is_numeric_bound_tuple(
-    value: tuple[ConfigValue, ...],
-) -> TypeGuard[tuple[int | float, int | float, int | float]]:
+def _is_numeric_bound_tuple(value: tuple[ConfigValue, ...]) -> TypeGuard[tuple[int | float, int | float, int | float]]:
     return len(value) == 3 and all(
         isinstance(item, (int, float)) and not isinstance(item, bool)
         for item in value
@@ -101,7 +173,7 @@ def _convert_user_value(user_value: object, default_value: ConfigValue) -> Confi
 
     if isinstance(default_value, bool):
         if isinstance(user_value, str):
-            parsed = convert_to_bool(user_value)
+            parsed = _convert_to_bool(user_value)
             if isinstance(parsed, bool):
                 return parsed
             return default_value
@@ -146,78 +218,3 @@ def _convert_user_value(user_value: object, default_value: ConfigValue) -> Confi
         return _clone_default(default_value)
 
     return cast(ConfigValue, user_value)
-
-
-def convert_value(
-    user_value: object | None = None,
-    default_value: ConfigValue | None = None,
-) -> ConfigValue | object | None:
-    if default_value is not None:
-        return _convert_user_value(user_value, default_value)
-
-    if isinstance(user_value, str):
-        parsed = convert_to_bool(user_value)
-        if isinstance(parsed, bool):
-            return parsed
-    return user_value
-
-
-def normalize_config(
-    user_config: ConfigMap,
-    default_config: ConfigMap,
-    *,
-    keep_unknown: bool = True,
-    recovery_missing: bool = False,
-) -> ConfigMap:
-    validated: ConfigMap = {}
-    incoming = user_config
-
-    for key, default_value in default_config.items():
-        if key not in incoming:
-            if recovery_missing:
-                if isinstance(default_value, dict):
-                    validated[key] = normalize_config(
-                        {},
-                        default_value,
-                        keep_unknown=keep_unknown,
-                        recovery_missing=recovery_missing,
-                    )
-                else:
-                    validated[key] = _clone_default(default_value)
-            continue
-
-        user_value = incoming[key]
-
-        if isinstance(default_value, dict):
-            if isinstance(user_value, dict):
-                validated[key] = normalize_config(
-                    user_value,
-                    default_value,
-                    keep_unknown=keep_unknown,
-                    recovery_missing=recovery_missing,
-                )
-            else:
-                validated[key] = normalize_config(
-                    {},
-                    default_value,
-                    keep_unknown=keep_unknown,
-                    recovery_missing=recovery_missing,
-                )
-        else:
-            validated[key] = cast(ConfigValue, convert_value(user_value, default_value))
-
-    if keep_unknown:
-        for key, user_value in incoming.items():
-            if key in default_config:
-                continue
-            if isinstance(user_value, dict):
-                validated[key] = normalize_config(
-                    user_value,
-                    {},
-                    keep_unknown=True,
-                    recovery_missing=recovery_missing,
-                )
-            else:
-                validated[key] = cast(ConfigValue, convert_value(user_value))
-
-    return validated

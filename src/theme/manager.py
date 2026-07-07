@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, cast, TYPE_CHECKING
 
 from PySide6.QtCore import QEvent, QObject, QSize, Signal, Qt, QTimer
 from PySide6.QtGui import QFont, QIcon, QPalette
@@ -39,12 +41,17 @@ from src.ui.widgets.main.inputs import MTSlider
 from src.ui.widgets.main.media import MTMediaWidget
 from src.ui.widgets.settings.containers import MTCollapsibleContainer
 
+if TYPE_CHECKING:
+    from src.config.manager import Config
+
+
 class ThemeManager(QObject):
     theme_changed = Signal(dict, dict)
     
     def __init__(
         self,
         root: QWidget,
+        config: Config,
         default_theme: ThemeMap | None = None,
         *,
         emit_theme_changed: bool = True,
@@ -53,8 +60,12 @@ class ThemeManager(QObject):
         self._root = root
         self._default_theme: ThemeMap = deepcopy(default_theme) if default_theme is not None else {}
         self._current_theme: ThemeMap = normalize_theme_payload(self._default_theme)
+        
         self._qss_builder = QssBuilder()
+        self._qss_builder.font_ready.connect(self._on_async_font_ready)
+        
         self._style_normalizer = StyleNormalizer()
+        
         self._styled_parts_widgets: set[QWidget] = set()
         self._styled_media_widgets: set[QWidget] = set()
         self._styled_combo_popup_widgets: set[QWidget] = set()
@@ -73,16 +84,19 @@ class ThemeManager(QObject):
         self._styled_line_edit_text_widgets: dict[QWidget, QPalette] = {}
         self._styled_text_font_widgets: dict[QWidget, QFont] = {}
         self._styled_box_widgets: set[QWidget] = set()
+        
         self._checkable_state_style_slots: dict[QWidget, Any] = {}
         self._checkable_state_style_base_qss: dict[QWidget, str] = {}
+        
         self._media_overlays: dict[QWidget, ThemeMediaOverlay] = {}
         self._media_overlay_filters: set[QWidget] = set()
+        
         self._theme_base_dir: Path | None = None
         self._theme_change_suppressed = False
         self._pending_theme_change: ThemeChangePayload | None = None
         self._last_emitted_theme_change: ThemeChangePayload | None = None
         self._emit_theme_changed_enabled = bool(emit_theme_changed)
-        self._qss_builder.font_ready.connect(self._on_async_font_ready)
+        
 
     _ALIGNED_WIDGET_TYPES = (QLabel, QLineEdit, QAbstractSpinBox, MTComboBox)
     _PARTS_THEME_WIDGET_TYPES = (MTSlider, MTSwitch, MTComboBox, MTCollapsibleContainer)

@@ -20,7 +20,7 @@ from src.http.constants import (
     HTTP_CLIENT_RETRY_MAX_DELAY_SECONDS,
     HTTP_CLIENT_TIMEOUT_SECONDS,
 )
-from src.utils.decorators import log_network_request
+from src.utils.logging.decorators import log_network_request
 from src.utils.logging import logger
 
 

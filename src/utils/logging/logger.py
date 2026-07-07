@@ -8,20 +8,21 @@ from typing import Any, cast
 
 import loguru
 
-from src.app.paths import PATH_ROOT
-from src.app.constants import ASCII_MEOWTOOL, IS_LAUNCHED_WITH_CONSOLE, PROGRAM_NAME
-from src.utils.constants.log import (
+from src.app.paths import PATH_ROOT, PATH_LOGS_USER
+from src.app.constants import IS_LAUNCHED_WITH_CONSOLE, PROGRAM_NAME
+from src.utils.logging.constants import (
     DATE_LOGGER_FORMAT,
     LOGGER_INDENT_FUNCTION,
     LOGGER_INDENT_LEVEL,
     LOGGER_INDENT_LINE,
     LOGGER_INDENT_NAME,
     LOG_ORIGIN_DEFAULT,
+    LOGGER_ROTATION,
+    LOGGER_RETENTION,
 )
 from src.utils.ansi import (
-    RED, YELLOW, PINK,
-    LIGHTGREEN, LIGHTYELLOW, LIGHTCYAN,
-    CLEAR
+    YELLOW, LIGHTGREEN, LIGHTYELLOW,
+    LIGHTCYAN, CLEAR
 )
 from src.utils.logging.enums import LogLevel
 
@@ -62,7 +63,7 @@ def _capture_origin(depth: int = 1) -> str:
         del frame
 
 
-def patcher(record: Any) -> None:
+def _patcher(record: Any) -> None:
     name = record.get('name')
     if isinstance(name, str) and name.startswith('src.'):
         record['name'] = name.removeprefix('src.')
@@ -91,10 +92,12 @@ def patcher(record: Any) -> None:
             except ValueError:
                 display_path = path.as_posix()
                 
-            display_path = display_path.removesuffix('.py').replace('/', '.')
-            
-            if display_path.startswith('src.'):
-                display_path = display_path.removeprefix('src.')
+            display_path = (
+                display_path
+                .removeprefix('src/')
+                .removesuffix('.py')
+                .replace('/', '.')
+            )
                 
             origin_path = display_path
             origin_line = str(line)
@@ -111,31 +114,61 @@ class Logger:
         name: str = PROGRAM_NAME,
         *,
         stream: bool = IS_LAUNCHED_WITH_CONSOLE,
-        console_level: LogLevel = LogLevel.DEBUG,
-        file_level: LogLevel = LogLevel.DEBUG
+        console_level: LogLevel = LogLevel.INFO,
+        file_level: LogLevel = LogLevel.DEBUG,
     ):
+        self._path = PATH_LOGS_USER / f'{name} ({datetime.now().strftime(DATE_LOGGER_FORMAT)}).log'
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        
         self._logger = loguru.logger
-        self._logger.remove()
-        self._logger.configure(patcher=patcher)
         self._stream = bool(stream)
         self._console_level = console_level
         self._file_level = file_level
-        self._debugger_settings: dict[str, bool] = {}
-        
-        self.path = Path(
-            'Logs',
-            f'{name} ({datetime.now().strftime(DATE_LOGGER_FORMAT)}).log'
-        )
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        
+        self._debug_settings: dict[str, bool] = {}
         self._configure_sinks()
 
-        if self._stream:
-            self._logger.debug(
-                f'{RED}[!] PROGRAM IS LAUNCHED IN TESTING MODE [!]\n'
-                f'{PINK}{ASCII_MEOWTOOL}{CLEAR}'
-            )
+    def apply_debug_settings(
+        self,
+        *,
+        debug: bool = False,
+        info: bool = False,
+        warning: bool = False,
+        error: bool = False,
+        exception: bool = False,
+    ) -> None:
+        updated: dict[str, bool] = dict(self._debug_settings)
+        overrides = {
+            'debug': debug,
+            'info': info,
+            'warning': warning,
+            'error': error,
+            'exception': exception,
+        }
+        for key, value in overrides.items():
+            updated[key] = value
+        
+        self._debug_settings = updated
+        self._configure_sinks()
 
+    @contextmanager
+    def origin_scope(
+        self,
+        origin: str | None = None,
+        *,
+        overwrite: bool = False,
+        depth: int = 1,
+    ) -> Any:
+        current = _LOG_ORIGIN.get()
+        if not overwrite and current != LOG_ORIGIN_DEFAULT:
+            yield current
+            return
+        resolved = (origin or '').strip() or _capture_origin(depth=depth + 1)
+        token = _LOG_ORIGIN.set(resolved)
+        try:
+            yield resolved
+        finally:
+            _LOG_ORIGIN.reset(token)
+            
     def _resolve_record_kind(self, record: Any) -> str:
         extra = cast(dict[str, Any], record.get('extra') or {})
         kind = str(extra.get('meow_kind') or record['level'].name).strip().lower()
@@ -149,12 +182,12 @@ class Logger:
 
     def _make_sink_filter(self) -> Any:
         def _filter(record: Any) -> bool:
-            return self._debugger_settings.get(self._resolve_record_kind(record), True)
+            return self._debug_settings.get(self._resolve_record_kind(record), True)
         return _filter
 
     def _configure_sinks(self) -> None:
         self._logger.remove()
-        self._logger.configure(patcher=patcher)
+        self._logger.configure(patcher=_patcher)
 
         if self._stream:
             _logger_console_format = (
@@ -197,66 +230,21 @@ class Logger:
         )
         
         self._logger.add(
-            self.path,
+            self._path,
             level=self._file_level,
             format=_logger_file_format,
-            rotation='10 MB',
-            retention=3,
+            rotation=f'{LOGGER_ROTATION} MB',
+            retention=LOGGER_RETENTION,
             encoding='utf-8',
             enqueue=True,
             filter=self._make_sink_filter(),
         )
 
-    def apply_debugger_settings(
-        self,
-        *,
-        debug: bool | None = None,
-        info: bool | None = None,
-        warning: bool | None = None,
-        error: bool | None = None,
-        exception: bool | None = None,
-    ) -> bool:
-        updated: dict[str, bool] = dict(self._debugger_settings)
-        overrides = {
-            'debug': debug,
-            'info': info,
-            'warning': warning,
-            'error': error,
-            'exception': exception,
-        }
-        for key, value in overrides.items():
-            if value is None:
-                continue
-            updated[key] = bool(value)
-        
-        self._debugger_settings = updated
-        self._configure_sinks()
-        return True
-
-    @contextmanager
-    def origin_scope(
-        self,
-        origin: str | None = None,
-        *,
-        overwrite: bool = False,
-        depth: int = 1,
-    ) -> Any:
-        current = _LOG_ORIGIN.get()
-        if not overwrite and current != LOG_ORIGIN_DEFAULT:
-            yield current
-            return
-        resolved = (origin or '').strip() or _capture_origin(depth=depth + 1)
-        token = _LOG_ORIGIN.set(resolved)
-        try:
-            yield resolved
-        finally:
-            _LOG_ORIGIN.reset(token)
 
     def debug(self, message: str = '') -> None: self._logger.opt(depth=1).debug(message)
     def info(self, message: str = '') -> None: self._logger.opt(depth=1).info(message)
     def warning(self, message: str = '') -> None: self._logger.opt(depth=1).warning(message)
     def error(self, message: str = '') -> None: self._logger.opt(depth=1).error(message)
     def exception(self, message: str = '') -> None: self._logger.opt(depth=1, exception=True).error(message)
-
 
 logger = Logger()

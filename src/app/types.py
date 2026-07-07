@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
+from dataclasses import dataclass
 
 if TYPE_CHECKING:
-    from src.config.loader import ConfigLoader
     from src.config.manager import Config
     from src.translation.manager import TranslationManager
     from src.theme.manager import ThemeManager
@@ -14,9 +13,8 @@ if TYPE_CHECKING:
 
 @dataclass(slots=True)
 class AppServices:
-    config_loader: ConfigLoader
     config: Config
     translator: TranslationManager
-    theme_manager: ThemeManager
     window: MainWindow
+    theme_manager: ThemeManager
     discord_rpc: DiscordRPC

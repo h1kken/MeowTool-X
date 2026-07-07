@@ -3,7 +3,6 @@ from __future__ import annotations
 from PySide6.QtCore import Signal, SignalInstance
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
-from src.config.loader import ConfigLoader
 from src.config.manager import Config
 from src.translation.manager import TranslationManager
 from src.ui.controllers import PageController
@@ -36,13 +35,11 @@ class SettingsPage(MTWidget):
     def __init__(
         self,
         *,
-        config_loader: ConfigLoader,
         config: Config,
         translator: TranslationManager,
         current_theme_name: str | None = None,
     ) -> None:
         super().__init__()
-        self._config_loader = config_loader
         self._config = config
         self._translator = translator
         self._tab_names_by_key: dict[str, str] = {}

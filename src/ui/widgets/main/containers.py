@@ -34,6 +34,7 @@ from PySide6.QtWidgets import (
 )
 
 from src.app.paths import PATH_SRC
+from src.translation.manager import TranslationManager
 from src.theme.colors import to_qcolor
 from src.theme.gradients import normalize_gradient_data
 from src.theme.schema.access import coerce_box_sides, coerce_number, object_map, theme_map
@@ -208,13 +209,19 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
     popupOpened = Signal()
     popupClosed = Signal()
 
-    def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
-        super().__init__(parent)
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        obj_name: str = '',
+        translator: TranslationManager | None = None,
+    ) -> None:
+        self._items: list[dict[str, Any]] = []
+        super().__init__(parent, translator=translator)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.init_box_theme()
-        self._items: list[dict[str, Any]] = []
         self._current_index = -1
         self._default_parts: dict[str, WidgetThemeMap] = self._build_default_parts()
         self._parts: dict[str, WidgetThemeMap] = deepcopy(self._default_parts)
@@ -233,6 +240,7 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
 
         self._popup = _MTComboPopup(self)
         self.sync_content_width()
+        self._sync_translator_binding()
 
     def sizeHint(self) -> QSize:
         text = self.currentText()

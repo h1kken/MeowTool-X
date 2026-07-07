@@ -29,4 +29,5 @@ class ConfigLoaderKey(StrEnum):
 
 # CONFIG
 class ConfigKey(StrEnum):
-    ...
+    GENERAL_PATH = "General"
+    GENERAL_LANGUAGE = f"{GENERAL_PATH}>Language"

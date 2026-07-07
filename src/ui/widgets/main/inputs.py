@@ -30,8 +30,9 @@ from src.theme.gradients import (
     normalize_gradient_data,
 )
 from src.theme.schema.access import coerce_box_sides, coerce_number, theme_map
-from src.translation.manager import get_translator
+from src.translation.manager import TranslationManager
 from src.theme.rainbow.palette import sample_rainbow_color
+from src.translation.mixin import TranslationAwareMixin
 from src.ui.painting import new_widget_painter
 from src.ui.widgets.main.box import BoxThemeMixin
 from src.ui.widgets.main.paint_primitives import parse_pen_style, resolve_fill_brush
@@ -665,21 +666,28 @@ class MTSlider(QSlider):
         self._draw_part_rect(painter, handle_rect, 'handle')
         painter.end()
 
-class MTLineEdit(BoxThemeMixin, QLineEdit):
+class MTLineEdit(BoxThemeMixin, TranslationAwareMixin, QLineEdit):
     PAINTED_BOX_THEME = False
 
-    def __init__(self, text: str = '', parent: QWidget | None = None, *, obj_name: str = '') -> None:
-        super().__init__(text, parent)
+    def __init__(
+        self,
+        text: str = '',
+        parent: QWidget | None = None,
+        *,
+        obj_name: str = '',
+        translator: TranslationManager | None = None,
+    ) -> None:
+        self._placeholder_tr_key: str | None = None
+        super().__init__(text, parent, translator=translator)
         self._focused_alignment: Qt.AlignmentFlag | None = None
         self._unfocused_alignment: Qt.AlignmentFlag | None = None
         self._theme_text_color_override: QColor | None = None
         self._theme_placeholder_color_override: QColor | None = None
-        self._placeholder_tr_key: str | None = None
         self.setFrame(False)
         self.setTextMargins(0, 0, 0, 0)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.init_box_theme()
-        get_translator().language_changed.connect(self._update_placeholder_translation)
+        self._sync_translator_binding()
 
         if obj_name:
             self.setObjectName(obj_name)
@@ -736,7 +744,15 @@ class MTLineEdit(BoxThemeMixin, QLineEdit):
     def _update_placeholder_translation(self) -> None:
         if not self._placeholder_tr_key:
             return
-        self.setPlaceholderText(get_translator().tr(self._placeholder_tr_key))
+        translator = self.translation_manager()
+        self.setPlaceholderText(
+            translator.tr(self._placeholder_tr_key)
+            if translator is not None else
+            self._placeholder_tr_key
+        )
+
+    def _on_language_changed(self) -> None:
+        self._update_placeholder_translation()
 
     def focusInEvent(self, event: QFocusEvent) -> None:
         super().focusInEvent(event)

@@ -6,5 +6,8 @@ LOGGER_INDENT_LINE = 4
 LOGGER_INDENT_FUNCTION = 20
 LOGGER_INDENT_LEVEL = 8
 
+LOGGER_ROTATION = 10 # MBytes
+LOGGER_RETENTION = 3
+
 
 __all__ = [name for name in globals() if name.isupper()]
