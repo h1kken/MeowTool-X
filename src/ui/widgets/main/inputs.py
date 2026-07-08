@@ -30,7 +30,6 @@ from src.theme.gradients import (
 )
 from src.theme.schema.access import coerce_box_sides, coerce_number, theme_map
 from src.translation.manager import TranslationManager
-from src.theme.rainbow.palette import sample_rainbow_color
 from src.ui.painting import new_widget_painter
 from src.ui.widgets.main.box import BoxThemeMixin
 from src.ui.widgets.main.paint_primitives import parse_pen_style, resolve_fill_brush
@@ -74,10 +73,6 @@ def _spin_box_content_size_hint(spin_box: QSpinBox | QDoubleSpinBox, values: tup
     )
 
 
-_SLIDER_RAINBOW_COLOR_PARTS: frozenset[str] = frozenset({'sub_page'})
-_SLIDER_RAINBOW_GRADIENT_DISABLED_PARTS: frozenset[str] = frozenset({'sub_page'})
-
-
 class MTSlider(QSlider):
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(Qt.Orientation.Horizontal, parent)
@@ -85,9 +80,6 @@ class MTSlider(QSlider):
         self.setMouseTracking(True)
         self._dragging_anywhere = False
         self._drag_offset = 0
-        self._slider_line_rainbow_phase = 0.0
-        self._runtime_rainbow_palette = 'Pastel'
-        self._rainbow_line_color: QColor | None = None
         self._animated_handle_color: QColor | None = None
         self._default_parts = self._build_default_parts()
         self._parts = deepcopy(self._default_parts)
@@ -310,8 +302,6 @@ class MTSlider(QSlider):
         part_key = str(part).strip()
         if part_key == 'handle':
             return self._current_handle_color()
-        if part_key in _SLIDER_RAINBOW_COLOR_PARTS and isinstance(self._rainbow_line_color, QColor) and self._rainbow_line_color.isValid():
-            return self._adjust_part_color(part_key, QColor(self._rainbow_line_color))
         color = self._part_value(part_key, 'background_color')
         if isinstance(color, QColor) and color.isValid():
             return self._adjust_part_color(part_key, color)
@@ -324,8 +314,6 @@ class MTSlider(QSlider):
             and isinstance(self._animated_handle_color, QColor)
             and self._animated_handle_color.isValid()
         ):
-            return None
-        if part_key in _SLIDER_RAINBOW_GRADIENT_DISABLED_PARTS and isinstance(self._rainbow_line_color, QColor) and self._rainbow_line_color.isValid():
             return None
         return self._adjust_part_gradient(part_key, theme_map(self._part_value(part_key, 'background_gradient')))
 
@@ -475,36 +463,8 @@ class MTSlider(QSlider):
         height = max(0.0, rect.height() - handle_h)
         return QRect(int(round(x)), int(round(y)), int(round(thickness)), int(round(height)))
 
-    def set_slider_line_rainbow(self, value: float) -> QColor:
-        try:
-            phase = float(value) % 1.0
-        except (TypeError, ValueError):
-            phase = 0.0
-        self._slider_line_rainbow_phase = phase
-        color = self._sample_rainbow_color(phase)
-        self._rainbow_line_color = QColor(color)
-        self.update()
-        return color
-
-    def clear_slider_line_rainbow(self) -> None:
-        self._slider_line_rainbow_phase = 0.0
-        self._rainbow_line_color = None
-        self.update()
-
-    def set_slider_line_rainbow_palette(self, value: str) -> None:
-        self._runtime_rainbow_palette = str(value or 'Pastel').strip() or 'Pastel'
-        if isinstance(self._rainbow_line_color, QColor):
-            self._rainbow_line_color = self._sample_rainbow_color(self._slider_line_rainbow_phase)
-            self.update()
-
-    def current_slider_line_rainbow(self) -> float:
-        return float(self._slider_line_rainbow_phase)
-
     def reset_theme(self) -> None:
-        self._slider_line_rainbow_phase = 0.0
-        self._runtime_rainbow_palette = 'Pastel'
         self._parts = deepcopy(self._default_parts)
-        self._rainbow_line_color = None
         self._animated_handle_color = None
         self.update()
 
@@ -544,15 +504,7 @@ class MTSlider(QSlider):
                 if (margin := coerce_box_sides(part_data.get('margin'), allow_negative=True)) is not None:
                     self._parts[part]['margin'] = margin
 
-        if isinstance(self._rainbow_line_color, QColor):
-            self._rainbow_line_color = self._sample_rainbow_color(self._slider_line_rainbow_phase)
         self.update()
-
-    def _sample_rainbow_color(self, phase: float) -> QColor:
-        return sample_rainbow_color(
-            phase,
-            palette=self._runtime_rainbow_palette,
-        )
 
     def _rounded_path(self, rect: QRectF, tl: float, tr: float, br: float, bl: float) -> QPainterPath:
         if not rect.isValid() or rect.width() <= 0 or rect.height() <= 0:
@@ -676,7 +628,7 @@ class MTLineEdit(BoxThemeMixin, QLineEdit):
         translator: TranslationManager | None = None,
     ) -> None:
         self._placeholder_tr_key: str | None = None
-        super().__init__(text, parent, translator=translator)
+        super().__init__(text, parent)
         self._focused_alignment: Qt.AlignmentFlag | None = None
         self._unfocused_alignment: Qt.AlignmentFlag | None = None
         self._theme_text_color_override: QColor | None = None

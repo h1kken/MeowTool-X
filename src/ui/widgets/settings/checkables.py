@@ -32,7 +32,6 @@ class MTCheckBoxSetting(MTWidget):
         self._cfg_key = cfg_key
         obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, "_", self._cfg_key)
         self.setObjectName(f"{obj_name}_CheckBox_Setting")
-        self.setProperty("rainbowBorderTarget", False)
 
         self._main_layout = create_layout(LayoutType.HBOX, parent=self)
 

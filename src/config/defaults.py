@@ -49,13 +49,7 @@ DEFAULT_CONFIG: Final[ConfigMap] = {
   "Theme": {
     "Autoload Selected Theme": True,
   },
-  "Misc": {
-    "Rainbow Mode": {
-      "Enabled": False,
-      "Cycle Duration": 5000,
-      "Palette": "Pastel",
-    }
-  },
+  "Misc": {},
   "HTTP Engine": {
     "Concurrency Profile": "Auto",
     "Max Concurrency": 64,

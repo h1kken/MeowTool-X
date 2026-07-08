@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import src.app.context as ctx
-translator = ctx.services.translator
 from src.app.paths import PATH_TRANSLATIONS_SRC, PATH_TRANSLATIONS_USER
 from src.config.manager import Config
 from src.translation.constants import DEFAULT_LANGUAGE
+from src.translation.manager import TranslationManager
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets import (
     MTCollapsibleContainer,
@@ -17,9 +16,10 @@ from src.ui.widgets import (
 
 
 class SettingsMainPage(MTWidget):
-    def __init__(self, *, config: Config) -> None:
+    def __init__(self, *, config: Config, translator: TranslationManager) -> None:
         super().__init__()
         self._config = config
+        self._translator = translator
         self._layout = create_layout(LayoutType.VBOX, parent=self)
 
         tabs = [
@@ -31,7 +31,7 @@ class SettingsMainPage(MTWidget):
                         config=self._config,
                         tr_key="LANG",
                         cfg_key="General>Language",
-                        items=translator.get_awailable_translations(),
+                        items=self._get_all_languages(),
                         default=DEFAULT_LANGUAGE,
                         on_changed=self._on_language_changed,
                     ),
@@ -42,6 +42,20 @@ class SettingsMainPage(MTWidget):
         columns_widget = MTColumnsSetting(tabs, 2, obj_name="Settings_General_Columns")
         self._layout.addWidget(columns_widget)
         self._config.config_loaded.connect(self._apply_runtime_settings)
+
+    def _get_all_languages(self) -> list[tuple[str, str]]:
+        return self._merge_languages(
+            *(
+                path.stem
+                for path in PATH_TRANSLATIONS_SRC.glob("*.axis")
+                if path.is_file()
+            ),
+            *(
+                path.stem
+                for path in PATH_TRANSLATIONS_USER.glob("*.axis")
+                if path.is_file()
+            ),
+        )
 
     @staticmethod
     def _language_display_name(value: str) -> str:
@@ -82,3 +96,12 @@ class SettingsMainPage(MTWidget):
                 return candidate
 
         return PATH_TRANSLATIONS_SRC / f"{DEFAULT_LANGUAGE}.axis"
+
+    def _on_language_changed(self, language_name: str) -> None:
+        self._translator.load(self._resolve_translation_path(language_name).stem)
+
+    def _apply_runtime_settings(self) -> None:
+        self._on_language_changed(
+            str(self._config.get("General>Language", default=DEFAULT_LANGUAGE)).strip()
+            or DEFAULT_LANGUAGE
+        )

@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 if TYPE_CHECKING:
     from src.config.manager import Config
     from src.translation.manager import TranslationManager
-    from src.theme.manager import ThemeManager
     from src.ui.windows.main_window import MainWindow
+    from src.theme.manager import ThemeManager
     from src.services.discord import DiscordRPC
     from src.utils.logging import Logger
 

@@ -20,7 +20,6 @@ LAYOUT_ALIGNMENT_VALUES: tuple[str, ...] = TEXT_ALIGNMENT_VALUES
 THEME_STYLE_SPEC: dict[str, Any] = {
     'common_sections': {
         'clear': 'clear local widget stylesheet before applying theme rules',
-        'rainbow': 'enable/disable runtime rainbow border targeting',
         'background': (
             'color',
             'image'

@@ -3,8 +3,9 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, cast
 
+import src.app.context as ctx
 from PySide6.QtCore import QSize, QTimer, Signal
-from PySide6.QtGui import QCloseEvent, QIcon, QMoveEvent, QResizeEvent, QShowEvent
+from PySide6.QtGui import QCloseEvent, QIcon, QMoveEvent, QResizeEvent
 from PySide6.QtWidgets import QBoxLayout, QMainWindow, QSizePolicy, QWidget
 
 from src.app.paths import (
@@ -16,14 +17,8 @@ from src.app.paths import (
 from src.ui.widgets import SidebarButton, SidebarCategory
 from src.config.manager import Config
 from src.theme.animation.manager import AnimationManager
-from src.theme.constants import (
-    THEME_AUTOLOAD_FALLBACK,
-    THEME_RUNTIME_RAINBOW_DURATION_FALLBACK,
-    THEME_RUNTIME_RAINBOW_ENABLED_FALLBACK,
-    THEME_RUNTIME_RAINBOW_PALETTE_FALLBACK,
-)
+from src.theme.constants import THEME_AUTOLOAD_FALLBACK
 from src.theme.manager import ThemeManager
-from src.theme.rainbow.runtime import RainbowRuntimeController
 from src.theme.storage.io import (
     find_theme_file_by_name,
     load_theme_payload,
@@ -95,6 +90,7 @@ class MainWindow(QMainWindow):
     def __init__(self, *, config: Config) -> None:
         super().__init__()
         self._config = config
+        self._translator = ctx.services.translator
         
         self._theme_auto_save_timer = QTimer(self)
         self._theme_auto_save_timer.setSingleShot(True)
@@ -109,7 +105,6 @@ class MainWindow(QMainWindow):
         self._deferred_theme_auto_save = False
         self._settings_page: SettingsPage | None = None
         self._animation_manager: AnimationManager | None = None
-        self._rainbow_runtime: RainbowRuntimeController | None = None
         self._theme_manager: ThemeManager | None = None
         self._presence_page = "Startup"
         self._settings_presence_label = "Settings"
@@ -122,8 +117,6 @@ class MainWindow(QMainWindow):
         self._sidebar_categories: list[SidebarCategory] = []
         self._sidebar_width_locked = False
 
-        self._runtime_theme_preferences_cache: tuple[bool, int, str] | None = None
-        self._runtime_theme_post_show_pending = True
         self._pages_built = False
 
         self._initial_theme_name = self.theme_on_load_name()
@@ -134,9 +127,6 @@ class MainWindow(QMainWindow):
         self.resize(WINDOW_X, WINDOW_Y)
 
         self._build_window_shell()
-
-        self._config.config_loaded.connect(self._on_config_loaded)
-        self._config.value_changed.connect(self._on_config_value_changed)
         FS.ensure_dir(PATH_THEMES_USER)
 
     def resolve_theme_path(self, theme_name: str) -> Path | None:
@@ -166,14 +156,6 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event: QCloseEvent) -> None:
         super().closeEvent(event)
-
-    def showEvent(self, event: QShowEvent) -> None:
-        super().showEvent(event)
-        if not self._runtime_theme_post_show_pending:
-            return
-        self._runtime_theme_post_show_pending = False
-        QTimer.singleShot(0, self.reapply_runtime_theme_preferences)
-        QTimer.singleShot(32, self.reapply_runtime_theme_preferences)
 
     def _create_main_page(
         self,
@@ -460,11 +442,6 @@ class MainWindow(QMainWindow):
         if self._animation_manager is None:
             self._animation_manager = AnimationManager(self.centralWidget())
 
-        if self._rainbow_runtime is None:
-            self._rainbow_runtime = RainbowRuntimeController(self.centralWidget())
-
-        self._rainbow_runtime.bind_animation_manager(self._animation_manager)
-
     def initialize_theme_manager(
         self,
         *,
@@ -522,20 +499,6 @@ class MainWindow(QMainWindow):
         ).strip()
         return configured or PATH_DEFAULT_THEME.stem
 
-    def _on_config_loaded(self) -> None:
-        self._invalidate_runtime_theme_preferences_cache()
-        self.reapply_runtime_theme_preferences()
-
-    def _on_config_value_changed(self, key: str, _value: object) -> None:
-        normalized = str(key).strip().replace(" ", "")
-        if normalized in {
-            "Misc>RainbowMode>Enabled",
-            "Misc>RainbowMode>CycleDuration",
-            "Misc>RainbowMode>Palette",
-        }:
-            self._invalidate_runtime_theme_preferences_cache()
-            self.reapply_runtime_theme_preferences()
-
     def set_theme(self, theme_name: str, *, persist: bool = True) -> bool:
         if self._theme_manager is None:
             return False
@@ -559,7 +522,6 @@ class MainWindow(QMainWindow):
             return
         self._theme_manager.apply()
         self._reload_main_animations_from_theme()
-        self.reapply_runtime_theme_preferences()
         self.update()
         central = self.centralWidget()
         central.update()
@@ -680,23 +642,6 @@ class MainWindow(QMainWindow):
                 animations[target] = deepcopy(animation_data)
         self._animation_manager.load(animations, widgets)
 
-    def _apply_runtime_theme_preferences_for_controller(
-        self,
-        controller: RainbowRuntimeController | None,
-        preferences: tuple[bool, int, str] | None = None,
-    ) -> None:
-        if controller is None:
-            return
-        enabled, duration, palette = preferences or self._runtime_theme_preferences()
-        controller.set_enabled(enabled, duration, palette=palette)
-
-    def _apply_runtime_theme_preferences_to_children(self) -> None:
-        preferences = self._runtime_theme_preferences()
-        enabled, duration, palette = preferences
-        self._window_header.set_title_rainbow(enabled, duration, palette=palette)
-
-        self._apply_runtime_theme_preferences_for_controller(self._rainbow_runtime, preferences)
-
     def _build_theme_payload_from_manager(self) -> dict[str, Any]:
         if self._theme_manager is None:
             return {"widgets": []}
@@ -718,44 +663,5 @@ class MainWindow(QMainWindow):
         parser.load(payload, merge_with_default=False)
         return parser.current_theme_widgets()
 
-    def _runtime_theme_preferences(self) -> tuple[bool, int, str]:
-        if self._runtime_theme_preferences_cache is not None:
-            return self._runtime_theme_preferences_cache
-
-        enabled = bool(
-            self._config.get(
-                "Misc>Rainbow Mode>Enabled",
-                default=THEME_RUNTIME_RAINBOW_ENABLED_FALLBACK,
-            )
-        )
-        try:
-            duration = max(
-                1000,
-                int(str(self._config.get(
-                    "Misc>Rainbow Mode>Cycle Duration",
-                    default=THEME_RUNTIME_RAINBOW_DURATION_FALLBACK,
-                ))),
-            )
-        except (TypeError, ValueError):
-            duration = THEME_RUNTIME_RAINBOW_DURATION_FALLBACK
-
-        palette = (
-            str(
-                self._config.get(
-                    "Misc>Rainbow Mode>Palette",
-                    default=THEME_RUNTIME_RAINBOW_PALETTE_FALLBACK,
-                )
-            ).strip()
-            or THEME_RUNTIME_RAINBOW_PALETTE_FALLBACK
-        )
-        self._runtime_theme_preferences_cache = (enabled, duration, palette)
-        return self._runtime_theme_preferences_cache
-
-    def _invalidate_runtime_theme_preferences_cache(self) -> None:
-        self._runtime_theme_preferences_cache = None
-
     def _effective_theme_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
         return deepcopy(payload)
-
-    def reapply_runtime_theme_preferences(self) -> None:
-        self._apply_runtime_theme_preferences_to_children()

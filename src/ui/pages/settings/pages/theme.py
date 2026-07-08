@@ -210,8 +210,6 @@ class SettingsThemePage(MTWidget):
         cancel_btn.setSizePolicy(
             QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred
         )
-        cancel_btn.setProperty("rainbowBorderTarget", False)
-        cancel_btn.setProperty("rainbowBorderExcluded", True)
         editor_layout.addWidget(line_edit, 1)
         editor_layout.addWidget(cancel_btn)
         stack.addWidget(editor_row)
@@ -265,8 +263,6 @@ class SettingsThemePage(MTWidget):
         self._delete_cancel_button.setSizePolicy(
             QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred
         )
-        self._delete_cancel_button.setProperty("rainbowBorderTarget", False)
-        self._delete_cancel_button.setProperty("rainbowBorderExcluded", True)
         confirm_layout.addWidget(self._delete_confirm_button, 1)
         confirm_layout.addWidget(self._delete_cancel_button)
         stack.addWidget(confirm_row)
@@ -283,7 +279,6 @@ class SettingsThemePage(MTWidget):
         value_obj_name: str,
     ) -> MTPlainLabel:
         row = MTWidget(obj_name=row_obj_name)
-        row.setProperty("rainbowBorderTarget", True)
         row_layout = create_layout(LayoutType.HBOX, parent=row)
         label = MTLabel(tr_key=tr_key, obj_name=label_obj_name)
         label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)

@@ -70,7 +70,6 @@ class ThemeManager(QObject):
         self._styled_media_widgets: set[QWidget] = set()
         self._styled_combo_popup_widgets: set[QWidget] = set()
         self._styled_theme_prop_widgets: set[QWidget] = set()
-        self._styled_rainbow_target_widgets: dict[QWidget, Any] = {}
         self._styled_geometry_widgets: dict[QWidget, GeometrySnapshot] = {}
         self._styled_viewport_margin_widgets: dict[QScrollArea, tuple[int, int, int, int]] = {}
         self._styled_size_policy_widgets: dict[QWidget, tuple[QSizePolicy.Policy, QSizePolicy.Policy]] = {}
@@ -297,13 +296,6 @@ class ThemeManager(QObject):
             except RuntimeError:
                 continue
 
-        for widget, original in self._styled_rainbow_target_widgets.items():
-            try:
-                widget.setProperty('rainbowBorderTarget', original)
-                widget.update()
-            except RuntimeError:
-                continue
-
         for widget in self._styled_theme_prop_widgets:
             try:
                 self._style_normalizer.clear_theme_helper_properties(widget)
@@ -458,7 +450,6 @@ class ThemeManager(QObject):
         self._styled_media_widgets.clear()
         self._styled_combo_popup_widgets.clear()
         self._styled_theme_prop_widgets.clear()
-        self._styled_rainbow_target_widgets.clear()
         self._styled_geometry_widgets.clear()
         self._styled_viewport_margin_widgets.clear()
         self._styled_size_policy_widgets.clear()
@@ -630,8 +621,6 @@ class ThemeManager(QObject):
             resolved_styles = self._qss_builder.resolve_relative_styles(styles, widget) if needs_relative_resolution else styles
             applied = False
 
-            if 'rainbow' in resolved_styles:
-                applied = self._apply_widget_rainbow_rule(widget, resolved_styles) or applied
             applied = self._apply_widget_frame_rules(widget, resolved_styles) or applied
             applied = self._apply_line_edit_padding_theme(widget, resolved_styles) or applied
 
@@ -661,15 +650,6 @@ class ThemeManager(QObject):
 
             if applied:
                 self._styled_theme_prop_widgets.add(widget)
-
-    def _apply_widget_rainbow_rule(self, widget: QWidget, styles: ThemeMap) -> bool:
-        rainbow_target = self._normalize_bool_value(styles.get('rainbow'))
-        if rainbow_target is None or widget.property('rainbowBorderExcluded') is True:
-            return False
-
-        if widget not in self._styled_rainbow_target_widgets:
-            self._styled_rainbow_target_widgets[widget] = widget.property('rainbowBorderTarget')
-        return self._set_widget_property_if_changed(widget, 'rainbowBorderTarget', rainbow_target)
 
     def _apply_widget_frame_rules(self, widget: QWidget, styles: ThemeMap) -> bool:
         applied = False

@@ -16,5 +16,4 @@ class MTButtonSetting(MTButton):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(tr_key=tr_key, obj_name=f"{obj_name}_Setting", parent=parent)
-        self.setProperty("rainbowBorderTarget", True)
         self.clicked.connect(action)

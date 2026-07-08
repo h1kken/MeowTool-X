@@ -252,8 +252,6 @@ class MTCollapsibleContainer(MTWidget):
             checked=True,
             obj_name=f"{obj_name}_Container_Header_Button",
         )
-        self._toggle_button.setProperty("rainbowBorderTarget", False)
-        self._toggle_button.setProperty("rainbowBorderExcluded", True)
         self._toggle_button.setText("")
         self._apply_toggle_button_metrics()
         self._content_widget = MTWidget(obj_name=f"{obj_name}_Container_Content_Widget")
@@ -582,6 +580,7 @@ class MTCollapsibleContainer(MTWidget):
 class MTComboBoxSetting(MTWidget):
     def __init__(
         self,
+        config: Config | ConfigLoader,
         tr_key: str,
         cfg_key: str,
         items: Sequence[str | tuple[str, str]],
@@ -590,12 +589,12 @@ class MTComboBoxSetting(MTWidget):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
+        self._config = config
         self._cfg_key = cfg_key
         self._on_changed = on_changed
         self._default = default
         obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, "_", self._cfg_key)
         self.setObjectName(f"{obj_name}_ComboBox_Setting")
-        self.setProperty("rainbowBorderTarget", False)
 
         self._main_layout = create_layout(LayoutType.HBOX, parent=self)
 
@@ -608,7 +607,6 @@ class MTComboBoxSetting(MTWidget):
         )
 
         self._combo_box = MTComboBox(obj_name=f"{obj_name}_ComboBox")
-        self._combo_box.setProperty("rainbowBorderTarget", True)
         self._combo_box.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )

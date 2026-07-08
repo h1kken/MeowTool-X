@@ -36,7 +36,6 @@ class MTTextSetting(MTWidget):
         self._cfg_key = cfg_key
         obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, "_", self._cfg_key)
         self.setObjectName(f"{obj_name}_Text_Setting")
-        self.setProperty("rainbowBorderTarget", False)
 
         self._main_layout = create_layout(LayoutType.HBOX, parent=self)
 
@@ -49,7 +48,6 @@ class MTTextSetting(MTWidget):
         )
 
         self._line_edit = MTLineEdit(obj_name=f"{obj_name}_LineEdit")
-        self._line_edit.setProperty("rainbowBorderTarget", True)
         self._line_edit.setText(str(self._config.get(self._cfg_key, default=default)))
         self._line_edit.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
@@ -93,7 +91,6 @@ class MTPathSetting(MTWidget):
         )
         obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, "_", self._cfg_key)
         self.setObjectName(f"{obj_name}_Path_Setting")
-        self.setProperty("rainbowBorderTarget", False)
 
         self._main_layout = create_layout(LayoutType.HBOX, parent=self)
 
@@ -106,14 +103,12 @@ class MTPathSetting(MTWidget):
         )
 
         self._line_edit = MTLineEdit(obj_name=f"{obj_name}_LineEdit")
-        self._line_edit.setProperty("rainbowBorderTarget", True)
         self._line_edit.setText(str(self._config.get(self._cfg_key, default=default)))
         self._line_edit.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
 
         self._browse_button = MTButton(tr_key="", obj_name=f"{obj_name}_Browse_Button")
-        self._browse_button.setProperty("rainbowBorderTarget", True)
         self._browse_button.setText("")
         self._browse_button.set_text_icon(
             source=str(PATH_FOLDER_ICON),

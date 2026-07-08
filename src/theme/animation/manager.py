@@ -41,19 +41,7 @@ from .parser import parse_specs
 from .timer import TimerAnimation
 from .types import AnimationSpec
 
-_RAINBOW_HANDLE_STOPS: tuple[tuple[float, str], ...] = (
-    (0.00, '#ff0000'),
-    (0.07, '#ff0000'),
-    (0.18, '#ff8a00'),
-    (0.30, '#fff000'),
-    (0.46, '#00ff66'),
-    (0.62, '#00d5ff'),
-    (0.78, '#4b5cff'),
-    (0.92, '#ff00c8'),
-    (1.00, '#ff0000'),
-)
 _CSS_DECLARATION_PATTERN = re.compile(r'([a-zA-Z-]+)\s*:\s*([^;{}]+)')
-_RUNTIME_BORDER_FADE_STEP = 0.12
 
 def _widget_or_none(value: QObject | QWidget) -> QWidget | None:
     return value if isinstance(value, QWidget) else None
@@ -81,27 +69,18 @@ class AnimationManager(QObject):
         self._pending_hover_exit_widgets: set[QWidget] = set()
         self._paint_overlays: dict[QWidget, DashBorderOverlay] = {}
         self._paint_border_profiles: dict[QWidget, dict[str, Any]] = {}
-        self._runtime_filtered_widgets: set[QWidget] = set()
-        self._runtime_rainbow_widgets: set[QWidget] = set()
-        self._runtime_native_border_widgets: dict[QWidget, dict[str, Any]] = {}
-        self._runtime_hover_overlays: dict[QWidget, DashBorderOverlay] = {}
-        self._runtime_hover_overlay_states: dict[QWidget, dict[str, float]] = {}
-        self._runtime_rainbow_duration_ms = 5000
         self._wheel_event_deltas: dict[QWidget, dict[str, float]] = {}
         self._locked_tabs: set[QWidget] = set()
         self._tab_toggle_slots: dict[QWidget, Any] = {}
         self._toggle_action_slots: dict[QWidget, Any] = {}
         self._popup_action_slots: dict[QWidget, tuple[Any, Any]] = {}
         
-        self._shared_rainbow_epoch = monotonic()
-        self._shared_rainbow_bindings: dict[QWidget, tuple[int, float]] = {}
-        self._shared_widget_border_bindings: dict[QWidget, tuple[int, float, float]] = {}
-        self._shared_border_color_bindings: dict[DashBorderOverlay, tuple[int, float, float]] = {}
+        self._shared_phase_epoch = monotonic()
         self._shared_gradient_border_bindings: dict[DashBorderOverlay, tuple[int, float]] = {}
         
-        self._shared_rainbow_timer = QTimer(self)
-        self._shared_rainbow_timer.setInterval(16)
-        self._shared_rainbow_timer.timeout.connect(self._update_shared_rainbow_widgets)
+        self._shared_phase_timer = QTimer(self)
+        self._shared_phase_timer.setInterval(16)
+        self._shared_phase_timer.timeout.connect(self._update_shared_phase_bindings)
         
         self._hover_reconcile_timer = QTimer(self)
         self._hover_reconcile_timer.setInterval(16)
@@ -225,34 +204,15 @@ class AnimationManager(QObject):
         if obj_widget is not None:
             if event.type() in (QEvent.Type.Resize, QEvent.Type.Move, QEvent.Type.Show):
                 self._sync_paint_overlay_geometry(obj_widget)
-                self._sync_runtime_overlay_geometry(obj_widget)
                 if event.type() in (QEvent.Type.Resize, QEvent.Type.Show) and self._style_overrides.get(obj_widget):
                     self._apply_widget_style(obj_widget)
             elif event.type() == QEvent.Type.Hide:
                 if (overlay := self._paint_overlays.get(obj_widget)) is not None:
                     overlay.hide()
-                if (overlay := self._runtime_hover_overlays.get(obj_widget)) is not None:
-                    overlay.hide()
             elif event.type() == QEvent.Type.Enter:
                 self._hovered_widgets.add(obj_widget)
-                if obj_widget in self._runtime_native_border_widgets:
-                    self._runtime_native_border_widgets[obj_widget]['target_opacity'] = 1.0
-                if (overlay := self._runtime_hover_overlays.get(obj_widget)) is not None:
-                    state = self._runtime_hover_overlay_states.setdefault(
-                        obj_widget, {'opacity': 0.0, 'target_opacity': 0.0}
-                    )
-                    state['target_opacity'] = 1.0
-                    if obj_widget.isVisible():
-                        overlay.show()
             elif event.type() == QEvent.Type.Leave:
                 self._hovered_widgets.discard(obj_widget)
-                if obj_widget in self._runtime_native_border_widgets:
-                    self._runtime_native_border_widgets[obj_widget]['target_opacity'] = 0.0
-                if (overlay := self._runtime_hover_overlays.get(obj_widget)) is not None:
-                    state = self._runtime_hover_overlay_states.setdefault(
-                        obj_widget, {'opacity': 0.0, 'target_opacity': 0.0}
-                    )
-                    state['target_opacity'] = 0.0
 
         if target_widget is None or target_widget not in self._animations:
             return super().eventFilter(obj, event)
@@ -299,9 +259,6 @@ class AnimationManager(QObject):
         return super().eventFilter(obj, event)
 
     def _clear(self) -> None:
-        self._clear_runtime_rainbow_mode()
-        shared_rainbow_widgets = set(self._shared_rainbow_bindings)
-
         for widget, slot in self._tab_toggle_slots.items():
             if not isinstance(widget, QAbstractButton):
                 continue
@@ -334,8 +291,6 @@ class AnimationManager(QObject):
         for widget, groups in self._animations.items():
             for group in groups.values():
                 group.stop()
-
-            self._reset_widget_animation_state(widget, had_shared_rainbow=widget in shared_rainbow_widgets)
             try:
                 widget.setProperty('_themeAnimatedContentHeight', False)
                 widget.setProperty('_themeAnimatedArrowRotation', False)
@@ -378,207 +333,9 @@ class AnimationManager(QObject):
         self._tab_toggle_slots.clear()
         self._toggle_action_slots.clear()
         self._popup_action_slots.clear()
-        self._shared_rainbow_bindings.clear()
-        self._shared_border_color_bindings.clear()
         self._shared_gradient_border_bindings.clear()
-        self._shared_rainbow_timer.stop()
-
-    def set_runtime_rainbow_mode(self, enabled: bool, duration_ms: int | float) -> None:
-        self._clear_runtime_rainbow_mode()
-        if not enabled:
-            return
-
-        duration = max(1, int(round(float(duration_ms))))
-        self._runtime_rainbow_duration_ms = duration
-
-        for widget in resolve_target_widgets(self._root, 'MTSwitch', include_window=True):
-            if not isinstance(widget, MTSwitch):
-                continue
-            if widget.property('rainbowBorderExcluded') is True:
-                continue
-            if widget.property('rainbowBorderTarget') is False:
-                continue
-            if not widget.has_visible_parts_theme():
-                self._reset_widget_animation_state(widget, had_shared_rainbow=True)
-                continue
-            self._ensure_runtime_widget_filter(widget)
-            self._runtime_rainbow_widgets.add(widget)
-            if widget.isChecked():
-                self._set_shared_rainbow_active(widget, duration, 0.0, True)
-            else:
-                self._reset_widget_animation_state(widget, had_shared_rainbow=True)
-
-        for widget in resolve_target_widgets(self._root, 'MTSlider', include_window=True):
-            if widget.property('rainbowBorderExcluded') is True:
-                continue
-            if widget.property('rainbowBorderTarget') is False:
-                continue
-            self._ensure_runtime_widget_filter(widget)
-            self._runtime_rainbow_widgets.add(widget)
-            self._set_shared_rainbow_active(widget, duration, 0.0, True)
-
-        base_color = self._sample_shared_rainbow_color(0.0, brightness=0.9)
-        setting_widgets: list[QWidget] = []
-        seen_setting_widgets: set[QWidget] = set()
-        for target in (
-            'MTComboBox',
-            'MTLineEdit',
-            'MTButtonSetting',
-            'MTCheckBoxSetting',
-            'MTSwitchSetting',
-            'MTSwitchRowSetting',
-            'MTPathSetting',
-            'MTSliderSetting',
-        ):
-            for candidate in resolve_target_widgets(self._root, target, include_window=True):
-                if candidate in seen_setting_widgets:
-                    continue
-                if candidate.property('rainbowBorderExcluded') is True:
-                    continue
-                if candidate.property('rainbowBorderTarget') is False:
-                    continue
-                seen_setting_widgets.add(candidate)
-                setting_widgets.append(candidate)
-
-        for widget in setting_widgets:
-            self._ensure_runtime_widget_filter(widget)
-            self._stop_runtime_conflicting_hover_groups(widget)
-            if (paint_overlay := self._paint_overlays.get(widget)) is not None:
-                self._set_shared_border_color_active(paint_overlay, 0, 0.0, False)
-                self._set_shared_gradient_border_active(paint_overlay, 0, 0.0, False)
-                try:
-                    paint_overlay.hide()
-                except RuntimeError:
-                    pass
-            border_config = self._detect_runtime_border_config(widget)
-            if border_config.get('visible'):
-                self._runtime_native_border_widgets[widget] = {
-                    'previous_border_color_override': deepcopy(self._style_overrides.get(widget, {}).get('border-color')),
-                    'base_border_color': str(border_config.get('color_text', '') or ''),
-                    'opacity': 1.0 if self._cursor_over_widget(widget) else 0.0,
-                    'target_opacity': 1.0 if self._cursor_over_widget(widget) else 0.0,
-                }
-                self._set_shared_widget_border_active(widget, duration, 0.0, True, brightness=0.9)
-                continue
-
-            overlay = self._runtime_hover_overlays.get(widget)
-            if overlay is None:
-                overlay = DashBorderOverlay(widget)
-                self._runtime_hover_overlays[widget] = overlay
-            self._runtime_hover_overlay_states[widget] = {
-                'opacity': 1.0 if self._cursor_over_widget(widget) else 0.0,
-                'target_opacity': 1.0 if self._cursor_over_widget(widget) else 0.0,
-            }
-            overlay.configure(
-                color=base_color,
-                width=float(border_config.get('width', 1.5)),
-                radius=float(border_config.get('radius', 10.0)),
-                dash_pattern=[9999.0, 1.0],
-                inset=float(border_config.get('inset', 1.0)),
-                pen_style=Qt.PenStyle.SolidLine,
-                opacity=1.0 if self._cursor_over_widget(widget) else 0.0,
-            )
-            self._sync_runtime_overlay_geometry(widget)
-            if widget.isVisible() and self._cursor_over_widget(widget):
-                overlay.show()
-            self._set_shared_border_color_active(
-                overlay,
-                duration,
-                0.0,
-                True,
-                brightness=0.9,
-            )
-
-    def _clear_runtime_rainbow_mode(self) -> None:
-        hovered_widgets = {
-            widget
-            for widget in (
-                set(self._runtime_rainbow_widgets)
-                | set(self._runtime_native_border_widgets)
-                | set(self._runtime_hover_overlays)
-            )
-            if self._cursor_over_widget(widget)
-        }
-        for widget in list(self._runtime_rainbow_widgets):
-            self._set_shared_rainbow_active(widget, 0, 0.0, False)
-            self._reset_widget_animation_state(widget, had_shared_rainbow=True)
-        self._runtime_rainbow_widgets.clear()
-
-        for widget in list(self._runtime_native_border_widgets):
-            self._set_shared_widget_border_active(widget, 0, 0.0, False)
-        self._runtime_native_border_widgets.clear()
-
-        for widget, overlay in list(self._runtime_hover_overlays.items()):
-            self._set_shared_border_color_active(overlay, 0, 0.0, False)
-            try:
-                overlay.hide()
-                overlay.deleteLater()
-            except RuntimeError:
-                pass
-        self._runtime_hover_overlays.clear()
-        self._runtime_hover_overlay_states.clear()
+        self._shared_phase_timer.stop()
         self._wheel_event_deltas.clear()
-
-        for widget in list(self._runtime_filtered_widgets):
-            if widget in self._filtered_widgets:
-                continue
-            try:
-                widget.removeEventFilter(self)
-            except RuntimeError:
-                pass
-        self._runtime_filtered_widgets.clear()
-        for widget in hovered_widgets:
-            if self._cursor_over_widget(widget) and widget in self._animations:
-                self._play(widget, 'hover')
-        self._stop_shared_rainbow_timer_if_idle()
-
-    def _ensure_runtime_widget_filter(self, widget: QWidget) -> None:
-        if widget in self._filtered_widgets or widget in self._runtime_filtered_widgets:
-            return
-        widget.installEventFilter(self)
-        self._runtime_filtered_widgets.add(widget)
-
-    def _sync_runtime_overlay_geometry(self, widget: QWidget) -> None:
-        overlay = self._runtime_hover_overlays.get(widget)
-        if overlay is None:
-            return
-        was_visible = overlay.isVisible()
-        overlay.setGeometry(widget.rect())
-        overlay.raise_()
-        if was_visible and widget.isVisible():
-            overlay.show()
-
-    def _stop_runtime_conflicting_hover_groups(self, widget: QWidget) -> None:
-        groups = self._animations.get(widget)
-        if not isinstance(groups, dict):
-            return
-        for action in ('hover', 'leave'):
-            group = groups.get(action)
-            if group is None:
-                continue
-            try:
-                group.stop()
-            except RuntimeError:
-                continue
-
-    def _reset_widget_animation_state(self, widget: QWidget, *, had_shared_rainbow: bool = False) -> None:
-        cache = self._cache.get(widget, {})
-        if not had_shared_rainbow and not {'parts.handle.rainbow', 'parts.sub_page.rainbow'} & set(cache):
-            return
-
-        if isinstance(widget, MTSlider):
-            try:
-                widget.clear_slider_line_rainbow()
-                widget.update()
-            except RuntimeError:
-                return
-            return
-        if isinstance(widget, MTSwitch):
-            try:
-                widget.clear_handle_rainbow()
-                widget.update()
-            except RuntimeError:
-                return
 
     def _register_widget(self, widget: QWidget) -> None:
         self._animations.setdefault(widget, {})
@@ -648,12 +405,6 @@ class AnimationManager(QObject):
     def _on_widget_toggled(self, widget: QWidget, checked: bool) -> None:
         self._play_checkable_state(widget, force=True)
         self._queue_checkable_reconcile(widget)
-        if widget in self._runtime_rainbow_widgets:
-            if checked:
-                self._set_shared_rainbow_active(widget, self._runtime_rainbow_duration_ms, 0.0, True)
-            else:
-                self._set_shared_rainbow_active(widget, 0, 0.0, False)
-                self._reset_widget_animation_state(widget, had_shared_rainbow=True)
 
     def _on_tab_toggled(self, widget: QWidget, checked: bool) -> None:
         self._play_checkable_state(widget, force=True)
@@ -720,256 +471,51 @@ class AnimationManager(QObject):
         if was_visible and widget.isVisible():
             overlay.show()
 
-    def _shared_rainbow_value(self, duration_ms: int | float, phase_offset: float = 0.0) -> float:
+    def _shared_phase_value(self, duration_ms: int | float, phase_offset: float = 0.0) -> float:
         try:
             duration = float(duration_ms)
         except (TypeError, ValueError):
             return 0.0
         if duration <= 0.0:
             return 0.0
-        elapsed_ms = (monotonic() - self._shared_rainbow_epoch) * 1000.0
+        elapsed_ms = (monotonic() - self._shared_phase_epoch) * 1000.0
         return float(((elapsed_ms / duration) + float(phase_offset)) % 1.0)
-
-    def _set_shared_rainbow_active(self, widget: QWidget, duration_ms: int | float, phase_offset: float, active: bool) -> None:
-        if active:
-            duration = max(1, int(round(float(duration_ms))))
-            self._shared_rainbow_bindings[widget] = (duration, float(phase_offset))
-            self._update_shared_rainbow_widget(widget, duration, float(phase_offset))
-            self._ensure_shared_rainbow_timer()
-            return
-
-        self._shared_rainbow_bindings.pop(widget, None)
-        self._stop_shared_rainbow_timer_if_idle()
-
-    def _set_shared_widget_border_active(self, widget: QWidget, duration_ms: int | float, phase_offset: float, active: bool, brightness: float = 1.0) -> None:
-        if active:
-            duration = max(1, int(round(float(duration_ms))))
-            brightness = max(0.0, min(float(brightness), 1.0))
-            self._shared_widget_border_bindings[widget] = (duration, float(phase_offset), brightness)
-            self._apply_runtime_widget_border_color(
-                widget,
-                self._sample_shared_rainbow_color(self._shared_rainbow_value(duration, phase_offset), brightness=brightness),
-            )
-            self._ensure_shared_rainbow_timer()
-            return
-
-        self._shared_widget_border_bindings.pop(widget, None)
-        self._restore_runtime_widget_border(widget)
-        self._stop_shared_rainbow_timer_if_idle()
-
-    def _set_shared_border_color_active(self, overlay: DashBorderOverlay, duration_ms: int | float, phase_offset: float, active: bool, brightness: float = 1.0) -> None:
-        if active:
-            duration = max(1, int(round(float(duration_ms))))
-            brightness = max(0.0, min(float(brightness), 1.0))
-            self._shared_border_color_bindings[overlay] = (duration, float(phase_offset), brightness)
-            overlay.set_color(self._sample_shared_rainbow_color(self._shared_rainbow_value(duration, phase_offset), brightness=brightness))
-            self._ensure_shared_rainbow_timer()
-            return
-
-        self._shared_border_color_bindings.pop(overlay, None)
-        self._stop_shared_rainbow_timer_if_idle()
 
     def _set_shared_gradient_border_active(self, overlay: DashBorderOverlay, duration_ms: int | float, phase_offset: float, active: bool) -> None:
         if active:
             duration = max(1, int(round(float(duration_ms))))
             self._shared_gradient_border_bindings[overlay] = (duration, float(phase_offset))
-            overlay.set_gradient_phase(self._shared_rainbow_value(duration, phase_offset))
-            self._ensure_shared_rainbow_timer()
+            overlay.set_gradient_phase(self._shared_phase_value(duration, phase_offset))
+            self._ensure_shared_phase_timer()
             return
 
         self._shared_gradient_border_bindings.pop(overlay, None)
-        self._stop_shared_rainbow_timer_if_idle()
+        self._stop_shared_phase_timer_if_idle()
 
-    def _ensure_shared_rainbow_timer(self) -> None:
-        if not self._shared_rainbow_timer.isActive():
-            self._shared_rainbow_timer.start()
+    def _ensure_shared_phase_timer(self) -> None:
+        if not self._shared_phase_timer.isActive():
+            self._shared_phase_timer.start()
 
-    def _stop_shared_rainbow_timer_if_idle(self) -> None:
-        if not self._shared_rainbow_bindings and not self._shared_widget_border_bindings and not self._shared_border_color_bindings and not self._shared_gradient_border_bindings:
-            self._shared_rainbow_timer.stop()
+    def _stop_shared_phase_timer_if_idle(self) -> None:
+        if not self._shared_gradient_border_bindings:
+            self._shared_phase_timer.stop()
 
-    def _update_shared_rainbow_widget(self, widget: QWidget, duration_ms: int | float, phase_offset: float) -> None:
-        phase = self._shared_rainbow_value(duration_ms, phase_offset)
-        self._set_shared_widget_rainbow_phase(widget, phase)
-
-    def _sample_shared_rainbow_color(self, phase: float, *, brightness: float = 1.0) -> QColor:
-        normalized = float(phase) % 1.0
-        previous_offset, previous_color = _RAINBOW_HANDLE_STOPS[0]
-        color = QColor(_RAINBOW_HANDLE_STOPS[-1][1])
-        for next_offset, next_color in _RAINBOW_HANDLE_STOPS[1:]:
-            if normalized <= next_offset:
-                span = max(next_offset - previous_offset, 1e-9)
-                mix = max(0.0, min(1.0, (normalized - previous_offset) / span))
-                start = QColor(previous_color)
-                end = QColor(next_color)
-                color = QColor(
-                    round(start.red() + (end.red() - start.red()) * mix),
-                    round(start.green() + (end.green() - start.green()) * mix),
-                    round(start.blue() + (end.blue() - start.blue()) * mix),
-                    round(start.alpha() + (end.alpha() - start.alpha()) * mix),
-                )
-                break
-            previous_offset, previous_color = next_offset, next_color
-
-        brightness = max(0.0, min(float(brightness), 1.0))
-        if brightness < 0.999:
-            color = QColor(
-                round(color.red() * brightness),
-                round(color.green() * brightness),
-                round(color.blue() * brightness),
-                color.alpha(),
-            )
-        return color
-
-    def _set_shared_widget_rainbow_phase(self, widget: QWidget, phase: float) -> None:
-        if isinstance(widget, MTSlider):
-            widget.set_slider_line_rainbow(float(phase))
-            self._cache.setdefault(widget, {})['parts.sub_page.rainbow'] = float(phase)
-            return
-
-        if isinstance(widget, MTSwitch):
-            widget.set_handle_rainbow(float(phase))
-            self._cache.setdefault(widget, {})['parts.handle.rainbow'] = float(phase)
-
-    def _update_shared_rainbow_widgets(self) -> None:
-        stale_widgets: list[QWidget] = []
-        stale_border_widgets: list[QWidget] = []
-        stale_color_overlays: list[DashBorderOverlay] = []
+    def _update_shared_phase_bindings(self) -> None:
         stale_overlays: list[DashBorderOverlay] = []
         phase_cache: dict[tuple[int, float], float] = {}
-        for widget, (duration, phase_offset) in list(self._shared_rainbow_bindings.items()):
-            try:
-                cache_key = (duration, float(phase_offset))
-                phase = phase_cache.get(cache_key)
-                if phase is None:
-                    phase = self._shared_rainbow_value(duration, phase_offset)
-                    phase_cache[cache_key] = phase
-                self._set_shared_widget_rainbow_phase(widget, phase)
-            except RuntimeError:
-                stale_widgets.append(widget)
-        for widget in list(self._shared_widget_border_bindings):
-            if widget.parentWidget() is None and widget is not self._root:
-                stale_border_widgets.append(widget)
-        for overlay, (duration, phase_offset, brightness) in list(self._shared_border_color_bindings.items()):
-            try:
-                cache_key = (duration, float(phase_offset))
-                phase = phase_cache.get(cache_key)
-                if phase is None:
-                    phase = self._shared_rainbow_value(duration, phase_offset)
-                    phase_cache[cache_key] = phase
-                overlay.set_color(self._sample_shared_rainbow_color(phase, brightness=brightness))
-            except RuntimeError:
-                stale_color_overlays.append(overlay)
         for overlay, (duration, phase_offset) in list(self._shared_gradient_border_bindings.items()):
             try:
                 cache_key = (duration, float(phase_offset))
                 phase = phase_cache.get(cache_key)
                 if phase is None:
-                    phase = self._shared_rainbow_value(duration, phase_offset)
+                    phase = self._shared_phase_value(duration, phase_offset)
                     phase_cache[cache_key] = phase
                 overlay.set_gradient_phase(phase)
             except RuntimeError:
                 stale_overlays.append(overlay)
-        self._update_runtime_hover_states()
-        for widget in stale_widgets:
-            self._shared_rainbow_bindings.pop(widget, None)
-        for widget in stale_border_widgets:
-            self._shared_widget_border_bindings.pop(widget, None)
-            self._restore_runtime_widget_border(widget)
-        for overlay in stale_color_overlays:
-            self._shared_border_color_bindings.pop(overlay, None)
         for overlay in stale_overlays:
             self._shared_gradient_border_bindings.pop(overlay, None)
-        self._stop_shared_rainbow_timer_if_idle()
-
-    def _update_runtime_hover_states(self) -> None:
-        for widget, state in list(self._runtime_native_border_widgets.items()):
-            try:
-                current = float(state.get('opacity', 0.0))
-                target = 1.0 if self._cursor_over_widget(widget) else 0.0
-                state['target_opacity'] = target
-                next_opacity = self._step_runtime_opacity(current, target)
-                state['opacity'] = next_opacity
-                if next_opacity <= 0.001:
-                    self._restore_runtime_widget_border(widget)
-                else:
-                    duration, phase_offset, brightness = self._shared_widget_border_bindings.get(widget, (self._runtime_rainbow_duration_ms, 0.0, 0.9))
-                    phase = self._shared_rainbow_value(duration, phase_offset)
-                    self._apply_runtime_widget_border_color(
-                        widget,
-                        self._sample_shared_rainbow_color(phase, brightness=brightness),
-                        opacity=next_opacity,
-                    )
-            except RuntimeError:
-                continue
-
-        for widget, overlay in list(self._runtime_hover_overlays.items()):
-            state = self._runtime_hover_overlay_states.get(widget)
-            if state is None:
-                continue
-            try:
-                current = float(state.get('opacity', 0.0))
-                target = 1.0 if self._cursor_over_widget(widget) else 0.0
-                state['target_opacity'] = target
-                next_opacity = self._step_runtime_opacity(current, target)
-                state['opacity'] = next_opacity
-                overlay.set_opacity(next_opacity)
-                if next_opacity <= 0.001:
-                    overlay.hide()
-                elif widget.isVisible():
-                    overlay.show()
-            except RuntimeError:
-                continue
-
-    def _step_runtime_opacity(self, current: float, target: float) -> float:
-        current = max(0.0, min(float(current), 1.0))
-        target = max(0.0, min(float(target), 1.0))
-        if abs(target - current) <= _RUNTIME_BORDER_FADE_STEP:
-            return target
-        if target > current:
-            return min(1.0, current + _RUNTIME_BORDER_FADE_STEP)
-        return max(0.0, current - _RUNTIME_BORDER_FADE_STEP)
-
-    def _apply_runtime_widget_border_color(self, widget: QWidget, color: QColor, *, opacity: float = 1.0) -> None:
-        base_text = str(self._runtime_native_border_widgets.get(widget, {}).get('base_border_color', '') or '')
-        blended = self._blend_runtime_border_color(base_text, color, opacity)
-        self._set_style_value(widget, 'border-color', blended.name(QColor.NameFormat.HexRgb))
-
-    def _blend_runtime_border_color(self, base_color_text: str, rainbow_color: QColor, opacity: float) -> QColor:
-        mix = max(0.0, min(float(opacity), 1.0))
-        target = QColor(rainbow_color)
-        target.setAlpha(255)
-        if mix <= 0.0:
-            base = to_qcolor(base_color_text)
-            return base if base is not None else target
-        if mix >= 1.0:
-            return target
-
-        base = to_qcolor(base_color_text)
-        if base is None:
-            return target
-
-        return QColor(
-            round(base.red() + (target.red() - base.red()) * mix),
-            round(base.green() + (target.green() - base.green()) * mix),
-            round(base.blue() + (target.blue() - base.blue()) * mix),
-            255,
-        )
-
-    def _restore_runtime_widget_border(self, widget: QWidget) -> None:
-        overrides = self._style_overrides.setdefault(widget, {})
-        previous = self._runtime_native_border_widgets.get(widget, {}).get('previous_border_color_override')
-        changed = False
-        if previous is None:
-            if 'border-color' in overrides:
-                overrides.pop('border-color', None)
-                changed = True
-        else:
-            if overrides.get('border-color') != previous:
-                overrides['border-color'] = str(previous)
-                changed = True
-        if changed:
-            self._apply_widget_style(widget)
+        self._stop_shared_phase_timer_if_idle()
 
     def _detect_runtime_border_config(self, widget: QWidget) -> dict[str, float | bool | str]:
         declarations = self._collect_widget_declarations(widget)
@@ -1102,35 +648,14 @@ class AnimationManager(QObject):
         merged = deepcopy(effect)
         provided = set(merged.get('_provided', set()))
 
-        for key in ('offset', 'phase_offset', 'phase_duration', 'opacity', 'brightness', 'width', 'radius', 'inset', 'dash_pattern', 'pen_style', 'seamless'):
+        for key in ('offset', 'opacity', 'width', 'radius', 'inset', 'dash_pattern', 'pen_style', 'seamless'):
             if key not in provided and key in defaults:
                 merged[key] = deepcopy(defaults[key])
 
         if 'color' not in provided:
             if 'color' in defaults:
                 merged['color'] = QColor(defaults['color'])
-            if 'shared_color' in defaults:
-                merged['shared_color'] = bool(defaults['shared_color'])
-
         return merged
-
-    def _style_handle_rainbow_duration(self, styles: dict[str, Any]) -> int | None:
-        parts = theme_map(styles.get('parts')) or {}
-        handle = theme_map(parts.get('handle')) or {}
-        rainbow = theme_map(handle.get('rainbow')) or {}
-        value = rainbow.get('phase_duration', rainbow.get('rainbow_duration', rainbow.get('period')))
-        duration_value = coerce_float(value)
-        if duration_value is None:
-            return None
-        return max(1, int(round(duration_value)))
-
-    def _rainbow_animation_duration(self, spec: AnimationSpec, styles: dict[str, Any]) -> int:
-        if spec.property_key != 'parts.handle.rainbow':
-            return spec.duration
-        options = spec.options if isinstance(spec.options, dict) else {}
-        if bool(options.get('duration_provided')):
-            return spec.duration
-        return self._style_handle_rainbow_duration(styles) or spec.duration
 
     def _append_animation(
         self,
@@ -1435,16 +960,6 @@ class AnimationManager(QObject):
             runtime['start_opacity'] = max(0.0, min(start_opacity, 1.0))
             runtime['end_opacity'] = max(0.0, min(end_opacity, 1.0))
             self._ensure_dash_overlay(widget, effect)
-            if bool(effect.get('shared_color')):
-                self._set_shared_border_color_active(
-                    overlay,
-                    effect.get('phase_duration', 5000.0),
-                    effect.get('phase_offset', 0.0),
-                    True,
-                    brightness=effect.get('brightness', 1.0),
-                )
-            else:
-                self._set_shared_border_color_active(overlay, 0, 0.0, False)
             if widget.isVisible():
                 overlay.show()
 
@@ -1471,7 +986,6 @@ class AnimationManager(QObject):
                 return
             end_opacity = float(runtime.get('end_opacity', effect.get('opacity', 1.0)))
             if end_opacity <= 0.0:
-                self._set_shared_border_color_active(overlay, 0, 0.0, False)
                 overlay.hide()
 
         animation = TimerAnimation(spec.duration, spec.easing, on_start, on_update, parent=widget)
@@ -1842,11 +1356,7 @@ class AnimationManager(QObject):
 
     def _reconcile_hover_states(self) -> None:
         should_continue = False
-        widgets = (
-            set(self._animations)
-            | set(self._runtime_native_border_widgets)
-            | set(self._runtime_hover_overlays)
-        )
+        widgets = set(self._animations)
 
         for widget in list(widgets):
             try:
@@ -2056,10 +1566,6 @@ class AnimationManager(QObject):
         return False
 
     def _update_style_override_value(self, widget: QWidget, css_property: str, value: str) -> bool:
-        border_related_property = css_property == 'border' or css_property == 'border-color' or css_property.startswith('border-')
-        if border_related_property and bool(widget.property('_rainbowRuntimeBorderTarget')):
-            return False
-
         overrides = self._style_overrides.setdefault(widget, {})
         changed = self._clear_conflicting_style_override(overrides, css_property)
         if overrides.get(css_property) != value:
@@ -2113,9 +1619,6 @@ class AnimationManager(QObject):
         return False
 
     def _set_parts_style_value(self, widget: QWidget, css_property: str, value: str) -> bool:
-        if self._is_runtime_handle_rainbow_active(widget, css_property):
-            return True
-
         direct_setter = widget.set_part_style_value if isinstance(widget, (MTSlider, MTSwitch, MTComboBox)) else None
 
         direct_parts = css_property.split('.', 2)
@@ -2172,23 +1675,6 @@ class AnimationManager(QObject):
             }.get(css_name)
             return bool(color_path and direct_setter(part, color_path, value))
         return False
-
-    def _is_runtime_handle_rainbow_active(self, widget: QWidget, css_property: str) -> bool:
-        if not css_property.startswith('parts.handle.'):
-            return False
-
-        css_name = css_property.rsplit('.', 1)[-1]
-        if css_name not in {'color', 'background-color'}:
-            return False
-
-        if not isinstance(widget, MTSwitch):
-            return False
-
-        try:
-            value = widget.current_handle_rainbow()
-        except RuntimeError:
-            return False
-        return (coerce_float(value, 0.0) or 0.0) > 0.0
 
     def _map_parts_css_property(self, widget: QWidget, css_property: str) -> str:
         if not css_property.startswith('parts.'):

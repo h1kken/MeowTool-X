@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-from time import monotonic
-
-from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QSize, Qt, QTimer
-from PySide6.QtGui import QGradient, QIcon, QLinearGradient, QMouseEvent, QPaintEvent, QPen, QResizeEvent
+from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QSize, Qt
+from PySide6.QtGui import QIcon, QMouseEvent, QResizeEvent
 from PySide6.QtWidgets import QApplication, QBoxLayout, QSizePolicy, QWidget
 
 from src.app.paths import PATH_HEADER_ICONS_SRC
-from src.theme.rainbow.palette import resolve_rainbow_stops
 from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.painting import draw_widget_background, new_widget_painter
 from src.ui.widgets import MTButton, MTPlainLabel, MTWidget
 
 _HEADER_RESIZE_MARGIN = 8
@@ -20,7 +16,6 @@ class _HeaderIconButton(MTButton):
     def __init__(self, *, obj_name: str, icon_name: str) -> None:
         super().__init__(tr_key='', obj_name=obj_name)
         self.setText('')
-        self.setProperty('rainbowBorderExcluded', True)
         self.setCursor(Qt.CursorShape.ArrowCursor)
         self.setFlat(True)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -47,81 +42,12 @@ class _HeaderTitleLabel(MTPlainLabel):
         obj_name: str = '',
     ) -> None:
         super().__init__(text, parent, obj_name=obj_name)
-        self._rainbow_enabled = False
-        self._rainbow_duration_ms = 5000
-        self._rainbow_palette = 'Classic'
-        self._rainbow_epoch = monotonic()
-        self._rainbow_timer = QTimer(self)
-        self._rainbow_timer.setInterval(16)
-        self._rainbow_timer.timeout.connect(self.update)
 
     def setAlignment(self, alignment: Qt.AlignmentFlag) -> None:
         super().setAlignment(alignment)
         parent = self.parentWidget()
         if isinstance(parent, MTWindowHeader):
             parent.sync_title_geometry()
-
-    def set_rainbow_enabled(
-        self,
-        enabled: bool,
-        duration_ms: int | float,
-        palette: str = 'Classic',
-    ) -> None:
-        enabled = bool(enabled)
-        duration = max(1, int(round(float(duration_ms))))
-        palette_name = str(palette or 'Classic').strip() or 'Classic'
-
-        was_enabled = self._rainbow_enabled
-        previous_phase = self._phase() if was_enabled else 0.0
-        self._rainbow_enabled = enabled
-        self._rainbow_duration_ms = duration
-        self._rainbow_palette = palette_name
-        self._rainbow_epoch = monotonic() - (
-            (previous_phase * float(self._rainbow_duration_ms)) / 1000.0
-        )
-
-        if not enabled:
-            self._rainbow_timer.stop()
-            self.update()
-            return
-
-        if not was_enabled:
-            self.update()
-        self._rainbow_timer.start()
-
-    def _phase(self) -> float:
-        return ((monotonic() - self._rainbow_epoch) * 1000.0 / float(self._rainbow_duration_ms)) % 1.0
-
-    def paintEvent(self, event: QPaintEvent) -> None:
-        if not self._rainbow_enabled or not self.text().strip():
-            super().paintEvent(event)
-            return
-
-        _ = event
-        painter = new_widget_painter(self, text_antialias=True)
-        draw_widget_background(self, painter)
-
-        alignment = int(self.alignment() | Qt.TextFlag.TextSingleLine)
-        text_rect = self.fontMetrics().boundingRect(self.contentsRect(), alignment, self.text())
-        if text_rect.isEmpty():
-            painter.end()
-            return
-
-        cycle_width = max(float(text_rect.width()), 1.0)
-        gradient = QLinearGradient(
-            text_rect.right() + (self._phase() * cycle_width),
-            float(text_rect.top()),
-            text_rect.right() + (self._phase() * cycle_width) - cycle_width,
-            float(text_rect.top()),
-        )
-        gradient.setSpread(QGradient.Spread.RepeatSpread)
-        for pos, color in resolve_rainbow_stops(self._rainbow_palette):
-            gradient.setColorAt(float(pos), color)
-
-        painter.setFont(self.font())
-        painter.setPen(QPen(gradient, 0.0))
-        painter.drawText(self.contentsRect(), alignment, self.text())
-        painter.end()
 
 
 class _HeaderResizeGrip(QWidget):
@@ -324,16 +250,6 @@ class MTWindowHeader(MTWidget):
 
     def set_header_title(self, title: str) -> None:
         self._title_label.setText(str(title or ''))
-
-    def set_title_rainbow(
-        self,
-        enabled: bool,
-        duration_ms: int | float,
-        palette: str = 'Classic',
-    ) -> None:
-        self._title_label.set_rainbow_enabled(
-            bool(enabled), duration_ms, palette=palette
-        )
 
     def sync_window_meta(self) -> None:
         self._title_label.setText(self._window.windowTitle())

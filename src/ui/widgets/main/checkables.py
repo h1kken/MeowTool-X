@@ -11,7 +11,6 @@ from src.theme.gradients import (
     clone_gradient_data,
     normalize_gradient_data,
 )
-from src.theme.rainbow.palette import sample_rainbow_color
 from src.theme.schema.access import coerce_positive_int, theme_map
 from src.ui.painting import new_widget_painter
 from src.ui.widgets.main.containers import MTWidget
@@ -32,12 +31,6 @@ class _SwitchAppearanceState:
     handle_background_brightness: float = 1.0
     checked_handle_background_brightness: float | None = None
     unchecked_handle_background_brightness: float | None = None
-
-
-@dataclass(slots=True)
-class _SwitchRainbowState:
-    palette: str = 'Classic'
-    handle_phase: float = 0.0
 
 
 class MTSwitch(QCheckBox):
@@ -90,7 +83,6 @@ class MTSwitch(QCheckBox):
         self._default_size = (40, 20)
         self._theme_fixed_size: tuple[int, int] | None = None
         self._appearance = _SwitchAppearanceState()
-        self._rainbow = _SwitchRainbowState()
         self._animated_handle_color: QColor | None = None
 
         self._track = MTWidget(parent=self)
@@ -139,7 +131,6 @@ class MTSwitch(QCheckBox):
         self._checked_handle_background_gradient = None
         self._unchecked_handle_background_gradient = None
         self._appearance = _SwitchAppearanceState()
-        self._rainbow = _SwitchRainbowState()
         self._animated_handle_color = None
         self._track_border_rule = ''
         self._handle_border_rule = ''
@@ -428,35 +419,6 @@ class MTSwitch(QCheckBox):
         if path == ('background', 'gradient'):
             return self.set_part_gradient(part, value)
         return False
-
-    def set_handle_rainbow(self, value: float) -> None:
-        try:
-            phase = float(value) % 1.0
-        except (TypeError, ValueError):
-            phase = 0.0
-        self._rainbow.handle_phase = phase
-        self._animated_handle_color = self._sample_rainbow_color(phase)
-        self.update()
-
-    def clear_handle_rainbow(self) -> None:
-        self._rainbow.handle_phase = 0.0
-        self._animated_handle_color = None
-        self.update()
-
-    def set_handle_rainbow_palette(self, value: str) -> None:
-        self._rainbow.palette = str(value or 'Pastel').strip() or 'Pastel'
-        if self._rainbow.handle_phase:
-            self.set_handle_rainbow(self._rainbow.handle_phase)
-
-    def _sample_rainbow_color(self, phase: float) -> QColor:
-        return sample_rainbow_color(
-            phase,
-            palette=self._rainbow.palette,
-            brightness=self._appearance.handle_background_brightness,
-        )
-
-    def current_handle_rainbow(self) -> float:
-        return float(self._rainbow.handle_phase)
 
     def has_visible_parts_theme(self) -> bool:
         for color in (

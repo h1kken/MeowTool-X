@@ -20,8 +20,6 @@ class SidebarCategory(MTWidget):
         self._main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self._header_button = MTButton(tr_key="", parent=self, obj_name=f"{obj_name}_Category_Header_Button")
-        self._header_button.setProperty("rainbowBorderTarget", False)
-        self._header_button.setProperty("rainbowBorderExcluded", True)
         self._header_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         self._content_widget = MTWidget(self, obj_name=f"{obj_name}_Category_Content_Widget")
