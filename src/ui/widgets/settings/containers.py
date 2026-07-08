@@ -5,6 +5,8 @@ from PySide6.QtCore import QEvent, QObject, QSize, QSignalBlocker, Qt, QTimer, S
 from PySide6.QtGui import QColor, QIcon, QMouseEvent
 from PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 
+import src.app.context as ctx
+config = ctx.services.config
 from src.app.paths import PATH_CONTAINER_ARROW_ICON
 from src.theme.colors import to_qcolor
 from src.ui.layouts.factory import LayoutType, create_layout
@@ -14,8 +16,6 @@ from src.ui.widgets import (
     MTScrollArea,
     MTWidget,
 )
-from src.config.loader import ConfigLoader
-from src.config.manager import Config
 from src.ui.widgets.main.helpers import icon, positive_int, repolish, measure, theme_icon_path
 from src.ui.widgets import MTComboBox
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
@@ -35,6 +35,7 @@ class MTColumnsSetting(MTScrollArea):
         tabs: Sequence[QWidget] | None = None,
         columns: int = 2,
         obj_name: str = "",
+        *,
         parent: QWidget | None = None,
     ) -> None:
         self._tabs: list[QWidget] = []
@@ -580,19 +581,19 @@ class MTCollapsibleContainer(MTWidget):
 class MTComboBoxSetting(MTWidget):
     def __init__(
         self,
-        config: Config | ConfigLoader,
         tr_key: str,
         cfg_key: str,
         items: Sequence[str | tuple[str, str]],
         default: str,
         on_changed: Callable[[str], None] | None = None,
+        *,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self._config = config
         self._cfg_key = cfg_key
         self._on_changed = on_changed
         self._default = default
+        
         obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, "_", self._cfg_key)
         self.setObjectName(f"{obj_name}_ComboBox_Setting")
 
@@ -613,11 +614,11 @@ class MTComboBoxSetting(MTWidget):
         self._combo_box.set_content_width_mode("current")
         self.set_items(items, keep_current=False)
 
-        self._set_current_value(self._config.get(self._cfg_key, default=default), fallback=default)
+        self._set_current_value(config.get(self._cfg_key, default=default), fallback=default)
         self._combo_box.currentIndexChanged.connect(self._on_index_changed)
-        self._config.config_loaded.connect(
+        config.config_loaded.connect(
             lambda d=default: self._set_current_value(
-                self._config.get(self._cfg_key, default=d), fallback=d
+                config.get(self._cfg_key, default=d), fallback=d
             )
         )
 
@@ -659,7 +660,7 @@ class MTComboBoxSetting(MTWidget):
         target_value = (
             current_value
             if keep_current
-            else str(self._config.get(self._cfg_key, default=self._default))
+            else str(config.get(self._cfg_key, default=self._default))
         )
 
         with QSignalBlocker(self._combo_box):
@@ -710,6 +711,6 @@ class MTComboBoxSetting(MTWidget):
         value = self._combo_box.itemData(index)
         if value is None:
             value = self._combo_box.currentText()
-        self._config.set(self._cfg_key, value)
+        config.set(self._cfg_key, value)
         if self._on_changed is not None:
             self._on_changed(str(value))

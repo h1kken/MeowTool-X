@@ -1,9 +1,8 @@
 from copy import deepcopy
 from typing import Final, cast
 
-from src.app.paths import PATH_DEFAULT_THEME
+from src.app.paths import PATH_DEFAULT_THEME, PATH_DEFAULT_TRANSLATION
 from src.config.types import ConfigMap, SortCategoryKind
-from src.translation.constants import DEFAULT_LANGUAGE
 
 
 DEFAULT_CONFIG_LOADER: Final[ConfigMap] = {
@@ -41,7 +40,7 @@ def default_config_loader() -> ConfigMap:
 
 DEFAULT_CONFIG: Final[ConfigMap] = {
   "General": {
-    "Language": DEFAULT_LANGUAGE,
+    "Language": PATH_DEFAULT_TRANSLATION.stem,
     "Theme": PATH_DEFAULT_THEME.stem,
     "Disable Warnings For Links": False,
     "Disable Warnings For Dangerous Actions": False,

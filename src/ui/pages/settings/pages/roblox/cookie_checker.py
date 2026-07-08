@@ -86,9 +86,9 @@ class SettingsRobloxCookieCheckerPage(MTWidget):
     def _build_main_fields_widgets(self) -> list[QWidget]:
         widgets: list[QWidget] = [
             MTButtonSetting(
-                self._change_main_fields_state,
                 tr_key="ENBL_ALL_DSBL_ALL",
                 obj_name="Settings_Roblox_Cookie_Checker_Main_Change_All_Button",
+                action=self._change_main_fields_state,
             )
         ]
         self._main_field_switches.clear()

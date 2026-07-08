@@ -40,17 +40,17 @@ class MTSwitch(QCheckBox):
     def __init__(
         self,
         text: str = '',
-        parent: QWidget | None = None,
         checked: bool = False,
+        obj_name: str = '',
         checked_color: str | None = None,
         unchecked_color: str | None = None,
         handle_color: str | None = None,
-        obj_name: str = '',
+        *,
+        parent: QWidget | None = None,
     ) -> None:
         super().__init__(text, parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setContentsMargins(0, 0, 0, 0)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setText('')
 
         self._margin = 3

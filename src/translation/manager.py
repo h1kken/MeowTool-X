@@ -24,7 +24,7 @@ class TranslationManager(QObject):
     def load(self, filename: str) -> None:        
         try:
             path = self.resolve_translation(filename)
-            translations = self.parse_translations(path)
+            translations = self._parse_translations(path)
                         
             if not translations:
                 logger.warning("Translation file is empty. Using keys...")
@@ -35,25 +35,6 @@ class TranslationManager(QObject):
         self._path = path
         self._translations = translations
         self.language_changed.emit()
-
-    def parse_translations(self, path: Path) -> dict[str, str]:
-        translations: dict[str, str] = {}
-        with path.open("r", encoding="utf-8", errors="ignore") as file:
-            for line in file:
-                line = line.strip()
-                if (
-                    not line
-                    or line.startswith(CONFIG_COMMENT_SYMBOLS)
-                    or "=" not in line
-                ):
-                    continue
-                
-                key, label = map(str.strip, line.split("=", 1))
-                if not key:
-                    continue
-                    
-                translations[key] = label
-        return translations
 
     def resolve_translation(self, filename: str) -> Path:
         for path in (
@@ -79,3 +60,23 @@ class TranslationManager(QObject):
             return text.format(**kwargs)
         except (KeyError, IndexError, ValueError):
             return text
+
+    def _parse_translations(self, path: Path) -> dict[str, str]:
+        translations: dict[str, str] = {}
+        with path.open("r", encoding="utf-8", errors="ignore") as file:
+            for line in file:
+                line = line.strip()
+                if (
+                    not line
+                    or line.startswith(CONFIG_COMMENT_SYMBOLS)
+                    or "=" not in line
+                ):
+                    continue
+                
+                key, label = map(str.strip, line.split("=", 1))
+                if not key:
+                    continue
+                    
+                translations[key] = label
+        return translations
+    

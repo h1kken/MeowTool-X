@@ -9,9 +9,9 @@ from src.ui.widgets.main.text import MTButton
 class MTButtonSetting(MTButton):
     def __init__(
         self,
-        action: Callable[[], None],
         tr_key: str,
         obj_name: str,
+        action: Callable[[], None],
         *,
         parent: QWidget | None = None,
     ) -> None:

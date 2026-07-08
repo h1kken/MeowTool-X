@@ -28,7 +28,6 @@ def _system_language() -> str:
 
 SYSTEM_LOCALE = _system_locale()
 SYSTEM_LANGUAGE = _system_language()
-DEFAULT_LANGUAGE = 'en_US'
 
 
 __all__ = [name for name in globals() if name.isupper()]
