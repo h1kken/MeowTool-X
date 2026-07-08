@@ -21,22 +21,13 @@ class TranslationManager(QObject):
     @property
     def path(self) -> Path: return self._path
 
-    def load(self, filename: str) -> None:
-        path = PATH_TRANSLATIONS_USER / f"{filename}.axis"
-        if not path.is_file():
-            return
-        
-        translations: dict[str, str] = {}
+    def load(self, filename: str) -> None:        
         try:
-            with path.open("r", encoding="utf-8", errors="ignore") as file:
-                for line in file:
-                    line = line.strip()
-                    if line and not line.startswith(CONFIG_COMMENT_SYMBOLS) and "=" in line:
-                        key, label = line.split("=", 1)
-                        translations[key.strip()] = label.strip()
+            path = self.resolve_translation(filename)
+            translations = self.parse_translations(path)
                         
             if not translations:
-                logger.warning(f"Translations not found. Using keys...")
+                logger.warning("Translation file is empty. Using keys...")
         except (OSError, UnicodeError, ValueError, TypeError) as e:
             logger.warning(f"Translations can't be loaded. Error: {e}")
             return
@@ -45,14 +36,33 @@ class TranslationManager(QObject):
         self._translations = translations
         self.language_changed.emit()
 
-    def get_awailable_translations(self) -> list[Path]:
-        lst = [
-            *(p for p in PATH_TRANSLATIONS_SRC.glob("*.axis") if p.is_file()),
-            *(p for p in PATH_TRANSLATIONS_USER.glob("*.axis") if p.is_file()),
-        ]
-        seen: set[Path] = set()
-        seen_add = seen.add
-        return [x for x in lst if not (x in seen or seen_add(x))]
+    def parse_translations(self, path: Path) -> dict[str, str]:
+        translations: dict[str, str] = {}
+        with path.open("r", encoding="utf-8", errors="ignore") as file:
+            for line in file:
+                line = line.strip()
+                if (
+                    not line
+                    or line.startswith(CONFIG_COMMENT_SYMBOLS)
+                    or "=" not in line
+                ):
+                    continue
+                
+                key, label = map(str.strip, line.split("=", 1))
+                if not key:
+                    continue
+                    
+                translations[key] = label
+        return translations
+
+    def resolve_translation(self, filename: str) -> Path:
+        for path in (
+            PATH_TRANSLATIONS_USER / f"{filename}.axis",
+            PATH_TRANSLATIONS_SRC / f"{filename}.axis",
+        ):
+            if path.is_file():
+                return path
+        return PATH_DEFAULT_TRANSLATION
 
     def tr(
         self,
