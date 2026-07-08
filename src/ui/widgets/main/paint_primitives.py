@@ -3,8 +3,6 @@ from __future__ import annotations
 from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QPainterPath
 
-from src.theme.gradients import build_background_brush
-
 
 def parse_pen_style(value: object) -> Qt.PenStyle:
     text = str(value or 'solid').strip().lower().replace('_', '-')
@@ -65,12 +63,9 @@ def resolve_fill_brush(
     rect: QRectF,
     *,
     color: QColor | None = None,
-    gradient: object = None,
     empty: object = Qt.BrushStyle.NoBrush,
 ) -> object:
-    brush = build_background_brush(rect, {'gradient': gradient})
-    if brush is not None:
-        return brush
+    _ = rect
     if isinstance(color, QColor) and color.isValid():
         return color
     return empty

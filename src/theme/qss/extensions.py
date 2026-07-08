@@ -80,12 +80,10 @@ CSS_PROPERTIES: dict[str, str] = {
     
     # Effects
     'blur': 'filter',
-    'brightness': 'filter',
     'contrast': 'filter',
     'grayscale': 'filter',
     'hue_rotate': 'filter',
     'invert': 'filter',
-    'saturate': 'filter',
     'sepia': 'filter',
     'drop_shadow': 'filter',
     
@@ -292,7 +290,7 @@ class FilterBuilder:
         
         Args:
             filters: List of filter operations
-                e.g., [{'blur': 5}, {'brightness': 1.2}, {'drop-shadow': {...}}]
+                e.g., [{'blur': 5}, {'drop-shadow': {...}}]
         
         Returns:
             CSS filter value string
@@ -302,8 +300,6 @@ class FilterBuilder:
         for f in filters:
             if 'blur' in f:
                 filter_parts.append(f'blur({f["blur"]}px)')
-            elif 'brightness' in f:
-                filter_parts.append(f'brightness({f["brightness"]})')
             elif 'contrast' in f:
                 filter_parts.append(f'contrast({f["contrast"]})')
             elif 'grayscale' in f:
@@ -312,8 +308,6 @@ class FilterBuilder:
                 filter_parts.append(f'hue-rotate({f["hue_rotate"]}deg)')
             elif 'invert' in f:
                 filter_parts.append(f'invert({f["invert"]})')
-            elif 'saturate' in f:
-                filter_parts.append(f'saturate({f["saturate"]})')
             elif 'sepia' in f:
                 filter_parts.append(f'sepia({f["sepia"]})')
             elif 'drop_shadow' in f:
@@ -339,8 +333,6 @@ class FilterBuilder:
         
         if 'blur' in filter_string:
             filters.append({'blur': 0})
-        if 'brightness' in filter_string:
-            filters.append({'brightness': 1})
         if 'contrast' in filter_string:
             filters.append({'contrast': 1})
         if 'grayscale' in filter_string:
@@ -349,8 +341,6 @@ class FilterBuilder:
             filters.append({'hue_rotate': 0})
         if 'invert' in filter_string:
             filters.append({'invert': 0})
-        if 'saturate' in filter_string:
-            filters.append({'saturate': 1})
         if 'sepia' in filter_string:
             filters.append({'sepia': 0})
         

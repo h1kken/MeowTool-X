@@ -7,7 +7,6 @@ from typing import Any, cast
 from src.theme.schema.access import theme_map
 
 from .helpers import (
-    normalize_gradient,
     normalize_token,
     parse_easing,
     parse_loop_count,
@@ -174,8 +173,6 @@ def _expand_shorthand(action: str, prop: str, value: Any, common: dict[str, Any]
             case 'background' | 'bg':
                 if 'color' in mapping:
                     specs.append({'on': action, 'property': 'background.color', 'to': mapping['color'], **common})
-                if 'gradient' in mapping:
-                    specs.append({'on': action, 'property': 'background.gradient', 'to': mapping['gradient'], **common})
             case 'text':
                 if 'color' in mapping:
                     specs.append({'on': action, 'property': 'color', 'to': mapping['color'], **common})
@@ -229,8 +226,6 @@ def _expand_parts_shorthand(action: str, value: dict[str, Any], common: dict[str
         background = theme_map(mapping.get('background')) or {}
         if 'color' in background:
             specs.append({'on': action, 'property': f'parts.{part_name}.background.color', 'to': background['color'], **common})
-        if 'gradient' in background:
-            specs.append({'on': action, 'property': f'parts.{part_name}.background.gradient', 'to': background['gradient'], **common})
 
         border = theme_map(mapping.get('border')) or {}
         if 'color' in border:
@@ -257,13 +252,6 @@ def _expand_parts_shorthand(action: str, value: dict[str, Any], common: dict[str
                     'on': action,
                     'property': f'parts.{part_name}.states.{state_name}.background.color',
                     'to': state_background['color'],
-                    **common,
-                })
-            if 'gradient' in state_background:
-                specs.append({
-                    'on': action,
-                    'property': f'parts.{part_name}.states.{state_name}.background.gradient',
-                    'to': state_background['gradient'],
                     **common,
                 })
 
@@ -351,23 +339,7 @@ def _build_spec(raw: dict[str, Any]) -> AnimationSpec | None:
             options={'duration_provided': 'duration' in raw or 'duration_ms' in raw},
         )
 
-    end_grad = normalize_gradient(end_raw)
-    if end_grad is None:
-        return None
-
-    start_grad = normalize_gradient(start_raw) if start_raw is not None else None
-
-    return AnimationSpec(
-        action=action,
-        property_key=property_key,
-        css_property=css_property,
-        kind=kind,
-        duration=_resolve_duration(raw, default=220),
-        loop_count=loop_count,
-        easing=parse_easing(raw.get('easing', raw.get('curve'))),
-        start=start_grad,
-        end=end_grad,
-    )
+    return None
 
 
 def _resolve_duration(raw: dict[str, Any], *, default: int) -> int:
@@ -512,9 +484,6 @@ def _normalize_property(prop: str) -> tuple[str, str, str] | None:
         'margin_bottom': 'layout.margin.bottom',
         'layout_spacing': 'layout.spacing',
         'spacing': 'layout.spacing',
-        'gradient': 'background.gradient',
-        'background_gradient': 'background.gradient',
-        'bg_gradient': 'background.gradient',
         'width': 'widget.maximum_width',
         'max_width': 'widget.maximum_width',
         'maximum_width': 'widget.maximum_width',
@@ -559,8 +528,6 @@ def _normalize_property(prop: str) -> tuple[str, str, str] | None:
             return canonical, 'number', ''
         case 'border.radius':
             return canonical, 'number', ''
-        case 'background.gradient':
-            return canonical, 'gradient', 'background'
         case 'padding.left' | 'padding.top' | 'padding.right' | 'padding.bottom':
             return canonical, 'number', ''
         case 'layout.spacing':
@@ -595,8 +562,6 @@ def _normalize_property(prop: str) -> tuple[str, str, str] | None:
         if len(parts) == 6 and parts[2] == 'states':
             if parts[4] == 'background' and parts[5] == 'color':
                 return canonical, 'color', f'parts.{parts[1]}.states.{parts[3]}.background-color'
-            if parts[4] == 'background' and parts[5] == 'gradient':
-                return canonical, 'gradient', f'parts.{parts[1]}.states.{parts[3]}.background'
             if parts[4] == 'text' and parts[5] == 'color':
                 return canonical, 'color', f'parts.{parts[1]}.states.{parts[3]}.color'
             if parts[4] == 'border' and parts[5] == 'color':
@@ -605,8 +570,6 @@ def _normalize_property(prop: str) -> tuple[str, str, str] | None:
             return canonical, 'color', f'parts.{parts[1]}.color'
         if len(parts) == 4 and parts[2] == 'background' and parts[3] == 'color':
             return canonical, 'color', f'parts.{parts[1]}.background-color'
-        if len(parts) == 4 and parts[2] == 'background' and parts[3] == 'gradient':
-            return canonical, 'gradient', f'parts.{parts[1]}.background'
         if len(parts) == 4 and parts[2] == 'text' and parts[3] == 'color':
             return canonical, 'color', f'parts.{parts[1]}.color'
         if len(parts) == 4 and parts[2] == 'border' and parts[3] == 'color':

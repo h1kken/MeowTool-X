@@ -4,7 +4,6 @@ import math
 import re
 from copy import deepcopy
 from dataclasses import replace
-from time import monotonic
 from typing import Any, cast
 
 from PySide6.QtCore import (
@@ -21,7 +20,7 @@ from PySide6.QtWidgets import QApplication, QAbstractButton, QAbstractScrollArea
 from src.theme.colors import normalize_color, to_qcolor
 from src.theme.constants import EVENT_ACTIONS
 from src.theme.qss.targets import resolve_target_widgets
-from src.theme.schema.access import coerce_float, object_map, theme_map
+from src.theme.schema.access import coerce_float, theme_map
 from src.ui.widgets.main.box import BoxThemeMixin
 from src.ui.widgets.main.checkables import MTSwitch
 from src.ui.widgets.main.containers import MTComboBox
@@ -29,12 +28,8 @@ from src.ui.widgets.main.inputs import MTSlider
 from src.ui.widgets.settings.containers import MTCollapsibleContainer
 
 from .helpers import (
-    clone_gradient,
-    gradient_to_qss,
     interpolate_color,
-    interpolate_gradient,
     normalize_dash_border,
-    normalize_gradient,
 )
 from .overlays import DashBorderOverlay
 from .parser import parse_specs
@@ -74,14 +69,7 @@ class AnimationManager(QObject):
         self._tab_toggle_slots: dict[QWidget, Any] = {}
         self._toggle_action_slots: dict[QWidget, Any] = {}
         self._popup_action_slots: dict[QWidget, tuple[Any, Any]] = {}
-        
-        self._shared_phase_epoch = monotonic()
-        self._shared_gradient_border_bindings: dict[DashBorderOverlay, tuple[int, float]] = {}
-        
-        self._shared_phase_timer = QTimer(self)
-        self._shared_phase_timer.setInterval(16)
-        self._shared_phase_timer.timeout.connect(self._update_shared_phase_bindings)
-        
+
         self._hover_reconcile_timer = QTimer(self)
         self._hover_reconcile_timer.setInterval(16)
         self._hover_reconcile_timer.timeout.connect(self._reconcile_hover_states)
@@ -186,12 +174,6 @@ class AnimationManager(QObject):
                     return float(self._sample_number(widget, spec.property_key, fallback=float(spec.start or 0.0)))
                 except (TypeError, ValueError):
                     return None
-            case 'gradient':
-                fallback = theme_map(spec.start) or theme_map(spec.end)
-                if fallback is None:
-                    return None
-                gradient = self._sample_style_gradient(base_styles, spec.property_key, fallback=fallback)
-                return clone_gradient(gradient) if isinstance(gradient, dict) else None
             case _:
                 return None
         return None
@@ -333,8 +315,6 @@ class AnimationManager(QObject):
         self._tab_toggle_slots.clear()
         self._toggle_action_slots.clear()
         self._popup_action_slots.clear()
-        self._shared_gradient_border_bindings.clear()
-        self._shared_phase_timer.stop()
         self._wheel_event_deltas.clear()
 
     def _register_widget(self, widget: QWidget) -> None:
@@ -471,52 +451,6 @@ class AnimationManager(QObject):
         if was_visible and widget.isVisible():
             overlay.show()
 
-    def _shared_phase_value(self, duration_ms: int | float, phase_offset: float = 0.0) -> float:
-        try:
-            duration = float(duration_ms)
-        except (TypeError, ValueError):
-            return 0.0
-        if duration <= 0.0:
-            return 0.0
-        elapsed_ms = (monotonic() - self._shared_phase_epoch) * 1000.0
-        return float(((elapsed_ms / duration) + float(phase_offset)) % 1.0)
-
-    def _set_shared_gradient_border_active(self, overlay: DashBorderOverlay, duration_ms: int | float, phase_offset: float, active: bool) -> None:
-        if active:
-            duration = max(1, int(round(float(duration_ms))))
-            self._shared_gradient_border_bindings[overlay] = (duration, float(phase_offset))
-            overlay.set_gradient_phase(self._shared_phase_value(duration, phase_offset))
-            self._ensure_shared_phase_timer()
-            return
-
-        self._shared_gradient_border_bindings.pop(overlay, None)
-        self._stop_shared_phase_timer_if_idle()
-
-    def _ensure_shared_phase_timer(self) -> None:
-        if not self._shared_phase_timer.isActive():
-            self._shared_phase_timer.start()
-
-    def _stop_shared_phase_timer_if_idle(self) -> None:
-        if not self._shared_gradient_border_bindings:
-            self._shared_phase_timer.stop()
-
-    def _update_shared_phase_bindings(self) -> None:
-        stale_overlays: list[DashBorderOverlay] = []
-        phase_cache: dict[tuple[int, float], float] = {}
-        for overlay, (duration, phase_offset) in list(self._shared_gradient_border_bindings.items()):
-            try:
-                cache_key = (duration, float(phase_offset))
-                phase = phase_cache.get(cache_key)
-                if phase is None:
-                    phase = self._shared_phase_value(duration, phase_offset)
-                    phase_cache[cache_key] = phase
-                overlay.set_gradient_phase(phase)
-            except RuntimeError:
-                stale_overlays.append(overlay)
-        for overlay in stale_overlays:
-            self._shared_gradient_border_bindings.pop(overlay, None)
-        self._stop_shared_phase_timer_if_idle()
-
     def _detect_runtime_border_config(self, widget: QWidget) -> dict[str, float | bool | str]:
         declarations = self._collect_widget_declarations(widget)
         width_text = declarations.get('border-width')
@@ -609,25 +543,6 @@ class AnimationManager(QObject):
         self._sync_paint_overlay_geometry(widget)
         return overlay
 
-    def _ensure_gradient_overlay(self, widget: QWidget, config: dict[str, Any]) -> DashBorderOverlay:
-        overlay = self._paint_overlays.get(widget)
-        if overlay is None:
-            overlay = DashBorderOverlay(widget)
-            self._paint_overlays[widget] = overlay
-
-        overlay.configure_gradient(
-            width=config['width'],
-            radius=config['radius'],
-            inset=config['inset'],
-            direction=config['direction'],
-            stops=config['stops'],
-            pen_style=config['pen_style'],
-            dash_pattern=config['dash_pattern'],
-            opacity=config.get('opacity', 1.0),
-        )
-        self._sync_paint_overlay_geometry(widget)
-        return overlay
-
     def _dash_border_style_defaults(self, styles: dict[str, Any]) -> dict[str, Any] | None:
         raw: Any = None
         paint = theme_map(styles.get('paint'))
@@ -672,20 +587,12 @@ class AnimationManager(QObject):
                 self._append_color_animation(widget, spec, group, base_styles, runtime)
                 return
 
-            case 'gradient':
-                self._append_gradient_animation(widget, spec, group, base_styles, runtime)
-                return
-
             case 'number':
                 self._append_number_animation(widget, spec, group, runtime)
                 return
 
             case 'paint_dash_border':
                 self._append_dash_border_animation(widget, spec, group, base_styles, runtime)
-                return
-
-            case 'paint_gradient_border':
-                self._append_gradient_border_animation(widget, spec, group, runtime)
                 return
             case _:
                 return
@@ -812,59 +719,6 @@ class AnimationManager(QObject):
         group.addAnimation(animation)
         return True
 
-    def _append_gradient_animation(
-        self,
-        widget: QWidget,
-        spec: AnimationSpec,
-        group: QParallelAnimationGroup,
-        base_styles: dict[str, Any],
-        runtime: dict[str, Any],
-    ) -> None:
-        def on_start() -> None:
-            cache = self._cache.setdefault(widget, {})
-            start_grad: object = cache.get(spec.property_key) if spec.action in {'hover', 'leave'} else spec.start
-            if start_grad is None:
-                start_grad = spec.start if spec.action in {'hover', 'leave'} else cache.get(spec.property_key)
-            if not isinstance(start_grad, dict):
-                start_grad = self._sample_style_gradient(base_styles, spec.property_key, fallback=spec.end)
-            if not isinstance(start_grad, dict) and spec.property_key.startswith('parts.'):
-                tokens = spec.property_key.split('.')
-                if len(tokens) == 4 and tokens[2] == 'background' and tokens[3] == 'gradient':
-                    if isinstance(widget, (MTSlider, MTSwitch, MTComboBox)):
-                        start_grad = theme_map(widget.current_part_gradient(tokens[1]))
-            start_grad_map = theme_map(cast(object, start_grad))
-            if start_grad_map is None:
-                end_map = theme_map(spec.end)
-                if end_map is None:
-                    return
-                start_grad_map = clone_gradient(end_map)
-            runtime['start'] = clone_gradient(start_grad_map)
-
-        def on_update(t: float) -> None:
-            if not self._is_spec_action_active(widget, spec):
-                return
-            start_grad = runtime.get('start', spec.end)
-            grad = interpolate_gradient(start_grad, spec.end, t)
-            if self._apply_runtime_part_gradient(widget, spec, grad):
-                self._cache[widget][spec.property_key] = clone_gradient(grad)
-                return
-            self._set_style_value(widget, spec.css_property, gradient_to_qss(grad), source_action=spec.action)
-            self._cache[widget][spec.property_key] = clone_gradient(grad)
-
-        animation = TimerAnimation(spec.duration, spec.easing, on_start, on_update, parent=widget)
-        animation.setLoopCount(spec.loop_count)
-        group.addAnimation(animation)
-
-    def _apply_runtime_part_gradient(self, widget: QWidget, spec: AnimationSpec, gradient: dict[str, Any]) -> bool:
-        if not spec.property_key.startswith('parts.'):
-            return False
-        tokens = spec.property_key.split('.')
-        if len(tokens) != 4 or tokens[2] != 'background' or tokens[3] != 'gradient':
-            return False
-        if isinstance(widget, (MTSlider, MTSwitch, MTComboBox)):
-            return bool(widget.set_part_gradient(tokens[1], gradient))
-        return False
-
     def _append_number_animation(
         self,
         widget: QWidget,
@@ -936,7 +790,7 @@ class AnimationManager(QObject):
             cache = self._cache.setdefault(widget, {})
             start_offset = spec.start
             if start_offset is None:
-                start_offset = cache.get(spec.property_key, overlay.gradient_phase())
+                start_offset = cache.get(spec.property_key, 0.0)
             start_offset = float(start_offset)
             end_offset = float(effect.get('offset', 0.0))
 
@@ -986,92 +840,6 @@ class AnimationManager(QObject):
                 return
             end_opacity = float(runtime.get('end_opacity', effect.get('opacity', 1.0)))
             if end_opacity <= 0.0:
-                overlay.hide()
-
-        animation = TimerAnimation(spec.duration, spec.easing, on_start, on_update, parent=widget)
-        animation.finished.connect(on_finished)
-        animation.setLoopCount(spec.loop_count)
-        group.addAnimation(animation)
-
-    def _append_gradient_border_animation(
-        self,
-        widget: QWidget,
-        spec: AnimationSpec,
-        group: QParallelAnimationGroup,
-        runtime: dict[str, Any],
-    ) -> None:
-        end_map = theme_map(spec.end)
-        if end_map is None:
-            return
-
-        overlay = self._ensure_gradient_overlay(widget, end_map)
-
-        def on_start() -> None:
-            cache = self._cache.setdefault(widget, {})
-            shared_phase = bool(end_map.get('shared_phase'))
-            start_phase = spec.start
-            if start_phase is None:
-                start_phase = cache.get(spec.property_key, overlay.gradient_phase())
-            start_phase = float(start_phase)
-            end_phase = float(end_map.get('phase', 1.0))
-
-            start_opacity = cache.get(f'{spec.property_key}.opacity', overlay.opacity())
-            try:
-                start_opacity = float(start_opacity)
-            except (TypeError, ValueError):
-                start_opacity = overlay.opacity()
-            end_opacity = float(end_map.get('opacity', 1.0))
-
-            if not shared_phase and spec.loop_count != 1 and bool(end_map.get('seamless', True)):
-                delta = end_phase - start_phase
-                direction = 1.0 if delta >= 0.0 else -1.0
-                turns = max(1, int(math.ceil(abs(delta)))) if abs(delta) > 1e-6 else 1
-                end_phase = start_phase + (direction * turns)
-
-            runtime['start'] = start_phase
-            runtime['end'] = end_phase
-            runtime['start_opacity'] = max(0.0, min(start_opacity, 1.0))
-            runtime['end_opacity'] = max(0.0, min(end_opacity, 1.0))
-            self._ensure_gradient_overlay(widget, end_map)
-            if shared_phase:
-                self._set_shared_gradient_border_active(
-                    overlay,
-                    end_map.get('phase_duration', 5000.0),
-                    end_map.get('phase_offset', 0.0),
-                    True,
-                )
-            else:
-                self._set_shared_gradient_border_active(overlay, 0, 0.0, False)
-            if widget.isVisible():
-                overlay.show()
-
-        def on_update(t: float) -> None:
-            if not self._is_spec_action_active(widget, spec):
-                return
-            shared_phase = bool(end_map.get('shared_phase'))
-            start_opacity = float(runtime.get('start_opacity', overlay.opacity()))
-            end_opacity = float(runtime.get('end_opacity', end_map.get('opacity', 1.0)))
-            opacity = start_opacity + ((end_opacity - start_opacity) * t)
-            overlay.set_opacity(opacity)
-            self._cache[widget][f'{spec.property_key}.opacity'] = float(opacity)
-
-            if not shared_phase:
-                start_phase = float(runtime.get('start', 0.0))
-                end_phase = float(runtime.get('end', end_map.get('phase', 1.0)))
-                phase = start_phase + (end_phase - start_phase) * t
-                overlay.set_gradient_phase(phase)
-                self._cache[widget][spec.property_key] = float(phase)
-
-            if widget.isVisible() and not overlay.isVisible() and opacity > 0.0:
-                self._sync_paint_overlay_geometry(widget)
-                overlay.show()
-
-        def on_finished() -> None:
-            if not self._is_spec_action_active(widget, spec):
-                return
-            end_opacity = float(runtime.get('end_opacity', end_map.get('opacity', 1.0)))
-            if end_opacity <= 0.0:
-                self._set_shared_gradient_border_active(overlay, 0, 0.0, False)
                 overlay.hide()
 
         animation = TimerAnimation(spec.duration, spec.easing, on_start, on_update, parent=widget)
@@ -1482,31 +1250,12 @@ class AnimationManager(QObject):
                     value = normalize_color(spec.end) or QColor(spec.end).name()
                     self._set_style_value(widget, spec.css_property, value, source_action=action)
                     self._cache.setdefault(widget, {})[spec.property_key] = QColor(spec.end)
-                case 'gradient':
-                    end_map = theme_map(spec.end)
-                    if end_map is None:
-                        continue
-                    if self._apply_part_gradient_final_state(widget, spec.property_key, end_map):
-                        self._cache.setdefault(widget, {})[spec.property_key] = clone_gradient(end_map)
-                        continue
-                    self._set_style_value(widget, spec.css_property, gradient_to_qss(end_map), source_action=action)
-                    self._cache.setdefault(widget, {})[spec.property_key] = clone_gradient(end_map)
                 case 'number':
                     target_value = self._normalize_number_target(widget, spec.property_key, float(spec.end))
                     self._set_number_property(widget, spec.property_key, target_value)
                     self._cache.setdefault(widget, {})[spec.property_key] = float(target_value)
                 case _:
                     continue
-
-    def _apply_part_gradient_final_state(self, widget: QWidget, property_key: str, gradient: dict[str, Any]) -> bool:
-        if not property_key.startswith('parts.'):
-            return False
-        tokens = property_key.split('.')
-        if len(tokens) != 4 or tokens[2] != 'background' or tokens[3] != 'gradient':
-            return False
-        if isinstance(widget, (MTSlider, MTSwitch, MTComboBox)):
-            return bool(widget.set_part_gradient(tokens[1], gradient))
-        return False
 
     def _spec_final_state_matches(self, widget: QWidget, spec: AnimationSpec) -> bool:
         match spec.kind:
@@ -1630,7 +1379,6 @@ class AnimationManager(QObject):
                     prefix = ('states', chunks[1])
                     nested_path = {
                         'background-color': (*prefix, 'background', 'color'),
-                        'background': (*prefix, 'background', 'gradient'),
                         'color': (*prefix, 'text', 'color'),
                         'border-color': (*prefix, 'border', 'color'),
                     }.get(chunks[2])
@@ -1662,7 +1410,6 @@ class AnimationManager(QObject):
             prefix = ('states', chunks[1])
             nested_path = {
                 'background-color': (*prefix, 'background', 'color'),
-                'background': (*prefix, 'background', 'gradient'),
                 'color': (*prefix, 'text', 'color'),
                 'border-color': (*prefix, 'border', 'color'),
             }.get(chunks[2])
@@ -1936,41 +1683,6 @@ class AnimationManager(QObject):
                 case _:
                     raw = None
         return to_qcolor(raw) if isinstance(raw, str) else None
-
-    def _sample_style_gradient(
-        self,
-        styles: dict[str, Any],
-        property_key: str,
-        *,
-        fallback: dict[str, Any],
-    ) -> dict[str, Any] | None:
-        source: dict[str, Any] | None = None
-        if property_key == 'background.gradient':
-            source = theme_map(styles.get('background'))
-        elif property_key.startswith('parts.'):
-            tokens = property_key.split('.')
-            if len(tokens) == 4 and tokens[2] == 'background' and tokens[3] == 'gradient':
-                parts_theme = theme_map(styles.get('parts')) or {}
-                part_data = theme_map(parts_theme.get(tokens[1])) or {}
-                source = theme_map(part_data.get('background'))
-        if source is None:
-            return None
-
-        gradient_data = source.get('gradient')
-        gradient_map = object_map(gradient_data)
-        if gradient_map is not None:
-            return normalize_gradient(gradient_map)
-
-        color_data = source.get('color')
-        color_map = object_map(color_data)
-        if color_map is not None:
-            return normalize_gradient(color_map)
-
-        if isinstance(color_data, str) and (color := to_qcolor(color_data)) is not None:
-            gradient = clone_gradient(fallback)
-            gradient['stops'] = [(float(pos), QColor(color)) for pos, _ in gradient.get('stops', [])]
-            return gradient
-        return None
 
     def _sample_number(self, widget: QWidget, property_key: str, *, fallback: float) -> float:
         match property_key:

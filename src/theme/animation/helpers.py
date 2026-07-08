@@ -6,13 +6,8 @@ from typing import Any, Callable, cast
 from PySide6.QtCore import QEasingCurve, Qt
 from PySide6.QtGui import QColor
 
-from src.theme.colors import normalize_color, to_qcolor
-from src.theme.constants import GRADIENT_DIRECTIONS
 from src.theme.regexes import CUBIC_BEZIER_PATTERN
 from src.theme.schema.access import coerce_int, object_map
-
-ColorStop = tuple[float, QColor]
-GradientData = dict[str, Any]
 
 
 def _iterable_data(value: Any) -> list[Any]:
@@ -20,40 +15,6 @@ def _iterable_data(value: Any) -> list[Any]:
         items = cast(list[Any] | tuple[Any, ...], value)
         return [item for item in items]
     return []
-
-
-def _color_stops(value: Any) -> list[ColorStop]:
-    if not isinstance(value, list):
-        return []
-
-    items = cast(list[Any], value)
-    result: list[ColorStop] = []
-    for item in items:
-        item_tuple = cast(tuple[Any, ...], item) if isinstance(item, tuple) else ()
-        if (
-            len(item_tuple) == 2
-            and isinstance(item_tuple[0], (int, float))
-            and isinstance(item_tuple[1], QColor)
-        ):
-            result.append((float(item_tuple[0]), QColor(item_tuple[1])))
-    return result
-
-
-def _point2(value: Any, default: tuple[float, float] = (0.5, 0.5)) -> tuple[float, float]:
-    if isinstance(value, (list, tuple)):
-        items = cast(list[Any] | tuple[Any, ...], value)
-        if len(items) < 2:
-            return default
-        x = _to_float(items[0])
-        y = _to_float(items[1])
-        if x is not None and y is not None:
-            return float(x), float(y)
-    return default
-
-
-def _float_or(value: Any, default: float) -> float:
-    numeric = _to_float(value)
-    return float(numeric) if numeric is not None else default
 
 
 def _clamp01(value: float) -> float:
@@ -97,8 +58,6 @@ def normalize_dash_border(data: Any) -> dict[str, Any] | None:
             provided.add('seamless')
 
         offset = _to_float(mapping.get('offset', mapping.get('value', 0.0)))
-        color_raw = mapping.get('color', '#ffffff')
-        color = to_qcolor(color_raw)
         opacity = _to_float(mapping.get('opacity', 1.0))
         width = _to_float(mapping.get('width', 1.0))
         radius = _to_float(mapping.get('radius', 6.0))
@@ -107,27 +66,21 @@ def normalize_dash_border(data: Any) -> dict[str, Any] | None:
         dash_raw = mapping.get('dash', mapping.get('dash_pattern', default_dash))
         dash_pattern: list[float] = []
         for value in _iterable_data(dash_raw):
-                dash_value = _to_float(value)
-                if dash_value is None:
-                    continue
-                dash_pattern.append(max(0.1, dash_value))
-
-        pen_style = _parse_pen_style(mapping.get('style'), default=Qt.PenStyle.CustomDashLine)
-        seamless = bool(mapping.get('seamless', True))
-
-        if color is None:
-            color = QColor('#ffffff')
+            dash_value = _to_float(value)
+            if dash_value is None:
+                continue
+            dash_pattern.append(max(0.1, dash_value))
 
         return {
             'offset': float(offset if offset is not None else 0.0),
-            'color': QColor(color),
+            'color': QColor(str(mapping.get('color', '#ffffff'))),
             'opacity': _clamp01(opacity if opacity is not None else 1.0),
             'width': float(max(0.5, width if width is not None else 1.0)),
             'radius': float(max(0.0, radius if radius is not None else 6.0)),
             'inset': float(max(0.0, inset if inset is not None else 0.5)),
             'dash_pattern': dash_pattern or default_dash,
-            'pen_style': pen_style,
-            'seamless': seamless,
+            'pen_style': _parse_pen_style(mapping.get('style'), default=Qt.PenStyle.CustomDashLine),
+            'seamless': bool(mapping.get('seamless', True)),
             '_provided': provided,
         }
 
@@ -147,37 +100,6 @@ def normalize_dash_border(data: Any) -> dict[str, Any] | None:
         'seamless': True,
         '_provided': {'offset'},
     }
-def _parse_gradient_stops(raw: Any) -> list[ColorStop]:
-    stops: list[ColorStop] = []
-    items = _iterable_data(raw)
-    if not items:
-        return stops
-
-    for stop in items:
-        pos: Any = None
-        color_raw: Any = None
-
-        if isinstance(stop, dict):
-            stop_data = object_map(cast(object, stop)) or {}
-            pos = stop_data.get('pos', stop_data.get('position'))
-            color_raw = stop_data.get('color')
-        elif isinstance(stop, (list, tuple)):
-            stop_items = _iterable_data(stop)
-            if len(stop_items) >= 2:
-                pos, color_raw = stop_items[0], stop_items[1]
-
-        try:
-            pos_f = float(pos)
-        except (TypeError, ValueError):
-            continue
-
-        color = to_qcolor(color_raw)
-        if color is None:
-            continue
-
-        stops.append((_clamp01(pos_f), color))
-
-    return stops
 
 
 def _parse_pen_style(raw: Any, *, default: Qt.PenStyle = Qt.PenStyle.CustomDashLine) -> Qt.PenStyle:
@@ -215,105 +137,6 @@ def interpolate_color(start: QColor, end: QColor, t: float) -> QColor:
         round(start.blue() + (end.blue() - start.blue()) * t),
         round(start.alpha() + (end.alpha() - start.alpha()) * t),
     )
-
-
-def normalize_gradient(data: Any) -> GradientData | None:
-    mapping = object_map(data)
-    if mapping is None:
-        return None
-
-    stops = _parse_gradient_stops(mapping.get('stops'))
-    if not stops:
-        return None
-
-    g_type = normalize_token(mapping.get('type', 'linear'))
-    grad: GradientData = {
-        'type': 'radial' if g_type == 'radial' else 'linear',
-        'direction': str(mapping.get('direction', 'vertical')),
-        'stops': stops,
-    }
-
-    if grad['type'] == 'radial':
-        cx, cy = _point2(mapping.get('center', (0.5, 0.5)))
-        radius = _float_or(mapping.get('radius', 0.5), 0.5)
-
-        grad['center'] = (cx, cy)
-        grad['radius'] = radius
-
-    return grad
-
-
-def clone_gradient(grad: GradientData) -> GradientData:
-    stops = _color_stops(grad.get('stops', []))
-    cloned = {
-        'type': grad.get('type', 'linear'),
-        'direction': grad.get('direction', 'vertical'),
-        'stops': [(pos, QColor(color)) for pos, color in stops],
-    }
-
-    if cloned['type'] == 'radial':
-        cloned['center'] = _point2(grad.get('center', (0.5, 0.5)))
-        cloned['radius'] = _float_or(grad.get('radius', 0.5), 0.5)
-
-    return cloned
-
-
-def interpolate_gradient(start: GradientData, end: GradientData, t: float) -> GradientData:
-    t = _clamp01(t)
-
-    s_stops = _color_stops(start.get('stops', []))
-    e_stops = _color_stops(end.get('stops', []))
-    if not s_stops or not e_stops:
-        return clone_gradient(end)
-
-    count = max(len(s_stops), len(e_stops))
-    new_stops: list[ColorStop] = []
-
-    for i in range(count):
-        s_pos, s_color = s_stops[min(i, len(s_stops) - 1)]
-        e_pos, e_color = e_stops[min(i, len(e_stops) - 1)]
-
-        pos = s_pos + (e_pos - s_pos) * t
-        color = interpolate_color(s_color, e_color, t)
-        new_stops.append((_clamp01(pos), color))
-
-    result = {
-        'type': end.get('type', start.get('type', 'linear')),
-        'direction': end.get('direction', start.get('direction', 'vertical')),
-        'stops': new_stops,
-    }
-
-    if result['type'] == 'radial':
-        s_center = _point2(start.get('center', (0.5, 0.5)))
-        e_center = _point2(end.get('center', s_center), s_center)
-        s_radius = _float_or(start.get('radius', 0.5), 0.5)
-        e_radius = _float_or(end.get('radius', s_radius), s_radius)
-
-        result['center'] = (
-            float(s_center[0]) + (float(e_center[0]) - float(s_center[0])) * t,
-            float(s_center[1]) + (float(e_center[1]) - float(s_center[1])) * t,
-        )
-        result['radius'] = s_radius + (e_radius - s_radius) * t
-
-    return result
-
-
-def gradient_to_qss(grad: GradientData) -> str:
-    stops = _color_stops(grad.get('stops', []))
-    stop_parts = ', '.join(
-        f'stop:{pos:.3f} {normalize_color(color)}'
-        for pos, color in stops
-        if normalize_color(color)
-    )
-
-    if grad.get('type') == 'radial':
-        cx, cy = _point2(grad.get('center', (0.5, 0.5)))
-        radius = _float_or(grad.get('radius', 0.5), 0.5)
-        return f'qradialgradient(cx:{cx}, cy:{cy}, radius:{radius}, {stop_parts})'
-
-    direction = grad.get('direction', 'vertical')
-    x1, y1, x2, y2 = GRADIENT_DIRECTIONS.get(direction, (0, 0, 0, 1))
-    return f'qlineargradient(x1:{x1}, y1:{y1}, x2:{x2}, y2:{y2}, {stop_parts})'
 
 
 def parse_easing(raw: Any) -> Callable[[float], float]:
@@ -359,9 +182,8 @@ def parse_easing(raw: Any) -> Callable[[float], float]:
                 try:
                     x1, y1, x2, y2 = (float(parts[0]), float(parts[1]), float(parts[2]), float(parts[3]))
                     return _cubic_bezier_easing(x1, y1, x2, y2)
-                except (TypeError, ValueError):
+                except ValueError:
                     return _linear_easing
-
         return _qt_easing(normalize_token(raw))
 
     return _linear_easing
@@ -372,112 +194,124 @@ def parse_loop_count(raw: Any, *, default: int = 1) -> int:
         return default
 
     if isinstance(raw, bool):
-        return -1 if raw else 1
+        return -1 if raw else default
 
     if isinstance(raw, (int, float)):
-        count = int(raw)
-        if count < 0:
-            return -1
-        return max(1, count)
+        try:
+            return max(int(raw), 1)
+        except (TypeError, ValueError):
+            return default
 
     if isinstance(raw, str):
         token = normalize_token(raw)
-        if token in ('infinite', 'forever', 'always', 'loop', 'endless'):
+        if token in {'true', 'infinite', 'forever', 'loop'}:
             return -1
-        if token in ('once', 'one', 'single'):
-            return 1
-
-        numeric = _to_float(token)
-        if numeric is not None:
-            count = int(numeric)
-            if count < 0:
-                return -1
-            return max(1, count)
+        if token in {'false', 'none', 'once'}:
+            return default
+        try:
+            return max(int(float(raw)), 1)
+        except ValueError:
+            return default
 
     return default
 
 
+def _linear_easing(value: float) -> float:
+    return _clamp01(value)
+
+
 def _qt_easing(name: str) -> Callable[[float], float]:
-    aliases = {
-        'linear': 'Linear',
-        'in_quad': 'InQuad',
-        'out_quad': 'OutQuad',
-        'in_out_quad': 'InOutQuad',
-        'in_cubic': 'InCubic',
-        'out_cubic': 'OutCubic',
-        'in_out_cubic': 'InOutCubic',
-        'in_quart': 'InQuart',
-        'out_quart': 'OutQuart',
-        'in_out_quart': 'InOutQuart',
-        'in_quint': 'InQuint',
-        'out_quint': 'OutQuint',
-        'in_out_quint': 'InOutQuint',
-        'in_sine': 'InSine',
-        'out_sine': 'OutSine',
-        'in_out_sine': 'InOutSine',
-        'in_expo': 'InExpo',
-        'out_expo': 'OutExpo',
-        'in_out_expo': 'InOutExpo',
-        'in_circ': 'InCirc',
-        'out_circ': 'OutCirc',
-        'in_out_circ': 'InOutCirc',
-        'in_back': 'InBack',
-        'out_back': 'OutBack',
-        'in_out_back': 'InOutBack',
-        'in_bounce': 'InBounce',
-        'out_bounce': 'OutBounce',
-        'in_out_bounce': 'InOutBounce',
-        'in_elastic': 'InElastic',
-        'out_elastic': 'OutElastic',
-        'in_out_elastic': 'InOutElastic',
+    curve_map = {
+        'linear': QEasingCurve.Type.Linear,
+        'in_quad': QEasingCurve.Type.InQuad,
+        'out_quad': QEasingCurve.Type.OutQuad,
+        'in_out_quad': QEasingCurve.Type.InOutQuad,
+        'in_cubic': QEasingCurve.Type.InCubic,
+        'out_cubic': QEasingCurve.Type.OutCubic,
+        'in_out_cubic': QEasingCurve.Type.InOutCubic,
+        'in_quart': QEasingCurve.Type.InQuart,
+        'out_quart': QEasingCurve.Type.OutQuart,
+        'in_out_quart': QEasingCurve.Type.InOutQuart,
+        'in_quint': QEasingCurve.Type.InQuint,
+        'out_quint': QEasingCurve.Type.OutQuint,
+        'in_out_quint': QEasingCurve.Type.InOutQuint,
+        'in_sine': QEasingCurve.Type.InSine,
+        'out_sine': QEasingCurve.Type.OutSine,
+        'in_out_sine': QEasingCurve.Type.InOutSine,
+        'in_expo': QEasingCurve.Type.InExpo,
+        'out_expo': QEasingCurve.Type.OutExpo,
+        'in_out_expo': QEasingCurve.Type.InOutExpo,
+        'in_circ': QEasingCurve.Type.InCirc,
+        'out_circ': QEasingCurve.Type.OutCirc,
+        'in_out_circ': QEasingCurve.Type.InOutCirc,
+        'in_back': QEasingCurve.Type.InBack,
+        'out_back': QEasingCurve.Type.OutBack,
+        'in_out_back': QEasingCurve.Type.InOutBack,
+        'in_bounce': QEasingCurve.Type.InBounce,
+        'out_bounce': QEasingCurve.Type.OutBounce,
+        'in_out_bounce': QEasingCurve.Type.InOutBounce,
+        'in_elastic': QEasingCurve.Type.InElastic,
+        'out_elastic': QEasingCurve.Type.OutElastic,
+        'in_out_elastic': QEasingCurve.Type.InOutElastic,
     }
-
-    enum_name = aliases.get(name, 'Linear')
-    qt_type = getattr(QEasingCurve.Type, enum_name, QEasingCurve.Type.Linear)
-    curve = QEasingCurve(qt_type)
-    return lambda t, c=curve: c.valueForProgress(_clamp01(t))
-
-
-def _linear_easing(t: float) -> float:
-    return _clamp01(t)
-
-
-def _steps_easing(count: int, jump: str) -> Callable[[float], float]:
-    steps = max(1, int(count))
-
-    if jump in ('start', 'jump_start'):
-        return lambda t: _clamp01((math.floor(_clamp01(t) * steps) + 1) / steps)
-
-    if jump in ('none', 'jump_none'):
-        return lambda t: _clamp01((math.floor(_clamp01(t) * (steps - 1)) + 0.5) / steps)
-
-    return lambda t: _clamp01(math.floor(_clamp01(t) * steps) / steps)
+    curve = QEasingCurve(curve_map.get(name, QEasingCurve.Type.Linear))
+    return lambda value: _clamp01(curve.valueForProgress(_clamp01(value)))
 
 
 def _cubic_bezier_easing(x1: float, y1: float, x2: float, y2: float) -> Callable[[float], float]:
-    x1 = _clamp01(x1)
-    x2 = _clamp01(x2)
+    def sample_curve_x(t: float) -> float:
+        return ((1.0 - 3.0 * x2 + 3.0 * x1) * t ** 3) + ((3.0 * x2 - 6.0 * x1) * t ** 2) + (3.0 * x1 * t)
 
-    def sample(u: float, p1: float, p2: float) -> float:
-        inv = 1.0 - u
-        return (3.0 * inv ** 2 * u * p1) + (3.0 * inv * u ** 2 * p2) + (u ** 3)
+    def sample_curve_y(t: float) -> float:
+        return ((1.0 - 3.0 * y2 + 3.0 * y1) * t ** 3) + ((3.0 * y2 - 6.0 * y1) * t ** 2) + (3.0 * y1 * t)
 
-    def easing(t: float) -> float:
-        target = _clamp01(t)
-        lo, hi = 0.0, 1.0
-        for _ in range(22):
-            mid = (lo + hi) / 2.0
-            x = sample(mid, x1, x2)
-            if x < target:
-                lo = mid
+    def sample_curve_derivative_x(t: float) -> float:
+        return (3.0 * (1.0 - 3.0 * x2 + 3.0 * x1) * t ** 2) + (2.0 * (3.0 * x2 - 6.0 * x1) * t) + (3.0 * x1)
+
+    def solve_curve_x(x: float, epsilon: float = 1e-6) -> float:
+        t = x
+        for _ in range(8):
+            x_est = sample_curve_x(t) - x
+            if abs(x_est) < epsilon:
+                return t
+            derivative = sample_curve_derivative_x(t)
+            if abs(derivative) < epsilon:
+                break
+            t -= x_est / derivative
+
+        t0 = 0.0
+        t1 = 1.0
+        t = x
+        while t0 < t1:
+            x_est = sample_curve_x(t)
+            if abs(x_est - x) < epsilon:
+                return t
+            if x > x_est:
+                t0 = t
             else:
-                hi = mid
+                t1 = t
+            t = (t0 + t1) / 2.0
+            if abs(t1 - t0) < epsilon:
+                break
+        return t
 
-        u = (lo + hi) / 2.0
-        return _clamp01(sample(u, y1, y2))
+    return lambda value: _clamp01(sample_curve_y(solve_curve_x(_clamp01(value))))
+
+
+def _steps_easing(count: int, jump: str) -> Callable[[float], float]:
+    count = max(1, int(count))
+    jump_mode = jump if jump in {'start', 'end', 'both', 'none'} else 'end'
+
+    def easing(value: float) -> float:
+        progress = _clamp01(value)
+        if jump_mode == 'start':
+            result = math.ceil(progress * count) / count
+        elif jump_mode == 'both':
+            result = math.floor((progress * (count + 1)) + 1.0) / (count + 1)
+        elif jump_mode == 'none':
+            result = math.floor(progress * (count - 1)) / max(1, count - 1)
+        else:
+            result = math.floor(progress * count) / count
+        return _clamp01(result)
 
     return easing
-
-
-
-

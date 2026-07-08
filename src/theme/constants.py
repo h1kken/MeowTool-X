@@ -1,12 +1,5 @@
 from PySide6.QtCore import QEvent
 
-GRADIENT_DIRECTIONS = {
-    'vertical':   (0, 0, 0, 1),
-    'horizontal': (0, 0, 1, 0),
-    'diagonal':   (0, 0, 1, 1),
-    'inverse':    (1, 0, 0, 1),
-}
-
 EVENT_ACTIONS = {
     QEvent.Type.Enter: 'hover',
     QEvent.Type.Leave: 'leave',

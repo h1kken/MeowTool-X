@@ -15,7 +15,7 @@ from PySide6.QtWidgets import QWidget
 
 from src.app.paths import PATH_FONTS_USER, PATH_ROOT
 from src.theme.colors import normalize_color, to_qcolor
-from src.theme.constants import GRADIENT_DIRECTIONS, SUPPORTED_BG_MEDIA_EXTENSIONS
+from src.theme.constants import SUPPORTED_BG_MEDIA_EXTENSIONS
 from src.theme.qss.normalizer import StyleNormalizer
 from src.theme.qss.targets import parse_selector_chain
 from src.theme.schema.access import theme_map
@@ -138,10 +138,6 @@ class QssBuilder(StyleNormalizer):
             return None
         if isinstance(data, str):
             return f'background-color: {normalize_color(data, fallback_raw=True)};'
-        if (gradient_data := theme_map(data)) is not None and (
-            gradient := self.build_gradient(gradient_data)
-        ):
-            return f'background: {gradient};'
         return None
 
     def build_background_image(self, data: Any) -> str | None:
@@ -160,63 +156,6 @@ class QssBuilder(StyleNormalizer):
             return f'background-image: url("{normalized}");'
 
         return f'background-image: {value};'
-
-    def build_gradient(self, data: dict[str, Any]) -> str | None:
-        if not (stops := self.parse_gradient_stops(data.get('stops'))):
-            return None
-
-        stop_text = ', '.join(f'stop:{pos} {color}' for pos, color in stops)
-        match data.get('type', 'linear'):
-            case 'linear':
-                direction = data.get('direction', 'vertical')
-                x1, y1, x2, y2 = GRADIENT_DIRECTIONS.get(direction, (0, 0, 0, 1))
-                return f'qlineargradient(x1:{x1}, y1:{y1}, x2:{x2}, y2:{y2}, {stop_text})'
-            case 'radial':
-                cx, cy = data.get('center', (0.5, 0.5))
-                radius = data.get('radius', 0.5)
-                return f'qradialgradient(cx:{cx}, cy:{cy}, radius:{radius}, {stop_text})'
-            case _:
-                return None
-
-    def parse_gradient_stops(self, data: Any) -> list[tuple[float, str]]:
-        if not isinstance(data, (list, tuple)):
-            return []
-
-        stops: list[tuple[float, str]] = []
-        for stop in cast(list[Any] | tuple[Any, ...], data):
-            pos: Any = None
-            color: Any = None
-
-            if (stop_dict := theme_map(stop)) is not None:
-                pos = stop_dict.get('pos', stop_dict.get('position'))
-                color = stop_dict.get('color')
-            elif isinstance(stop, (list, tuple)):
-                stop_values = cast(list[Any] | tuple[Any, ...], stop)
-                if len(stop_values) < 2:
-                    continue
-                pos, color = stop_values[0:2]
-            else:
-                continue
-
-            if color is None:
-                continue
-
-            try:
-                pos_value = float(str(pos).strip())
-            except (TypeError, ValueError):
-                continue
-
-            resolved = to_qcolor(color)
-            if resolved is None:
-                continue
-
-            normalized = normalize_color(resolved)
-            if normalized is None:
-                continue
-
-            stops.append((pos_value, normalized))
-
-        return stops
 
     def build_border(self, data: dict[str, Any]) -> str | None:
         rules = self.build_border_rules(data)

@@ -23,11 +23,6 @@ from PySide6.QtWidgets import (
 )
 
 from src.theme.colors import to_qcolor
-from src.theme.gradients import (
-    adjust_gradient_data,
-    adjust_qcolor,
-    normalize_gradient_data,
-)
 from src.theme.schema.access import coerce_box_sides, coerce_number, theme_map
 from src.translation.manager import TranslationManager
 from src.ui.painting import new_widget_painter
@@ -105,35 +100,28 @@ class MTSlider(QSlider):
         return {
             'groove': {
                 'background_color': QColor(transparent),
-                'background_gradient': None,
                 'border_color': QColor(transparent),
                 'border_width': 0.0,
                 'border_style': 'solid',
                 'border_radius': None,
                 'size': 6.0,
-                'brightness': 1.0,
             },
             'sub_page': {
                 'background_color': QColor(transparent),
-                'background_gradient': None,
                 'border_color': QColor(transparent),
                 'border_width': 0.0,
                 'border_style': 'solid',
                 'border_radius': None,
-                'brightness': 1.0,
             },
             'add_page': {
                 'background_color': QColor(transparent),
-                'background_gradient': None,
                 'border_color': QColor(transparent),
                 'border_width': 0.0,
                 'border_style': 'solid',
                 'border_radius': None,
-                'brightness': 1.0,
             },
             'handle': {
                 'background_color': QColor(transparent),
-                'background_gradient': None,
                 'border_color': QColor(transparent),
                 'border_width': 0.0,
                 'border_style': 'solid',
@@ -141,7 +129,6 @@ class MTSlider(QSlider):
                 'width': 14.0,
                 'height': 14.0,
                 'margin': (-4.0, 0.0, -4.0, 0.0),
-                'brightness': 1.0,
             },
         }
 
@@ -285,18 +272,7 @@ class MTSlider(QSlider):
         if isinstance(animated, QColor) and animated.isValid():
             return QColor(animated)
         color = self._part_value('handle', 'background_color')
-        base = QColor(color) if isinstance(color, QColor) and color.isValid() else QColor(Qt.GlobalColor.transparent)
-        return self._adjust_part_color('handle', base)
-
-    def _part_brightness(self, part: str) -> float:
-        value = self._part_value(part, 'brightness', 1.0)
-        return max(0.0, min(float(value), 1.0)) if isinstance(value, (int, float)) else 1.0
-
-    def _adjust_part_color(self, part: str, color: QColor) -> QColor:
-        return adjust_qcolor(color, brightness=self._part_brightness(part))
-
-    def _adjust_part_gradient(self, part: str, gradient: WidgetThemeMap | None) -> WidgetThemeMap | None:
-        return adjust_gradient_data(gradient, brightness=self._part_brightness(part))
+        return QColor(color) if isinstance(color, QColor) and color.isValid() else QColor(Qt.GlobalColor.transparent)
 
     def current_part_color(self, part: str) -> QColor:
         part_key = str(part).strip()
@@ -304,18 +280,8 @@ class MTSlider(QSlider):
             return self._current_handle_color()
         color = self._part_value(part_key, 'background_color')
         if isinstance(color, QColor) and color.isValid():
-            return self._adjust_part_color(part_key, color)
+            return QColor(color)
         return QColor()
-
-    def current_part_gradient(self, part: str) -> WidgetThemeMap | None:
-        part_key = str(part).strip()
-        if (
-            part_key == 'handle'
-            and isinstance(self._animated_handle_color, QColor)
-            and self._animated_handle_color.isValid()
-        ):
-            return None
-        return self._adjust_part_gradient(part_key, theme_map(self._part_value(part_key, 'background_gradient')))
 
     def set_part_color(self, part: str, value: object) -> bool:
         color = to_qcolor(value)
@@ -323,17 +289,8 @@ class MTSlider(QSlider):
         if color is None or part_key not in self._parts:
             return False
         self._parts[part_key]['background_color'] = QColor(color)
-        self._parts[part_key]['background_gradient'] = None
         if part_key == 'handle':
             self._animated_handle_color = QColor(color)
-        self.update()
-        return True
-
-    def set_part_gradient(self, part: str, value: object) -> bool:
-        gradient = theme_map(normalize_gradient_data(value))
-        if gradient is None or part not in self._parts:
-            return False
-        self._parts[part]['background_gradient'] = gradient
         self.update()
         return True
 
@@ -342,8 +299,6 @@ class MTSlider(QSlider):
             return False
         if path in {('color',), ('background', 'color')}:
             return self.set_part_color(part, value)
-        if path == ('background', 'gradient'):
-            return self.set_part_gradient(part, value)
         if path == ('border', 'color'):
             color = to_qcolor(value)
             if color is None:
@@ -477,11 +432,8 @@ class MTSlider(QSlider):
             border = theme_map(part_data.get('border')) or {}
             if (color := to_qcolor(background.get('color'))):
                 self._parts[part]['background_color'] = color
-                self._parts[part]['background_gradient'] = None
                 if part == 'handle':
                     self._animated_handle_color = None
-            if 'gradient' in background:
-                self._parts[part]['background_gradient'] = theme_map(normalize_gradient_data(background.get('gradient')))
             if (border_color := to_qcolor(border.get('color'))):
                 self._parts[part]['border_color'] = border_color
             if (border_width := coerce_number(border.get('width'))) is not None:
@@ -490,9 +442,6 @@ class MTSlider(QSlider):
                 self._parts[part]['border_style'] = border_style.strip().lower()
             if (border_radius := border.get('radius')) is not None:
                 self._parts[part]['border_radius'] = border_radius
-            brightness = background.get('brightness')
-            if isinstance(brightness, (int, float)):
-                self._parts[part]['brightness'] = max(0.0, min(float(brightness), 1.0))
             if part == 'groove':
                 if (size := coerce_number(part_data.get('size'))) is not None:
                     self._parts[part]['size'] = max(1.0, size)
@@ -561,14 +510,13 @@ class MTSlider(QSlider):
         painter.save()
 
         background = self.current_part_color(part)
-        background_gradient = self.current_part_gradient(part)
         border_color = self._part_value(part, 'border_color')
         border_width_value = coerce_number(self._part_value(part, 'border_width', 0.0))
         border_width = border_width_value if border_width_value is not None else 0.0
         border_style = parse_pen_style(self._part_value(part, 'border_style', 'solid'))
 
         painter.setBrush(
-            resolve_fill_brush(rect, color=background if background.isValid() else None, gradient=background_gradient)
+            resolve_fill_brush(rect, color=background if background.isValid() else None)
             if draw_fill else
             Qt.BrushStyle.NoBrush
         )
@@ -577,7 +525,6 @@ class MTSlider(QSlider):
             pen = Qt.PenStyle.NoPen
         else:
             color = border_color if isinstance(border_color, QColor) and border_color.isValid() else QColor(Qt.GlobalColor.transparent)
-            color = self._adjust_part_color(part, color)
             qpen = QPen(color, border_width)
             qpen.setStyle(border_style)
             qpen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)

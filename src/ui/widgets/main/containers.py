@@ -36,7 +36,6 @@ from PySide6.QtWidgets import (
 from src.app.paths import PATH_SRC
 from src.translation.manager import TranslationManager
 from src.theme.colors import to_qcolor
-from src.theme.gradients import normalize_gradient_data
 from src.theme.schema.access import coerce_box_sides, coerce_number, object_map, theme_map
 from src.ui.painting import draw_widget_background, new_widget_painter
 from src.translation.mixin import TranslatableComboBoxMixin
@@ -414,7 +413,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
         return {
             'button': {
                 'background_color': QColor(transparent),
-                'background_gradient': None,
                 'border_color': QColor(transparent),
                 'border_width': 0.0,
                 'border_style': 'solid',
@@ -429,7 +427,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
             },
             'popup': {
                 'background_color': QColor(Qt.GlobalColor.white),
-                'background_gradient': None,
                 'border_color': QColor(Qt.GlobalColor.transparent),
                 'border_width': 0.0,
                 'border_style': 'solid',
@@ -439,7 +436,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
             },
             'item': {
                 'background_color': QColor(Qt.GlobalColor.transparent),
-                'background_gradient': None,
                 'text_color': QColor(),
                 'border_color': QColor(Qt.GlobalColor.transparent),
                 'border_width': 0.0,
@@ -450,13 +446,11 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
                 'states': {
                     'hover': {
                         'background_color': QColor(),
-                        'background_gradient': None,
                         'text_color': QColor(),
                         'border_color': QColor(),
                     },
                     'selected': {
                         'background_color': QColor(),
-                        'background_gradient': None,
                         'text_color': QColor(),
                         'border_color': QColor(),
                     },
@@ -487,9 +481,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
             border = theme_map(button.get('border')) or {}
             if (color := to_qcolor(background.get('color'))) is not None:
                 button_part['background_color'] = color
-                button_part['background_gradient'] = None
-            if isinstance((gradient := normalize_gradient_data(background.get('gradient'))), dict):
-                button_part['background_gradient'] = gradient
             if (border_color := to_qcolor(border.get('color'))) is not None:
                 button_part['border_color'] = border_color
             if (border_width := coerce_number(border.get('width'))) is not None:
@@ -531,9 +522,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
                 border = theme_map(selection.get('border')) or {}
                 if (color := to_qcolor(background.get('color'))) is not None:
                     state['background_color'] = color
-                    state['background_gradient'] = None
-                if isinstance((gradient := normalize_gradient_data(background.get('gradient'))), dict):
-                    state['background_gradient'] = gradient
                 if (text_color := to_qcolor(text.get('color'))) is not None:
                     state['text_color'] = text_color
                 if (border_color := to_qcolor(border.get('color'))) is not None:
@@ -553,9 +541,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
                 border = theme_map(selection.get('border')) or {}
                 if (color := to_qcolor(background.get('color'))) is not None:
                     state['background_color'] = color
-                    state['background_gradient'] = None
-                if isinstance((gradient := normalize_gradient_data(background.get('gradient'))), dict):
-                    state['background_gradient'] = gradient
                 if (text_color := to_qcolor(text.get('color'))) is not None:
                     state['text_color'] = text_color
                 if (border_color := to_qcolor(border.get('color'))) is not None:
@@ -569,9 +554,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
         border = theme_map(data.get('border')) or {}
         if (color := to_qcolor(background.get('color'))) is not None:
             part_data['background_color'] = color
-            part_data['background_gradient'] = None
-        if isinstance((gradient := normalize_gradient_data(background.get('gradient'))), dict):
-            part_data['background_gradient'] = gradient
         if (border_color := to_qcolor(border.get('color'))) is not None:
             part_data['border_color'] = border_color
         if (border_width := coerce_number(border.get('width'))) is not None:
@@ -609,9 +591,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
             border = theme_map(state_theme.get('border')) or {}
             if (color := to_qcolor(background.get('color'))) is not None:
                 state['background_color'] = color
-                state['background_gradient'] = None
-            if isinstance((gradient := normalize_gradient_data(background.get('gradient'))), dict):
-                state['background_gradient'] = gradient
             if (text_color := to_qcolor(text.get('color'))) is not None:
                 state['text_color'] = text_color
             if (border_color := to_qcolor(border.get('color'))) is not None:
@@ -661,11 +640,8 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
                 data['text_color'] = QColor(color)
             else:
                 data['background_color'] = QColor(color)
-                data['background_gradient'] = None
         else:
             data['background_color'] = QColor(color)
-            if 'background_gradient' in data:
-                data['background_gradient'] = None
         self._refresh_part(part)
         return True
 
@@ -687,8 +663,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
             data['source'] = str(value).strip()
             self._refresh_part(part)
             return True
-        if path == ('background', 'gradient'):
-            return self.set_part_gradient(part, value)
         if path == ('border', 'width'):
             return self.set_part_metric(part, ('border', 'width'), coerce_number(value) or 0.0)
         if path == ('border', 'radius'):
@@ -711,12 +685,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
             if color is None:
                 return False
             state['background_color'] = QColor(color)
-            state['background_gradient'] = None
-        elif path == ('background', 'gradient'):
-            gradient = normalize_gradient_data(value)
-            if not isinstance(gradient, dict):
-                return False
-            state['background_gradient'] = gradient
         elif path in {('text', 'color'), ('color',)}:
             color = to_qcolor(value)
             if color is None:
@@ -731,20 +699,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
             return False
 
         self._refresh_part('item')
-        return True
-
-    def current_part_gradient(self, part: str) -> WidgetThemeMap | None:
-        data = self._existing_part_data(part)
-        gradient = theme_map(data.get('background_gradient')) if data is not None else None
-        return dict(gradient) if gradient is not None else None
-
-    def set_part_gradient(self, part: str, value: object) -> bool:
-        data = self._existing_part_data(part)
-        gradient = normalize_gradient_data(value)
-        if data is None or not isinstance(gradient, dict) or 'background_gradient' not in data:
-            return False
-        data['background_gradient'] = gradient
-        self._refresh_part(part)
         return True
 
     def current_part_metric(self, part: str, metric_path: tuple[str, ...], fallback: float = 0.0) -> float:
@@ -874,13 +828,10 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
         state = theme_map(None if state_map is None or state_name is None else state_map.get(state_name))
         color = state.get('background_color') if state is not None else None
         border_color = state.get('border_color') if state is not None else None
-        gradient = state.get('background_gradient') if state is not None else None
         if not (isinstance(color, QColor) and color.isValid()):
             color = item_part.get('background_color')
         if not (isinstance(border_color, QColor) and border_color.isValid()):
             border_color = item_part.get('border_color')
-        if gradient is None:
-            gradient = item_part.get('background_gradient')
         border_width = float(coerce_number(item_part.get('border_width')) or 0.0)
         border_style = parse_pen_style(item_part.get('border_style', 'solid'))
         radius = self.resolve_radius(item_part.get('border_radius'), rect)
@@ -890,7 +841,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
             resolve_fill_brush(
                 rect,
                 color=color if isinstance(color, QColor) and color.isValid() else None,
-                gradient=gradient,
             )
         )
 
@@ -919,7 +869,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
             resolve_fill_brush(
                 rect,
                 color=background if isinstance(background, QColor) and background.isValid() else None,
-                gradient=popup.get('background_gradient'),
             )
         )
 
@@ -1058,7 +1007,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
             resolve_fill_brush(
                 rect,
                 color=background_color if isinstance(background_color, QColor) and background_color.isValid() else None,
-                gradient=button_part.get('background_gradient'),
             )
         )
 
