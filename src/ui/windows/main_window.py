@@ -55,7 +55,6 @@ from src.ui.windows.types import PageSpec, SidebarSectionSpec
 from src.ui.windows.window_header import apply_frameless_window_header
 from src.app.constants import PROGRAM_NAME
 from src.utils.filesystem import FS
-from src.translation.manager import TranslationManager
 
 
 class MainWindow(QMainWindow):
@@ -93,15 +92,10 @@ class MainWindow(QMainWindow):
         "Settings": "settings.svg",
     }
 
-    def __init__(
-        self,
-        *,
-        config: Config,
-        translator: TranslationManager,
-    ) -> None:
+    def __init__(self, *, config: Config) -> None:
         super().__init__()
         self._config = config
-        self._translator = translator
+        
         self._theme_auto_save_timer = QTimer(self)
         self._theme_auto_save_timer.setSingleShot(True)
         self._theme_auto_save_timer.setInterval(THEME_AUTO_SAVE_DEBOUNCE_MS)

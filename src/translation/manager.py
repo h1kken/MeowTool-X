@@ -4,9 +4,10 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 
-from src.app.paths import PATH_DEFAULT_TRANSLATION, PATH_TRANSLATIONS_USER
+import src.app.context as ctx
+logger = ctx.services.logger
+from src.app.paths import PATH_DEFAULT_TRANSLATION, PATH_TRANSLATIONS_SRC, PATH_TRANSLATIONS_USER
 from src.config.constants import CONFIG_COMMENT_SYMBOLS
-from src.utils.logging import logger
 
 
 class TranslationManager(QObject):
@@ -35,14 +36,23 @@ class TranslationManager(QObject):
                         translations[key.strip()] = label.strip()
                         
             if not translations:
-                logger.warning(f"translations not found, using keys...")
+                logger.warning(f"Translations not found. Using keys...")
         except (OSError, UnicodeError, ValueError, TypeError) as e:
-            logger.warning(f"translations can't be loaded, error: {e}")
+            logger.warning(f"Translations can't be loaded. Error: {e}")
             return
 
         self._path = path
         self._translations = translations
         self.language_changed.emit()
+
+    def get_awailable_translations(self) -> list[Path]:
+        lst = [
+            *(p for p in PATH_TRANSLATIONS_SRC.glob("*.axis") if p.is_file()),
+            *(p for p in PATH_TRANSLATIONS_USER.glob("*.axis") if p.is_file()),
+        ]
+        seen: set[Path] = set()
+        seen_add = seen.add
+        return [x for x in lst if not (x in seen or seen_add(x))]
 
     def tr(
         self,

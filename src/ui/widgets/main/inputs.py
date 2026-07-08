@@ -14,7 +14,6 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QLineEdit,
-    QSizePolicy,
     QSlider,
     QSpinBox,
     QStyle,
@@ -32,7 +31,6 @@ from src.theme.gradients import (
 from src.theme.schema.access import coerce_box_sides, coerce_number, theme_map
 from src.translation.manager import TranslationManager
 from src.theme.rainbow.palette import sample_rainbow_color
-from src.translation.mixin import TranslationAwareMixin
 from src.ui.painting import new_widget_painter
 from src.ui.widgets.main.box import BoxThemeMixin
 from src.ui.widgets.main.paint_primitives import parse_pen_style, resolve_fill_brush
@@ -666,7 +664,7 @@ class MTSlider(QSlider):
         self._draw_part_rect(painter, handle_rect, 'handle')
         painter.end()
 
-class MTLineEdit(BoxThemeMixin, TranslationAwareMixin, QLineEdit):
+class MTLineEdit(BoxThemeMixin, QLineEdit):
     PAINTED_BOX_THEME = False
 
     def __init__(
@@ -685,23 +683,10 @@ class MTLineEdit(BoxThemeMixin, TranslationAwareMixin, QLineEdit):
         self._theme_placeholder_color_override: QColor | None = None
         self.setFrame(False)
         self.setTextMargins(0, 0, 0, 0)
-        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.init_box_theme()
-        self._sync_translator_binding()
 
         if obj_name:
             self.setObjectName(obj_name)
-
-    def sizeHint(self) -> QSize:
-        text = self.text() or self.placeholderText()
-        width = _text_render_width(self, (text,)) + _line_edit_horizontal_margins(self)
-        return QSize(max(1, width), max(1, self.fontMetrics().height()))
-
-    def minimumSizeHint(self) -> QSize:
-        text = self.text() or self.placeholderText()
-        width = _text_render_width(self, (text,)) + _line_edit_horizontal_margins(self)
-        hint = QSize(max(1, width), max(1, self.fontMetrics().height()))
-        return QSize(1, hint.height())
 
     def set_focus_alignments(
         self,
@@ -735,24 +720,6 @@ class MTLineEdit(BoxThemeMixin, TranslationAwareMixin, QLineEdit):
         self._theme_text_color_override = None
         self._theme_placeholder_color_override = None
         self._apply_theme_palette_overrides()
-
-    def set_placeholder_tr_key(self, key: str | None) -> None:
-        normalized = str(key).strip() if isinstance(key, str) else ''
-        self._placeholder_tr_key = normalized or None
-        self._update_placeholder_translation()
-
-    def _update_placeholder_translation(self) -> None:
-        if not self._placeholder_tr_key:
-            return
-        translator = self.translation_manager()
-        self.setPlaceholderText(
-            translator.tr(self._placeholder_tr_key)
-            if translator is not None else
-            self._placeholder_tr_key
-        )
-
-    def _on_language_changed(self) -> None:
-        self._update_placeholder_translation()
 
     def focusInEvent(self, event: QFocusEvent) -> None:
         super().focusInEvent(event)

@@ -246,5 +246,3 @@ class Logger:
     def warning(self, message: str = '') -> None: self._logger.opt(depth=1).warning(message)
     def error(self, message: str = '') -> None: self._logger.opt(depth=1).error(message)
     def exception(self, message: str = '') -> None: self._logger.opt(depth=1, exception=True).error(message)
-
-logger = Logger()

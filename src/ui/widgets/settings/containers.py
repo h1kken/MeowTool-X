@@ -582,7 +582,6 @@ class MTCollapsibleContainer(MTWidget):
 class MTComboBoxSetting(MTWidget):
     def __init__(
         self,
-        config: Config | ConfigLoader,
         tr_key: str,
         cfg_key: str,
         items: Sequence[str | tuple[str, str]],
@@ -591,8 +590,6 @@ class MTComboBoxSetting(MTWidget):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-
-        self._config = config
         self._cfg_key = cfg_key
         self._on_changed = on_changed
         self._default = default
@@ -675,7 +672,6 @@ class MTComboBoxSetting(MTWidget):
                     continue
                 self._combo_box.addItem(display_text, value)
             self._set_current_value(target_value, fallback=self._default)
-            self._combo_box.sync_content_width()
 
     def _set_current_value(self, value: Any, *, fallback: str | None = None) -> None:
         index = self._find_index(value)

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 
-from src.utils.logging import logger
+import src.app.context as ctx
 from src.app.paths import PATH_DEFAULT_CONFIG_LOADER
 from src.config.defaults import default_config_loader
 from src.config.mixin import GetConfigMixin, SaveConfigMixin, SetConfigMixin
@@ -56,7 +56,7 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         self.save()
 
     def _apply_logger_settings(self) -> None:
-        logger.apply_debug_settings(
+        ctx.services.logger.apply_debug_settings(
             debug=bool(
                 get_safe(self._data, CLKey.MISC_DEBUGGER_DEBUG, sep=">", default=False)
             ),
@@ -86,4 +86,4 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             self.save()
             self.config_loaded.emit()
         except (OSError, UnicodeError, ValueError, TypeError) as e:
-            logger.exception(f"Loader error: {e}")
+            ctx.services.logger.exception(f"Loader error: {e}")

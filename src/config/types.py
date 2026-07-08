@@ -3,7 +3,12 @@ from pathlib import Path
 from typing import Literal, Protocol, TypeAlias
 
 type ConfigScalar = None | bool | int | float | str
-type ConfigValue = ConfigScalar | list["ConfigValue"] | tuple["ConfigValue", ...] | dict[str, "ConfigValue"]
+type ConfigValue = (
+    ConfigScalar
+    | list["ConfigValue"]
+    | tuple["ConfigValue", ...]
+    | dict[str, "ConfigValue"]
+)
 ConfigMap: TypeAlias = dict[str, ConfigValue]
 type SortCategoryKind = Literal["none", "text", "number"]
 

@@ -239,8 +239,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
             self.setObjectName(obj_name)
 
         self._popup = _MTComboPopup(self)
-        self.sync_content_width()
-        self._sync_translator_binding()
 
     def sizeHint(self) -> QSize:
         text = self.currentText()
@@ -268,7 +266,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
         self._items.append(data)
         if self._current_index < 0:
             self.setCurrentIndex(0)
-        self.sync_content_width()
         self._popup.mark_dirty()
         self.update()
 
@@ -280,7 +277,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
         had_current = self._current_index
         self._items.clear()
         self._current_index = -1
-        self.sync_content_width()
         self._popup.mark_dirty()
         self.update()
         if had_current != -1:
@@ -323,7 +319,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
         if not 0 <= index < self.count():
             return
         self._items[index]['text'] = str(text)
-        self.sync_content_width()
         self._popup.sync_items()
         self.update()
 
@@ -389,23 +384,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
     def alignment(self) -> Qt.AlignmentFlag:
         return self._alignment
 
-    def sync_content_width(self) -> None:
-        content_width = 0
-        match str(self._content_width_mode).strip().lower():
-            case 'none':
-                content_width = 0
-            case 'current':
-                current_text = self.currentText()
-                content_width = self.fontMetrics().horizontalAdvance(current_text) if current_text else 0
-            case _:
-                for index in range(self.count()):
-                    content_width = max(
-                        content_width,
-                        self.fontMetrics().horizontalAdvance(self.itemText(index)),
-                    )
-
-        target_width = max(self._content_width_floor, content_width + int(round(self._button_width())))
-        self.setMinimumWidth(target_width)
 
     def set_content_width_mode(self, mode: str) -> None:
         normalized = str(mode or 'longest').strip().lower()
@@ -416,7 +394,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
         self._content_width_mode = normalized
         if normalized == 'none':
             self.setMinimumWidth(max(self._content_width_floor, int(round(self._button_width()))))
-        self.sync_content_width()
 
     def content_width_mode(self) -> str:
         return self._content_width_mode
@@ -538,7 +515,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
 
         self._apply_popup_part_theme('popup', popup)
         self._apply_popup_item_theme('item', item)
-        self.sync_content_width()
         self._apply_popup_view_theme()
         self.update()
 
@@ -823,7 +799,6 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
         metric_value = float(value)
         if part_key == 'button' and normalized_path == ('width',):
             data['width'] = max(0.0, metric_value)
-            self.sync_content_width()
         elif part_key == 'popup' and normalized_path == ('width',):
             data['width'] = max(0.0, metric_value)
         elif part_key == 'popup' and normalized_path == ('height',):

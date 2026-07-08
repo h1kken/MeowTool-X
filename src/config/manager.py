@@ -8,6 +8,7 @@ from typing import cast
 
 from PySide6.QtCore import QObject, Signal
 
+import src.app.context as ctx
 from src.app.paths import PATH_CONFIGS_USER, PATH_DEFAULT_CONFIG
 from src.config.defaults import default_config
 from src.config.loader import ConfigLoader
@@ -15,7 +16,6 @@ from src.config.mixin import GetConfigMixin, SaveConfigMixin, SetConfigMixin
 from src.config.types import ConfigMap, ConfigValue
 from src.config.utils import normalize_config, parse_config
 from src.utils.filesystem import FS
-from src.utils.logging import logger
 
 
 class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
@@ -57,7 +57,7 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             path.write_text(text, encoding="utf-8")
             self.load(filename)
         except OSError as e:
-            logger.exception(f"Can't create config '{filename}'. Error: {e}")
+            ctx.services.logger.exception(f"Can't create config '{filename}'. Error: {e}")
         
     def load(self, filename: str) -> None:
         path = PATH_CONFIGS_USER / f"{filename}.txt"
@@ -73,7 +73,7 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             self.save()
             self.config_loaded.emit()
         except (OSError, UnicodeError, ValueError, TypeError) as e:
-            logger.exception(f"Can't load config '{filename}'. Error: {e}")
+            ctx.services.logger.exception(f"Can't load config '{filename}'. Error: {e}")
 
     def set(self, key: str, value: object, *, sep: str = ">", force_save: bool = False) -> None:
         super().set(key, value, sep=sep)
@@ -105,5 +105,5 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             path.rename(new_path)
             self._path = new_path
         except OSError as e:
-            logger.exception(f"Can't rename config '{path.stem}' to '{name}'. Error: {e}")
+            ctx.services.logger.exception(f"Can't rename config '{path.stem}' to '{name}'. Error: {e}")
             return
