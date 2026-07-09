@@ -34,7 +34,6 @@ from src.theme.types import (
     ThemeWidgetsMap,
 )
 from src.ui.widgets.main.inputs import MTLineEdit
-from src.ui.widgets.main.box import BoxThemeMixin
 from src.ui.widgets.main.checkables import MTSwitch
 from src.ui.widgets.main.containers import MTComboBox
 from src.ui.widgets.main.inputs import MTSlider
@@ -82,7 +81,6 @@ class ThemeManager(QObject):
         self._styled_line_edit_margin_widgets: dict[QWidget, tuple[int, int, int, int]] = {}
         self._styled_line_edit_text_widgets: dict[QWidget, QPalette] = {}
         self._styled_text_font_widgets: dict[QWidget, QFont] = {}
-        self._styled_box_widgets: set[QWidget] = set()
         
         self._checkable_state_style_slots: dict[QWidget, Any] = {}
         self._checkable_state_style_base_qss: dict[QWidget, str] = {}
@@ -399,13 +397,6 @@ class ThemeManager(QObject):
             except RuntimeError:
                 continue
 
-        for widget in self._styled_box_widgets:
-            try:
-                if isinstance(widget, BoxThemeMixin):
-                    widget.clear_box_theme()
-            except RuntimeError:
-                continue
-
         for widget in self._styled_effect_widgets:
             try:
                 widget.setGraphicsEffect(cast(Any, None))
@@ -462,7 +453,6 @@ class ThemeManager(QObject):
         self._styled_line_edit_margin_widgets.clear()
         self._styled_line_edit_text_widgets.clear()
         self._styled_text_font_widgets.clear()
-        self._styled_box_widgets.clear()
         self._media_overlays.clear()
         self._media_overlay_filters.clear()
 
@@ -565,8 +555,6 @@ class ThemeManager(QObject):
         for widget in widgets:
             try:
                 self._set_widget_stylesheet_if_changed(widget, '')
-                if isinstance(widget, BoxThemeMixin):
-                    widget.clear_box_theme()
                 widget.update()
             except RuntimeError:
                 continue
@@ -728,13 +716,6 @@ class ThemeManager(QObject):
                 return [resolve_part_media_sources(item) for item in cast(list[Any], value)]
             return deepcopy(value)
 
-        box_theme: ThemeMap | None = None
-        for key in ('background', 'border'):
-            if (value := theme_map(styles.get(key))) is not None:
-                if box_theme is None:
-                    box_theme = {}
-                box_theme[key] = deepcopy(value)
-
         parts_theme = theme_map(styles.get('parts'))
         resolved_parts_theme = (
             cast(ThemeMap, resolve_part_media_sources(parts_theme))
@@ -772,10 +753,6 @@ class ThemeManager(QObject):
 
         resolved_widgets = widgets if widgets is not None else resolve_target_widgets(self._root, target, include_window=True)
         for widget in resolved_widgets:
-            if box_theme is not None and self._uses_painted_box_theme(widget):
-                cast(BoxThemeMixin, widget).apply_box_theme(box_theme)
-                self._styled_box_widgets.add(widget)
-
             if resolved_parts_theme is not None and isinstance(widget, self._PARTS_THEME_WIDGET_TYPES):
                 widget.apply_theme(resolved_parts_theme)
                 self._styled_parts_widgets.add(widget)
@@ -884,7 +861,6 @@ class ThemeManager(QObject):
         *,
         widgets: list[QWidget] | None = None,
     ) -> str:
-        styles = self._qss_styles_for_widgets(styles, widgets or [])
         return self._qss_builder.build(
             obj_name,
             styles,
@@ -892,26 +868,6 @@ class ThemeManager(QObject):
             widgets=widgets,
             root_widget=self._root,
         )
-
-    def _qss_styles_for_widgets(self, styles: ThemeMap, widgets: list[QWidget]) -> ThemeMap:
-        if not widgets:
-            return styles
-
-        if not all(self._uses_painted_box_theme(widget) for widget in widgets):
-            return styles
-
-        if theme_map(styles.get('background')) is None and theme_map(styles.get('border')) is None:
-            return styles
-
-        filtered = dict(styles)
-        filtered.pop('background', None)
-        filtered.pop('border', None)
-        return filtered
-
-    def _uses_painted_box_theme(self, widget: QWidget) -> bool:
-        if not isinstance(widget, BoxThemeMixin):
-            return False
-        return bool(widget.PAINTED_BOX_THEME)
 
     def _apply_layout_theme(self, widget: QWidget, data: ThemeMap) -> bool:
         spacing = self._style_normalizer.normalize_int(data.get('spacing'))

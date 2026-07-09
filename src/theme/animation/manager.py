@@ -21,7 +21,6 @@ from src.theme.colors import normalize_color, to_qcolor
 from src.theme.constants import EVENT_ACTIONS
 from src.theme.qss.targets import resolve_target_widgets
 from src.theme.schema.access import coerce_float, theme_map
-from src.ui.widgets.main.box import BoxThemeMixin
 from src.ui.widgets.main.checkables import MTSwitch
 from src.ui.widgets.main.containers import MTComboBox
 from src.ui.widgets.main.inputs import MTSlider
@@ -479,6 +478,7 @@ class AnimationManager(QObject):
     def _collect_widget_declarations(self, widget: QWidget) -> dict[str, str]:
         declarations: dict[str, str] = {}
         for raw in (
+            widget.property('_themeBackgroundRule'),
             widget.property('_themeBorderRule'),
             widget.property('_themeBorderRadius'),
             widget.styleSheet(),
@@ -1303,8 +1303,6 @@ class AnimationManager(QObject):
             return True
         if css_property.startswith('parts.'):
             return self._set_parts_style_value(widget, css_property, value)
-        if self._set_box_style_value(widget, css_property, value):
-            return True
         return self._set_text_style_value(widget, css_property, value)
 
     def _should_defer_locked_tab_style(self, widget: QWidget, source_action: str | None) -> bool:
@@ -1344,24 +1342,6 @@ class AnimationManager(QObject):
             case _:
                 pass
         return changed
-
-    def _set_box_style_value(self, widget: QWidget, css_property: str, value: str) -> bool:
-        if not isinstance(widget, BoxThemeMixin) or not isinstance(widget.box_theme_state(), dict):
-            return False
-
-        if css_property in {'background', 'background-color'}:
-            return bool(widget.set_box_background_color(value))
-
-        if css_property == 'border-color':
-            return bool(widget.set_box_border_color(value))
-
-        if css_property == 'border-width':
-            return bool(widget.set_box_border(width=value))
-
-        if css_property == 'border-radius':
-            return bool(widget.set_box_border(radius=value))
-
-        return False
 
     def _set_text_style_value(self, widget: QWidget, css_property: str, value: str) -> bool:
         _ = (widget, css_property, value)
@@ -1576,24 +1556,17 @@ class AnimationManager(QObject):
         return QColor(fallback)
 
     def _sample_override_color(self, widget: QWidget, css_property: str) -> QColor | None:
-        state = None
-        if isinstance(widget, BoxThemeMixin):
-            try:
-                state = widget.box_theme_state()
-            except RuntimeError:
-                state = None
-        state_map = theme_map(state)
-        if state_map is not None:
-            if css_property in {'background', 'background-color'}:
-                background = theme_map(state_map.get('background')) or {}
-                color = background.get('color')
-                if isinstance(color, QColor) and color.isValid():
-                    return color
-            elif css_property == 'border-color':
-                border = theme_map(state_map.get('border')) or {}
-                color = border.get('color')
-                if isinstance(color, QColor) and color.isValid():
-                    return color
+        declarations = self._collect_widget_declarations(widget)
+        if css_property in {'background', 'background-color'}:
+            raw = declarations.get('background-color')
+            if isinstance(raw, str) and (color := to_qcolor(raw)) is not None:
+                return color
+        elif css_property == 'border-color':
+            raw = declarations.get('border-color')
+            if not raw and isinstance((border_text := declarations.get('border')), str):
+                _width, _style, raw = self._parse_border_shorthand(border_text)
+            if isinstance(raw, str) and (color := to_qcolor(raw)) is not None:
+                return color
 
         if css_property.startswith('parts.'):
             mapped = self._map_parts_css_property(widget, css_property)
@@ -1760,18 +1733,6 @@ class AnimationManager(QObject):
         return float(fallback)
 
     def _sample_border_width(self, widget: QWidget, *, fallback: float) -> float:
-        state = {}
-        if isinstance(widget, BoxThemeMixin):
-            try:
-                state = theme_map(widget.box_theme_state()) or {}
-            except RuntimeError:
-                state = {}
-        border = theme_map(state.get('border'))
-        if border is not None:
-            width = border.get('width')
-            if isinstance(width, (int, float)):
-                return float(width)
-
         declarations = self._collect_widget_declarations(widget)
         width_text = declarations.get('border-width')
         if not width_text and (border_text := declarations.get('border')):
@@ -1779,17 +1740,6 @@ class AnimationManager(QObject):
         return self._parse_measure_value(width_text) or float(fallback)
 
     def _sample_border_radius(self, widget: QWidget, *, fallback: float) -> float:
-        state = {}
-        if isinstance(widget, BoxThemeMixin):
-            try:
-                state = theme_map(widget.box_theme_state()) or {}
-            except RuntimeError:
-                state = {}
-        radius = state.get('radius')
-        value = self._parse_measure_value(radius)
-        if value is not None:
-            return float(value)
-
         value = self._parse_measure_value(widget.property('_themeBorderRadius'))
         if value is not None:
             return float(value)
@@ -1845,12 +1795,10 @@ class AnimationManager(QObject):
 
         match property_key:
             case 'border.width':
-                if not self._set_box_style_value(widget, 'border-width', f'{max(0.0, value):g}px'):
-                    self._set_style_value(widget, 'border-width', f'{max(0.0, value):g}px')
+                self._set_style_value(widget, 'border-width', f'{max(0.0, value):g}px')
             case 'border.radius':
-                if not self._set_box_style_value(widget, 'border-radius', f'{max(0.0, value):g}px'):
-                    widget.setProperty('_themeBorderRadius', f'{max(0.0, value):g}px')
-                    self._set_style_value(widget, 'border-radius', f'{max(0.0, value):g}px')
+                widget.setProperty('_themeBorderRadius', f'{max(0.0, value):g}px')
+                self._set_style_value(widget, 'border-radius', f'{max(0.0, value):g}px')
             case 'padding.left' | 'padding.top' | 'padding.right' | 'padding.bottom':
                 self._set_padding_side(widget, property_key.rsplit('.', 1)[-1], max(0, rounded))
             case 'layout.spacing':

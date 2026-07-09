@@ -5,23 +5,17 @@ from PySide6.QtGui import QColor, QIcon
 from PySide6.QtWidgets import QLabel, QAbstractButton, QWidget
 
 from src.translation.mixin import TranslatableMixin
-from src.ui.widgets.main.box import BoxThemeMixin
 
 
-class MTPlainLabel(BoxThemeMixin, QLabel):
-    PAINTED_BOX_THEME = False
-
+class MTPlainLabel(QLabel):
     def __init__(self, text: str = '', parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(text, parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         if obj_name:
             self.setObjectName(obj_name)
 
-        self.init_box_theme()
-
-
-class MTLabel(BoxThemeMixin, TranslatableMixin, QLabel):
-    PAINTED_BOX_THEME = False
+class MTLabel(TranslatableMixin, QLabel):
 
     def __init__(
         self,
@@ -31,15 +25,12 @@ class MTLabel(BoxThemeMixin, TranslatableMixin, QLabel):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(tr_key, parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         if obj_name:
             self.setObjectName(obj_name)
 
-        self.init_box_theme()
-        
-
-class MTButton(BoxThemeMixin, TranslatableMixin, QAbstractButton):
-    PAINTED_BOX_THEME = False
+class MTButton(TranslatableMixin, QAbstractButton):
 
     def __init__(
         self,
@@ -52,6 +43,7 @@ class MTButton(BoxThemeMixin, TranslatableMixin, QAbstractButton):
     ) -> None:
         super().__init__(tr_key, parent)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         if checkable:
             self.setCheckable(True)
@@ -59,8 +51,7 @@ class MTButton(BoxThemeMixin, TranslatableMixin, QAbstractButton):
 
         if obj_name:
             self.setObjectName(obj_name)
-            
-        self.init_box_theme()
+
         self._text_icon_state: dict[str, object] | None = None
         self._default_text_icon_state: dict[str, object] | None = None
         self._default_text_icon_captured = False

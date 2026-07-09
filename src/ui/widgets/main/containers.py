@@ -39,7 +39,6 @@ from src.theme.schema.access import coerce_box_sides, coerce_number, object_map,
 from src.ui.painting import draw_widget_background, new_widget_painter
 from src.translation.mixin import TranslatableComboBoxMixin
 from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.widgets.main.box import BoxThemeMixin
 from src.ui.widgets.main.paint_primitives import parse_pen_style, resolve_fill_brush, rounded_rect_path
 from src.ui.widgets.main.text import MTButton, MTLabel, MTPlainLabel
 from src.ui.widgets.types import WidgetThemeMap
@@ -62,20 +61,13 @@ def _draw_aligned_text(
     painter.restore()
 
 
-class MTRadioButton(BoxThemeMixin, QRadioButton):
+class MTRadioButton(QRadioButton):
     def __init__(self, text: str = '', parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(text, parent)
-        self.init_box_theme()
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         if obj_name:
             self.setObjectName(obj_name)
-
-    def paintEvent(self, event: QPaintEvent) -> None:
-        if self.has_box_theme():
-            painter = new_widget_painter(self)
-            self.draw_box_theme(painter)
-            painter.end()
-        super().paintEvent(event)
 
 
 class _MTComboPopupItem(MTButton):
@@ -120,14 +112,13 @@ class _MTComboPopupItem(MTButton):
         painter.end()
 
 
-class _MTComboPopup(BoxThemeMixin, QFrame):
+class _MTComboPopup(QFrame):
     def __init__(self, combo_box: 'MTComboBox') -> None:
         super().__init__(
             combo_box,
             Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint,
         )
         self._combo_box = combo_box
-        self.init_box_theme()
         self.setObjectName(combo_box.popup_object_name())
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -200,7 +191,7 @@ class _MTComboPopup(BoxThemeMixin, QFrame):
         self.setMask(QRegion(path.toFillPolygon().toPolygon()))
 
 
-class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
+class MTComboBox(TranslatableComboBoxMixin, QWidget):
     currentIndexChanged = Signal(int)
     currentTextChanged = Signal(str)
     activated = Signal(int)
@@ -215,10 +206,10 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
     ) -> None:
         self._items: list[dict[str, Any]] = []
         super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        self.init_box_theme()
         self._current_index = -1
         self._default_parts: dict[str, WidgetThemeMap] = self._build_default_parts()
         self._parts: dict[str, WidgetThemeMap] = deepcopy(self._default_parts)
@@ -1118,10 +1109,10 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
     def rounded_path(self, rect: QRectF, radius: float) -> QPainterPath:
         return rounded_rect_path(rect, radius)
 
-class MTScrollArea(BoxThemeMixin, QScrollArea):
+class MTScrollArea(QScrollArea):
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent)
-        self.init_box_theme()
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setWidgetResizable(True)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -1134,40 +1125,19 @@ class MTScrollArea(BoxThemeMixin, QScrollArea):
         if obj_name:
             self.setObjectName(obj_name)
 
-    def apply_box_theme(self, theme: dict[str, Any]) -> None:
-        content = self.widget()
-        if isinstance(content, BoxThemeMixin):
-            self._box_theme = None
-            content.apply_box_theme(theme)
-            self.viewport().update()
-            return
-        super().apply_box_theme(theme)
-
-    def clear_box_theme(self) -> None:
-        content = self.widget()
-        if isinstance(content, BoxThemeMixin):
-            content.clear_box_theme()
-        super().clear_box_theme()
-
-class MTWidget(BoxThemeMixin, QWidget):
+class MTWidget(QWidget):
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent)
-        self.init_box_theme()
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         if obj_name:
             self.setObjectName(obj_name)
 
     def paintEvent(self, event: QPaintEvent) -> None:
-        if not self.has_box_theme():
-            painter = new_widget_painter(self, antialias=False)
-            draw_widget_background(self, painter)
-            painter.end()
-            super().paintEvent(event)
-            return
-
-        painter = new_widget_painter(self)
-        self.draw_box_theme(painter)
+        painter = new_widget_painter(self, antialias=False)
+        draw_widget_background(self, painter)
         painter.end()
+        super().paintEvent(event)
 
 
 class _MTListItem(MTButton):

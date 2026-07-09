@@ -25,7 +25,6 @@ from PySide6.QtWidgets import (
 from src.theme.colors import to_qcolor
 from src.theme.schema.access import coerce_box_sides, coerce_number, theme_map
 from src.ui.painting import new_widget_painter
-from src.ui.widgets.main.box import BoxThemeMixin
 from src.ui.widgets.main.paint_primitives import parse_pen_style, resolve_fill_brush
 from src.ui.widgets.types import WidgetThemeMap
 
@@ -562,9 +561,7 @@ class MTSlider(QSlider):
         self._draw_part_rect(painter, handle_rect, 'handle')
         painter.end()
 
-class MTLineEdit(BoxThemeMixin, QLineEdit):
-    PAINTED_BOX_THEME = False
-
+class MTLineEdit(QLineEdit):
     def __init__(
         self,
         text: str = '',
@@ -573,6 +570,7 @@ class MTLineEdit(BoxThemeMixin, QLineEdit):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(text, parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setFrame(False)
         self.setTextMargins(0, 0, 0, 0)
         
@@ -584,7 +582,6 @@ class MTLineEdit(BoxThemeMixin, QLineEdit):
         self._unfocused_alignment: Qt.AlignmentFlag | None = None
         self._theme_text_color_override: QColor | None = None
         self._theme_placeholder_color_override: QColor | None = None
-        self.init_box_theme()
 
 
     def set_focus_alignments(
@@ -643,17 +640,16 @@ class MTLineEdit(BoxThemeMixin, QLineEdit):
         self.update()
 
 
-class MTSpinBox(BoxThemeMixin, QSpinBox):
+class MTSpinBox(QSpinBox):
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
         self.setFrame(False)
         self.lineEdit().setTextMargins(0, 0, 0, 0)
         
         if obj_name:
             self.setObjectName(obj_name)
-            
-        self.init_box_theme()
 
 
     def sizeHint(self) -> QSize:
@@ -678,21 +674,14 @@ class MTSpinBox(BoxThemeMixin, QSpinBox):
         event.ignore()
         self.clearFocus()
 
-    def paintEvent(self, event: QPaintEvent) -> None:
-        if self.has_box_theme():
-            painter = new_widget_painter(self)
-            self.draw_box_theme(painter)
-            painter.end()
-        super().paintEvent(event)
 
-
-class MTDoubleSpinBox(BoxThemeMixin, QDoubleSpinBox):
+class MTDoubleSpinBox(QDoubleSpinBox):
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
         self.setFrame(False)
         self.lineEdit().setTextMargins(0, 0, 0, 0)
-        self.init_box_theme()
 
         if obj_name:
             self.setObjectName(obj_name)
@@ -718,10 +707,3 @@ class MTDoubleSpinBox(BoxThemeMixin, QDoubleSpinBox):
     def wheelEvent(self, event: QWheelEvent):
         event.ignore()
         self.clearFocus()
-
-    def paintEvent(self, event: QPaintEvent) -> None:
-        if self.has_box_theme():
-            painter = new_widget_painter(self)
-            self.draw_box_theme(painter)
-            painter.end()
-        super().paintEvent(event)

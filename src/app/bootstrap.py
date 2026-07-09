@@ -24,17 +24,16 @@ if TYPE_CHECKING:
 
 def bootstrap(app: QApplication) -> None:
     services = ctx.services = AppServices()
+
+    services.logger = Logger()
     
     create_start_paths()
-    
-    services.logger = Logger()
     
     config_loader = ConfigLoader()
 
     services.config = Config(loader=config_loader)
     services.config.load(str(config_loader.get(CLKey.LOADER_CONFIG_ON_LOAD, default=PATH_DEFAULT_CONFIG.stem)).strip())
 
-    # TODO: refactor lighter
     services.translator = TranslationManager()
     services.translator.load(str(services.config.get(CKey.GENERAL_LANGUAGE, default=PATH_DEFAULT_TRANSLATION.stem)).strip())
     

@@ -1,5 +1,6 @@
 import inspect
 import sys
+import platform
 from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime
@@ -9,7 +10,7 @@ from typing import Any, cast
 import loguru
 
 from src.app.paths import PATH_ROOT, PATH_LOGS_USER
-from src.app.constants import IS_LAUNCHED_WITH_CONSOLE, PROGRAM_NAME
+from src.app.constants import IS_LAUNCHED_WITH_CONSOLE, PROGRAM_NAME, PROGRAM_VERSION
 from src.utils.logging.constants import (
     DATE_LOGGER_FORMAT,
     LOGGER_INDENT_FUNCTION,
@@ -168,6 +169,11 @@ class Logger:
             yield resolved
         finally:
             _LOG_ORIGIN.reset(token)
+            
+    def _log_environment_info(self):
+        self.info(f"Starting {PROGRAM_NAME} v{PROGRAM_VERSION}")
+        self.info(f"OS: {platform.platform()}")
+        self.info(f"Python: {platform.python_version()}")
             
     def _resolve_record_kind(self, record: Any) -> str:
         extra = cast(dict[str, Any], record.get('extra') or {})

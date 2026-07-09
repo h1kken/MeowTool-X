@@ -3,13 +3,12 @@ from __future__ import annotations
 from typing import Any, cast
 
 from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QRectF, QSize, Qt, Signal
-from PySide6.QtGui import QCursor, QHideEvent, QMouseEvent, QPaintEvent, QRegion, QResizeEvent, QShowEvent, QWheelEvent
+from PySide6.QtGui import QCursor, QHideEvent, QMouseEvent, QRegion, QResizeEvent, QShowEvent, QWheelEvent
 from PySide6.QtWidgets import QApplication, QBoxLayout, QLayout, QSizePolicy, QWidget
 
-from src.ui.painting import new_widget_painter
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets.main.containers import MTWidget
-from src.ui.widgets.main.paint_primitives import rounded_rect_path
+from src.ui.widgets.main.paint_primitives import resolve_uniform_radius, rounded_rect_path
 from src.ui.widgets.types import PopupPlacement
 
 
@@ -71,22 +70,10 @@ class MTPopup(MTWidget):
         self.setAutoFillBackground(False)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
-        self.apply_box_theme(
-            {
-                'background': {'color': '#ffffff'},
-                'border': {'width': 0.0, 'radius': 0.0, 'style': 'none'},
-            }
-        )
 
         self._root_layout = create_layout(LayoutType.VBOX, parent=self)
         self._content = MTWidget(parent=self, obj_name=f'{obj_name}_Content')
         self._content.setProperty('popupContent', True)
-        self._content.apply_box_theme(
-            {
-                'background': {'color': '#ffffff'},
-                'border': {'width': 0.0, 'radius': 0.0, 'style': 'none'},
-            }
-        )
         self._content_layout = create_layout(layout_type, parent=self._content)
         self._root_layout.addWidget(self._content)
 
@@ -228,14 +215,6 @@ class MTPopup(MTWidget):
         self.closed.emit()
         super().hideEvent(event)
 
-    def paintEvent(self, event: QPaintEvent) -> None:
-        if self.has_box_theme():
-            painter = new_widget_painter(self)
-            self.draw_box_theme(painter)
-            painter.end()
-            return
-        super().paintEvent(event)
-
     def _prepare_to_show(self) -> None:
         self.ensurePolished()
         self.adjustSize()
@@ -299,9 +278,7 @@ class MTPopup(MTWidget):
         return QPoint(0, 0)
 
     def _apply_shape_mask(self) -> None:
-        theme = self.box_theme_state()
-        radius_value = theme.get('radius') if theme is not None else None
-        radius = self._radius(radius_value, QRectF(self.rect())) if radius_value is not None else 0.0
+        radius = resolve_uniform_radius(QRectF(self.rect()), self.property('_themeBorderRadius'))
         if radius <= 0.0:
             self.clearMask()
             return

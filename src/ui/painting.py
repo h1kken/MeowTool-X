@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import QStyle, QStyleOption, QWidget
-from src.ui.widgets.main.box import BoxThemeMixin
 
 
 def configure_painter(
@@ -37,10 +36,6 @@ def new_widget_painter(
 
 
 def draw_widget_background(widget: QWidget, painter: QPainter) -> None:
-    if isinstance(widget, BoxThemeMixin) and widget.has_box_theme():
-        widget.draw_box_theme(painter)
-        return
-
     option = QStyleOption()
     option.initFrom(widget)
     widget.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, option, painter, widget)

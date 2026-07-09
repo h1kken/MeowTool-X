@@ -29,7 +29,10 @@ PATH_ROOT = _find_bundle_root()
 PATH_APP_ROOT = _find_app_root(PATH_ROOT)
 
 PATH_SYSTEM_DRIVE = Path(os.environ['SystemDrive'])
+
 PATH_APPDATA = Path(os.environ['APPDATA'])
+PATH_APPDATA_APP_DIR = PATH_APPDATA / APP_DIRNAME
+
 PATH_LOCALAPPDATA = Path(os.environ['LOCALAPPDATA'])
 
 ### src
@@ -59,20 +62,18 @@ PATH_APP_LABEL = PATH_APP_ICONS_SRC / 'meowtool-x-label.png'
 PATH_THEMES_SRC = PATH_SRC / 'theme' / 'themes'
 PATH_DEFAULT_THEME = PATH_THEMES_SRC / 'pink.json5'
 
+PATH_THEMES_USER = PATH_APPDATA_APP_DIR / 'Themes'
+
 ## translations
 PATH_TRANSLATIONS_SRC = PATH_SRC / 'translation' / 'translations'
 PATH_DEFAULT_TRANSLATION = PATH_TRANSLATIONS_SRC / 'en_US.axis'
 
-### user data
-PATH_APPDATA_APP_DIR = PATH_APPDATA / APP_DIRNAME
+PATH_TRANSLATIONS_USER = PATH_APPDATA_APP_DIR / 'Translations'
 
+### other user data
 PATH_CONFIGS_USER = PATH_APPDATA_APP_DIR / 'Configs'
 PATH_DEFAULT_CONFIG = PATH_CONFIGS_USER / 'default.txt'
 PATH_DEFAULT_CONFIG_LOADER = PATH_CONFIGS_USER / '.loader.txt'
-
-PATH_THEMES_USER = PATH_APPDATA_APP_DIR / 'Themes'
-
-PATH_TRANSLATIONS_USER = PATH_APPDATA_APP_DIR / 'Translations'
 
 ### work data
 PATH_LOGS_USER = PATH_APPDATA_APP_DIR / 'Logs'
