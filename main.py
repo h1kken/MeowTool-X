@@ -12,7 +12,6 @@ from src.app.constants import PROGRAM_NAME
 
 def main() -> None:
     app = QApplication(sys.argv)
-    app.setStyle('Fusion')
     app.setApplicationName(PROGRAM_NAME)
     
     bootstrap(app)

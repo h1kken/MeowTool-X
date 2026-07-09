@@ -15,10 +15,8 @@ from src.app.paths import (
     PATH_THEMES_USER,
 )
 from src.ui.widgets import SidebarButton, SidebarCategory
-from src.config.manager import Config
 from src.theme.animation.manager import AnimationManager
 from src.theme.constants import THEME_AUTOLOAD_FALLBACK
-from src.theme.manager import ThemeManager
 from src.theme.storage.io import (
     find_theme_file_by_name,
     load_theme_payload,
@@ -87,10 +85,8 @@ class MainWindow(QMainWindow):
         "Settings": "settings.svg",
     }
 
-    def __init__(self, *, config: Config) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self._config = config
-        self._translator = ctx.services.translator
         
         self._theme_auto_save_timer = QTimer(self)
         self._theme_auto_save_timer.setSingleShot(True)

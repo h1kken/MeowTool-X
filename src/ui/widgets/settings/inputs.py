@@ -4,9 +4,9 @@ from pathlib import Path
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import QFileDialog, QSizePolicy, QWidget
 
+import src.app.context as ctx
+config = ctx.services.config
 from src.app.paths import PATH_FOLDER_ICON, PATH_ROOT
-from src.config.loader import ConfigLoader
-from src.config.manager import Config
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets import (
     MTButton,
@@ -24,56 +24,47 @@ from src.ui.widgets.main.helpers import config_float, config_int
 class MTTextSetting(MTWidget):
     def __init__(
         self,
-        config: Config | ConfigLoader,
         tr_key: str,
         cfg_key: str,
         default: str,
+        *,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-
-        self._config = config
         self._cfg_key = cfg_key
         obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, "_", self._cfg_key)
         self.setObjectName(f"{obj_name}_Text_Setting")
 
-        self._main_layout = create_layout(LayoutType.HBOX, parent=self)
+        self._layout = create_layout(LayoutType.HBOX, parent=self)
 
         self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
-        self._label.setAlignment(
-            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
-        )
-        self._label.setSizePolicy(
-            QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred
-        )
 
         self._line_edit = MTLineEdit(obj_name=f"{obj_name}_LineEdit")
-        self._line_edit.setText(str(self._config.get(self._cfg_key, default=default)))
+        self._line_edit.setText(str(config.get(self._cfg_key, default=default)))
         self._line_edit.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
 
         self._line_edit.editingFinished.connect(self._on_changed)
-        self._config.config_loaded.connect(
+        config.config_loaded.connect(
             lambda d=default: self._line_edit.setText(
-                str(self._config.get(self._cfg_key, default=d))
+                str(config.get(self._cfg_key, default=d))
             )
         )
 
-        self._main_layout.addWidget(self._label)
-        self._main_layout.addWidget(self._line_edit, 1)
+        self._layout.addWidget(self._label)
+        self._layout.addWidget(self._line_edit, 1)
 
     def _on_changed(self) -> None:
-        self._config.set(self._cfg_key, self._line_edit.text())
+        config.set(self._cfg_key, self._line_edit.text())
 
 
 class MTPathSetting(MTWidget):
     def __init__(
         self,
-        config: Config | ConfigLoader,
-        tr_key: str,
-        cfg_key: str,
-        default: str,
+        tr_key: str = '',
+        cfg_key: str = '',
+        default: Path | None = None,
         *,
         mode: str = "directory",
         file_filter: str = "",
@@ -81,32 +72,19 @@ class MTPathSetting(MTWidget):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-
-        self._config = config
         self._cfg_key = cfg_key
-        self._mode = str(mode).strip().lower() or "directory"
-        self._file_filter = str(file_filter or "")
-        self._caption = (
-            caption.strip() if isinstance(caption, str) and caption.strip() else None
-        )
+        self._mode = mode
+        self._file_filter = file_filter
+        self._caption = caption.strip() if isinstance(caption, str) and caption.strip() else None
         obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, "_", self._cfg_key)
         self.setObjectName(f"{obj_name}_Path_Setting")
 
         self._main_layout = create_layout(LayoutType.HBOX, parent=self)
 
         self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
-        self._label.setAlignment(
-            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
-        )
-        self._label.setSizePolicy(
-            QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred
-        )
 
         self._line_edit = MTLineEdit(obj_name=f"{obj_name}_LineEdit")
-        self._line_edit.setText(str(self._config.get(self._cfg_key, default=default)))
-        self._line_edit.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        self._line_edit.setText(str(config.get(self._cfg_key, default=default)))
 
         self._browse_button = MTButton(tr_key="", obj_name=f"{obj_name}_Browse_Button")
         self._browse_button.setText("")
@@ -116,15 +94,12 @@ class MTPathSetting(MTWidget):
             size=QSize(18, 18),
             spacing=0.0,
         )
-        self._browse_button.setSizePolicy(
-            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
-        )
 
         self._line_edit.editingFinished.connect(self._on_changed)
         self._browse_button.clicked.connect(self._browse_path)
-        self._config.config_loaded.connect(
+        config.config_loaded.connect(
             lambda d=default: self._line_edit.setText(
-                str(self._config.get(self._cfg_key, default=d))
+                str(config.get(self._cfg_key, default=d))
             )
         )
 
@@ -133,7 +108,7 @@ class MTPathSetting(MTWidget):
         self._main_layout.addWidget(self._browse_button)
 
     def _on_changed(self) -> None:
-        self._config.set(self._cfg_key, self._line_edit.text())
+        config.set(self._cfg_key, self._line_edit.text())
 
     def _browse_path(self) -> None:
         caption = self._caption or self._label.text().strip() or "Select path"
@@ -197,15 +172,15 @@ class MTSliderSetting(MTWidget):
     ) -> None:
         super().__init__(parent)
 
-        self._config = config
+        config = config
         self._cfg_key = cfg_key
         if isinstance(default, int):
-            current_value = config_int(self._config.get(self._cfg_key, default=default), default)
+            current_value = config_int(config.get(self._cfg_key, default=default), default)
             min_int = int(min_value)
             max_int = int(max_value)
             self._prev_value = current_value if min_int <= current_value <= max_int else default
         else:
-            current_value = config_float(self._config.get(self._cfg_key, default=default), default)
+            current_value = config_float(config.get(self._cfg_key, default=default), default)
             min_float = float(min_value)
             max_float = float(max_value)
             self._prev_value = current_value if min_float <= current_value <= max_float else default
@@ -250,10 +225,10 @@ class MTSliderSetting(MTWidget):
         self._slider.sliderReleased.connect(
             lambda: self._on_changed(self._slider.value())
         )
-        self._config.config_loaded.connect(
+        config.config_loaded.connect(
             lambda d=default: self._slider.setValue(
                 config_int(
-                    self._config.get(self._cfg_key, default=d),
+                    config.get(self._cfg_key, default=d),
                     int(d))
             )
         )
@@ -267,7 +242,7 @@ class MTSliderSetting(MTWidget):
     def _on_changed(self, value: int | float) -> None:
         if self._spin_box.value() != self._prev_value:
             self._prev_value = self._spin_box.value()
-            self._config.set(self._cfg_key, value)
+            config.set(self._cfg_key, value)
 
     @property
     def spin_box(self) -> MTSpinBox | MTDoubleSpinBox:

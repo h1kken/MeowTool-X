@@ -12,7 +12,6 @@ from src.theme.schema.types import ThemeMap
 from src.ui.widgets.main.paint_primitives import parse_pen_style
 
 
-ThemeState = ThemeMap
 _BOX_BORDER_SIDES = ('top', 'right', 'bottom', 'left')
 
 if TYPE_CHECKING:
@@ -27,13 +26,13 @@ else:
 
 class BoxThemeMixin(_BoxThemeBase):
     PAINTED_BOX_THEME = True
-    _box_theme: ThemeState | None = None
+    _box_theme: ThemeMap | None = None
 
     def init_box_theme(self) -> None:
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self._box_theme = None
 
-    def apply_box_theme(self, theme: ThemeState) -> None:
+    def apply_box_theme(self, theme: ThemeMap) -> None:
         background = theme_map(theme.get('background')) or {}
         border = theme_map(theme.get('border')) or {}
         background_mapping = theme_map(background) or {}
@@ -52,11 +51,11 @@ class BoxThemeMixin(_BoxThemeBase):
     def has_box_theme(self) -> bool:
         return theme_map(self._box_theme) is not None
 
-    def box_theme_state(self) -> ThemeState | None:
+    def box_theme_state(self) -> ThemeMap | None:
         theme = theme_map(self._box_theme)
         return deepcopy(theme) if theme is not None else None
 
-    def restore_box_theme_state(self, state: ThemeState | None) -> None:
+    def restore_box_theme_state(self, state: ThemeMap | None) -> None:
         self._box_theme = deepcopy(state) if state is not None else None
         self.update()
 
@@ -74,7 +73,7 @@ class BoxThemeMixin(_BoxThemeBase):
         if color is None:
             return False
         theme = self._ensure_box_theme()
-        border = cast(ThemeState, theme.setdefault('border', self._normalize_border({})))
+        border = cast(ThemeMap, theme.setdefault('border', self._normalize_border({})))
         border['color'] = color
         for side_data in self._configured_side_borders(border):
             side_data['color'] = QColor(color)
@@ -90,7 +89,7 @@ class BoxThemeMixin(_BoxThemeBase):
         style: str | None = None,
     ) -> bool:
         theme = self._ensure_box_theme()
-        border = cast(ThemeState, theme.setdefault('border', self._normalize_border({})))
+        border = cast(ThemeMap, theme.setdefault('border', self._normalize_border({})))
 
         if color is not None:
             border_color = self._theme_color(color)
@@ -159,7 +158,7 @@ class BoxThemeMixin(_BoxThemeBase):
 
         self._draw_side_borders(painter, rect, border)
 
-    def _ensure_box_theme(self) -> ThemeState:
+    def _ensure_box_theme(self) -> ThemeMap:
         theme = theme_map(self._box_theme)
         if theme is None:
             self._box_theme = {
@@ -170,11 +169,11 @@ class BoxThemeMixin(_BoxThemeBase):
             theme = self._box_theme
         return theme
 
-    def _normalize_background(self, data: Any) -> ThemeState:
+    def _normalize_background(self, data: Any) -> ThemeMap:
         mapping = theme_map(data) or {}
         return {'color': self._theme_color(mapping.get('color'))}
 
-    def _normalize_border(self, data: Any) -> ThemeState:
+    def _normalize_border(self, data: Any) -> ThemeMap:
         mapping = theme_map(data) or {}
         full = {
             'color': self._theme_color(mapping.get('color')),
@@ -193,7 +192,7 @@ class BoxThemeMixin(_BoxThemeBase):
             }
         return full
 
-    def _normalize_side_border(self, value: Any) -> ThemeState:
+    def _normalize_side_border(self, value: Any) -> ThemeMap:
         mapping = theme_map(value)
         if mapping is not None:
             return mapping
@@ -245,11 +244,11 @@ class BoxThemeMixin(_BoxThemeBase):
                     painter.drawLine(QPointF(rect.left() + half, rect.top()), QPointF(rect.left() + half, rect.bottom()))
             painter.restore()
 
-    def _side_border_data(self, border: dict[str, Any], side: str) -> ThemeState | None:
+    def _side_border_data(self, border: dict[str, Any], side: str) -> ThemeMap | None:
         return theme_map(border.get(side))
 
-    def _configured_side_borders(self, border: dict[str, Any]) -> list[ThemeState]:
-        result: list[ThemeState] = []
+    def _configured_side_borders(self, border: dict[str, Any]) -> list[ThemeMap]:
+        result: list[ThemeMap] = []
         for side in _BOX_BORDER_SIDES:
             side_data = self._side_border_data(border, side)
             if side_data is not None and any(

@@ -22,12 +22,8 @@ def _system_locale() -> str:
     return 'en_US'
 
 
-def _system_language() -> str:
-    return _system_locale().split('_', 1)[0].upper()
-
-
 SYSTEM_LOCALE = _system_locale()
-SYSTEM_LANGUAGE = _system_language()
+SYSTEM_LANGUAGE = SYSTEM_LOCALE.split('_', 1)[0].upper()
 
 
 __all__ = [name for name in globals() if name.isupper()]

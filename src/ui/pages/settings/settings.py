@@ -5,7 +5,6 @@ from PySide6.QtWidgets import QSizePolicy, QWidget
 
 from src.config.loader import ConfigLoader
 from src.config.manager import Config
-from src.translation.manager import TranslationManager
 from src.ui.controllers import PageController
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.pages.settings.pages import (
@@ -35,18 +34,10 @@ class SettingsPage(MTWidget):
 
     def __init__(
         self,
-        *,
-        config: Config,
-        translator: TranslationManager,
-        current_theme_name: str | None = None,
     ) -> None:
         super().__init__()
-        self._config = config
-        self._config_loader: ConfigLoader = config.loader
-        self._translator = translator
         self._tab_names_by_key: dict[str, str] = {}
         self._pages_by_key: dict[str, QWidget] = {}
-        self._current_theme_name = current_theme_name
 
         main_layout = create_layout(LayoutType.VBOX, parent=self)
         main_widget = MTWidget(obj_name="Settings_Main_Tabs_Widget")
@@ -64,11 +55,7 @@ class SettingsPage(MTWidget):
                 QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
             )
             if isinstance(page, (SettingsProxyPage, SettingsRobloxPage)):
-                presence_signal: SignalInstance = page.presence_path_changed
-                def _forward_presence_path(*_args: object) -> None:
-                    self._emit_presence_path()
-
-                presence_signal.connect(_forward_presence_path)
+                page.presence_path_changed.connect(self._emit_presence_path)
             self._page_controller.add_page(
                 tr_key, page, obj_name=f"Settings_{obj_name}_Page"
             )

@@ -15,7 +15,7 @@ class TranslationManager(QObject):
 
     def __init__(self) -> None:
         super().__init__()
-        self._path: Path = PATH_DEFAULT_TRANSLATION
+        self._path = PATH_DEFAULT_TRANSLATION
         self._translations: dict[str, str] = {}
 
     @property

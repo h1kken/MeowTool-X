@@ -34,7 +34,6 @@ from PySide6.QtWidgets import (
 )
 
 from src.app.paths import PATH_SRC
-from src.translation.manager import TranslationManager
 from src.theme.colors import to_qcolor
 from src.theme.schema.access import coerce_box_sides, coerce_number, object_map, theme_map
 from src.ui.painting import draw_widget_background, new_widget_painter
@@ -213,10 +212,9 @@ class MTComboBox(BoxThemeMixin, TranslatableComboBoxMixin, QWidget):
         parent: QWidget | None = None,
         *,
         obj_name: str = '',
-        translator: TranslationManager | None = None,
     ) -> None:
         self._items: list[dict[str, Any]] = []
-        super().__init__(parent, translator=translator)
+        super().__init__(parent)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)

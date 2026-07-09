@@ -24,7 +24,6 @@ from PySide6.QtWidgets import (
 
 from src.theme.colors import to_qcolor
 from src.theme.schema.access import coerce_box_sides, coerce_number, theme_map
-from src.translation.manager import TranslationManager
 from src.ui.painting import new_widget_painter
 from src.ui.widgets.main.box import BoxThemeMixin
 from src.ui.widgets.main.paint_primitives import parse_pen_style, resolve_fill_brush
@@ -569,23 +568,24 @@ class MTLineEdit(BoxThemeMixin, QLineEdit):
     def __init__(
         self,
         text: str = '',
-        parent: QWidget | None = None,
-        *,
         obj_name: str = '',
-        translator: TranslationManager | None = None,
+        *,
+        parent: QWidget | None = None,
     ) -> None:
-        self._placeholder_tr_key: str | None = None
         super().__init__(text, parent)
+        self.setFrame(False)
+        self.setTextMargins(0, 0, 0, 0)
+        
+        if obj_name:
+            self.setObjectName(obj_name)
+            
+        self._placeholder_tr_key: str | None = None
         self._focused_alignment: Qt.AlignmentFlag | None = None
         self._unfocused_alignment: Qt.AlignmentFlag | None = None
         self._theme_text_color_override: QColor | None = None
         self._theme_placeholder_color_override: QColor | None = None
-        self.setFrame(False)
-        self.setTextMargins(0, 0, 0, 0)
         self.init_box_theme()
 
-        if obj_name:
-            self.setObjectName(obj_name)
 
     def set_focus_alignments(
         self,
@@ -647,13 +647,14 @@ class MTSpinBox(BoxThemeMixin, QSpinBox):
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent)
         self.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
-        self.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self.setFrame(False)
         self.lineEdit().setTextMargins(0, 0, 0, 0)
-        self.init_box_theme()
-
+        
         if obj_name:
             self.setObjectName(obj_name)
+            
+        self.init_box_theme()
+
 
     def sizeHint(self) -> QSize:
         return _spin_box_content_size_hint(
@@ -689,7 +690,6 @@ class MTDoubleSpinBox(BoxThemeMixin, QDoubleSpinBox):
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent)
         self.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
-        self.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self.setFrame(False)
         self.lineEdit().setTextMargins(0, 0, 0, 0)
         self.init_box_theme()

@@ -39,9 +39,7 @@ def bootstrap(app: QApplication) -> None:
     services.translator.load(str(services.config.get(CKey.GENERAL_LANGUAGE, default=PATH_DEFAULT_TRANSLATION.stem)).strip())
     
     # TODO: refactor lighter
-    services.window = MainWindow(
-        config=services.config,
-    )
+    services.window = MainWindow()
     services.window.build_pages()
     services.window.init_runtime_controllers()
     services.window.initialize_theme_manager()
