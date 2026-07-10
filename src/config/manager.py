@@ -4,18 +4,22 @@ from copy import deepcopy
 import threading
 from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from PySide6.QtCore import QObject, Signal
 
 import src.app.context as ctx
+logger = ctx.services.logger
 from src.app.paths import PATH_CONFIGS_USER, PATH_DEFAULT_CONFIG
 from src.config.defaults import default_config
-from src.config.loader import ConfigLoader
 from src.config.mixin import GetConfigMixin, SaveConfigMixin, SetConfigMixin
 from src.config.types import ConfigMap, ConfigValue
 from src.config.utils import normalize_config, parse_config
 from src.utils.filesystem import FS
+from src.config import ConfigLoaderKey as CLKey
+
+if TYPE_CHECKING:
+    from src.config import ConfigLoader
 
 
 class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
@@ -25,13 +29,11 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
     def __init__(self, loader: ConfigLoader) -> None:
         super().__init__()
         self._loader = loader
+        
         self._path = PATH_DEFAULT_CONFIG
         self._data: ConfigMap = {}
         self._defaults: ConfigMap = default_config()
         self._save_lock = threading.Lock()
-
-    @property
-    def loader(self) -> ConfigLoader: return self._loader
 
     @property
     def path(self) -> Path: return self._path
@@ -57,9 +59,12 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             path.write_text(text, encoding="utf-8")
             self.load(filename)
         except OSError as e:
-            ctx.services.logger.exception(f"Can't create config '{filename}'. Error: {e}")
+            logger.exception(f"Can't create config '{filename}'. Error: {e}")
         
-    def load(self, filename: str) -> None:
+    def load(self, filename: str | None = None) -> None:
+        if filename is None:
+            filename = str(self._loader.get(CLKey.LOADER_CONFIG_ON_LOAD, default=PATH_DEFAULT_CONFIG.stem)).strip()
+        
         path = PATH_CONFIGS_USER / f"{filename}.txt"
         if not path.is_file():
             return
@@ -73,7 +78,7 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             self.save()
             self.config_loaded.emit()
         except (OSError, UnicodeError, ValueError, TypeError) as e:
-            ctx.services.logger.exception(f"Can't load config '{filename}'. Error: {e}")
+            logger.exception(f"Can't load config '{filename}'. Error: {e}")
 
     def set(self, key: str, value: object, *, sep: str = ">", force_save: bool = False) -> None:
         super().set(key, value, sep=sep)
@@ -105,5 +110,5 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             path.rename(new_path)
             self._path = new_path
         except OSError as e:
-            ctx.services.logger.exception(f"Can't rename config '{path.stem}' to '{name}'. Error: {e}")
+            logger.exception(f"Can't rename config '{path.stem}' to '{name}'. Error: {e}")
             return

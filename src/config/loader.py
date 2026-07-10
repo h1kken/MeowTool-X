@@ -1,19 +1,23 @@
 from __future__ import annotations
 
 import threading
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal
 
 import src.app.context as ctx
+logger = ctx.services.logger
 from src.app.paths import PATH_DEFAULT_CONFIG_LOADER
 from src.config.defaults import default_config_loader
-from src.config.mixin import GetConfigMixin, SaveConfigMixin, SetConfigMixin
-from src.config.types import ConfigMap
+from src.config.mixin import GetConfigMixin, SetConfigMixin, SaveConfigMixin
 from src.config.utils import normalize_config, parse_config
 from src.utils.filesystem import FS, get_safe
 from src.config.enums import ConfigLoaderKey as CLKey
 
+if TYPE_CHECKING:
+    from pathlib import Path
+    from src.config.types import ConfigMap
+    
 
 class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
     config_loaded = Signal()
@@ -26,8 +30,6 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         self._defaults: ConfigMap = default_config_loader()
         self._save_lock = threading.Lock()
         self._load()
-        self.auto_save_config = self.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES, default=False)
-        self.auto_save_theme = self.get(CLKey.SAVER_AUTO_SAVE_THEME_CHANGES, default=False)
 
     @property
     def path(self) -> Path: return self._path
@@ -45,10 +47,6 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         super().set(key, value, sep=sep)
 
         normalized_key = key.replace(sep, ">")
-        if normalized_key == CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES:
-            self.auto_save_config = bool(value)
-        if normalized_key == CLKey.SAVER_AUTO_SAVE_THEME_CHANGES:
-            self.auto_save_theme = bool(value)
         if normalized_key.startswith(CLKey.MISC_DEBUGGER_PATH):
             self._apply_logger_settings()
         
@@ -56,7 +54,7 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         self.save()
 
     def _apply_logger_settings(self) -> None:
-        ctx.services.logger.apply_debug_settings(
+        logger.apply_debug_settings(
             debug=bool(
                 get_safe(self._data, CLKey.MISC_DEBUGGER_DEBUG, sep=">", default=False)
             ),
@@ -75,7 +73,7 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         )
 
     def _load(self) -> None:
-        FS.ensure_file(self.path)
+        FS.ensure_file(self._path)
 
         try:
             with self._path.open("r", encoding="utf-8", errors="ignore") as f:

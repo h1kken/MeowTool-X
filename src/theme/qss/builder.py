@@ -80,56 +80,83 @@ class QssBuilder(StyleNormalizer):
             return []
 
         rules: list[str] = []
+        surface_rules, has_background_rule = self._build_surface_rules(data_dict)
+        rules.extend(surface_rules)
+        rules.extend(self._build_text_rules(data_dict))
+        rules.extend(self._build_passthrough_rules(data_dict))
+        rules.extend(self._build_frame_rules(data_dict, has_background_rule=has_background_rule))
+        rules.extend(self.build_padding_rules(data_dict))
+        return rules
+
+    def _build_surface_rules(self, data_dict: dict[str, Any]) -> tuple[list[str], bool]:
+        rules: list[str] = []
         has_background_rule = False
 
-        bg_data = theme_map(data_dict.get('background')) or {}
-        if (bg_color := self.build_background_color(bg_data.get('color'))):
+        background = theme_map(data_dict.get('background')) or {}
+        if (bg_color := self.build_background_color(background.get('color'))):
             rules.append(bg_color)
             has_background_rule = True
-        if (bg_image := self.build_background_image(bg_data.get('image'))):
+        if (bg_image := self.build_background_image(background.get('image'))):
             rules.append(bg_image)
             has_background_rule = True
 
-        if (media_data := theme_map(data_dict.get('media'))) is not None:
-            source = media_data.get('source')
-            if isinstance(source, str) and source.strip():
-                resolved_source = self.resolve_media_source(source)
-                if (media_bg_image := self.build_background_image(resolved_source)):
-                    rules.append(media_bg_image)
-                    has_background_rule = True
+        media = theme_map(data_dict.get('media')) or {}
+        source = media.get('source')
+        if isinstance(source, str) and source.strip():
+            resolved_source = self.resolve_media_source(source)
+            if (media_bg_image := self.build_background_image(resolved_source)):
+                rules.append(media_bg_image)
+                has_background_rule = True
 
-        if (text_data := theme_map(data_dict.get('text'))) is not None:
-            if (text_color := text_data.get('color')):
-                rules.append(f'color: {normalize_color(text_color, fallback_raw=True)};')
-            if (font_data := theme_map(text_data.get('font'))) is not None:
-                if (family := font_data.get('family')):
-                    if (resolved_family := self.resolve_font_family(str(family))):
-                        rules.append(f'font-family: {resolved_family};')
-                if (size := self.normalize_measure(font_data.get('size'))):
-                    rules.append(f'font-size: {size};')
-                if (weight := font_data.get('weight')):
-                    rules.append(f'font-weight: {weight};')
-                if (style := font_data.get('style')):
-                    rules.append(f'font-style: {style};')
+        return rules, has_background_rule
 
-        if (qss_rules := self.build_qss_passthrough_rules(data_dict.get('qss'))):
-            rules.extend(qss_rules)
+    def _build_text_rules(self, data_dict: dict[str, Any]) -> list[str]:
+        text_data = theme_map(data_dict.get('text')) or {}
+        if not text_data:
+            return []
 
-        if (border_data := theme_map(data_dict.get('border'))) is not None:
+        rules: list[str] = []
+        if (text_color := text_data.get('color')):
+            rules.append(f'color: {normalize_color(text_color, fallback_raw=True)};')
+
+        font_data = theme_map(text_data.get('font')) or {}
+        if not font_data:
+            return rules
+
+        if (family := font_data.get('family')):
+            if (resolved_family := self.resolve_font_family(str(family))):
+                rules.append(f'font-family: {resolved_family};')
+        if (size := self.normalize_measure(font_data.get('size'))):
+            rules.append(f'font-size: {size};')
+        if (weight := font_data.get('weight')):
+            rules.append(f'font-weight: {weight};')
+        if (style := font_data.get('style')):
+            rules.append(f'font-style: {style};')
+        return rules
+
+    def _build_passthrough_rules(self, data_dict: dict[str, Any]) -> list[str]:
+        return self.build_qss_passthrough_rules(data_dict.get('qss'))
+
+    def _build_frame_rules(self, data_dict: dict[str, Any], *, has_background_rule: bool) -> list[str]:
+        rules: list[str] = []
+        background = theme_map(data_dict.get('background')) or {}
+        border_data = theme_map(data_dict.get('border'))
+
+        if border_data is not None:
             border_rules = self.build_border_rules(border_data)
             rules.extend(border_rules)
-            radius_value = border_data.get('radius', bg_data.get('radius'))
+            radius_value = border_data.get('radius', background.get('radius'))
             if (radius_rule := self.build_border_radius_rule(radius_value)):
                 if not border_rules:
                     rules.append('border: none;')
                 rules.append(radius_rule)
-        elif (radius_rule := self.build_border_radius_rule(bg_data.get('radius'))):
-            rules.append('border: none;')
-            rules.append(radius_rule)
-        elif has_background_rule:
-            rules.append('border: none;')
+            return rules
 
-        rules.extend(self.build_padding_rules(data_dict))
+        if (radius_rule := self.build_border_radius_rule(background.get('radius'))):
+            return ['border: none;', radius_rule]
+
+        if has_background_rule:
+            return ['border: none;']
 
         return rules
 

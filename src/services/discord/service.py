@@ -8,16 +8,16 @@ from typing import TYPE_CHECKING, Any
 from PySide6.QtCore import QObject
 
 import src.app.context as ctx
-from src.services.discord.constants import (
-    DISCORD_RPC_APP_ID,
+logger = ctx.services.logger
+from src.services.discord.constants import ( # TODO: remove
     DISCORD_RPC_LARGE_IMAGE_KEY,
     DISCORD_RPC_SMALL_IMAGE_KEY,
     DISCORD_RPC_SMALL_IMAGE_TEXT,
 )
 
 if TYPE_CHECKING:
-    from src.config.manager import Config
     from src.ui.windows.main_window import MainWindow
+    from src.config.manager import Config
 
 
 class _DiscordRPCImportError(Exception):
@@ -35,7 +35,8 @@ except Exception:  # pragma: no cover - optional dependency safety
 
 
 class DiscordRPC(QObject):
-    CONFIG_KEY = "Outputs>Discord Presence>Enable Presence"
+    APP_ID = '1493918950344626216'
+    
     DEFAULT_PAGE = "Startup"
     RETRY_DELAY_SECONDS = 5.0
     CAPACITY_DELAY_SECONDS = 15.0
@@ -44,7 +45,7 @@ class DiscordRPC(QObject):
         super().__init__(window)
         self._window = window
         self._config = config
-        self._client_id = str(DISCORD_RPC_APP_ID).strip()
+        
         self._started_at = int(time())
         self._page = self._normalize_page(window.current_presence_page())
         self._enabled = False
@@ -57,8 +58,8 @@ class DiscordRPC(QObject):
         self._worker: threading.Thread | None = None
 
         self._window.presence_page_changed.connect(self._set_page)
-        self._config.config_loaded.connect(self._sync_enabled)
-        self._config.value_changed.connect(self._on_config_value_changed)
+        config.config_loaded.connect(self._sync_enabled)
+        config.value_changed.connect(self._on_config_value_changed)
 
     def start(self) -> None:
         self._started_at = int(time())
@@ -152,28 +153,28 @@ class DiscordRPC(QObject):
         return tuple((key, repr(payload[key])) for key in sorted(payload))
 
     def _connect(self) -> tuple[object | None, float]:
-        if not self._client_id:
-            ctx.services.logger.warning("Discord Presence is enabled, but DISCORD_PRESENCE_APP_ID is empty.")
+        if not self.APP_ID:
+            logger.warning("Discord Presence is enabled, but DISCORD_PRESENCE_APP_ID is empty.")
             return None, self.RETRY_DELAY_SECONDS
 
         if Presence is None:
-            ctx.services.logger.warning("Discord Presence is enabled, but pypresence is not installed.")
+            logger.warning("Discord Presence is enabled, but pypresence is not installed.")
             return None, self.RETRY_DELAY_SECONDS
 
         for pipe in [self._preferred_pipe, *[value for value in range(10) if value != self._preferred_pipe]]:
             rpc: object | None = None
             try:
-                rpc = Presence(self._client_id, pipe=pipe)
+                rpc = Presence(self.APP_ID, pipe=pipe)
                 rpc.connect()
                 self._preferred_pipe = pipe
                 self._capacity_logged = False
-                ctx.services.logger.info(f"Discord Presence connected (pipe {pipe})")
+                logger.info(f"Discord Presence connected (pipe {pipe})")
                 return rpc, self.RETRY_DELAY_SECONDS
             except DiscordError as exc:
                 self._close_rpc(rpc)
                 if getattr(exc, "code", None) == 1006 or "Server at capacity" in str(exc):
                     if not self._capacity_logged:
-                        ctx.services.logger.warning("Discord Presence temporarily unavailable: Discord server at capacity.")
+                        logger.warning("Discord Presence temporarily unavailable: Discord server at capacity.")
                         self._capacity_logged = True
                     return None, self.CAPACITY_DELAY_SECONDS
             except (DiscordNotFound, InvalidPipe, OSError):
@@ -181,7 +182,7 @@ class DiscordRPC(QObject):
                 continue
             except Exception as exc:  # pragma: no cover - defensive guard
                 self._close_rpc(rpc)
-                ctx.services.logger.exception(f"Discord Presence connection failed. Error: {exc}")
+                logger.exception(f"Discord Presence connection failed. Error: {exc}")
                 return None, self.RETRY_DELAY_SECONDS
 
         return None, self.RETRY_DELAY_SECONDS
@@ -191,10 +192,10 @@ class DiscordRPC(QObject):
             getattr(rpc, "update")(**payload)
             return True
         except (DiscordNotFound, InvalidPipe, PipeClosed, BrokenPipeError, OSError):
-            ctx.services.logger.debug("Discord Presence update skipped: pipe unavailable")
+            logger.debug("Discord Presence update skipped: pipe unavailable")
             return False
         except Exception as exc:  # pragma: no cover - defensive guard
-            ctx.services.logger.exception(f"Discord Presence update failed. Error: {exc}")
+            logger.exception(f"Discord Presence update failed. Error: {exc}")
             return False
 
     def _close_rpc(self, rpc: object | None) -> None:
@@ -238,7 +239,7 @@ class DiscordRPC(QObject):
                 if rpc is not None:
                     self._close_rpc(rpc)
                     rpc = None
-                    ctx.services.logger.debug("Discord Presence disconnected")
+                    logger.debug("Discord Presence disconnected")
                 self._wait()
                 continue
 
@@ -269,4 +270,4 @@ class DiscordRPC(QObject):
 
         if rpc is not None:
             self._close_rpc(rpc)
-            ctx.services.logger.debug("Discord Presence disconnected")
+            logger.debug("Discord Presence disconnected")

@@ -10,7 +10,7 @@ from sqlalchemy import insert
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.db.base import Base, RunBoundModel
+from src.db.models.base import Base, RunBoundModel
 
 TModel = TypeVar("TModel", bound=Base)
 TRunBoundModel = TypeVar("TRunBoundModel", bound=RunBoundModel)

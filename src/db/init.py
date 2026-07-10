@@ -1,4 +1,4 @@
-from src.db.base import Base
+from src.db.models.base import Base
 from src.app.paths import PATH_DATABASES_USER
 from src.db.models import load_models
 from src.db.session import get_engine

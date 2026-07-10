@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import json
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import src.app.context as ctx
 from PySide6.QtCore import QSize, QTimer, Signal
@@ -15,7 +17,6 @@ from src.app.paths import (
     PATH_THEMES_USER,
 )
 from src.ui.widgets import SidebarButton, SidebarCategory
-from src.theme.animation.manager import AnimationManager
 from src.theme.constants import THEME_AUTOLOAD_FALLBACK
 from src.theme.storage.io import (
     find_theme_file_by_name,
@@ -48,6 +49,9 @@ from src.ui.windows.types import PageSpec, SidebarSectionSpec
 from src.ui.windows.window_header import apply_frameless_window_header
 from src.app.constants import PROGRAM_NAME
 from src.utils.filesystem import FS
+
+if TYPE_CHECKING:
+    from src.config.manager import Config
 
 
 class MainWindow(QMainWindow):
@@ -85,8 +89,9 @@ class MainWindow(QMainWindow):
         "Settings": "settings.svg",
     }
 
-    def __init__(self) -> None:
+    def __init__(self, config: Config) -> None:
         super().__init__()
+        self.config = config
         
         self._theme_auto_save_timer = QTimer(self)
         self._theme_auto_save_timer.setSingleShot(True)
@@ -100,8 +105,6 @@ class MainWindow(QMainWindow):
 
         self._deferred_theme_auto_save = False
         self._settings_page: SettingsPage | None = None
-        self._animation_manager: AnimationManager | None = None
-        self._theme_manager: ThemeManager | None = None
         self._presence_page = "Startup"
         self._settings_presence_label = "Settings"
 

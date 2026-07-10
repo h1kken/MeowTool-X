@@ -4,7 +4,7 @@ import math
 import re
 from copy import deepcopy
 from dataclasses import replace
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from PySide6.QtCore import (
     QAbstractAnimation,
@@ -35,6 +35,10 @@ from .parser import parse_specs
 from .timer import TimerAnimation
 from .types import AnimationSpec
 
+if TYPE_CHECKING:
+    from src.ui.windows.main_window import MainWindow
+    from src.config import Config
+
 _CSS_DECLARATION_PATTERN = re.compile(r'([a-zA-Z-]+)\s*:\s*([^;{}]+)')
 
 def _widget_or_none(value: QObject | QWidget) -> QWidget | None:
@@ -45,9 +49,11 @@ def _slider_or_none(value: object) -> QAbstractSlider | None:
     return value if isinstance(value, QAbstractSlider) else None
 
 class AnimationManager(QObject):
-    def __init__(self, root: QWidget):
+    def __init__(self, window: MainWindow, config: Config):
         super().__init__()
-        self._root = root
+        self._window = window
+        self._config = config
+        
         self._animations: dict[QWidget, dict[str, QParallelAnimationGroup]] = {}
         self._cache: dict[QWidget, dict[str, Any]] = {}
         self._style_overrides: dict[QWidget, dict[str, str]] = {}
@@ -81,7 +87,7 @@ class AnimationManager(QObject):
             if not specs:
                 continue
 
-            widgets = resolve_target_widgets(self._root, target, include_window=True)
+            widgets = resolve_target_widgets(self._window, target, include_window=True)
             if not widgets:
                 continue
 

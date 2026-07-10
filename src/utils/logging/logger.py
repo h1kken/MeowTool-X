@@ -126,7 +126,9 @@ class Logger:
         self._console_level = console_level
         self._file_level = file_level
         self._debug_settings: dict[str, bool] = {}
+        
         self._configure_sinks()
+        self._log_environment_info()
 
     def apply_debug_settings(
         self,

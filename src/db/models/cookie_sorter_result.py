@@ -3,12 +3,11 @@ from __future__ import annotations
 from sqlalchemy import Boolean, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.db.base import RunBoundModel
-from src.db.types import JsonValue
+from src.db.models import BaseModel
 
 
 # TODO: columns
-class CookieSorterResult(RunBoundModel):
+class CookieSorterResult(BaseModel):
     __tablename__ = "cookie_sorter_results"
 
     source_text: Mapped[str] = mapped_column(Text)
@@ -17,7 +16,6 @@ class CookieSorterResult(RunBoundModel):
     is_valid_cookie: Mapped[bool | None] = mapped_column(Boolean)
     bucket_name: Mapped[str | None] = mapped_column(String(64), index=True)
     output_path: Mapped[str | None] = mapped_column(Text)
-    payload_json: Mapped[JsonValue | None] = mapped_column(JSON)
 
 
 __all__ = ("CookieSorterResult",)

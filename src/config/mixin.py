@@ -5,6 +5,8 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import TypeVar, cast
 
+import src.app.context as ctx
+logger = ctx.services.logger
 from src.app.paths import PATH_CONFIGS_USER
 from src.config.constants import (
     CONFIG_INDENT,
@@ -15,7 +17,6 @@ from src.config.constants import (
 from src.config.types import ConfigMap, ConfigMixinHost, ConfigValue
 from src.config.utils import convert_value
 from src.utils.filesystem import FS, del_safe, get_safe, set_safe
-from src.utils.logging import logger
 
 TDefault = TypeVar("TDefault")
 
