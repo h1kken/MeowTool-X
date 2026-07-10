@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 
 import src.app.context as ctx
 from src.app.types import AppServices
-from src.utils.logging import Logger
 from src.utils.filesystem.file import create_start_paths
 from src.config import ConfigLoader, Config
 # db:
@@ -20,8 +19,6 @@ if TYPE_CHECKING:
 
 def bootstrap(app: QApplication) -> None:
     services = ctx.services = AppServices()
-
-    services.logger = Logger()
     
     create_start_paths()
     

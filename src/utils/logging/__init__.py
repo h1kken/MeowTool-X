@@ -1,5 +1,5 @@
-from src.utils.logging.logger import Logger
+from src.utils.logging.logger import logger
 
 __all__ = [
-    'Logger'
+    'logger'
 ]

@@ -5,9 +5,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal
 
-import src.app.context as ctx
-logger = ctx.services.logger
-
+from src.utils.logging import logger
 from src.app.paths import PATH_DEFAULT_TRANSLATION, PATH_TRANSLATIONS_SRC, PATH_TRANSLATIONS_USER
 from src.config.constants import CONFIG_COMMENT_SYMBOLS
 

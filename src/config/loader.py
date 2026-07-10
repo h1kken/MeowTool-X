@@ -5,8 +5,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal
 
-import src.app.context as ctx
-logger = ctx.services.logger
+from src.utils.logging import logger
 from src.app.paths import PATH_DEFAULT_CONFIG_LOADER
 from src.config.defaults import default_config_loader
 from src.config.mixin import GetConfigMixin, SetConfigMixin, SaveConfigMixin
@@ -84,4 +83,4 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             self.save()
             self.config_loaded.emit()
         except (OSError, UnicodeError, ValueError, TypeError) as e:
-            ctx.services.logger.exception(f"Loader error: {e}")
+            logger.exception(f"Loader error: {e}")

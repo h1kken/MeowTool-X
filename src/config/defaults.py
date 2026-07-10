@@ -42,21 +42,8 @@ DEFAULT_CONFIG: Final[ConfigMap] = {
   "General": {
     "Language": PATH_DEFAULT_TRANSLATION.stem,
     "Theme": PATH_DEFAULT_THEME.stem,
-    "Disable Warnings For Links": False,
-    "Disable Warnings For Dangerous Actions": False,
-  },
-  "Theme": {
-    "Autoload Selected Theme": True,
-  },
-  "Misc": {},
-  "HTTP Engine": {
-    "Concurrency Profile": "Auto",
-    "Max Concurrency": 64,
-    "Per Proxy Max In Flight": 8,
-    "Direct Max In Flight": 2,
   },
   "Outputs": {
-    "Play Sound When Work Finished": False,
     "Telegram Bot": {
       "Token": "",
       "Chat ID": "",

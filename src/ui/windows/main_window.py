@@ -5,7 +5,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-import src.app.context as ctx
+from src.utils.logging import logger
 from PySide6.QtCore import QSize, QTimer, Signal
 from PySide6.QtGui import QCloseEvent, QIcon, QMoveEvent, QResizeEvent
 from PySide6.QtWidgets import QBoxLayout, QMainWindow, QSizePolicy, QWidget

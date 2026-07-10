@@ -13,7 +13,7 @@ ConfigMap: TypeAlias = dict[str, ConfigValue]
 type SortCategoryKind = Literal["none", "text", "number"]
 
 
-class ConfigMixinHost(Protocol):
+class ConfigMixinHost(Protocol):    
     @property
     def path(self) -> Path: ...
     

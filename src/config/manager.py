@@ -8,8 +8,7 @@ from typing import TYPE_CHECKING, cast
 
 from PySide6.QtCore import QObject, Signal
 
-import src.app.context as ctx
-logger = ctx.services.logger
+from src.utils.logging import logger
 from src.app.paths import PATH_CONFIGS_USER, PATH_DEFAULT_CONFIG
 from src.config.defaults import default_config
 from src.config.mixin import GetConfigMixin, SaveConfigMixin, SetConfigMixin
@@ -28,7 +27,7 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
 
     def __init__(self, loader: ConfigLoader) -> None:
         super().__init__()
-        self._loader = loader
+        self.loader = loader
         
         self._path = PATH_DEFAULT_CONFIG
         self._data: ConfigMap = {}
@@ -63,7 +62,7 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         
     def load(self, filename: str | None = None) -> None:
         if filename is None:
-            filename = str(self._loader.get(CLKey.LOADER_CONFIG_ON_LOAD, default=PATH_DEFAULT_CONFIG.stem)).strip()
+            filename = str(self.loader.get(CLKey.LOADER_CONFIG_ON_LOAD, default=PATH_DEFAULT_CONFIG.stem)).strip()
         
         path = PATH_CONFIGS_USER / f"{filename}.txt"
         if not path.is_file():
@@ -84,7 +83,7 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         super().set(key, value, sep=sep)
         self.value_changed.emit(key.replace(sep, ">"), value)
 
-        if self._loader.auto_save_config or force_save:
+        if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES, default=False) or force_save:
             self.save()
 
     def set_many(self, items: Mapping[str, ConfigValue] | Iterable[tuple[str, ConfigValue]], *, sep: str = ">", force_save: bool = False) -> None:
@@ -93,7 +92,7 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             super().set(str(key), value, sep=sep)
             self.value_changed.emit(str(key).replace(sep, ">"), value)
 
-        if self._loader.auto_save_config or force_save:
+        if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES, default=False) or force_save:
             self.save()
 
     def rename(self, path: Path, name: Path) -> None:
