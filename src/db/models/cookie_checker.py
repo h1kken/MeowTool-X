@@ -11,7 +11,7 @@ from src.db.models import BaseModel, RunModel, ResultModel
 
 if TYPE_CHECKING:
     from src.db.models import (
-        RobloxAccount, BadgeOwned, GamepassOwned,
+        Account, BadgeOwned, GamepassOwned,
         ProductOwned, PlaceFavorited, PlacePlayed,
         BundleOwned, GroupOwned, PlaceOwned,
         RobloxBadgeOwned,
@@ -68,7 +68,7 @@ class CookieCheckerResult(ResultModel):
     is_valid: Mapped[bool] = mapped_column(Boolean)
     
     user_id: Mapped[int | None] = mapped_column(ForeignKey("accounts.user_id"), index=True)
-    account: Mapped["RobloxAccount"] = relationship()
+    account: Mapped["Account"] = relationship()
     
     country_code: Mapped[str | None] = mapped_column(String(2))
     registration_date: Mapped[datetime | None] = mapped_column(DateTime)

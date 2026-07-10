@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from src.db.models import BaseModel
 
 
-class RobloxAccount(BaseModel):
+class Account(BaseModel):
     __tablename__ = "accounts"
 
     user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)

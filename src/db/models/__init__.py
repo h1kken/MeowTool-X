@@ -1,7 +1,7 @@
 from src.db.models.base import BaseModel, RunModel, ResultModel
 
 # checker
-from src.db.models.account import RobloxAccount
+from src.db.models.account import Account
 from src.db.models.badges import Badge, BadgeOwned
 from src.db.models.bundles import Bundle, BundleOwned
 from src.db.models.gamepasses import Gamepass, GamepassOwned
@@ -29,7 +29,7 @@ def load_models() -> None:
         RunModel,
         ResultModel,
 
-        RobloxAccount,
+        Account,
         
         Badge,
         BadgeOwned,
@@ -69,7 +69,7 @@ __all__ = (
     "RunModel",
     "ResultModel",
 
-    "RobloxAccount",
+    "Account",
 
     "Badge",
     "BadgeOwned",
