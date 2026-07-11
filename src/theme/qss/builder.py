@@ -13,7 +13,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QWidget
 
-from src.app.paths import PATH_FONTS_USER, PATH_ROOT
+from src.app.paths import PATH_FONTS, PATH_ROOT
 from src.theme.colors import normalize_color, to_qcolor
 from src.theme.constants import SUPPORTED_BG_MEDIA_EXTENSIONS
 from src.theme.qss.normalizer import StyleNormalizer
@@ -448,7 +448,7 @@ class QssBuilder(StyleNormalizer):
         return self._resolve_remote_font_path(url, download=False)
 
     def _resolve_remote_font_path(self, url: str, *, download: bool) -> Path | None:
-        PATH_FONTS_USER.mkdir(parents=True, exist_ok=True)
+        PATH_FONTS.mkdir(parents=True, exist_ok=True)
         parsed = urllib.parse.urlparse(url)
         suffix = Path(parsed.path).suffix.lower()
 
@@ -495,7 +495,7 @@ class QssBuilder(StyleNormalizer):
 
     def _cached_url_path(self, url: str, suffix: str) -> Path:
         filename = hashlib.sha256(url.encode('utf-8')).hexdigest() + suffix
-        return PATH_FONTS_USER / filename
+        return PATH_FONTS / filename
 
     def _queue_remote_font_download(self, source: str) -> None:
         url = self._unwrap_url_value(source)

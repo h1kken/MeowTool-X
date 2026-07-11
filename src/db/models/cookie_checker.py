@@ -8,7 +8,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.models import RunModel, ResultModel
 
-
 if TYPE_CHECKING:
     from src.db.models import (
         Cookie, Account, Card,
@@ -45,7 +44,7 @@ class CookieCheckerResult(ResultModel):
     is_card_checked: Mapped[bool] = mapped_column(Boolean, default=False)
     card: Mapped[list["Card"] | None] = relationship(back_populates="result")
     
-    premium: Mapped[bool | None] = mapped_column(Boolean)
+    has_premium: Mapped[bool | None] = mapped_column(Boolean)
     
     is_badges_checked: Mapped[bool] = mapped_column(Boolean, default=False)
     badges: Mapped[list["BadgeOwned"]] = relationship(back_populates="result")
@@ -94,9 +93,6 @@ class CookieCheckerResult(ResultModel):
 
 
 __all__ = (
-    "Card",
-    "Session",
-    "Email",
     "CookieCheckerRun",
     "CookieCheckerResult",
 )

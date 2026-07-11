@@ -11,10 +11,10 @@ def _find_bundle_root() -> Path:
     if isinstance(bundle_path, str):
         return Path(bundle_path).resolve()
 
-    parents = Path(__file__).resolve().parents
-    for idx, path in enumerate(parents):
+    for path in Path(__file__).resolve().parents:
         if path.name == 'src':
-            return parents[idx + 1]
+            return path.parent
+        
     return Path.cwd().resolve()
 
 
@@ -71,21 +71,24 @@ PATH_DEFAULT_TRANSLATION = PATH_TRANSLATIONS_SRC / 'en_US.axis'
 PATH_TRANSLATIONS_USER = PATH_APPDATA_APP_DIR / 'Translations'
 
 ### other user data
-PATH_CONFIGS_USER = PATH_APPDATA_APP_DIR / 'Configs'
-PATH_DEFAULT_CONFIG = PATH_CONFIGS_USER / 'default.txt'
-PATH_DEFAULT_CONFIG_LOADER = PATH_CONFIGS_USER / '.loader.txt'
+PATH_CONFIGS = PATH_APPDATA_APP_DIR / 'Configs'
+PATH_DEFAULT_CONFIG = PATH_CONFIGS / 'default.txt'
+PATH_DEFAULT_CONFIG_LOADER = PATH_CONFIGS / '.loader.txt'
 
 ### work data
-PATH_LOGS_USER = PATH_APPDATA_APP_DIR / 'Logs'
-PATH_CACHE_USER = PATH_APPDATA_APP_DIR / 'Cache'
-PATH_FONTS_USER = PATH_APPDATA_APP_DIR / 'Fonts'
+PATH_LOGS = PATH_APPDATA_APP_DIR / 'Logs'
 
-PATH_DATABASES_USER = PATH_APPDATA_APP_DIR / 'Databases'
+PATH_CACHE = PATH_APPDATA_APP_DIR / 'Cache'
+PATH_CACHE_AVATARS = PATH_CACHE / "Avatars"
 
-PATH_DATABASES_ROBLOX_USER = PATH_DATABASES_USER / 'Roblox'
-PATH_ROBLOX_COOKIE_CHECKER_DB = PATH_DATABASES_ROBLOX_USER / 'cookie-checker.db'
-PATH_ROBLOX_COOKIE_SORTER_DB = PATH_DATABASES_ROBLOX_USER / 'cookie-sorter.db'
-PATH_ROBLOX_COOKIE_REFRESHER_DB = PATH_DATABASES_ROBLOX_USER / 'cookie-refresher.db'
+PATH_FONTS = PATH_APPDATA_APP_DIR / 'Fonts'
+
+PATH_DATABASES = PATH_APPDATA_APP_DIR / 'Databases'
+
+PATH_DATABASES_ROBLOX = PATH_DATABASES / 'Roblox'
+PATH_ROBLOX_COOKIE_CHECKER_DB = PATH_DATABASES_ROBLOX / 'CookieChecker.db'
+PATH_ROBLOX_COOKIE_SORTER_DB = PATH_DATABASES_ROBLOX / 'CookieSorter.db'
+PATH_ROBLOX_COOKIE_REFRESHER_DB = PATH_DATABASES_ROBLOX / 'CookieRefresher.db'
 
 ### roblox
 PATH_FISHSTRAP = PATH_LOCALAPPDATA / 'Fishstrap' / 'Fishstrap.exe'

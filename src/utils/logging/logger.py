@@ -9,7 +9,7 @@ from typing import Any, cast
 
 import loguru
 
-from src.app.paths import PATH_ROOT, PATH_LOGS_USER
+from src.app.paths import PATH_ROOT, PATH_LOGS
 from src.app.constants import IS_LAUNCHED_WITH_CONSOLE, PROGRAM_NAME, PROGRAM_VERSION
 from src.utils.logging.constants import (
     DATE_LOGGER_FORMAT,
@@ -118,7 +118,7 @@ class Logger:
         console_level: LogLevel = LogLevel.INFO,
         file_level: LogLevel = LogLevel.DEBUG,
     ):
-        self._path = PATH_LOGS_USER / f'{name} ({datetime.now().strftime(DATE_LOGGER_FORMAT)}).log'
+        self._path = PATH_LOGS / f'{name} ({datetime.now().strftime(DATE_LOGGER_FORMAT)}).log'
         self._path.parent.mkdir(parents=True, exist_ok=True)
         
         self._logger = loguru.logger

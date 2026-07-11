@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, cast
 from PySide6.QtCore import QObject, Signal
 
 from src.utils.logging import logger
-from src.app.paths import PATH_CONFIGS_USER, PATH_DEFAULT_CONFIG
+from src.app.paths import PATH_CONFIGS, PATH_DEFAULT_CONFIG
 from src.config.defaults import default_config
 from src.config.mixin import GetConfigMixin, SaveConfigMixin, SetConfigMixin
 from src.config.types import ConfigMap, ConfigValue
@@ -47,11 +47,11 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
     def save_lock(self) -> threading.Lock: return self._save_lock
 
     def create_config(self, filename: str) -> None:
-        path = PATH_CONFIGS_USER / f"{filename}.txt"
+        path = PATH_CONFIGS / f"{filename}.txt"
         if path.exists():
             return
 
-        FS.ensure_dir(PATH_CONFIGS_USER)
+        FS.ensure_dir(PATH_CONFIGS)
         try:
             snapshot = deepcopy(self._data)
             text = "\n".join(self.dump_dict(snapshot, self._defaults))
@@ -64,7 +64,7 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         if filename is None:
             filename = str(self.loader.get(CLKey.LOADER_CONFIG_ON_LOAD, default=PATH_DEFAULT_CONFIG.stem)).strip()
         
-        path = PATH_CONFIGS_USER / f"{filename}.txt"
+        path = PATH_CONFIGS / f"{filename}.txt"
         if not path.is_file():
             return
         
@@ -101,7 +101,7 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         if path.stem == name:
             return
 
-        new_path = PATH_CONFIGS_USER / f"{name}.txt"
+        new_path = PATH_CONFIGS / f"{name}.txt"
         if new_path.is_file():
             return
 

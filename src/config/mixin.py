@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TypeVar, cast
 
 from src.utils.logging import logger
-from src.app.paths import PATH_CONFIGS_USER
+from src.app.paths import PATH_CONFIGS
 from src.config.constants import (
     CONFIG_INDENT,
     CONFIG_MISSING_DEFAULT,
@@ -91,7 +91,7 @@ class SaveConfigMixin:
         return new_data
 
     def save(self: ConfigMixinHost) -> None:
-        FS.ensure_dir(PATH_CONFIGS_USER)
+        FS.ensure_dir(PATH_CONFIGS)
         text = "\n".join(self.dump_dict(self.data, self.defaults))
 
         with self.save_lock:

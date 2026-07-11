@@ -7,7 +7,7 @@ from PySide6.QtCore import QFileSystemWatcher, QSignalBlocker, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QLayout, QSizePolicy, QStackedWidget
 
-from src.app.paths import PATH_CONFIGS_USER
+from src.app.paths import PATH_CONFIGS
 from src.config.constants import CONFIGS_REFRESH_DEBOUNCE_MS
 from src.config.loader import ConfigLoader
 from src.config.manager import Config
@@ -33,7 +33,7 @@ class SettingsConfigPage(MTWidget):
         super().__init__()
         self._config_loader = config_loader
         self._config = config
-        FS.ensure_dir(PATH_CONFIGS_USER)
+        FS.ensure_dir(PATH_CONFIGS)
         self._autoload_name = self._read_autoload_name()
 
         main_layout = create_layout(LayoutType.VBOX, parent=self)
@@ -54,7 +54,7 @@ class SettingsConfigPage(MTWidget):
         self._build_actions_column()
 
         self._watcher = QFileSystemWatcher(self)
-        self._watcher.addPath(str(PATH_CONFIGS_USER))
+        self._watcher.addPath(str(PATH_CONFIGS))
         self._refresh_timer = QTimer(self)
         self._refresh_timer.setSingleShot(True)
         self._refresh_timer.setInterval(CONFIGS_REFRESH_DEBOUNCE_MS)
@@ -270,7 +270,7 @@ class SettingsConfigPage(MTWidget):
 
     def _iter_config_names(self) -> list[str]:
         names: list[str] = []
-        for file_path in PATH_CONFIGS_USER.glob("*.txt"):
+        for file_path in PATH_CONFIGS.glob("*.txt"):
             if not file_path.is_file():
                 continue
             stem = file_path.stem
@@ -287,7 +287,7 @@ class SettingsConfigPage(MTWidget):
         selected = self._current_selected_name()
         if not selected:
             return None
-        return PATH_CONFIGS_USER / f"{selected}.txt"
+        return PATH_CONFIGS / f"{selected}.txt"
 
     def _read_autoload_name(self) -> str:
         return str(self._config_loader.get(CLKey.LOADER_CONFIG_ON_LOAD, default=CONFIG_DEFAULT_NAME)).strip() or CONFIG_DEFAULT_NAME
