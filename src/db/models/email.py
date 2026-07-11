@@ -14,10 +14,9 @@ if TYPE_CHECKING:
 class Email(BaseModel):
     __tablename__ = "emails"
 
-    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), unique=True, index=True)
-    
     email: Mapped[str] = mapped_column(String(128))
     setted: Mapped[bool] = mapped_column(Boolean)
     verified: Mapped[bool] = mapped_column(Boolean)
     
+    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), unique=True, index=True)
     result: Mapped["CookieCheckerResult"] = relationship(back_populates="email")

@@ -19,6 +19,10 @@ from .cookie_refresher import CookieRefresherRun, CookieRefresherResult
 
 from .cookie_sorter import CookieSorterRun, CookieSorterResult
 
+from .transaction import Transaction
+
+from .transaction_analysis import TransactionAnalysisRun, TransactionAnalysisResult
+
 
 def load_models() -> None:
     _ = (
@@ -65,6 +69,11 @@ def load_models() -> None:
 
         CookieSorterRun,
         CookieSorterResult,
+        
+        Transaction,
+        
+        TransactionAnalysisRun,
+        TransactionAnalysisResult,
     )
 
 
@@ -112,6 +121,11 @@ __all__ = (
     
     "CookieSorterRun",
     "CookieSorterResult",
+    
+    "Transaction",
+    
+    "TransactionAnalysisRun",
+    "TransactionAnalysisResult",
 
     "load_models",
 )

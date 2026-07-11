@@ -22,11 +22,9 @@ class RobloxBadge(BaseModel):
 
 class RobloxBadgeOwned(BaseModel):
     __tablename__ = "roblox_badges_owned"
-
+    
     result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
-    
-    roblox_badge_id: Mapped[int] = mapped_column(ForeignKey("roblox_badges.badge_id"), index=True)
-    
     result: Mapped["CookieCheckerResult"] = relationship(back_populates="roblox_badges")
 
+    roblox_badge_id: Mapped[int] = mapped_column(ForeignKey("roblox_badges.badge_id"), index=True)
     roblox_badge: Mapped["RobloxBadge"] = relationship(back_populates="owned_records")

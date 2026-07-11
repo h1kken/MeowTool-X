@@ -23,10 +23,8 @@ class Bundle(BaseModel):
 class BundleOwned(BaseModel):
     __tablename__ = "bundles_owned"
 
-    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
-    
     bundle_id: Mapped[int] = mapped_column(ForeignKey("bundles.bundle_id"), index=True)
-
-    result: Mapped["CookieCheckerResult"] = relationship(back_populates="bundles")
-
     bundle: Mapped["Bundle"] = relationship(back_populates="owned_records")
+
+    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
+    result: Mapped["CookieCheckerResult"] = relationship(back_populates="bundles")

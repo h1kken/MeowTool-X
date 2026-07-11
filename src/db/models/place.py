@@ -19,6 +19,16 @@ class Place(BaseModel):
 
     place_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
     name: Mapped[str | None] = mapped_column(String(128))
+
+    extended: Mapped["PlaceExtended | None"] = relationship(back_populates="place", uselist=False)
+
+
+class PlaceExtended(BaseModel):
+    __tablename__ = "places_extended"
+    
+    place_id: Mapped[int] = mapped_column(ForeignKey("places.place_id"), unique=True)
+    place: Mapped["Place"] = relationship(back_populates="extended")
+    
     visits: Mapped[int | None] = mapped_column(Integer)
     
     badges: Mapped[list["Badge"]] = relationship(back_populates="place")
@@ -33,32 +43,30 @@ class Place(BaseModel):
 class PlaceOwned(BaseModel):
     __tablename__ = "places_owned"
 
-    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
     place_id: Mapped[int] = mapped_column(ForeignKey("places.place_id"), index=True)
-
-    result: Mapped["CookieCheckerResult"] = relationship(back_populates="places_owned")
-
     place: Mapped["Place"] = relationship(back_populates="owned_records")
+
+    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
+    result: Mapped["CookieCheckerResult"] = relationship(back_populates="places_owned")
 
 
 class PlacePlayed(BaseModel):
     __tablename__ = "places_played"
 
-    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
     place_id: Mapped[int] = mapped_column(ForeignKey("places.place_id"), index=True)
+    place: Mapped["Place"] = relationship(back_populates="played_records")
+    
     minutes_played: Mapped[int | None] = mapped_column(Integer)
 
+    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
     result: Mapped["CookieCheckerResult"] = relationship(back_populates="places_played")
-
-    place: Mapped["Place"] = relationship(back_populates="played_records")
 
 
 class PlaceFavorited(BaseModel):
     __tablename__ = "places_favorited"
 
-    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
     place_id: Mapped[int] = mapped_column(ForeignKey("places.place_id"), index=True)
-
-    result: Mapped["CookieCheckerResult"] = relationship(back_populates="places_favorited")
-
     place: Mapped["Place"] = relationship(back_populates="favorited_records")
+
+    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
+    result: Mapped["CookieCheckerResult"] = relationship(back_populates="places_favorited")

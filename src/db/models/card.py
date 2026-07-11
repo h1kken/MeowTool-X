@@ -13,8 +13,6 @@ if TYPE_CHECKING:
 
 class Card(BaseModel):
     __tablename__ = "cards"
-
-    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
     
     network: Mapped[str | None] = mapped_column(String(128))
     last_4_digits: Mapped[int | None] = mapped_column(Integer)
@@ -22,4 +20,5 @@ class Card(BaseModel):
     exprie_year: Mapped[int | None] = mapped_column(Integer)
     last_used: Mapped[int | None] = mapped_column(BigInteger)
     
+    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
     result: Mapped["CookieCheckerResult"] = relationship(back_populates="card")

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class Cookie(BaseModel):
     __tablename__ = "cookies"
 
-    cookie_id: Mapped[str] = mapped_column(Integer, primary_key=True)
+    cookie_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     cookie: Mapped[str] = mapped_column(Text, unique=True)
 
     accounts: Mapped[list["Account"]] = relationship(back_populates="cookie")

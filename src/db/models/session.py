@@ -14,12 +14,11 @@ if TYPE_CHECKING:
 class Session(BaseModel):
     __tablename__ = "sessions"
 
-    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
-    
     city: Mapped[str | None] = mapped_column(String(128))
     subdivision: Mapped[str | None] = mapped_column(String(128))
     country: Mapped[str | None] = mapped_column(String(128))
     last_ip: Mapped[str | None] = mapped_column(String(128))
     is_trusted: Mapped[bool | None] = mapped_column(Boolean)
-    
+
+    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
     result: Mapped["CookieCheckerResult"] = relationship(back_populates="sessions")

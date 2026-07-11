@@ -27,10 +27,8 @@ class Group(BaseModel):
 class GroupOwned(BaseModel):
     __tablename__ = "groups_owned"
 
-    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
-    
     group_id: Mapped[int] = mapped_column(ForeignKey("groups.group_id"), index=True)
-
-    result: Mapped["CookieCheckerResult"] = relationship(back_populates="groups_owned")
-    
     group: Mapped["Group"] = relationship(back_populates="owned_records")
+
+    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
+    result: Mapped["CookieCheckerResult"] = relationship(back_populates="groups_owned")

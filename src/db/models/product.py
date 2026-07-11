@@ -18,23 +18,22 @@ class Product(BaseModel):
     __tablename__ = "products"
     __table_args__ = UniqueConstraint("place_id", "name", name="uq_product_place_name")
 
-    place_id: Mapped[int] = mapped_column(ForeignKey("places.place_id"), index=True)
-
     name: Mapped[str] = mapped_column(String(128))
 
-    owned_records: Mapped[list["ProductOwned"]] = relationship(back_populates="product")
-
+    place_id: Mapped[int] = mapped_column(ForeignKey("places.place_id"), index=True)
     place: Mapped["Place"] = relationship(back_populates="products")
+
+    owned_records: Mapped[list["ProductOwned"]] = relationship(back_populates="product")
 
 
 class ProductOwned(BaseModel):
     __tablename__ = "products_owned"
 
-    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
-    
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), index=True)
+    product: Mapped["Product"] = relationship(back_populates="owned_records")
+    
     count: Mapped[int] = mapped_column(Integer)
 
+    result_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
     result: Mapped["CookieCheckerResult"] = relationship(back_populates="products")
 
-    product: Mapped["Product"] = relationship(back_populates="owned_records")
