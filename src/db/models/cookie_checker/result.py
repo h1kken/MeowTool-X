@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import ForeignKey, BigInteger, Boolean, Integer, JSON, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.db.models import RunModel, ResultModel
+from .base import CookieCheckerResultBase
 
 if TYPE_CHECKING:
     from src.db.models import (
@@ -18,11 +18,7 @@ if TYPE_CHECKING:
     )
 
 
-class CookieCheckerRun(RunModel):
-    __tablename__ = "runs"
-
-
-class CookieCheckerResult(ResultModel):
+class CookieCheckerResult(CookieCheckerResultBase):
     __tablename__ = "results"
 
     is_valid: Mapped[bool] = mapped_column(Boolean)
@@ -90,9 +86,3 @@ class CookieCheckerResult(ResultModel):
     
     cookie_id: Mapped[int] = mapped_column(ForeignKey("cookies.id"))
     cookie: Mapped["Cookie"] = relationship(back_populates="cookie")
-
-
-__all__ = (
-    "CookieCheckerRun",
-    "CookieCheckerResult",
-)

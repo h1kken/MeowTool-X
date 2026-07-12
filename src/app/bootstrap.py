@@ -22,7 +22,6 @@ def bootstrap(app: QApplication) -> None:
 
     from src.db.manager import DatabaseManager
     services.database = DatabaseManager()
-    services.database.create_all()
 
     from src.translation.manager import TranslationManager
     services.translator = TranslationManager(services.config)

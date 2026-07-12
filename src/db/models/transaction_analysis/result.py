@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Boolean, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.db.models import RunModel, ResultModel
+from .base import TransactionAnalysisResultBase
 
 if TYPE_CHECKING:
     from src.db.models import (
@@ -13,11 +13,7 @@ if TYPE_CHECKING:
     )
 
 
-class TransactionAnalysisRun(RunModel):
-    __tablename__ = "runs"
-
-
-class TransactionAnalysisResult(ResultModel):
+class TransactionAnalysisResult(TransactionAnalysisResultBase):
     __tablename__ = "results"
 
     is_valid: Mapped[bool | None] = mapped_column(Boolean, index=True)
@@ -26,9 +22,3 @@ class TransactionAnalysisResult(ResultModel):
     cookie: Mapped["Cookie"] = relationship(back_populates="cookie")
 
     transactions: Mapped[list["Transaction"]] = relationship(back_populates="result")
-
-
-__all__ = (
-    "TransactionAnalysisRun",
-    "TransactionAnalysisResult",
-)
