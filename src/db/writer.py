@@ -7,32 +7,50 @@ if TYPE_CHECKING:
     from src.db.models.cookie_checker import CookieCheckerResult
 
 
+# TODO: move to advanced config
+_BATCH_SIZE = 100
+_COMMIT_INTERVAL = 5
+
+
 class DatabaseWriter:
     def __init__(self, handler: DatabaseHandler):
-        self.queue: Queue[CookieCheckerResult] = Queue(maxsize=500)
-        self.handler = handler
-        self.running = True
+        self._handler = handler
+        
+        self._queue: Queue[CookieCheckerResult] = Queue(maxsize=500)
+        self._running = False
 
-    def put(self, obj: CookieCheckerResult):
-        self.queue.put(obj)
+    def put(self, obj: CookieCheckerResult) -> None:
+        self._queue.put(obj)
 
-    def run(self):
-        session = self.handler.session()
+    def stop(self) -> None:
+        self._running = False
+
+    def run(self) -> None:
+        session = self._handler.session()
 
         batch: list[CookieCheckerResult] = []
         last_commit = monotonic()
 
-        while self.running:
+        self._running = True
+        while True:
             try:
-                obj = self.queue.get(timeout=1)
+                obj = self._queue.get(timeout=1)
                 batch.append(obj)
             except Empty:
                 pass
 
-            if len(batch) >= 100 or (batch and monotonic() - last_commit >= 5):
+            if len(batch) >= _BATCH_SIZE or (batch and monotonic() - last_commit >= _COMMIT_INTERVAL):
                 session.add_all(batch)
                 session.commit()
                 session.expunge_all()
 
                 batch.clear()
                 last_commit = monotonic()
+                
+            if not self._running:
+                if batch:
+                    session.add_all(batch)
+                    session.commit()
+                    
+                session.close()
+                break
