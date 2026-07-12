@@ -9,7 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import CookieCheckerResultBase
 
 if TYPE_CHECKING:
-    from src.db.models import (
+    from . import (
         Cookie, Account, Card,
         Session, Email, BadgeOwned,
         GamepassOwned, ProductOwned, PlaceFavorited,
@@ -23,7 +23,7 @@ class CookieCheckerResult(CookieCheckerResultBase):
 
     is_valid: Mapped[bool] = mapped_column(Boolean)
     
-    user_id: Mapped[int | None] = mapped_column(ForeignKey("accounts.user_id"), index=True)
+    account_ref_id: Mapped[int | None] = mapped_column(ForeignKey("accounts.id"), index=True)
     account: Mapped["Account | None"] = relationship()
     
     country_code: Mapped[str | None] = mapped_column(String(2))
@@ -84,5 +84,5 @@ class CookieCheckerResult(CookieCheckerResultBase):
     
     payload: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     
-    cookie_id: Mapped[int] = mapped_column(ForeignKey("cookies.id"))
+    cookie_ref_id: Mapped[int] = mapped_column(ForeignKey("cookies.id"))
     cookie: Mapped["Cookie"] = relationship(back_populates="cookie")

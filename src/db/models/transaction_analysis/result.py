@@ -7,10 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import TransactionAnalysisResultBase
 
 if TYPE_CHECKING:
-    from src.db.models import (
-        Cookie,
-        Transaction,
-    )
+    from . import Cookie, Transaction
 
 
 class TransactionAnalysisResult(TransactionAnalysisResultBase):

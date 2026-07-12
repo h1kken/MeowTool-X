@@ -1,15 +1,11 @@
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from src.db.models.mixins import BaseMixin, RunMixin
+from src.db.models.mixins import BaseMixin
 
 
 class TransactionAnalysisBase(DeclarativeBase):
     pass
-
-
-class TransactionAnalysisRun(TransactionAnalysisBase, BaseMixin, RunMixin):
-    __tablename__ = "runs"
 
 
 class TransactionAnalysisResultBase(TransactionAnalysisBase, BaseMixin):

@@ -3,13 +3,14 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 
+from src.db.names import DatabaseName
 from src.utils.filesystem import FS
 
 
 class DatabaseHandler:
     def __init__(
         self,
-        name: str,
+        name: DatabaseName,
         path: Path,
         base: type[DeclarativeBase],
         *,
@@ -35,9 +36,11 @@ class DatabaseHandler:
             autoflush=False,
             expire_on_commit=False,
         )
+        
+        self.ensure_initialized()
 
     def ensure_initialized(self) -> None:
-        FS.ensure_dir(self.path)
+        FS.ensure_dir(self.path.parent)
         self.base.metadata.create_all(self.engine)
 
     def session(self) -> Session:
