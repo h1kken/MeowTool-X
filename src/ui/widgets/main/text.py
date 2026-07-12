@@ -17,13 +17,7 @@ class MTPlainLabel(QLabel):
 
 class MTLabel(TranslatableMixin, QLabel):
 
-    def __init__(
-        self,
-        tr_key: str = '',
-        obj_name: str = '',
-        *,
-        parent: QWidget | None = None,
-    ) -> None:
+    def __init__(self, tr_key: str = '', obj_name: str = '', *, parent: QWidget | None = None) -> None:
         super().__init__(tr_key, parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 

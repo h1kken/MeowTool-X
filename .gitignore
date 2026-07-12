@@ -1,14 +1,15 @@
 # local
 .beta/
-.prod
+tests/
+docs/
 tools/
+run.bat
 TODOS.md
 notepad.txt
 
 # envs
 .env
 .venv/
-venv/
 
 # python caches
 __pycache__/
@@ -18,7 +19,6 @@ __pycache__/
 .ruff_cache/
 .pyright/
 .pyright.out
-.cache/
 .coverage
 coverage/
 htmlcov/
@@ -33,7 +33,7 @@ pip-wheel-metadata/
 *.whl
 
 # native build artifacts
-native/
+/native/
 *.dll
 *.so
 *.dylib
@@ -43,30 +43,12 @@ native/
 # ide
 .vscode/
 .DS_Store
-Thumbs.db
 
 # runtime data
-Logs/
-Proxy/
-Roblox/
-Versions/
-Settings/Configs/
-Settings/Database/
-Settings/Fonts/
-Settings/Roblox/
-Settings/Themes/
-Settings/Translations/
-
-# docs
-docs/
+/Proxy/
+/Roblox/
 
 # dbs
 *.db
 *.sqlite
 *.sqlite3
-
-# trash
-tests/
-*.svg
-pyright-report.json
-run.bat

@@ -16,7 +16,9 @@ if TYPE_CHECKING:
 
 class Product(BaseModel):
     __tablename__ = "products"
-    __table_args__ = UniqueConstraint("place_id", "name", name="uq_product_place_name")
+    __table_args__ = (
+        UniqueConstraint("place_id", "name", name="uq_product_place_name"),
+    )
 
     name: Mapped[str] = mapped_column(String(128))
 

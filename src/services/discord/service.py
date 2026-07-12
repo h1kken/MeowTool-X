@@ -7,8 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QObject
 
-import src.app.context as ctx
-logger = ctx.services.logger
+from src.utils.logging import logger
 from src.services.discord.constants import ( # TODO: remove
     DISCORD_RPC_LARGE_IMAGE_KEY,
     DISCORD_RPC_SMALL_IMAGE_KEY,

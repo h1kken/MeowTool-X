@@ -14,8 +14,8 @@ from src.config.defaults import default_config
 from src.config.mixin import GetConfigMixin, SaveConfigMixin, SetConfigMixin
 from src.config.types import ConfigMap, ConfigValue
 from src.config.utils import normalize_config, parse_config
+from src.config.enums import ConfigLoaderKey as CLKey
 from src.utils.filesystem import FS
-from src.config import ConfigLoaderKey as CLKey
 
 if TYPE_CHECKING:
     from src.config import ConfigLoader

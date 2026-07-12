@@ -2,7 +2,7 @@ import sys
 
 PROGRAM_NAME = "MeowTool... Meow :3"
 PROGRAM_VERSION = "1.0.0"
-APP_DIRNAME = "MeowTool-X"
+APP_DIRNAME = "MeowTool X"
 
 ASCII_MEOWTOOL = rf"""
 {"‾" * 109}

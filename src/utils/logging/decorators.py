@@ -5,7 +5,7 @@ from typing import Awaitable, Callable, Concatenate, Literal, ParamSpec, TypeVar
 
 from aiohttp import ClientResponse
 
-import src.app.context as ctx
+from src.utils.logging import logger
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -25,29 +25,29 @@ def log_action(action: str, *, re_raise: bool = False) -> Callable[[Callable[Con
         if re_raise:
             @functools.wraps(func)
             def log_action_wrapper_reraise(path: Path, *args: P.args, **kwargs: P.kwargs) -> R:
-                with ctx.services.logger.origin_scope(overwrite=False, depth=2):
+                with logger.origin_scope(overwrite=False, depth=2):
                     try:
                         return func(path, *args, **kwargs)
                     except FileExistsError:
-                        ctx.services.logger.debug(f"Can't {action}: {path}. Error: File already exists")
+                        logger.debug(f"Can't {action}: {path}. Error: File already exists")
                         raise
                     except Exception as e:
-                        ctx.services.logger.exception(f"Can't {action}: {path}. Error: {type(e).__name__}")
+                        logger.exception(f"Can't {action}: {path}. Error: {type(e).__name__}")
                         raise
 
             return log_action_wrapper_reraise
 
         @functools.wraps(func)
         def log_action_wrapper(path: Path, *args: P.args, **kwargs: P.kwargs) -> R | None:
-            with ctx.services.logger.origin_scope(overwrite=False, depth=2):
+            with logger.origin_scope(overwrite=False, depth=2):
                 try:
                     return func(path, *args, **kwargs)
                 except FileExistsError as e:
-                    ctx.services.logger.debug(f"Can't {action}: {path}. Error: File already exists")
+                    logger.debug(f"Can't {action}: {path}. Error: File already exists")
                     if re_raise:
                         raise
                 except Exception as e:
-                    ctx.services.logger.exception(f"Can't {action}: {path}. Error: {type(e).__name__}")
+                    logger.exception(f"Can't {action}: {path}. Error: {type(e).__name__}")
                     if re_raise:
                         raise
         return log_action_wrapper
@@ -57,12 +57,12 @@ def log_action(action: str, *, re_raise: bool = False) -> Callable[[Callable[Con
 def log_network_request(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
     @functools.wraps(func)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-        with ctx.services.logger.origin_scope(overwrite=False, depth=2):
+        with logger.origin_scope(overwrite=False, depth=2):
             start = time.perf_counter()
             result = await func(*args, **kwargs)
             end = time.perf_counter()
             elapsed_ms = int((end - start) * 1000)
             if isinstance(result, ClientResponse):
-                ctx.services.logger.debug(f"[{func.__name__.upper()}:{result.status}] {result.url} for {elapsed_ms}ms")
+                logger.debug(f"[{func.__name__.upper()}:{result.status}] {result.url} for {elapsed_ms}ms")
             return result
     return wrapper
