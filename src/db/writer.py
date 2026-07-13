@@ -32,7 +32,7 @@ class DatabaseWriter:
         last_commit = monotonic()
 
         self._running = True
-        while True:
+        while self._running:
             try:
                 obj = self._queue.get(timeout=1)
                 batch.append(obj)
@@ -47,10 +47,8 @@ class DatabaseWriter:
                 batch.clear()
                 last_commit = monotonic()
                 
-            if not self._running:
-                if batch:
-                    session.add_all(batch)
-                    session.commit()
-                    
-                session.close()
-                break
+        if batch:
+            session.add_all(batch)
+            session.commit()
+            
+        session.close()

@@ -1,1 +1,0 @@
-"""Theme media overlay package."""
