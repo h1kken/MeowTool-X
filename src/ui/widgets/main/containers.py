@@ -25,6 +25,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QApplication,
+    QButtonGroup,
     QFileDialog,
     QFrame,
     QRadioButton,
@@ -65,6 +66,20 @@ class MTRadioButton(QRadioButton):
     def __init__(self, text: str = '', parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(text, parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+
+        if obj_name:
+            self.setObjectName(obj_name)
+
+
+class MTGroupButton(QButtonGroup):
+    def __init__(
+        self,
+        *,
+        obj_name: str = '',
+        exclusive: bool = True,
+    ) -> None:
+        super().__init__()
+        self.setExclusive(exclusive)
 
         if obj_name:
             self.setObjectName(obj_name)

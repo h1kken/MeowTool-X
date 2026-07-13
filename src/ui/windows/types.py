@@ -1,8 +1,8 @@
-from PySide6.QtWidgets import QWidget
+from src.ui.widgets.main.containers import MTWidget
 
-type PageSpec = tuple[str, str, type[QWidget]]
-type SidebarSectionSpec = tuple[
-    str, str, list[PageSpec] | type[QWidget] | None
-]
+type PageSpec = tuple[str, str, type[MTWidget]]
 
-__all__ = ("PageSpec", "SidebarSectionSpec")
+
+__all__ = (
+    "PageSpec",
+)

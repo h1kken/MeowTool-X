@@ -8,12 +8,10 @@ from PySide6.QtCore import QObject, Signal
 from src.utils.logging import logger
 from src.app.paths import PATH_DEFAULT_TRANSLATION, PATH_TRANSLATIONS_SRC, PATH_TRANSLATIONS_USER
 from src.config.constants import CONFIG_COMMENT_SYMBOLS
+from src.config import ConfigKey as CKey
 
 if TYPE_CHECKING:
-    from src.config import (
-        Config,
-        ConfigKey as CKey
-    )
+    from src.config import Config
     
     
 class TranslationManager(QObject):

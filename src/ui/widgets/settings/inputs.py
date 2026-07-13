@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import QFileDialog, QSizePolicy, QWidget
@@ -19,6 +22,9 @@ from src.ui.widgets import (
 )
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 from src.ui.widgets.main.helpers import config_float, config_int
+
+if TYPE_CHECKING:
+    from src.config import Config, ConfigLoader
 
 
 class MTTextSetting(MTWidget):

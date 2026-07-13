@@ -9,12 +9,19 @@ from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets import MTButton, MTPlainLabel, MTWidget
 
 _HEADER_RESIZE_MARGIN = 8
+_HEADER_OBJECT_NAME = 'Main_Window_Header'
 _QT_MAX_SIZE = 16_777_215
 
 
 class _HeaderIconButton(MTButton):
-    def __init__(self, *, obj_name: str, icon_name: str) -> None:
-        super().__init__(tr_key='', obj_name=obj_name)
+    def __init__(self, icon_name: str) -> None:
+        button_name = '_'.join(
+            part.capitalize() for part in icon_name.split('_')
+        )
+        super().__init__(
+            tr_key='',
+            obj_name=f'{_HEADER_OBJECT_NAME}_{button_name}_Button',
+        )
         self.setText('')
         self.setCursor(Qt.CursorShape.ArrowCursor)
         self.setFlat(True)
@@ -95,11 +102,8 @@ class MTWindowHeader(MTWidget):
         window: QWidget,
         *,
         title: str | None = None,
-        allow_minimize: bool = True,
-        allow_maximize: bool = True,
-        obj_name: str = 'Window_Header',
     ) -> None:
-        super().__init__(parent=window, obj_name=obj_name)
+        super().__init__(parent=window, obj_name=_HEADER_OBJECT_NAME)
         self._window = window
         self._resize_margin = _HEADER_RESIZE_MARGIN
         self._drag_press_pos = QPoint()
@@ -121,7 +125,7 @@ class MTWindowHeader(MTWidget):
         self._title_label = _HeaderTitleLabel(
             title or window.windowTitle(),
             self,
-            obj_name=f'{obj_name}_Title',
+            obj_name=f'{_HEADER_OBJECT_NAME}_Title',
         )
         self._title_label.setAlignment(
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
@@ -132,7 +136,10 @@ class MTWindowHeader(MTWidget):
 
         layout.addStretch(1)
 
-        self._buttons_host = MTWidget(parent=self, obj_name=f'{obj_name}_Buttons')
+        self._buttons_host = MTWidget(
+            parent=self,
+            obj_name=f'{_HEADER_OBJECT_NAME}_Buttons',
+        )
         self._buttons_host.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
         self._buttons_host.setSizePolicy(
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding
@@ -140,29 +147,15 @@ class MTWindowHeader(MTWidget):
         buttons_layout = create_layout(LayoutType.HBOX, parent=self._buttons_host)
         layout.addWidget(self._buttons_host)
 
-        self._minimize_button: _HeaderIconButton | None = None
-        self._maximize_button: _HeaderIconButton | None = None
+        self._minimize_button = _HeaderIconButton('minimize')
+        self._minimize_button.clicked.connect(self._window.showMinimized)
+        buttons_layout.addWidget(self._minimize_button)
 
-        if allow_minimize:
-            self._minimize_button = _HeaderIconButton(
-                obj_name=f'{obj_name}_Minimize_Button',
-                icon_name='roll_up',
-            )
-            self._minimize_button.clicked.connect(self._window.showMinimized)
-            buttons_layout.addWidget(self._minimize_button)
+        self._maximize_button = _HeaderIconButton('maximize')
+        self._maximize_button.clicked.connect(self._toggle_maximized)
+        buttons_layout.addWidget(self._maximize_button)
 
-        if allow_maximize:
-            self._maximize_button = _HeaderIconButton(
-                obj_name=f'{obj_name}_Maximize_Button',
-                icon_name='maximize',
-            )
-            self._maximize_button.clicked.connect(self._toggle_maximized)
-            buttons_layout.addWidget(self._maximize_button)
-
-        self._close_button = _HeaderIconButton(
-            obj_name=f'{obj_name}_Close_Button',
-            icon_name='close',
-        )
+        self._close_button = _HeaderIconButton('close')
         self._close_button.clicked.connect(self._window.close)
         buttons_layout.addWidget(self._close_button)
 
@@ -253,10 +246,9 @@ class MTWindowHeader(MTWidget):
 
     def sync_window_meta(self) -> None:
         self._title_label.setText(self._window.windowTitle())
-        if self._maximize_button is not None:
-            self._maximize_button.set_icon_by_name(
-                'minimize' if self._window.isMaximized() else 'maximize'
-            )
+        self._maximize_button.set_icon_by_name(
+            'restore' if self._window.isMaximized() else 'maximize'
+        )
         self.sync_title_geometry()
 
     def begin_resize(self, edges: Qt.Edge, global_pos: QPoint) -> None:
@@ -387,7 +379,7 @@ class MTWindowHeader(MTWidget):
         return not isinstance(child, MTButton)
 
     def _create_resize_grips(self) -> list[_HeaderResizeGrip]:
-        obj_name = self.objectName().strip() or 'Window_Header'
+        obj_name = _HEADER_OBJECT_NAME
         grips = [
             _HeaderResizeGrip(
                 self,
@@ -490,18 +482,9 @@ def apply_frameless_window_header(
     layout: QBoxLayout,
     *,
     title: str | None = None,
-    allow_minimize: bool = True,
-    allow_maximize: bool = True,
-    obj_name: str = 'Window_Header',
 ) -> MTWindowHeader:
     window.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
     window.setWindowFlag(Qt.WindowType.Window, True)
-    header = MTWindowHeader(
-        window,
-        title=title,
-        allow_minimize=allow_minimize,
-        allow_maximize=allow_maximize,
-        obj_name=obj_name,
-    )
+    header = MTWindowHeader(window, title=title)
     layout.insertWidget(0, header)
     return header

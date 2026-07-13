@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from typing import TypeAlias
+
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QSizePolicy, QWidget
+from PySide6.QtWidgets import QSizePolicy
 
 from src.config.manager import Config
 from src.ui.controllers import PageController
@@ -9,11 +11,13 @@ from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.pages.settings.pages.proxy import SettingsProxyCheckerPage
 from src.ui.widgets import MTButton, MTWidget
 
+ProxySettingsPageClass: TypeAlias = type[SettingsProxyCheckerPage]
+
 
 class SettingsProxyPage(MTWidget):
-    presence_path_changed = Signal(str)
+    page_changed = Signal()
 
-    _PAGES: list[tuple[str, str, type[QWidget] | None]] = [
+    _PAGES: list[tuple[str, str, ProxySettingsPageClass | None]] = [
         ("Checker", "CHCKR", SettingsProxyCheckerPage),
         ("", "", None),
     ]
@@ -47,13 +51,15 @@ class SettingsProxyPage(MTWidget):
             tabs_layout.addWidget(btn)
         
         self._page_controller.show(self._PAGES[0][1])  # show the first page
-        self._page_controller.on_change(lambda _key: self._emit_presence_path())
+        self._page_controller.on_change(lambda _key: self._emit_page_changed())
 
-    def current_presence_subpage(self) -> str:
+    def current_page_inner(self) -> tuple[str, ...]:
         key = self._page_controller.current_key()
         if not isinstance(key, str):
-            return "Proxy"
-        return self._tab_labels_by_key.get(key, key)
+            return ()
 
-    def _emit_presence_path(self) -> None:
-        self.presence_path_changed.emit(self.current_presence_subpage())
+        label = self._tab_labels_by_key.get(key, key)
+        return (label,) if label else ()
+
+    def _emit_page_changed(self) -> None:
+        self.page_changed.emit()

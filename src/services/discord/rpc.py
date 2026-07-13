@@ -5,12 +5,12 @@ import threading
 from time import time
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QObject
 from pypresence.exceptions import DiscordError, DiscordNotFound, InvalidPipe, PipeClosed
 from pypresence.presence import Presence
 from pypresence.types import ActivityType
 
-from src.config.enums import ConfigKey
+from src.config.enums import ConfigKey as CKey
+from src.ui.types import PageState
 from src.utils.logging import logger
 
 if TYPE_CHECKING:
@@ -18,32 +18,32 @@ if TYPE_CHECKING:
     from src.ui.windows.main_window import MainWindow
 
 
-class DiscordRPC(QObject):
+class DiscordRPC:
     APP_ID = "1493918950344626216"
-    CONFIG_KEY = ConfigKey.OUTPUTS_DISCORD_RICH_PRESENCE
 
     DEFAULT_PAGE = "Startup"
     RETRY_DELAY_SECONDS = 5.0
     TEXT_LIMIT = 128
 
+    NAME = "MeowTool X"
     LARGE_IMAGE = ""
-    LARGE_TEXT = "MeowTool X"
+    LARGE_TEXT = ""
     SMALL_IMAGE = ""
     SMALL_TEXT = ""
 
     def __init__(self, window: MainWindow, config: Config) -> None:
-        super().__init__(window)
         self._config = config
+        
         self._lock = threading.Lock()
         self._wake = threading.Event()
         self._stop = threading.Event()
         self._worker: threading.Thread | None = None
 
         self._enabled = self._read_enabled()
-        self._page = self._normalize_page(window.current_presence_page())
+        self._state = self._normalize_state(window.current_state())
         self._started_at = int(time())
 
-        window.presence_page_changed.connect(self._set_page)
+        window.page_changed.connect(self._set_state)
         config.config_loaded.connect(self._load_config)
         config.value_changed.connect(self._on_config_changed)
 
@@ -55,14 +55,14 @@ class DiscordRPC(QObject):
             self._started_at = int(time())
             self._stop.clear()
             self._wake.clear()
-            worker = threading.Thread(
+            
+            self._worker = threading.Thread(
                 target=self._run,
                 name="DiscordRPC",
                 daemon=True,
             )
-            self._worker = worker
 
-        worker.start()
+        self._worker.start()
 
     def shutdown(self) -> None:
         self._stop.set()
@@ -76,13 +76,13 @@ class DiscordRPC(QObject):
             self._worker = None
 
     def _read_enabled(self) -> bool:
-        return bool(self._config.get(self.CONFIG_KEY, default=False))
+        return bool(self._config.get(CKey.OUTPUTS_DISCORD_RICH_PRESENCE, default=False))
 
     def _load_config(self) -> None:
         self._set_enabled(self._read_enabled())
 
     def _on_config_changed(self, key: str, _value: object) -> None:
-        if key == self.CONFIG_KEY:
+        if key == CKey.OUTPUTS_DISCORD_RICH_PRESENCE:
             self._load_config()
 
     def _set_enabled(self, enabled: bool) -> None:
@@ -96,22 +96,39 @@ class DiscordRPC(QObject):
 
         self._wake.set()
 
-    def _set_page(self, page: str) -> None:
-        page = self._normalize_page(page)
+    def _set_state(self, state: PageState) -> None:
+        state = self._normalize_state(state)
         with self._lock:
-            if page == self._page:
+            if state == self._state:
                 return
-            self._page = page
+            self._state = state
 
         self._wake.set()
 
     @classmethod
-    def _normalize_page(cls, page: str) -> str:
-        return str(page).strip() or cls.DEFAULT_PAGE
+    def _normalize_state(cls, state: PageState) -> PageState:
+        main = state.get("main", "") or cls.DEFAULT_PAGE
+        new_state: PageState = {"main": main}
 
-    def _snapshot(self) -> tuple[bool, str, int]:
+        raw_inner = state.get("inner")
+        if isinstance(raw_inner, tuple):
+            inner = tuple(part for part in (item for item in raw_inner) if part)
+            if inner:
+                new_state["inner"] = inner
+
+        return new_state
+
+    def _snapshot(self) -> tuple[bool, PageState, int]:
         with self._lock:
-            return self._enabled, self._page, self._started_at
+            return self._enabled, self._state, self._started_at
+
+    @staticmethod
+    def _format_page(page: PageState) -> str:
+        main = page["main"]
+        inner = page.get("inner")
+        if inner:
+            return f"{main}: {' > '.join(inner)}"
+        return main
 
     def _connect(self) -> Presence | None:
         for pipe in range(10):
@@ -123,32 +140,16 @@ class DiscordRPC(QObject):
                 return rpc
             except (DiscordNotFound, InvalidPipe, PipeClosed, OSError):
                 self._disconnect(rpc, clear=False)
-            except DiscordError as error:
+            except DiscordError as e:
                 self._disconnect(rpc, clear=False)
-                logger.warning(f"Discord Presence connection failed: {error}")
+                logger.warning(f"Discord Presence connection failed: {e}")
                 return None
-            except Exception as error:
+            except Exception as e:
                 self._disconnect(rpc, clear=False)
-                logger.exception(f"Discord Presence connection failed: {error}")
+                logger.exception(f"Discord Presence connection failed: {e}")
                 return None
 
         return None
-
-    def _update(self, rpc: Presence, page: str, started_at: int) -> None:
-        rpc.update(  # pyright: ignore[reportUnknownMemberType]
-            pid=os.getpid(),
-            activity_type=ActivityType.PLAYING,
-            details=page[:self.TEXT_LIMIT],
-            start=max(1, started_at),
-            large_image=self.LARGE_IMAGE or None,
-            large_text=(
-                self.LARGE_TEXT[:self.TEXT_LIMIT] if self.LARGE_IMAGE else None
-            ),
-            small_image=self.SMALL_IMAGE or None,
-            small_text=(
-                self.SMALL_TEXT[:self.TEXT_LIMIT] if self.SMALL_IMAGE else None
-            ),
-        )
 
     @staticmethod
     def _disconnect(rpc: Presence | None, *, clear: bool = True) -> None:
@@ -165,7 +166,7 @@ class DiscordRPC(QObject):
             rpc.close()
         except Exception:
             try:
-                rpc.loop.close()  # pyright: ignore[reportUnknownMemberType]
+                rpc.loop.close() # pyright: ignore[reportUnknownMemberType]
             except Exception:
                 pass
 
@@ -198,8 +199,8 @@ class DiscordRPC(QObject):
                     rpc = None
                     self._wake.wait(self.RETRY_DELAY_SECONDS)
                     continue
-                except Exception as error:
-                    logger.exception(f"Discord Presence update failed: {error}")
+                except Exception as e:
+                    logger.exception(f"Discord Presence update failed: {e}")
                     self._disconnect(rpc, clear=False)
                     rpc = None
                     self._wake.wait(self.RETRY_DELAY_SECONDS)
@@ -210,3 +211,17 @@ class DiscordRPC(QObject):
             if rpc is not None:
                 self._disconnect(rpc)
                 logger.debug("Discord Presence disconnected")
+
+    def _update(self, rpc: Presence, page: PageState, started_at: int) -> None:
+        details = self._format_page(page)
+        rpc.update( # pyright: ignore[reportUnknownMemberType]
+            pid=os.getpid(),
+            activity_type=ActivityType.PLAYING,
+            details=details[:self.TEXT_LIMIT],
+            name=self.NAME or None,
+            start=max(1, started_at),
+            large_image=self.LARGE_IMAGE or None,
+            large_text=self.LARGE_TEXT[:self.TEXT_LIMIT] if self.LARGE_IMAGE else None,
+            small_image=self.SMALL_IMAGE or None,
+            small_text=self.SMALL_TEXT[:self.TEXT_LIMIT] if self.SMALL_IMAGE else None,
+        )

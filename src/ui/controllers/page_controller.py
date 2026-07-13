@@ -1,25 +1,26 @@
 from typing import Callable
 
 from PySide6.QtWidgets import (
-    QAbstractButton,
     QApplication,
-    QButtonGroup,
     QLayout,
-    QWidget,
 )
+
+from src.ui.widgets.main.containers import MTGroupButton, MTWidget
+from src.ui.widgets.main.text import MTButton
 
 
 class PageController:
     def __init__(self, layout: QLayout) -> None:
         self._layout = layout
-        self._pages: dict[str, QWidget] = {}
-        self._tabs: dict[str, QAbstractButton] = {}
-        self._button_group = QButtonGroup(exclusive=True)
+
+        self._pages: dict[str, MTWidget] = {}
+        self._tabs: dict[str, MTButton] = {}
+        self._button_group = MTGroupButton()
         self._current_page: str | None = None
         self._change_callbacks: list[Callable[[str], None]] = []
 
     def add_page(
-        self, key: str, page: QWidget, *, obj_name: str | None = None
+        self, key: str, page: MTWidget, *, obj_name: str | None = None
     ) -> None:
         page.hide()
         self._pages[key] = page
@@ -28,7 +29,7 @@ class PageController:
         if obj_name:
             page.setObjectName(obj_name)
 
-    def bind_tab(self, key: str, button: QAbstractButton) -> None:
+    def bind_tab(self, key: str, button: MTButton) -> None:
         self._tabs[key] = button
         button.setCheckable(True)
         button.setProperty('pageTab', True)
@@ -64,7 +65,7 @@ class PageController:
     def current_key(self) -> str | None:
         return self._current_page
 
-    def current_page(self) -> QWidget | None:
+    def current_page(self) -> MTWidget | None:
         if self._current_page is None:
             return
         return self._pages.get(self._current_page)

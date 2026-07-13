@@ -30,17 +30,17 @@ def bootstrap(app: QApplication) -> None:
     # TODO: refactor lighter
     from src.ui.windows.main_window import MainWindow
     services.window = MainWindow(services.config)
-    services.window.build_pages()
     
+    # TODO: refactor lighter
     from src.theme.manager import ThemeManager
     services.theme_manager = ThemeManager(services.window, services.config)
     services.theme_manager.load()
     
+    # TODO: refactor lighter
     from src.theme.animation.manager import AnimationManager
     services.animation_manager = AnimationManager(services.window, services.config)
     services.animation_manager.load()
         
-    # TODO: refactor lighter
     from src.services.discord import DiscordRPC
     services.discord_rpc = DiscordRPC(services.window, services.config)
     app.aboutToQuit.connect(services.discord_rpc.shutdown)
