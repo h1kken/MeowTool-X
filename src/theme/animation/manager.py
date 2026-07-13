@@ -4,6 +4,7 @@ import math
 import re
 from copy import deepcopy
 from dataclasses import replace
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from PySide6.QtCore import (
@@ -21,6 +22,8 @@ from src.theme.colors import normalize_color, to_qcolor
 from src.theme.constants import EVENT_ACTIONS
 from src.theme.qss.targets import resolve_target_widgets
 from src.theme.schema.access import coerce_float, theme_map
+from src.theme.schema.payload import normalize_theme_payload
+from src.theme.storage.loader import load_theme
 from src.ui.widgets.main.checkables import MTSwitch
 from src.ui.widgets.main.containers import MTComboBox
 from src.ui.widgets.main.inputs import MTSlider
@@ -79,9 +82,25 @@ class AnimationManager(QObject):
         self._hover_reconcile_timer.setInterval(16)
         self._hover_reconcile_timer.timeout.connect(self._reconcile_hover_states)
 
-    def load(self, animations: dict[str, Any], theme_widgets: dict[str, Any] | None = None) -> None:
+    def load(self, name: str | None = None) -> Path | None:
+        loaded = load_theme(self._config, name)
+        if loaded is None:
+            self._clear()
+            return None
+
+        path, payload = loaded
+        theme = normalize_theme_payload(payload)
+        theme_widgets = cast(
+            dict[str, dict[str, Any]],
+            theme_map(theme.get("widgets")) or {},
+        )
+        animations = {
+            target: styles["animations"]
+            for target, styles in theme_widgets.items()
+            if "animations" in styles
+        }
+
         self._clear()
-        theme_widgets_map = theme_widgets or {}
         for target, raw_specs in animations.items():
             specs = parse_specs(raw_specs)
             if not specs:
@@ -91,7 +110,7 @@ class AnimationManager(QObject):
             if not widgets:
                 continue
 
-            base_styles = theme_map(theme_widgets_map.get(target)) or {}
+            base_styles = theme_map(theme_widgets.get(target)) or {}
 
             for widget in widgets:
                 self._register_widget(widget)
@@ -130,6 +149,8 @@ class AnimationManager(QObject):
 
                 self._sync_initial_state_actions(widget)
                 self._queue_widget_style_refresh(widget)
+
+        return path
 
     def _build_auto_leave_specs(
         self,
@@ -191,10 +212,11 @@ class AnimationManager(QObject):
         if obj_widget is not None:
             if event.type() in (QEvent.Type.Resize, QEvent.Type.Move, QEvent.Type.Show):
                 self._sync_paint_overlay_geometry(obj_widget)
-                if event.type() in (QEvent.Type.Resize, QEvent.Type.Show) and self._style_overrides.get(obj_widget):
-                    self._apply_widget_style(obj_widget)
+            if event.type() in (QEvent.Type.Resize, QEvent.Type.Show) and self._style_overrides.get(obj_widget):
+                self._apply_widget_style(obj_widget)
             elif event.type() == QEvent.Type.Hide:
-                if (overlay := self._paint_overlays.get(obj_widget)) is not None:
+                overlay = self._paint_overlays.get(obj_widget)
+                if overlay is not None:
                     overlay.hide()
             elif event.type() == QEvent.Type.Enter:
                 self._hovered_widgets.add(obj_widget)
@@ -296,7 +318,8 @@ class AnimationManager(QObject):
                 widget.setStyleSheet(self._base_styles[widget])
                 widget.setProperty('_themeAnimationStyleManaged', False)
 
-            if (overlay := self._paint_overlays.get(widget)) is not None:
+            overlay = self._paint_overlays.get(widget)
+            if overlay is not None:
                 overlay.hide()
                 overlay.deleteLater()
 
@@ -403,7 +426,8 @@ class AnimationManager(QObject):
         if 'unchecked' in self._animations.get(widget, {}):
             return
 
-        if (overrides := self._style_overrides.get(widget)):
+        overrides = self._style_overrides.get(widget)
+        if overrides:
             overrides.clear()
         self._apply_widget_style(widget)
 
@@ -461,7 +485,8 @@ class AnimationManager(QObject):
         width_text = declarations.get('border-width')
         style_text = declarations.get('border-style')
         color_text = declarations.get('border-color')
-        if (shorthand := declarations.get('border')):
+        shorthand = declarations.get('border')
+        if shorthand:
             short_width, short_style, short_color = self._parse_border_shorthand(shorthand)
             width_text = width_text or short_width
             style_text = style_text or short_style
@@ -1448,7 +1473,8 @@ class AnimationManager(QObject):
 
     def _widget_style_blocks(self, widget: QWidget) -> list[str]:
         blocks: list[str] = []
-        if override_block := self._widget_override_style_block(widget):
+        override_block = self._widget_override_style_block(widget)
+        if override_block:
             blocks.append(override_block)
         slider_overrides = self._slider_style_overrides.get(widget, {})
         blocks.extend(self._build_slider_override_blocks(widget, slider_overrides))
@@ -1470,7 +1496,8 @@ class AnimationManager(QObject):
             any(name in effective_overrides for name in {'background', 'background-color'})
             and 'border-radius' not in effective_overrides
         ):
-            if (radius := self._current_theme_border_radius(widget)):
+            radius = self._current_theme_border_radius(widget)
+            if radius:
                 has_border_override = self._has_border_override(effective_overrides)
                 if not self._has_theme_border(widget) and not has_border_override:
                     effective_overrides['border'] = 'none'
@@ -1515,7 +1542,8 @@ class AnimationManager(QObject):
         declarations = self._collect_widget_declarations(widget)
         width_text = declarations.get('border-width')
         style_text = declarations.get('border-style')
-        if border_text := declarations.get('border'):
+        border_text = declarations.get('border')
+        if border_text:
             short_width, short_style, _short_color = self._parse_border_shorthand(border_text)
             width_text = width_text or short_width
             style_text = style_text or short_style
@@ -1565,14 +1593,19 @@ class AnimationManager(QObject):
         declarations = self._collect_widget_declarations(widget)
         if css_property in {'background', 'background-color'}:
             raw = declarations.get('background-color')
-            if isinstance(raw, str) and (color := to_qcolor(raw)) is not None:
-                return color
+            if isinstance(raw, str):
+                color = to_qcolor(raw)
+                if color is not None:
+                    return color
         elif css_property == 'border-color':
             raw = declarations.get('border-color')
-            if not raw and isinstance((border_text := declarations.get('border')), str):
+            border_text = declarations.get('border')
+            if not raw and isinstance(border_text, str):
                 _width, _style, raw = self._parse_border_shorthand(border_text)
-            if isinstance(raw, str) and (color := to_qcolor(raw)) is not None:
-                return color
+            if isinstance(raw, str):
+                color = to_qcolor(raw)
+                if color is not None:
+                    return color
 
         if css_property.startswith('parts.'):
             mapped = self._map_parts_css_property(widget, css_property)
@@ -1741,7 +1774,8 @@ class AnimationManager(QObject):
     def _sample_border_width(self, widget: QWidget, *, fallback: float) -> float:
         declarations = self._collect_widget_declarations(widget)
         width_text = declarations.get('border-width')
-        if not width_text and (border_text := declarations.get('border')):
+        border_text = declarations.get('border')
+        if not width_text and border_text:
             width_text, _style, _color = self._parse_border_shorthand(border_text)
         return self._parse_measure_value(width_text) or float(fallback)
 

@@ -5,16 +5,14 @@ from typing import Any, cast
 
 import json5
 
-from src.exceptions.json import NotADictionaryError
-from src.theme.storage.serialization import format_theme_json
 from src.utils.logging import logger
 
 SUPPORTED_THEME_EXTENSIONS: tuple[str, ...] = ('.json5', '.json')
 DEFAULT_USER_THEME_EXTENSION = '.json5'
 
 
-def _parse_json5_object(text: str) -> object:
-    return cast(object, json5.loads(text))
+class ThemeFileError(ValueError):
+    pass
 
 
 def is_theme_file(path: Path) -> bool:
@@ -32,37 +30,25 @@ def iter_theme_files(root: Path) -> list[Path]:
     return files
 
 
+def read_theme_payload(path: Path) -> dict[str, Any]:
+    text = path.read_text(encoding='utf-8')
+    data: object = cast(object, json5.loads(text)) if text.strip() else {}
+    if not isinstance(data, dict):
+        raise ThemeFileError(f'Theme root must be an object: {path}')
+    return cast(dict[str, Any], data)
+
+
 def load_theme_payload(path: Path) -> dict[str, Any]:
     try:
-        text = path.read_text(encoding='utf-8')
-        if not text.strip():
-            return {}
-
-        data = _parse_json5_object(text)
-
-        if not isinstance(data, dict):
-            raise NotADictionaryError
-
-        return cast(dict[str, Any], data)
-    except FileNotFoundError:
-        logger.warning(f'Theme file not found: {path}')
-    except NotADictionaryError:
-        logger.debug(f'Theme file does not contain a dictionary payload: {path}')
-    except ValueError as e:
-        logger.debug(f'Cannot decode theme JSON5 in {path}: {e}')
-    except Exception:
-        logger.exception(f'Error while loading theme {path}')
+        return read_theme_payload(path)
+    except (OSError, UnicodeError, ValueError, TypeError) as error:
+        logger.warning(f"Can't load theme '{path}'. Error: {error}")
     return {}
 
 
 def write_theme_payload(path: Path, payload: dict[str, Any]) -> None:
-    existing_text = None
-    if path.suffix.lower() == '.json5' and path.exists():
-        try:
-            existing_text = path.read_text(encoding='utf-8')
-        except OSError:
-            existing_text = None
-    path.write_text(format_theme_json(payload, existing_text=existing_text), encoding='utf-8')
+    text = json5.dumps(payload, ensure_ascii=False, indent=2, quote_keys=True)
+    path.write_text(f'{text}\n', encoding='utf-8')
 
 
 def normalize_theme_name(value: str) -> str:

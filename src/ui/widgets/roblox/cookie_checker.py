@@ -317,7 +317,6 @@ class _SortListEditor(MTWidget):
     def _add_empty_entry(self) -> None:
         self._append_entry_row("", "")
         self._save_entries()
-        self._sync_theme_subtree()
 
     def _append_entry_row(self, start_value: str, end_value: str) -> None:
         row = _SortListEntryRow(
@@ -336,7 +335,6 @@ class _SortListEditor(MTWidget):
         row_widget.setParent(None)
         row_widget.deleteLater()
         self._save_entries()
-        self._sync_theme_subtree()
 
     def _rebuild_entries(self, items: dict[str, bool]) -> None:
         self._suspend_save = True
@@ -360,7 +358,6 @@ class _SortListEditor(MTWidget):
                 self._append_entry_row(start_value, end_value)
         finally:
             self._suspend_save = False
-        self._sync_theme_subtree()
 
     @staticmethod
     def _split_range_key(value: str) -> tuple[str, str]:
@@ -378,18 +375,13 @@ class _SortListEditor(MTWidget):
 
         items: dict[str, bool] = {}
         for row in self._entry_rows:
-            if (entry_key := row.entry_key()) is None:
+            entry_key = row.entry_key()
+            if entry_key is None:
                 continue
             items[entry_key] = True
 
         self._config.set(self._cfg_key_items, items)
         self.changed.emit()
-
-    def _sync_theme_subtree(self) -> None:
-        parent_window = self.window()
-        theme_manager = cast(Any, parent_window)._theme_manager
-        if theme_manager is not None:
-            theme_manager.apply_to_subtree(self)
 
 
 class _CookieCheckerSortPopup(MTPopup):

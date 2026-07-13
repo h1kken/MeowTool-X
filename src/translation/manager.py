@@ -28,12 +28,12 @@ class TranslationManager(QObject):
 
         self._config.config_loaded.connect(self.load)
 
-    def load(self, filename: str | None = None) -> None:        
-        if filename is None:
-            filename = str(self._config.get(CKey.GENERAL_LANGUAGE, default=PATH_DEFAULT_TRANSLATION.stem)).strip()
+    def load(self, name: str | None = None) -> None:        
+        if name is None:
+            name = str(self._config.get(CKey.GENERAL_LANGUAGE, default=PATH_DEFAULT_TRANSLATION.stem)).strip()
         
         try:
-            path = self._resolve_translation(filename)
+            path = self._resolve_translation(name)
             translations = self._parse_translations(path)
                 
             if not translations:
@@ -62,10 +62,10 @@ class TranslationManager(QObject):
         except (KeyError, IndexError, ValueError):
             return text
 
-    def _resolve_translation(self, filename: str) -> Path:
+    def _resolve_translation(self, name: str) -> Path:
         for path in (
-            PATH_TRANSLATIONS_USER / f"{filename}.axis",
-            PATH_TRANSLATIONS_SRC / f"{filename}.axis",
+            PATH_TRANSLATIONS_USER / f"{name}.axis",
+            PATH_TRANSLATIONS_SRC / f"{name}.axis",
         ):
             if path.is_file():
                 return path

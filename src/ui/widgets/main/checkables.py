@@ -117,17 +117,25 @@ class MTSwitch(QCheckBox):
             checked_background = theme_map(checked_data.get('background')) or {}
             unchecked_background = theme_map(unchecked_data.get('background')) or {}
             checked_color = checked_data.get('color')
-            if isinstance(checked_color, str) and (color := to_qcolor(checked_color)) is not None:
-                self._checked_color = color
+            if isinstance(checked_color, str):
+                color = to_qcolor(checked_color)
+                if color is not None:
+                    self._checked_color = color
             checked_bg_color = checked_background.get('color')
-            if isinstance(checked_bg_color, str) and (color := to_qcolor(checked_bg_color)) is not None:
-                self._checked_color = color
+            if isinstance(checked_bg_color, str):
+                color = to_qcolor(checked_bg_color)
+                if color is not None:
+                    self._checked_color = color
             unchecked_color = unchecked_data.get('color')
-            if isinstance(unchecked_color, str) and (color := to_qcolor(unchecked_color)) is not None:
-                self._unchecked_color = color
+            if isinstance(unchecked_color, str):
+                color = to_qcolor(unchecked_color)
+                if color is not None:
+                    self._unchecked_color = color
             unchecked_bg_color = unchecked_background.get('color')
-            if isinstance(unchecked_bg_color, str) and (color := to_qcolor(unchecked_bg_color)) is not None:
-                self._unchecked_color = color
+            if isinstance(unchecked_bg_color, str):
+                color = to_qcolor(unchecked_bg_color)
+                if color is not None:
+                    self._unchecked_color = color
 
         handle_data = theme_map(data.get('handle'))
         if handle_data is not None:
@@ -138,29 +146,33 @@ class MTSwitch(QCheckBox):
             checked_background = theme_map(checked_data.get('background')) or {}
             unchecked_background = theme_map(unchecked_data.get('background')) or {}
             handle_color = handle_data.get('color')
-            if isinstance(handle_color, str) and (color := to_qcolor(handle_color)) is not None:
-                self._handle_color = color
-                self._animated_handle_color = None
+            if isinstance(handle_color, str):
+                color = to_qcolor(handle_color)
+                if color is not None:
+                    self._handle_color = color
+                    self._animated_handle_color = None
             handle_bg_color = handle_background.get('color')
-            if isinstance(handle_bg_color, str) and (color := to_qcolor(handle_bg_color)) is not None:
-                self._handle_color = color
-                self._animated_handle_color = None
-            self._checked_handle_color = next(
-                (
-                    color
-                    for raw in (checked_background.get('color'), checked_data.get('color'))
-                    if isinstance(raw, str) and (color := to_qcolor(raw)) is not None
-                ),
-                None,
-            )
-            self._unchecked_handle_color = next(
-                (
-                    color
-                    for raw in (unchecked_background.get('color'), unchecked_data.get('color'))
-                    if isinstance(raw, str) and (color := to_qcolor(raw)) is not None
-                ),
-                None,
-            )
+            if isinstance(handle_bg_color, str):
+                color = to_qcolor(handle_bg_color)
+                if color is not None:
+                    self._handle_color = color
+                    self._animated_handle_color = None
+            self._checked_handle_color = None
+            for raw in (checked_background.get('color'), checked_data.get('color')):
+                if not isinstance(raw, str):
+                    continue
+                color = to_qcolor(raw)
+                if color is not None:
+                    self._checked_handle_color = color
+                    break
+            self._unchecked_handle_color = None
+            for raw in (unchecked_background.get('color'), unchecked_data.get('color')):
+                if not isinstance(raw, str):
+                    continue
+                color = to_qcolor(raw)
+                if color is not None:
+                    self._unchecked_handle_color = color
+                    break
 
         size_data = theme_map(data.get('size')) or {}
         width = coerce_positive_int(size_data.get('width', size_data.get('w')))

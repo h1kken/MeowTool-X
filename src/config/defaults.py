@@ -11,8 +11,7 @@ DEFAULT_CONFIG_LOADER: Final[ConfigMap] = {
     "Developer Mode": False
   },
   "Saver": {
-    "Auto Save Config Changes": False,
-    "Auto Save Theme Changes": False
+    "Auto Save Config Changes": False
   },
   "Updater": {
     "Check Updates": True,

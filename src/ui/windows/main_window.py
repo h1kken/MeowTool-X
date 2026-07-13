@@ -1,29 +1,16 @@
 from __future__ import annotations
 
-import json
-from copy import deepcopy
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QSize, QTimer, Signal
-from PySide6.QtGui import QCloseEvent, QIcon, QMoveEvent, QResizeEvent
+from PySide6.QtCore import QSize, Signal
+from PySide6.QtGui import QCloseEvent, QIcon, QResizeEvent
 from PySide6.QtWidgets import QBoxLayout, QMainWindow, QSizePolicy, QWidget
 
 from src.app.paths import (
     PATH_APP_ICON,
-    PATH_DEFAULT_THEME,
     PATH_SIDEBAR_ICONS_SRC,
-    PATH_THEMES_USER,
 )
 from src.ui.widgets import SidebarButton, SidebarCategory
-from src.theme.constants import THEME_AUTOLOAD_FALLBACK
-from src.theme.storage.io import (
-    find_theme_file_by_name,
-    load_theme_payload,
-    theme_output_path,
-    write_theme_payload,
-)
-from src.theme.storage.loader import resolve_theme_path
 from src.ui.controllers import PageController
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.pages import (
@@ -39,7 +26,6 @@ from src.ui.pages import (
 )
 from src.ui.constants import (
     MAIN_WINDOW_PAGE_LABEL_FALLBACK,
-    THEME_AUTO_SAVE_DEBOUNCE_MS,
     WINDOW_X,
     WINDOW_Y,
 )
@@ -47,7 +33,6 @@ from src.ui.widgets import MTButton, MTWidget, SidebarMediaWidget
 from src.ui.windows.types import PageSpec, SidebarSectionSpec
 from src.ui.windows.window_header import apply_frameless_window_header
 from src.app.constants import PROGRAM_NAME
-from src.utils.filesystem import FS
 
 if TYPE_CHECKING:
     from src.config.manager import Config
@@ -92,22 +77,9 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.config = config
         
-        self._theme_auto_save_timer = QTimer(self)
-        self._theme_auto_save_timer.setSingleShot(True)
-        self._theme_auto_save_timer.setInterval(THEME_AUTO_SAVE_DEBOUNCE_MS)
-        self._theme_auto_save_timer.timeout.connect(self.auto_save_current_theme_if_enabled)
-
-        self._window_move_idle_timer = QTimer(self)
-        self._window_move_idle_timer.setSingleShot(True)
-        self._window_move_idle_timer.setInterval(160)
-        self._window_move_idle_timer.timeout.connect(self._on_window_move_idle)
-
-        self._deferred_theme_auto_save = False
         self._settings_page: SettingsPage | None = None
         self._presence_page = "Startup"
         self._settings_presence_label = "Settings"
-
-        self._current_theme_name = ""
 
         self._sidebar_widget: MTWidget | None = None
         self._sidebar_media: SidebarMediaWidget | None = None
@@ -117,40 +89,16 @@ class MainWindow(QMainWindow):
 
         self._pages_built = False
 
-        self._initial_theme_name = self.theme_on_load_name()
-
         self.setObjectName("Main_Window")
         self.setWindowTitle(PROGRAM_NAME)
         self.setWindowIcon(QIcon(str(PATH_APP_ICON)))
         self.resize(WINDOW_X, WINDOW_Y)
 
         self._build_window_shell()
-        FS.ensure_dir(PATH_THEMES_USER)
-
-    def resolve_theme_path(self, theme_name: str) -> Path | None:
-        return resolve_theme_path(theme_name)
-
-    def moveEvent(self, event: QMoveEvent) -> None:
-        super().moveEvent(event)
-        self._window_move_idle_timer.start()
-        self._defer_theme_related_activity_for_window_motion()
-
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         self.repaint()
         self.centralWidget().repaint()
-
-    def _defer_theme_related_activity_for_window_motion(self) -> None:
-        if self._theme_auto_save_timer.isActive():
-            self._theme_auto_save_timer.stop()
-            self._deferred_theme_auto_save = True
-
-    def _on_window_move_idle(self) -> None:
-        if self._deferred_theme_auto_save and self._config.loader.auto_save_theme:
-            self._deferred_theme_auto_save = False
-            self._theme_auto_save_timer.start()
-            return
-        self._deferred_theme_auto_save = False
 
     def closeEvent(self, event: QCloseEvent) -> None:
         super().closeEvent(event)
@@ -162,11 +110,7 @@ class MainWindow(QMainWindow):
         page_class: type[QWidget],
     ) -> QWidget:
         if tr_key == "STNGS":
-            page = SettingsPage(
-                config=self._config,
-                translator=self._translator,
-                current_theme_name=self._initial_theme_name,
-            )
+            page = SettingsPage()
             self._settings_page = page
             page.presence_path_changed.connect(
                 self._on_settings_presence_path_changed
@@ -294,9 +238,6 @@ class MainWindow(QMainWindow):
 
         pages_layout = create_layout(LayoutType.VBOX, parent=main_content)
         self._page_controller = PageController(pages_layout)
-
-    def initialize_runtime_controllers(self) -> None:
-        self.init_runtime_controllers()
 
     def build_pages(self) -> None:
         if self._pages_built:
@@ -436,230 +377,5 @@ class MainWindow(QMainWindow):
         if current_key == "STNGS":
             self._set_presence_page(normalized)
 
-    def init_runtime_controllers(self) -> None:
-        if self._animation_manager is None:
-            self._animation_manager = AnimationManager(self.centralWidget())
-
-    def initialize_theme_manager(
-        self,
-        *,
-        default_payload: dict[str, Any] | None = None,
-    ) -> None:
-        if self._theme_manager is not None:
-            return
-
-        payload = (
-            deepcopy(default_payload)
-            if isinstance(default_payload, dict)
-            else self._load_default_theme_payload()
-        )
-        self._theme_manager = ThemeManager(self, self._config, payload)
-        self._theme_manager.suppress_theme_changed()
-
-    def apply_startup_theme(self, theme_name: str | None = None) -> str:
-        target_theme = str(theme_name or self._initial_theme_name).strip() or PATH_DEFAULT_THEME.stem
-        if not self.set_theme(target_theme, persist=False):
-            self.set_theme(PATH_DEFAULT_THEME.stem, persist=False)
-        self._lock_sidebar_width_once()
-        return self.current_theme_name()
-
-    @property
-    def theme_manager(self) -> ThemeManager:
-        if self._theme_manager is None:
-            raise RuntimeError("Theme manager is not initialized.")
-        return self._theme_manager
-
-    def resume_theme_events(self) -> None:
-        if self._theme_manager is None:
-            return
-        self._theme_manager.resume_theme_changed(flush=True)
-
     def current_presence_page(self) -> str:
         return self._presence_page
-
-    def current_theme_name(self) -> str:
-        current = str(self._current_theme_name).strip()
-        if current:
-            return current
-        initial = str(self._initial_theme_name).strip()
-        return initial or PATH_DEFAULT_THEME.stem
-
-    def theme_on_load_name(self) -> str:
-        if not bool(
-            self._config.get(
-                "Theme>Autoload Selected Theme",
-                default=THEME_AUTOLOAD_FALLBACK,
-            )
-        ):
-            return PATH_DEFAULT_THEME.stem
-        configured = str(
-            self._config.get("General>Theme", default=PATH_DEFAULT_THEME.stem)
-        ).strip()
-        return configured or PATH_DEFAULT_THEME.stem
-
-    def set_theme(self, theme_name: str, *, persist: bool = True) -> bool:
-        if self._theme_manager is None:
-            return False
-        theme_path = self.resolve_theme_path(theme_name)
-        if theme_path is None:
-            return False
-
-        self._theme_manager.load(theme_path, merge_with_default=False)
-        self._current_theme_name = theme_path.stem
-        self.reapply_loaded_theme()
-
-        if persist:
-            current = str(self._config.get("General>Theme", default=""))
-            if current != theme_path.stem:
-                self._config.set("General>Theme", theme_path.stem)
-
-        return True
-
-    def reapply_loaded_theme(self) -> None:
-        if self._theme_manager is None:
-            return
-        self._theme_manager.apply()
-        self._reload_main_animations_from_theme()
-        self.update()
-        central = self.centralWidget()
-        central.update()
-        central.updateGeometry()
-
-    def save_current_theme_as(self, theme_name: str) -> Path | None:
-        if self._theme_manager is None:
-            return None
-
-        name = Path(str(theme_name).strip()).stem.strip()
-        if not name or name.startswith("."):
-            return None
-
-        payload = self._theme_payload_for_save()
-
-        output_path = find_theme_file_by_name(PATH_THEMES_USER, name) or theme_output_path(PATH_THEMES_USER, name)
-        FS.ensure_dir(PATH_THEMES_USER)
-        try:
-            write_theme_payload(output_path, payload)
-        except OSError:
-            return None
-
-        return output_path
-
-    def _theme_payload_for_save(self) -> dict[str, Any]:
-        current_theme = deepcopy(self._build_theme_payload_from_manager())
-        widgets = current_theme.get("widgets")
-        if isinstance(widgets, list):
-            return current_theme
-
-        widgets_payload = self._widgets_dict_to_payload(cast(dict[str, dict[str, Any]], widgets if isinstance(widgets, dict) else {}))
-        payload: dict[str, Any] = {
-            key: deepcopy(value)
-            for key, value in current_theme.items()
-            if key != "widgets"
-        }
-        payload["widgets"] = widgets_payload
-        return payload
-
-    def _load_default_theme_payload(self) -> dict[str, Any]:
-        return load_theme_payload(PATH_DEFAULT_THEME)
-
-    def _widgets_dict_to_payload(
-        self, widgets: dict[str, dict[str, Any]]
-    ) -> list[dict[str, Any]]:
-        grouped: dict[str, dict[str, Any]] = {}
-        order: list[str] = []
-
-        for target, data in widgets.items():
-            if not target:
-                continue
-
-            styles = {
-                key: deepcopy(value)
-                for key, value in data.items()
-                if key != "animations"
-            }
-
-            animations_present = "animations" in data
-            animations_payload: Any = None
-            if "animations" in data:
-                animations_payload = deepcopy(data.get("animations"))
-
-            if not styles and not animations_present:
-                continue
-
-            grouping_key = json.dumps(
-                {
-                    "styles": styles if styles else None,
-                    "animations": animations_payload if animations_present else None,
-                },
-                ensure_ascii=False,
-                sort_keys=True,
-                separators=(",", ":"),
-            )
-            if target == "*":
-                grouping_key = f"__global__::{target}"
-
-            if grouping_key not in grouped:
-                entry: dict[str, Any] = {"targets": [target]}
-                if styles:
-                    entry["styles"] = styles
-                if animations_present:
-                    entry["animations"] = animations_payload
-                grouped[grouping_key] = entry
-                order.append(grouping_key)
-                continue
-
-            grouped[grouping_key]["targets"].append(target)
-
-        return [grouped[key] for key in order]
-
-    def request_auto_save_current_theme_if_enabled(self) -> None:
-        if not self._config.loader.auto_save_theme:
-            return
-
-        if self._window_move_idle_timer.isActive():
-            self._deferred_theme_auto_save = True
-            return
-
-        self._theme_auto_save_timer.start()
-
-    def auto_save_current_theme_if_enabled(self) -> Path | None:
-        if not self._config.loader.auto_save_theme:
-            return None
-
-        return self.save_current_theme_as(self.current_theme_name())
-
-    def _reload_main_animations_from_theme(self) -> None:
-        if self._theme_manager is None or self._animation_manager is None:
-            return
-
-        widgets = self._theme_manager.current_theme_widgets()
-        animations: dict[str, Any] = {}
-        for target, item in widgets.items():
-            animation_data = item.get("animations")
-            if animation_data is not None:
-                animations[target] = deepcopy(animation_data)
-        self._animation_manager.load(animations, widgets)
-
-    def _build_theme_payload_from_manager(self) -> dict[str, Any]:
-        if self._theme_manager is None:
-            return {"widgets": []}
-
-        current_theme = self._theme_manager.current_theme
-        widgets = self._theme_manager.current_theme_widgets()
-        payload = {
-            key: deepcopy(value)
-            for key, value in current_theme.items()
-            if key != "widgets"
-        }
-        payload["widgets"] = self._widgets_dict_to_payload(widgets)
-        return payload
-
-    def _payload_widgets_dict(
-        self, payload: dict[str, Any]
-    ) -> dict[str, dict[str, Any]]:
-        parser = ThemeManager(self, self._config, emit_theme_changed=False)
-        parser.load(payload, merge_with_default=False)
-        return parser.current_theme_widgets()
-
-    def _effective_theme_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return deepcopy(payload)

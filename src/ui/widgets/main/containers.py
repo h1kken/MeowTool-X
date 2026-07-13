@@ -468,26 +468,34 @@ class MTComboBox(TranslatableComboBoxMixin, QWidget):
             button_part = self._part_data('button')
             background = theme_map(button.get('background')) or {}
             border = theme_map(button.get('border')) or {}
-            if (color := to_qcolor(background.get('color'))) is not None:
+            color = to_qcolor(background.get('color'))
+            if color is not None:
                 button_part['background_color'] = color
-            if (border_color := to_qcolor(border.get('color'))) is not None:
+            border_color = to_qcolor(border.get('color'))
+            if border_color is not None:
                 button_part['border_color'] = border_color
-            if (border_width := coerce_number(border.get('width'))) is not None:
+            border_width = coerce_number(border.get('width'))
+            if border_width is not None:
                 button_part['border_width'] = max(0.0, border_width)
-            if isinstance((border_style := border.get('style')), str) and border_style.strip():
+            border_style = border.get('style')
+            if isinstance(border_style, str) and border_style.strip():
                 button_part['border_style'] = border_style.strip().lower()
             if border.get('radius') is not None:
                 button_part['border_radius'] = border.get('radius')
-            if (width := coerce_number(button.get('width'))) is not None:
+            width = coerce_number(button.get('width'))
+            if width is not None:
                 button_part['width'] = max(0.0, width)
 
         if icon:
             icon_part = self._part_data('icon')
-            if (color := to_qcolor(icon.get('color'))) is not None:
+            color = to_qcolor(icon.get('color'))
+            if color is not None:
                 icon_part['color'] = color
-            if (size := coerce_number(icon.get('size'))) is not None:
+            size = coerce_number(icon.get('size'))
+            if size is not None:
                 icon_part['size'] = max(0.0, size)
-            if (rotation := coerce_number(icon.get('rotation'))) is not None:
+            rotation = coerce_number(icon.get('rotation'))
+            if rotation is not None:
                 icon_part['rotation'] = float(rotation)
             source = icon.get('source', icon.get('path', icon.get('file')))
             if isinstance(source, str):
@@ -500,20 +508,25 @@ class MTComboBox(TranslatableComboBoxMixin, QWidget):
 
     def apply_dropdown_theme(self, data: WidgetThemeMap) -> None:
         self._apply_popup_part_theme('popup', data)
-        if (text := theme_map(data.get('text'))) is not None:
+        text = theme_map(data.get('text'))
+        if text is not None:
             self._apply_popup_item_theme('item', {'text': text})
-        if (selection := theme_map(data.get('selection'))) is not None:
+        selection = theme_map(data.get('selection'))
+        if selection is not None:
             states = theme_map(self._part_data('item').get('states'))
             state = theme_map(None if states is None else states.get('selected'))
             if state is not None:
                 background = theme_map(selection.get('background')) or {}
                 text = theme_map(selection.get('text')) or {}
                 border = theme_map(selection.get('border')) or {}
-                if (color := to_qcolor(background.get('color'))) is not None:
+                color = to_qcolor(background.get('color'))
+                if color is not None:
                     state['background_color'] = color
-                if (text_color := to_qcolor(text.get('color'))) is not None:
+                text_color = to_qcolor(text.get('color'))
+                if text_color is not None:
                     state['text_color'] = text_color
-                if (border_color := to_qcolor(border.get('color'))) is not None:
+                border_color = to_qcolor(border.get('color'))
+                if border_color is not None:
                     state['border_color'] = border_color
         self._apply_popup_view_theme()
         self.update()
@@ -521,18 +534,22 @@ class MTComboBox(TranslatableComboBoxMixin, QWidget):
     def apply_items_theme(self, data: WidgetThemeMap) -> None:
         base_theme = {key: value for key, value in data.items() if key not in {'selection', 'qss'}}
         self._apply_popup_item_theme('item', base_theme)
-        if (selection := theme_map(data.get('selection'))) is not None:
+        selection = theme_map(data.get('selection'))
+        if selection is not None:
             states = theme_map(self._part_data('item').get('states'))
             state = theme_map(None if states is None else states.get('selected'))
             if state is not None:
                 background = theme_map(selection.get('background')) or {}
                 text = theme_map(selection.get('text')) or {}
                 border = theme_map(selection.get('border')) or {}
-                if (color := to_qcolor(background.get('color'))) is not None:
+                color = to_qcolor(background.get('color'))
+                if color is not None:
                     state['background_color'] = color
-                if (text_color := to_qcolor(text.get('color'))) is not None:
+                text_color = to_qcolor(text.get('color'))
+                if text_color is not None:
                     state['text_color'] = text_color
-                if (border_color := to_qcolor(border.get('color'))) is not None:
+                border_color = to_qcolor(border.get('color'))
+                if border_color is not None:
                     state['border_color'] = border_color
         self._apply_popup_view_theme()
         self.update()
@@ -541,31 +558,40 @@ class MTComboBox(TranslatableComboBoxMixin, QWidget):
         part_data = self._part_data(part)
         background = theme_map(data.get('background')) or {}
         border = theme_map(data.get('border')) or {}
-        if (color := to_qcolor(background.get('color'))) is not None:
+        color = to_qcolor(background.get('color'))
+        if color is not None:
             part_data['background_color'] = color
-        if (border_color := to_qcolor(border.get('color'))) is not None:
+        border_color = to_qcolor(border.get('color'))
+        if border_color is not None:
             part_data['border_color'] = border_color
-        if (border_width := coerce_number(border.get('width'))) is not None:
+        border_width = coerce_number(border.get('width'))
+        if border_width is not None:
             part_data['border_width'] = max(0.0, border_width)
-        if isinstance((border_style := border.get('style')), str) and border_style.strip():
+        border_style = border.get('style')
+        if isinstance(border_style, str) and border_style.strip():
             part_data['border_style'] = border_style.strip().lower()
         if border.get('radius') is not None:
             part_data['border_radius'] = border.get('radius')
         if part == 'popup':
-            if (metric_value := coerce_number(data.get('width'))) is not None:
-                part_data['width'] = max(0.0, metric_value)
-            if (metric_value := coerce_number(data.get('height'))) is not None:
-                part_data['height'] = max(0.0, metric_value)
+            width_value = coerce_number(data.get('width'))
+            if width_value is not None:
+                part_data['width'] = max(0.0, width_value)
+            height_value = coerce_number(data.get('height'))
+            if height_value is not None:
+                part_data['height'] = max(0.0, height_value)
 
     def _apply_popup_item_theme(self, part: str, data: WidgetThemeMap) -> None:
         self._apply_popup_part_theme(part, data)
         part_data = self._part_data(part)
         text = theme_map(data.get('text')) or {}
-        if (text_color := to_qcolor(text.get('color'))) is not None:
+        text_color = to_qcolor(text.get('color'))
+        if text_color is not None:
             part_data['text_color'] = text_color
-        if (height := coerce_number(data.get('height'))) is not None:
+        height = coerce_number(data.get('height'))
+        if height is not None:
             part_data['height'] = max(1.0, height)
-        if (padding := coerce_box_sides(data.get('padding'))) is not None:
+        padding = coerce_box_sides(data.get('padding'))
+        if padding is not None:
             part_data['padding'] = padding
 
         states = theme_map(data.get('states')) or {}
@@ -578,11 +604,14 @@ class MTComboBox(TranslatableComboBoxMixin, QWidget):
             background = theme_map(state_theme.get('background')) or {}
             text = theme_map(state_theme.get('text')) or {}
             border = theme_map(state_theme.get('border')) or {}
-            if (color := to_qcolor(background.get('color'))) is not None:
+            color = to_qcolor(background.get('color'))
+            if color is not None:
                 state['background_color'] = color
-            if (text_color := to_qcolor(text.get('color'))) is not None:
+            text_color = to_qcolor(text.get('color'))
+            if text_color is not None:
                 state['text_color'] = text_color
-            if (border_color := to_qcolor(border.get('color'))) is not None:
+            border_color = to_qcolor(border.get('color'))
+            if border_color is not None:
                 state['border_color'] = border_color
 
     def current_part_color(self, part: str, css_name: str = 'background-color') -> QColor:

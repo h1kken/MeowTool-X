@@ -9,7 +9,6 @@ class ConfigLoaderKey(StrEnum):
 
     SAVER_PATH = "Saver"
     SAVER_AUTO_SAVE_CONFIG_CHANGES = f"{SAVER_PATH}>Auto Save Config Changes"
-    SAVER_AUTO_SAVE_THEME_CHANGES = f"{SAVER_PATH}>Auto Save Theme Changes"
 
     UPDATER_PATH = "Updater"
     UPDATER_CHECK_UPDATES = f"{UPDATER_PATH}>Check Updates"

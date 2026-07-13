@@ -4,21 +4,27 @@ import re
 from copy import deepcopy
 from typing import Any, cast
 
-from src.theme.animation.parser import normalize_specs_payload
 from src.theme.schema.types import ThemeMap
 
 BORDER_SIDE_KEYS = ('top', 'right', 'bottom', 'left')
 BORDER_GLOBAL_KEYS = ('width', 'style', 'color', 'radius')
 
 
-def normalize_theme_payload(theme: dict[str, Any]) -> dict[str, Any]:
+def normalize_theme_payload(
+    theme: dict[str, Any],
+    *,
+    include_animations: bool = True,
+) -> dict[str, Any]:
     resolved_theme = resolve_theme_vars(theme)
     normalized = {
         key: deepcopy(value)
             for key, value in resolved_theme.items()
                 if key not in {'widgets', 'vars'}
     }
-    normalized['widgets'] = parse_widgets(resolved_theme.get('widgets', []))
+    normalized['widgets'] = parse_widgets(
+        resolved_theme.get('widgets', []),
+        include_animations=include_animations,
+    )
     return normalized
 
 
@@ -98,7 +104,11 @@ def _resolve_theme_value(value: Any, vars_map: dict[str, Any], stack: tuple[str,
     return deepcopy(value)
 
 
-def parse_widgets(widgets: Any) -> dict[str, ThemeMap]:
+def parse_widgets(
+    widgets: Any,
+    *,
+    include_animations: bool = True,
+) -> dict[str, ThemeMap]:
     parsed: dict[str, ThemeMap] = {}
     if not isinstance(widgets, list):
         return parsed
@@ -114,7 +124,12 @@ def parse_widgets(widgets: Any) -> dict[str, ThemeMap]:
 
         raw_styles = item_map.get('styles', {})
         styles = normalize_widget_styles(cast(ThemeMap, raw_styles) if isinstance(raw_styles, dict) else {})
-        animations = item_map.get('animations')
+        style_animations = styles.pop('animations', None)
+        animations = (
+            merge_animation_data(style_animations, item_map.get('animations'))
+            if include_animations
+            else None
+        )
 
         for obj_name in cast(list[Any], targets):
             if not isinstance(obj_name, str) or not obj_name:
@@ -143,6 +158,8 @@ def parse_widgets(widgets: Any) -> dict[str, ThemeMap]:
 
 
 def merge_animation_data(current: Any, incoming: Any) -> Any:
+    from src.theme.animation.parser import normalize_specs_payload
+
     current_specs = normalize_specs_payload(current)
     incoming_specs = normalize_specs_payload(incoming)
 
@@ -164,25 +181,6 @@ def merge_animation_data(current: Any, incoming: Any) -> Any:
         else:
             positions[key] = len(merged)
             merged.append(deepcopy(spec))
-
-    return merged
-
-
-def merge_widget_theme_data(current: dict[str, Any] | None, incoming: dict[str, Any] | None) -> dict[str, Any]:
-    base = current if isinstance(current, dict) else {}
-    extra = incoming if isinstance(incoming, dict) else {}
-
-    merged = deep_merge_dicts(
-        {key: value for key, value in base.items() if key != 'animations'},
-        {key: value for key, value in extra.items() if key != 'animations'},
-    )
-
-    animations = merge_animation_data(
-        base.get('animations'),
-        extra.get('animations'),
-    )
-    if animations:
-        merged['animations'] = animations
 
     return merged
 

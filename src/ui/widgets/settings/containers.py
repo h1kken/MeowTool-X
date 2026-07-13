@@ -112,7 +112,8 @@ class MTColumnsSetting(MTScrollArea):
             self._column_heights = heights
 
             self._scroll_area_content.updateGeometry()
-            if (scroll_widget := self.widget()) is not None:
+            scroll_widget = self.widget()
+            if scroll_widget is not None:
                 scroll_widget.updateGeometry()
             self.updateGeometry()
         finally:
@@ -165,7 +166,8 @@ class MTColumnsSetting(MTScrollArea):
         self._main_layout.activate()
         for tab in self._tabs:
             tab.ensurePolished()
-            if (layout := tab.layout()) is not None:
+            layout = tab.layout()
+            if layout is not None:
                 layout.activate()
 
     def _estimated_tab_height(self, tab: QWidget) -> int:
@@ -196,7 +198,8 @@ class MTColumnsSetting(MTScrollArea):
                 if item is None:
                     continue
 
-                if (widget := item.widget()) is not None:
+                widget = item.widget()
+                if widget is not None:
                     widget.setParent(self._scroll_area_content)
 
 
@@ -304,7 +307,8 @@ class MTCollapsibleContainer(MTWidget):
         icon = cast(dict[str, Any], data.get("icon")) if isinstance(data.get("icon"), dict) else {}
 
         source = icon.get("source", icon.get("path", icon.get("file")))
-        if (icon_path := theme_icon_path(source)) is not None:
+        icon_path = theme_icon_path(source)
+        if icon_path is not None:
             self._toggle_arrow_source = icon_path
 
         if "color" in icon:
@@ -313,7 +317,8 @@ class MTCollapsibleContainer(MTWidget):
                 color.name(QColor.NameFormat.HexArgb) if color is not None else None
             )
 
-        if (size := positive_int(icon.get("size"))) is not None:
+        size = positive_int(icon.get("size"))
+        if size is not None:
             self._toggle_arrow_size = size
 
         button_size = icon.get(
@@ -321,7 +326,8 @@ class MTCollapsibleContainer(MTWidget):
         )
         if button_size is None and isinstance(icon.get("button"), dict):
             button_size = cast(dict[str, Any], icon["button"]).get("size")
-        if (parsed_button_size := positive_int(button_size)) is not None:
+        parsed_button_size = positive_int(button_size)
+        if parsed_button_size is not None:
             self._toggle_button_size = parsed_button_size
 
         collapsed_rotation = icon.get(
@@ -335,9 +341,11 @@ class MTCollapsibleContainer(MTWidget):
             rotation = cast(dict[str, Any], icon["rotation"])
             collapsed_rotation = rotation.get("collapsed", collapsed_rotation)
             expanded_rotation = rotation.get("expanded", expanded_rotation)
-        if (parsed_collapsed := measure(collapsed_rotation)) is not None:
+        parsed_collapsed = measure(collapsed_rotation)
+        if parsed_collapsed is not None:
             self._toggle_arrow_collapsed_rotation = parsed_collapsed
-        if (parsed_expanded := measure(expanded_rotation)) is not None:
+        parsed_expanded = measure(expanded_rotation)
+        if parsed_expanded is not None:
             self._toggle_arrow_expanded_rotation = parsed_expanded
 
         if not bool(self.property("_themeAnimatedArrowRotation")):

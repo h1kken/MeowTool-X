@@ -428,27 +428,36 @@ class MTSlider(QSlider):
                 continue
             background = theme_map(part_data.get('background')) or {}
             border = theme_map(part_data.get('border')) or {}
-            if (color := to_qcolor(background.get('color'))):
+            color = to_qcolor(background.get('color'))
+            if color:
                 self._parts[part]['background_color'] = color
                 if part == 'handle':
                     self._animated_handle_color = None
-            if (border_color := to_qcolor(border.get('color'))):
+            border_color = to_qcolor(border.get('color'))
+            if border_color:
                 self._parts[part]['border_color'] = border_color
-            if (border_width := coerce_number(border.get('width'))) is not None:
+            border_width = coerce_number(border.get('width'))
+            if border_width is not None:
                 self._parts[part]['border_width'] = max(0.0, border_width)
-            if isinstance((border_style := border.get('style')), str) and border_style.strip():
+            border_style = border.get('style')
+            if isinstance(border_style, str) and border_style.strip():
                 self._parts[part]['border_style'] = border_style.strip().lower()
-            if (border_radius := border.get('radius')) is not None:
+            border_radius = border.get('radius')
+            if border_radius is not None:
                 self._parts[part]['border_radius'] = border_radius
             if part == 'groove':
-                if (size := coerce_number(part_data.get('size'))) is not None:
+                size = coerce_number(part_data.get('size'))
+                if size is not None:
                     self._parts[part]['size'] = max(1.0, size)
             elif part == 'handle':
-                if (width := coerce_number(part_data.get('width'))) is not None:
+                width = coerce_number(part_data.get('width'))
+                if width is not None:
                     self._parts[part]['width'] = max(1.0, width)
-                if (height := coerce_number(part_data.get('height'))) is not None:
+                height = coerce_number(part_data.get('height'))
+                if height is not None:
                     self._parts[part]['height'] = max(1.0, height)
-                if (margin := coerce_box_sides(part_data.get('margin'), allow_negative=True)) is not None:
+                margin = coerce_box_sides(part_data.get('margin'), allow_negative=True)
+                if margin is not None:
                     self._parts[part]['margin'] = margin
 
         self.update()

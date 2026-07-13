@@ -114,13 +114,6 @@ class MTPopup(MTWidget):
                 widget.deleteLater()
 
     def sync_theme(self) -> None:
-        parent_widget = self.parentWidget()
-        parent_window = parent_widget.window() if isinstance(parent_widget, QWidget) else None
-        theme_manager = cast(Any, parent_window)._theme_manager if isinstance(parent_window, QWidget) else None
-        if theme_manager is not None:
-            theme_manager.apply_to_subtree(self)
-            if self._backdrop is not None:
-                theme_manager.apply_to_subtree(self._backdrop)
         self._apply_shape_mask()
 
     def show_for(

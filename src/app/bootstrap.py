@@ -32,13 +32,13 @@ def bootstrap(app: QApplication) -> None:
     services.window = MainWindow(services.config)
     services.window.build_pages()
     
-    # TODO: refactor lighter
     from src.theme.manager import ThemeManager
     services.theme_manager = ThemeManager(services.window, services.config)
+    services.theme_manager.load()
     
-    # TODO: refactor lighter
     from src.theme.animation.manager import AnimationManager
     services.animation_manager = AnimationManager(services.window, services.config)
+    services.animation_manager.load()
         
     # TODO: refactor lighter
     from src.services.discord import DiscordRPC

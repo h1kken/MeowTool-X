@@ -1,7 +1,6 @@
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, cast
 
 from PySide6.QtCore import QFileSystemWatcher, QSignalBlocker, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
@@ -316,18 +315,9 @@ class SettingsConfigPage(MTWidget):
         names = self._iter_config_names()
         target = self._pick_target_name(names, preferred=preferred)
         with QSignalBlocker(self._configs_list):
-            items_rebuilt = self._list_column.set_items(names, preferred=target)
+            self._list_column.set_items(names, preferred=target)
 
         self._sync_actions_state()
-        if items_rebuilt:
-            self._reapply_window_theme()
-
-    def _reapply_window_theme(self) -> None:
-        window = self.window()
-        if window is self:
-            return
-        window = cast(Any, window)
-        window.reapply_loaded_theme()
 
     def _sync_actions_state(self) -> None:
         selected = self._current_selected_name()

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import sys
 
-from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
 import src.app.context as ctx
@@ -17,7 +16,6 @@ def main() -> None:
     bootstrap(app)
 
     ctx.services.window.show()
-    QTimer.singleShot(0, lambda: ctx.services.window.resume_theme_events)
     
     ctx.services.discord_rpc.start()
     

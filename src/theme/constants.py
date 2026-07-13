@@ -10,13 +10,4 @@ EVENT_ACTIONS = {
     QEvent.Type.FocusOut: 'blur',
 }
 
-SUPPORTED_BG_MEDIA_EXTENSIONS = {
-    '.png', '.jpg', '.jpeg', '.bmp', '.gif',
-    '.webp', '.svg', '.ico', '.mp4', '.webm',
-    '.avi', '.mov', '.mkv',
-}
-
-THEME_AUTOLOAD_FALLBACK = True
-
-
 __all__ = [name for name in globals() if name.isupper()]

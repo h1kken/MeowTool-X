@@ -46,8 +46,8 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
     @property
     def save_lock(self) -> threading.Lock: return self._save_lock
 
-    def create_config(self, filename: str) -> None:
-        path = PATH_CONFIGS / f"{filename}.txt"
+    def create_config(self, name: str) -> None:
+        path = PATH_CONFIGS / f"{name}.txt"
         if path.exists():
             return
 
@@ -56,15 +56,15 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             snapshot = deepcopy(self._data)
             text = "\n".join(self.dump_dict(snapshot, self._defaults))
             path.write_text(text, encoding="utf-8")
-            self.load(filename)
+            self.load(name)
         except OSError as e:
-            logger.exception(f"Can't create config '{filename}'. Error: {e}")
+            logger.exception(f"Can't create config '{name}'. Error: {e}")
         
-    def load(self, filename: str | None = None) -> None:
-        if filename is None:
-            filename = str(self.loader.get(CLKey.LOADER_CONFIG_ON_LOAD, default=PATH_DEFAULT_CONFIG.stem)).strip()
+    def load(self, name: str | None = None) -> None:
+        if name is None:
+            name = str(self.loader.get(CLKey.LOADER_CONFIG_ON_LOAD, default=PATH_DEFAULT_CONFIG.stem)).strip()
         
-        path = PATH_CONFIGS / f"{filename}.txt"
+        path = PATH_CONFIGS / f"{name}.txt"
         if not path.is_file():
             return
         
@@ -77,7 +77,7 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             self.save()
             self.config_loaded.emit()
         except (OSError, UnicodeError, ValueError, TypeError) as e:
-            logger.exception(f"Can't load config '{filename}'. Error: {e}")
+            logger.exception(f"Can't load config '{name}'. Error: {e}")
 
     def set(self, key: str, value: object, *, sep: str = ">", force_save: bool = False) -> None:
         super().set(key, value, sep=sep)

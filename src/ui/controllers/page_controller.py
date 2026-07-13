@@ -96,7 +96,8 @@ class PageController:
                 page = self._pages[key]
                 was_visible = page.isVisible()
                 page.ensurePolished()
-                if (layout := page.layout()) is not None:
+                layout = page.layout()
+                if layout is not None:
                     layout.activate()
 
                 if not was_visible:

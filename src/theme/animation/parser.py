@@ -27,7 +27,8 @@ def _iterable_items(value: Any) -> list[Any]:
 def parse_specs(raw: Any) -> list[AnimationSpec]:
     specs: list[AnimationSpec] = []
     for payload in normalize_specs_payload(raw):
-        if (spec := _build_spec(payload)) is not None:
+        spec = _build_spec(payload)
+        if spec is not None:
             specs.append(spec)
     return specs
 
@@ -118,7 +119,8 @@ def _normalize_raw_specs(raw: dict[str, Any]) -> list[dict[str, Any]]:
     for action in _normalize_actions(_action_value(raw)):
         candidate = deepcopy(raw)
         candidate['on'] = action
-        if (spec := _normalize_raw_spec(candidate)) is not None:
+        spec = _normalize_raw_spec(candidate)
+        if spec is not None:
             specs.append(spec)
     return specs
 
@@ -360,7 +362,8 @@ def _to_number(value: Any) -> float | None:
         if not text:
             return None
 
-        if match := _NUMBER_VALUE_PATTERN.fullmatch(text):
+        match = _NUMBER_VALUE_PATTERN.fullmatch(text)
+        if match:
             token = str(match.group(1)).replace(',', '.')
             try:
                 return float(token)

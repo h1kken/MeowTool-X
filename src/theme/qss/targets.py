@@ -35,7 +35,8 @@ def parse_qss_target(target: str) -> tuple[str, list[tuple[str, str]]] | None:
     if not text:
         return None
 
-    if not (match := QSS_TARGET_PATTERN.fullmatch(text)):
+    match = QSS_TARGET_PATTERN.fullmatch(text)
+    if not match:
         return None
 
     base = str(match.group('base')).strip()
@@ -52,7 +53,8 @@ def parse_qss_target(target: str) -> tuple[str, list[tuple[str, str]]] | None:
 
 
 def normalize_qss_target(target: str) -> str:
-    if (parsed := parse_qss_target(target)):
+    parsed = parse_qss_target(target)
+    if parsed:
         obj_name, properties = parsed
         if not properties:
             return obj_name
@@ -72,10 +74,12 @@ def find_target_widgets(root: QWidget, target: str) -> list[QWidget]:
     if target.startswith('#'):
         target = target[1:]
 
-    if (chain := parse_selector_chain(target)) and len(chain) > 1:
+    chain = parse_selector_chain(target)
+    if chain and len(chain) > 1:
         return _find_widgets_by_selector_chain(root, chain)
 
-    if parsed := parse_qss_target(target):
+    parsed = parse_qss_target(target)
+    if parsed:
         obj_name, properties = parsed
         if not properties:
             return _find_widgets(root, obj_name)

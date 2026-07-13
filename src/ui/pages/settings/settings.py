@@ -89,11 +89,7 @@ class SettingsPage(MTWidget):
                 config=self._config,
             )
         if page_class is SettingsThemePage:
-            return page_class(
-                config_loader=self._config_loader,
-                config=self._config,
-                autoload_name=self._current_theme_name,
-            )
+            return page_class()
         return page_class()
 
     def current_presence_path(self) -> str:

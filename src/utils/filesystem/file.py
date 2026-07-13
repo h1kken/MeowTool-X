@@ -218,13 +218,13 @@ def count_lines_in_file(path: Path) -> int:
     return count
 
 
-def validate_filename(filename: str, *, black_list: Collection[str] = (), default: str = 'output') -> str:
-    filename = str(filename).strip()
+def validate_filename(name: str, *, black_list: Collection[str] = (), default: str = 'output') -> str:
+    name = str(name).strip()
     if (
-        not filename
-        or filename in black_list
-        or any(char in filename for char in FILENAME_SPECIAL_CHARS)
+        not name
+        or name in black_list
+        or any(char in name for char in FILENAME_SPECIAL_CHARS)
     ):
         return default
-    return filename
+    return name
 
