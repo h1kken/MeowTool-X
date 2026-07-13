@@ -30,3 +30,6 @@ class ConfigLoaderKey(StrEnum):
 class ConfigKey(StrEnum):
     GENERAL_PATH = "General"
     GENERAL_LANGUAGE = f"{GENERAL_PATH}>Language"
+
+    OUTPUTS_PATH = "Outputs"
+    OUTPUTS_DISCORD_RICH_PRESENCE = f"{OUTPUTS_PATH}>Discord Rich Presence"

@@ -7,7 +7,7 @@ from src.ui.widgets import (
     MTSwitchSetting,
     MTWidget,
 )
-from src.config.enums import ConfigLoaderKey as CLKey
+from src.config.enums import ConfigKey, ConfigLoaderKey as CLKey
 
 
 class SettingsMiscPage(MTWidget):
@@ -62,7 +62,7 @@ class SettingsMiscPage(MTWidget):
                     MTSwitchSetting(
                         config=self._config,
                         tr_key="ENBL_DS_RPC",
-                        cfg_key="Outputs>Discord Presence>Enable Presence",
+                        cfg_key=ConfigKey.OUTPUTS_DISCORD_RICH_PRESENCE,
                         default=False,
                     ),
                 ],

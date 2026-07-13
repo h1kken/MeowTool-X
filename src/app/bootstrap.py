@@ -43,3 +43,4 @@ def bootstrap(app: QApplication) -> None:
     # TODO: refactor lighter
     from src.services.discord import DiscordRPC
     services.discord_rpc = DiscordRPC(services.window, services.config)
+    app.aboutToQuit.connect(services.discord_rpc.shutdown)
