@@ -4,7 +4,7 @@ import re
 from copy import deepcopy
 from typing import Any, cast
 
-from src.theme.schema.access import theme_map
+from src.utils.conversion import as_dict
 
 from .helpers import (
     normalize_token,
@@ -192,7 +192,7 @@ def _expand_shorthand(action: str, prop: str, value: Any, common: dict[str, Any]
             case 'layout':
                 if 'spacing' in mapping:
                     specs.append({'on': action, 'property': 'layout.spacing', 'to': mapping['spacing'], **common})
-                margin = theme_map(mapping.get('margin', mapping.get('margins'))) or {}
+                margin = as_dict(mapping.get('margin', mapping.get('margins'))) or {}
                 if margin:
                     for side in ('left', 'top', 'right', 'bottom'):
                         if side in margin:
@@ -225,11 +225,11 @@ def _expand_parts_shorthand(action: str, value: dict[str, Any], common: dict[str
             if metric in mapping:
                 specs.append({'on': action, 'property': f'parts.{part_name}.{metric}', 'to': mapping[metric], **common})
 
-        background = theme_map(mapping.get('background')) or {}
+        background = as_dict(mapping.get('background')) or {}
         if 'color' in background:
             specs.append({'on': action, 'property': f'parts.{part_name}.background.color', 'to': background['color'], **common})
 
-        border = theme_map(mapping.get('border')) or {}
+        border = as_dict(mapping.get('border')) or {}
         if 'color' in border:
             specs.append({'on': action, 'property': f'parts.{part_name}.border.color', 'to': border['color'], **common})
         if 'width' in border:
@@ -237,18 +237,18 @@ def _expand_parts_shorthand(action: str, value: dict[str, Any], common: dict[str
         if 'radius' in border:
             specs.append({'on': action, 'property': f'parts.{part_name}.border.radius', 'to': border['radius'], **common})
 
-        text = theme_map(mapping.get('text')) or {}
+        text = as_dict(mapping.get('text')) or {}
         if 'color' in text:
             specs.append({'on': action, 'property': f'parts.{part_name}.text.color', 'to': text['color'], **common})
 
-        states = theme_map(mapping.get('states')) or {}
+        states = as_dict(mapping.get('states')) or {}
         for state, state_data in states.items():
             state_name = normalize_token(state)
             if not isinstance(state_data, dict) or not state_name:
                 continue
             state_mapping = cast(dict[str, Any], state_data)
 
-            state_background = theme_map(state_mapping.get('background')) or {}
+            state_background = as_dict(state_mapping.get('background')) or {}
             if 'color' in state_background:
                 specs.append({
                     'on': action,
@@ -257,7 +257,7 @@ def _expand_parts_shorthand(action: str, value: dict[str, Any], common: dict[str
                     **common,
                 })
 
-            state_text = theme_map(state_mapping.get('text')) or {}
+            state_text = as_dict(state_mapping.get('text')) or {}
             if 'color' in state_text:
                 specs.append({
                     'on': action,
@@ -266,7 +266,7 @@ def _expand_parts_shorthand(action: str, value: dict[str, Any], common: dict[str
                     **common,
                 })
 
-            state_border = theme_map(state_mapping.get('border')) or {}
+            state_border = as_dict(state_mapping.get('border')) or {}
             if 'color' in state_border:
                 specs.append({
                     'on': action,

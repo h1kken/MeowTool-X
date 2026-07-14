@@ -4,7 +4,7 @@ import re
 from copy import deepcopy
 from typing import Any, cast
 
-from src.theme.schema.types import ThemeMap
+type ThemeMap = dict[str, Any]
 
 BORDER_SIDE_KEYS = ('top', 'right', 'bottom', 'left')
 BORDER_GLOBAL_KEYS = ('width', 'style', 'color', 'radius')

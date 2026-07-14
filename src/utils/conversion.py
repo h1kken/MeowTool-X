@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from src.theme.schema.types import ThemeMap
+
+def as_dict(value: object) -> dict[str, Any] | None:
+    return cast(dict[str, Any], value) if isinstance(value, dict) else None
 
 
-def theme_map(value: object) -> ThemeMap | None:
-    return cast(ThemeMap, value) if isinstance(value, dict) else None
-
-
-def object_map(value: object) -> dict[object, object] | None:
+def as_object_dict(value: object) -> dict[object, object] | None:
     return cast(dict[object, object], value) if isinstance(value, dict) else None
 
 
@@ -43,28 +41,6 @@ def coerce_number(value: object, default: float | None = None) -> float | None:
         return float(text)
     except ValueError:
         return default
-
-
-def coerce_positive_int(value: object) -> int | None:
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, int):
-        return value if value > 0 else None
-    if isinstance(value, float):
-        rounded = int(round(value))
-        return rounded if rounded > 0 else None
-    if not isinstance(value, str):
-        return None
-
-    text = value.strip().lower().removesuffix('px').strip()
-    if not text:
-        return None
-
-    try:
-        rounded = int(round(float(text)))
-    except ValueError:
-        return None
-    return rounded if rounded > 0 else None
 
 
 def coerce_box_sides(
@@ -107,11 +83,10 @@ def coerce_box_sides(
 
 
 __all__ = (
-    'theme_map',
-    'object_map',
+    'as_dict',
+    'as_object_dict',
     'coerce_int',
     'coerce_float',
     'coerce_number',
-    'coerce_positive_int',
     'coerce_box_sides',
 )

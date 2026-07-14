@@ -16,4 +16,7 @@ type PopupPlacement = Literal[
     "cursor",
 ]
 
-__all__ = ("PopupPlacement", "WidgetThemeMap")
+__all__ = (
+    "PopupPlacement",
+    "WidgetThemeMap",
+)

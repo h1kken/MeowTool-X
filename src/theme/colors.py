@@ -48,10 +48,8 @@ def to_qcolor(value: Any, *, fallback: QColor | None = None) -> QColor | None:
 @overload
 def normalize_color(value: Any, *, fallback_raw: Literal[False] = False) -> str | None: ...
 
-
 @overload
 def normalize_color(value: Any, *, fallback_raw: Literal[True]) -> str: ...
-
 
 def normalize_color(value: Any, *, fallback_raw: bool = False) -> str | None:
     color = to_qcolor(value)

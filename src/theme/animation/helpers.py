@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import math
+import re
 from typing import Any, Callable, cast
 
 from PySide6.QtCore import QEasingCurve, Qt
 from PySide6.QtGui import QColor
 
-from src.theme.regexes import CUBIC_BEZIER_PATTERN
-from src.theme.schema.access import coerce_int, object_map
+from src.utils.conversion import as_object_dict, coerce_int
+
+_CUBIC_BEZIER_PATTERN = re.compile(
+    r'cubic-bezier\s*\(([^)]+)\)',
+    re.IGNORECASE,
+)
 
 
 def _iterable_data(value: Any) -> list[Any]:
@@ -36,7 +41,7 @@ def normalize_dash_border(data: Any) -> dict[str, Any] | None:
     default_dash = [4.0, 2.0]
 
     if isinstance(data, dict):
-        mapping = object_map(cast(object, data)) or {}
+        mapping = as_object_dict(cast(object, data)) or {}
         provided: set[str] = set()
         if 'offset' in mapping or 'value' in mapping:
             provided.add('offset')
@@ -141,7 +146,7 @@ def interpolate_color(start: QColor, end: QColor, t: float) -> QColor:
 
 def parse_easing(raw: Any) -> Callable[[float], float]:
     if isinstance(raw, dict):
-        mapping = object_map(cast(object, raw)) or {}
+        mapping = as_object_dict(cast(object, raw)) or {}
         easing_type = normalize_token(mapping.get('type', mapping.get('name', mapping.get('curve', 'linear'))))
 
         if easing_type in ('bezier', 'cubic_bezier'):
@@ -175,7 +180,7 @@ def parse_easing(raw: Any) -> Callable[[float], float]:
         return _qt_easing(easing_type)
 
     if isinstance(raw, str):
-        match = CUBIC_BEZIER_PATTERN.search(raw)
+        match = _CUBIC_BEZIER_PATTERN.search(raw)
         if match:
             parts = [p.strip() for p in match.group(1).split(',')]
             if len(parts) == 4:

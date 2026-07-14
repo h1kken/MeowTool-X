@@ -1,5 +1,5 @@
 import re
-from typing import Any, Callable, Sequence, cast
+from typing import Any, Callable, Sequence
 
 from PySide6.QtCore import QEvent, QObject, QSize, QSignalBlocker, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QIcon, QMouseEvent
@@ -8,7 +8,6 @@ from PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 import src.app.context as ctx
 config = ctx.services.config
 from src.app.paths import PATH_CONTAINER_ARROW_ICON
-from src.theme.colors import to_qcolor
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets import (
     MTButton,
@@ -16,7 +15,7 @@ from src.ui.widgets import (
     MTScrollArea,
     MTWidget,
 )
-from src.ui.widgets.main.helpers import icon, positive_int, repolish, measure, theme_icon_path
+from src.ui.widgets.main.helpers import icon, repolish
 from src.ui.widgets import MTComboBox
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 
@@ -222,7 +221,7 @@ class MTCollapsibleContainer(MTWidget):
         self._default_toggle_arrow_color: str | None = None
         self._default_toggle_arrow_collapsed_rotation = 0.0
         self._default_toggle_arrow_expanded_rotation = 90.0
-        self._reset_toggle_arrow_theme_values()
+        self._reset_toggle_arrow_values()
         self._toggle_arrow_rotation = self._default_toggle_arrow_expanded_rotation
         self._content_height_animation_active = False
 
@@ -244,9 +243,6 @@ class MTCollapsibleContainer(MTWidget):
 
         self._label = MTLabel(
             tr_key=tr_key, obj_name=f"{obj_name}_Container_Header_Title"
-        )
-        self._label.setAlignment(
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
         self._label.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -292,70 +288,6 @@ class MTCollapsibleContainer(MTWidget):
         self._toggle_button.toggled.connect(self._toggle_collapsed)
         self._toggle_button.toggled.connect(self.toggled.emit)
 
-    def reset_theme(self) -> None:
-        self._reset_toggle_arrow_theme_values()
-        if not bool(self.property("_themeAnimatedArrowRotation")):
-            self._toggle_arrow_rotation = (
-                self._toggle_arrow_expanded_rotation
-                if self._toggle_button.isChecked()
-                else self._toggle_arrow_collapsed_rotation
-            )
-        self._apply_toggle_button_metrics()
-        self._refresh_toggle_icon()
-
-    def apply_theme(self, data: dict[str, Any]) -> None:
-        icon = cast(dict[str, Any], data.get("icon")) if isinstance(data.get("icon"), dict) else {}
-
-        source = icon.get("source", icon.get("path", icon.get("file")))
-        icon_path = theme_icon_path(source)
-        if icon_path is not None:
-            self._toggle_arrow_source = icon_path
-
-        if "color" in icon:
-            color = to_qcolor(icon.get("color"))
-            self._toggle_arrow_color = (
-                color.name(QColor.NameFormat.HexArgb) if color is not None else None
-            )
-
-        size = positive_int(icon.get("size"))
-        if size is not None:
-            self._toggle_arrow_size = size
-
-        button_size = icon.get(
-            "button_size", icon.get("button-size", icon.get("buttonSize"))
-        )
-        if button_size is None and isinstance(icon.get("button"), dict):
-            button_size = cast(dict[str, Any], icon["button"]).get("size")
-        parsed_button_size = positive_int(button_size)
-        if parsed_button_size is not None:
-            self._toggle_button_size = parsed_button_size
-
-        collapsed_rotation = icon.get(
-            "collapsed_rotation",
-            icon.get("collapsed-rotation", icon.get("collapsed")),
-        )
-        expanded_rotation = icon.get(
-            "expanded_rotation", icon.get("expanded-rotation", icon.get("expanded"))
-        )
-        if isinstance(icon.get("rotation"), dict):
-            rotation = cast(dict[str, Any], icon["rotation"])
-            collapsed_rotation = rotation.get("collapsed", collapsed_rotation)
-            expanded_rotation = rotation.get("expanded", expanded_rotation)
-        parsed_collapsed = measure(collapsed_rotation)
-        if parsed_collapsed is not None:
-            self._toggle_arrow_collapsed_rotation = parsed_collapsed
-        parsed_expanded = measure(expanded_rotation)
-        if parsed_expanded is not None:
-            self._toggle_arrow_expanded_rotation = parsed_expanded
-
-        if not bool(self.property("_themeAnimatedArrowRotation")):
-            self._toggle_arrow_rotation = (
-                self._toggle_arrow_expanded_rotation
-                if self._toggle_button.isChecked()
-                else self._toggle_arrow_collapsed_rotation
-            )
-        self._apply_toggle_button_metrics()
-        self._refresh_toggle_icon()
         if self._toggle_button.isChecked():
             self._sync_content_height_to_layout()
 
@@ -417,7 +349,7 @@ class MTCollapsibleContainer(MTWidget):
         }:
             self._refresh_toggle_icon()
 
-    def _reset_toggle_arrow_theme_values(self) -> None:
+    def _reset_toggle_arrow_values(self) -> None:
         self._toggle_arrow_source = self._default_toggle_arrow_source
         self._toggle_arrow_size = self._default_toggle_arrow_size
         self._toggle_button_size = self._default_toggle_button_size
@@ -608,9 +540,6 @@ class MTComboBoxSetting(MTWidget):
         self._main_layout = create_layout(LayoutType.HBOX, parent=self)
 
         self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
-        self._label.setAlignment(
-            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
-        )
         self._label.setSizePolicy(
             QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred
         )

@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Any, cast
 
 from PySide6.QtCore import QObject, QSize, Qt, QUrl
 from PySide6.QtGui import QMovie, QPixmap, QResizeEvent
@@ -101,50 +100,16 @@ class MTMediaWidget(MTWidget):
             parent=self,
             obj_name=self._image_obj_name or self._child_obj_name('Image_Label', 'Media_Image_Label'),
         )
-        self._image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._image_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
         if self._transparent_for_mouse:
             self._image_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._layout.addWidget(self._image_label)
 
         self._show_image_area()
-        self.reset_theme()
+        self._clear_media_layer()
 
     def has_media(self) -> bool:
         return self._current_path is not None
-
-    def reset_theme(self) -> None:
-        self._source = ''
-        self._fit = _DEFAULT_MEDIA_FIT
-        self._clear_media_layer()
-
-    def apply_media_theme(self, data: dict[str, Any]) -> None:
-        source = ''
-        direct_source = data.get('source')
-        if isinstance(direct_source, str) and direct_source.strip():
-            source = direct_source.strip()
-        else:
-            icon_data = data.get('icon')
-            if isinstance(icon_data, dict):
-                icon_source = cast(dict[str, Any], icon_data).get('source')
-                if isinstance(icon_source, str) and icon_source.strip():
-                    source = icon_source.strip()
-        if source or 'source' in data or isinstance(data.get('icon'), dict):
-            self._source = source
-        if 'fit' in data:
-            token = str(data.get('fit') or '').strip().lower()
-            if token in (_MEDIA_FIT_CONTAIN, ''):
-                self._fit = _MEDIA_FIT_CONTAIN
-            elif token == _MEDIA_FIT_COVER:
-                self._fit = _MEDIA_FIT_COVER
-            elif token in (_MEDIA_FIT_STRETCH, 'fill'):
-                self._fit = _MEDIA_FIT_STRETCH
-            elif token in (_MEDIA_FIT_CENTER, 'free'):
-                self._fit = _MEDIA_FIT_CENTER
-            else:
-                self._fit = _DEFAULT_MEDIA_FIT
-
-        self._apply_current_media()
 
     def set_source(self, source: str | Path | None) -> None:
         self._source = str(source).strip() if source is not None else ''
@@ -345,15 +310,10 @@ class SidebarMediaWidget(MTMediaWidget):
             video_obj_name='Sidebar_Media_Video_Widget',
             content_margins=SIDEBAR_MEDIA_MARGIN,
         )
+        self.set_source(PATH_APP_ICON if PATH_APP_ICON.is_file() else None)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.setMinimumHeight(SIDEBAR_MEDIA_HEIGHT)
         self.setMaximumHeight(SIDEBAR_MEDIA_HEIGHT)
-        self._layout.setAlignment(self._image_label, Qt.AlignmentFlag.AlignCenter)
-
-    def reset_theme(self) -> None:
-        super().reset_theme()
-        self._source = str(PATH_APP_ICON) if PATH_APP_ICON.is_file() else ''
-        self._apply_current_media()
 
     def _apply_current_media(self) -> None:
         super()._apply_current_media()

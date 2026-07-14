@@ -89,19 +89,14 @@ class MTPopup(MTWidget):
     def content_layout(self) -> QLayout:
         return self._content_layout
 
-    def add_widget(self, widget: QWidget, stretch: int = 0, alignment: Qt.AlignmentFlag | None = None) -> None:
+    def add_widget(self, widget: QWidget, stretch: int = 0) -> None:
         if isinstance(self._content_layout, QBoxLayout):
-            if alignment is None:
-                self._content_layout.addWidget(widget, stretch)
-            else:
-                self._content_layout.addWidget(widget, stretch, alignment)
+            self._content_layout.addWidget(widget, stretch)
             return
 
         grid_layout = self._content_layout
         row = grid_layout.rowCount()
         grid_layout.addWidget(widget, row, 0)
-        if alignment is not None:
-            grid_layout.setAlignment(widget, alignment)
 
     def clear(self) -> None:
         while self._content_layout.count():
@@ -113,7 +108,7 @@ class MTPopup(MTWidget):
                 widget.setParent(None)
                 widget.deleteLater()
 
-    def sync_theme(self) -> None:
+    def _sync_shape_mask(self) -> None:
         self._apply_shape_mask()
 
     def show_for(
@@ -213,7 +208,7 @@ class MTPopup(MTWidget):
         self.adjustSize()
         self._content.adjustSize()
         self._ensure_backdrop()
-        self.sync_theme()
+        self._sync_shape_mask()
         self._show_backdrop()
 
     def _placement_point(self, anchor: QWidget, popup_size: QSize, placement: PopupPlacement) -> QPoint:

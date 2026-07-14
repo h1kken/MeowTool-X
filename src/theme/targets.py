@@ -1,9 +1,16 @@
 from fnmatch import fnmatchcase
+import re
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget
 
-from src.theme.regexes import QSS_TARGET_PATTERN, QSS_TARGET_PROPERTY_PATTERN
+_TARGET_PATTERN = re.compile(
+    r'(?P<base>[a-zA-Z_*][\w*]*)'
+    r'(?P<props>(?:\[\s*\w+\s*=\s*(?:"(?:\\.|[^"])*"|\'(?:\\.|[^\'])*\'|[^\]]+)\s*\])*)'
+)
+_TARGET_PROPERTY_PATTERN = re.compile(
+    r'\[\s*(?P<key>\w+)\s*=\s*(?P<value>"(?:\\.|[^"])*"|\'(?:\\.|[^\'])*\'|[^\]]+)\s*\]'
+)
 
 _CLASS_TARGET_FAMILIES: dict[str, tuple[str, ...]] = {}
 
@@ -35,7 +42,7 @@ def parse_qss_target(target: str) -> tuple[str, list[tuple[str, str]]] | None:
     if not text:
         return None
 
-    match = QSS_TARGET_PATTERN.fullmatch(text)
+    match = _TARGET_PATTERN.fullmatch(text)
     if not match:
         return None
 
@@ -44,7 +51,7 @@ def parse_qss_target(target: str) -> tuple[str, list[tuple[str, str]]] | None:
     properties: list[tuple[str, str]] = []
 
     if props_text:
-        for prop_match in QSS_TARGET_PROPERTY_PATTERN.finditer(props_text):
+        for prop_match in _TARGET_PROPERTY_PATTERN.finditer(props_text):
             key = str(prop_match.group('key')).strip()
             value = _strip_quotes(str(prop_match.group('value')))
             properties.append((key, value))

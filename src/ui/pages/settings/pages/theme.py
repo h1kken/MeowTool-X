@@ -12,14 +12,7 @@ from PySide6.QtWidgets import QLayout, QSizePolicy, QStackedWidget
 import src.app.context as ctx
 from src.app.paths import PATH_DEFAULT_THEME, PATH_THEMES_SRC, PATH_THEMES_USER
 from src.config.constants import CONFIGS_REFRESH_DEBOUNCE_MS
-from src.theme.storage.io import (
-    find_theme_file_by_name,
-    iter_theme_files,
-    load_theme_payload,
-    normalize_theme_name,
-    theme_output_path,
-    write_theme_payload,
-)
+from src.theme import files as theme_files
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets import (
     MTButton,
@@ -185,12 +178,12 @@ class SettingsThemePage(MTWidget):
 
     def _configured_name(self) -> str:
         value = self._config.get("General>Theme", default=PATH_DEFAULT_THEME.stem)
-        return normalize_theme_name(str(value)) or PATH_DEFAULT_THEME.stem
+        return theme_files.normalize_name(str(value)) or PATH_DEFAULT_THEME.stem
 
     def _refresh(self, *, preferred: str | None = None) -> None:
         themes: dict[str, Path] = {}
         for directory in (PATH_THEMES_SRC, PATH_THEMES_USER):
-            for path in iter_theme_files(directory):
+            for path in theme_files.iter_files(directory):
                 themes[path.stem] = path
         self._themes = themes
 
@@ -254,7 +247,7 @@ class SettingsThemePage(MTWidget):
             self._load(name, persist=True)
 
     def _normalize_new_name(self, value: str) -> str:
-        name = normalize_theme_name(value)
+        name = theme_files.normalize_name(value)
         if (
             not name
             or name.startswith(".")
@@ -274,17 +267,17 @@ class SettingsThemePage(MTWidget):
 
     def _create(self) -> None:
         name = self._normalize_new_name(self._create_line.text())
-        if not name or find_theme_file_by_name(PATH_THEMES_USER, name) is not None:
+        if not name or theme_files.find(PATH_THEMES_USER, name) is not None:
             return
-        path = theme_output_path(PATH_THEMES_USER, name)
+        path = theme_files.output_path(PATH_THEMES_USER, name)
         selected = self._selected_path()
         payload: dict[str, Any] = (
-            load_theme_payload(selected)
+            theme_files.read_safe(selected)
             if selected is not None
             else {"widgets": []}
         )
         try:
-            write_theme_payload(path, payload)
+            theme_files.write(path, payload)
         except OSError:
             return
         self._cancel_create()
@@ -313,11 +306,11 @@ class SettingsThemePage(MTWidget):
             or not self._is_user_theme(old_path)
             or not new_name
             or new_name == old_name
-            or find_theme_file_by_name(PATH_THEMES_USER, new_name) is not None
+            or theme_files.find(PATH_THEMES_USER, new_name) is not None
         ):
             return
 
-        new_path = theme_output_path(
+        new_path = theme_files.output_path(
             PATH_THEMES_USER,
             new_name,
             preferred_suffix=old_path.suffix,

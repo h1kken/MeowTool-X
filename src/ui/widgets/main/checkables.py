@@ -3,7 +3,6 @@ from PySide6.QtGui import QColor, QPaintEvent, QPainter, QPen, QResizeEvent
 from PySide6.QtWidgets import QCheckBox, QSizePolicy, QWidget
 
 from src.theme.colors import to_qcolor
-from src.theme.schema.access import coerce_positive_int, theme_map
 from src.ui.painting import new_widget_painter
 from src.ui.widgets.main.containers import MTWidget
 from src.ui.widgets.main.paint_primitives import (
@@ -13,7 +12,6 @@ from src.ui.widgets.main.paint_primitives import (
     resolve_uniform_radius,
     rounded_rect_path,
 )
-from src.ui.widgets.types import WidgetThemeMap
 
 
 class MTSwitch(QCheckBox):
@@ -25,9 +23,6 @@ class MTSwitch(QCheckBox):
         text: str = '',
         checked: bool = False,
         obj_name: str = '',
-        checked_color: str | None = None,
-        unchecked_color: str | None = None,
-        handle_color: str | None = None,
         *,
         parent: QWidget | None = None,
     ) -> None:
@@ -42,21 +37,16 @@ class MTSwitch(QCheckBox):
         self._visual_checked_state = bool(checked)
         self._pending_visual_checked_state: bool | None = None
         self._visual_sync_queued = False
-        self._checked_color = self._resolve_initial_color(checked_color, QColor(Qt.GlobalColor.transparent))
-        self._unchecked_color = self._resolve_initial_color(unchecked_color, QColor(Qt.GlobalColor.transparent))
-        self._handle_color = self._resolve_initial_color(handle_color, QColor(Qt.GlobalColor.transparent))
+        self._checked_color = QColor(Qt.GlobalColor.transparent)
+        self._unchecked_color = QColor(Qt.GlobalColor.transparent)
+        self._handle_color = QColor(Qt.GlobalColor.transparent)
         self._checked_handle_color: QColor | None = None
         self._unchecked_handle_color: QColor | None = None
-        self._default_margin = self._margin
-        self._default_checked_color = QColor(self._checked_color)
-        self._default_unchecked_color = QColor(self._unchecked_color)
-        self._default_handle_color = QColor(self._handle_color)
         self._track_border_rule = ''
         self._handle_border_rule = ''
         self._track_radius = '0px'
         self._handle_radius = '0px'
         self._default_size = (40, 20)
-        self._theme_fixed_size: tuple[int, int] | None = None
         self._animated_handle_color: QColor | None = None
 
         self._track = MTWidget(parent=self)
@@ -81,115 +71,7 @@ class MTSwitch(QCheckBox):
         self._sync_visuals()
 
     def sync_size(self, *, bounds_width: int | None = None, bounds_height: int | None = None) -> None:
-        target_size = self._theme_fixed_size or self._default_size
-        self.setFixedSize(*target_size)
-        self._sync_visuals()
-
-    def _resolve_initial_color(self, value: str | None, fallback: QColor) -> QColor:
-        if isinstance(value, str) and value.strip():
-            color = to_qcolor(value)
-            if color is not None:
-                return color
-        return QColor(fallback)
-
-    def reset_theme(self) -> None:
-        self._margin = self._default_margin
-        self._checked_color = QColor(self._default_checked_color)
-        self._unchecked_color = QColor(self._default_unchecked_color)
-        self._handle_color = QColor(self._default_handle_color)
-        self._checked_handle_color = None
-        self._unchecked_handle_color = None
-        self._animated_handle_color = None
-        self._track_border_rule = ''
-        self._handle_border_rule = ''
-        self._track_radius = '0px'
-        self._handle_radius = '0px'
-        self._theme_fixed_size = None
         self.setFixedSize(*self._default_size)
-        self._sync_visuals()
-
-    def apply_theme(self, data: WidgetThemeMap) -> None:
-        track_data = theme_map(data.get('track'))
-        if track_data is not None:
-            self._track_border_rule, self._track_radius = self._part_frame_rules(track_data)
-            checked_data = theme_map(track_data.get('checked')) or {}
-            unchecked_data = theme_map(track_data.get('unchecked')) or {}
-            checked_background = theme_map(checked_data.get('background')) or {}
-            unchecked_background = theme_map(unchecked_data.get('background')) or {}
-            checked_color = checked_data.get('color')
-            if isinstance(checked_color, str):
-                color = to_qcolor(checked_color)
-                if color is not None:
-                    self._checked_color = color
-            checked_bg_color = checked_background.get('color')
-            if isinstance(checked_bg_color, str):
-                color = to_qcolor(checked_bg_color)
-                if color is not None:
-                    self._checked_color = color
-            unchecked_color = unchecked_data.get('color')
-            if isinstance(unchecked_color, str):
-                color = to_qcolor(unchecked_color)
-                if color is not None:
-                    self._unchecked_color = color
-            unchecked_bg_color = unchecked_background.get('color')
-            if isinstance(unchecked_bg_color, str):
-                color = to_qcolor(unchecked_bg_color)
-                if color is not None:
-                    self._unchecked_color = color
-
-        handle_data = theme_map(data.get('handle'))
-        if handle_data is not None:
-            self._handle_border_rule, self._handle_radius = self._part_frame_rules(handle_data)
-            checked_data = theme_map(handle_data.get('checked')) or {}
-            unchecked_data = theme_map(handle_data.get('unchecked')) or {}
-            handle_background = theme_map(handle_data.get('background')) or {}
-            checked_background = theme_map(checked_data.get('background')) or {}
-            unchecked_background = theme_map(unchecked_data.get('background')) or {}
-            handle_color = handle_data.get('color')
-            if isinstance(handle_color, str):
-                color = to_qcolor(handle_color)
-                if color is not None:
-                    self._handle_color = color
-                    self._animated_handle_color = None
-            handle_bg_color = handle_background.get('color')
-            if isinstance(handle_bg_color, str):
-                color = to_qcolor(handle_bg_color)
-                if color is not None:
-                    self._handle_color = color
-                    self._animated_handle_color = None
-            self._checked_handle_color = None
-            for raw in (checked_background.get('color'), checked_data.get('color')):
-                if not isinstance(raw, str):
-                    continue
-                color = to_qcolor(raw)
-                if color is not None:
-                    self._checked_handle_color = color
-                    break
-            self._unchecked_handle_color = None
-            for raw in (unchecked_background.get('color'), unchecked_data.get('color')):
-                if not isinstance(raw, str):
-                    continue
-                color = to_qcolor(raw)
-                if color is not None:
-                    self._unchecked_handle_color = color
-                    break
-
-        size_data = theme_map(data.get('size')) or {}
-        width = coerce_positive_int(size_data.get('width', size_data.get('w')))
-        height = coerce_positive_int(size_data.get('height', size_data.get('h')))
-        if width is not None and height is not None:
-            self._theme_fixed_size = (width, height)
-            self.setFixedSize(*self._theme_fixed_size)
-        else:
-            self._theme_fixed_size = None
-            self.setFixedSize(*self._default_size)
-
-        layout_data = theme_map(data.get('layout')) or {}
-        margin = layout_data.get('margin')
-        if isinstance(margin, int) and margin >= 0:
-            limit = max(0, (min(self.width(), self.height()) // 2) - 1)
-            self._margin = min(margin, limit)
-
         self._sync_visuals()
 
     def setChecked(self, checked: bool) -> None:
@@ -308,21 +190,6 @@ class MTSwitch(QCheckBox):
             return self.set_part_color(part, value)
         return False
 
-    def has_visible_parts_theme(self) -> bool:
-        for color in (
-            self._handle_color,
-            self._checked_handle_color,
-            self._unchecked_handle_color,
-            self._checked_color,
-            self._unchecked_color,
-        ):
-            if self._has_visible_color(color):
-                return True
-        return bool(self._track_border_rule) or bool(self._handle_border_rule)
-
-    def _has_visible_color(self, color: QColor | None) -> bool:
-        return isinstance(color, QColor) and color.isValid() and color.alpha() > 0
-
     def paintEvent(self, event: QPaintEvent) -> None:
         _ = event
         painter = new_widget_painter(self, smooth_pixmap=True)
@@ -390,16 +257,6 @@ class MTSwitch(QCheckBox):
         style = parse_pen_style(parts[1])
         color = to_qcolor(' '.join(parts[2:]))
         return width, style, color if color is not None else QColor()
-
-    def _part_frame_rules(self, data: WidgetThemeMap) -> tuple[str, str]:
-        border = theme_map(data.get('border')) or {}
-        radius = str(border.get('radius', data.get('radius', '0px'))).strip() or '0px'
-
-        width = str(border.get('width', '')).strip()
-        style = str(border.get('style', '')).strip()
-        color = str(border.get('color', '')).strip()
-        border_rule = f'border: {width} {style} {color};' if all((width, style, color)) else ''
-        return border_rule, radius
 
     def _sync_checked_properties(self) -> None:
         checked = self.isChecked()

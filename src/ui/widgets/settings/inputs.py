@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QSize
 from PySide6.QtWidgets import QFileDialog, QSizePolicy, QWidget
 
 import src.app.context as ctx
@@ -195,13 +195,9 @@ class MTSliderSetting(MTWidget):
         self.setObjectName(f"{obj_name}_Slider_Setting")
 
         self._main_layout = create_layout(LayoutType.VBOX, parent=self)
-        self._main_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         self._info_layout = create_layout(LayoutType.HBOX)
 
         self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
-        self._label.setAlignment(
-            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
-        )
 
         if isinstance(default, int):
             self._spin_box = MTSpinBox(obj_name=f"{obj_name}_SpinBox")
@@ -211,9 +207,6 @@ class MTSliderSetting(MTWidget):
             self._spin_box = MTDoubleSpinBox(obj_name=f"{obj_name}_DoubleSpinBox")
             self._spin_box.setRange(float(min_value), float(max_value))
             self._spin_box.setValue(float(self._prev_value))
-        self._spin_box.setAlignment(
-            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
-        )
         self._spin_box.setSizePolicy(
             QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred
         )

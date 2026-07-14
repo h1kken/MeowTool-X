@@ -18,16 +18,15 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QColor, QCursor, QMouseEvent, QPalette, QWheelEvent
 from PySide6.QtWidgets import QApplication, QAbstractButton, QAbstractScrollArea, QAbstractSlider, QLayout, QSlider, QWidget
 
+from src.theme import files as theme_files
 from src.theme.colors import normalize_color, to_qcolor
-from src.theme.constants import EVENT_ACTIONS
-from src.theme.qss.targets import resolve_target_widgets
-from src.theme.schema.access import coerce_float, theme_map
-from src.theme.schema.payload import normalize_theme_payload
-from src.theme.storage.loader import load_theme
+from src.theme.parser import normalize_theme_payload
+from src.theme.targets import resolve_target_widgets
 from src.ui.widgets.main.checkables import MTSwitch
 from src.ui.widgets.main.containers import MTComboBox
 from src.ui.widgets.main.inputs import MTSlider
 from src.ui.widgets.settings.containers import MTCollapsibleContainer
+from src.utils.conversion import as_dict, coerce_float
 
 from .helpers import (
     interpolate_color,
@@ -43,6 +42,15 @@ if TYPE_CHECKING:
     from src.config import Config
 
 _CSS_DECLARATION_PATTERN = re.compile(r'([a-zA-Z-]+)\s*:\s*([^;{}]+)')
+_EVENT_ACTIONS = {
+    QEvent.Type.Enter: 'hover',
+    QEvent.Type.Leave: 'leave',
+    QEvent.Type.MouseButtonPress: 'press',
+    QEvent.Type.MouseButtonRelease: 'release',
+    QEvent.Type.Wheel: 'wheel',
+    QEvent.Type.FocusIn: 'focus',
+    QEvent.Type.FocusOut: 'blur',
+}
 
 def _widget_or_none(value: QObject | QWidget) -> QWidget | None:
     return value if isinstance(value, QWidget) else None
@@ -83,7 +91,7 @@ class AnimationManager(QObject):
         self._hover_reconcile_timer.timeout.connect(self._reconcile_hover_states)
 
     def load(self, name: str | None = None) -> Path | None:
-        loaded = load_theme(self._config, name)
+        loaded = theme_files.load(self._config, name)
         if loaded is None:
             self._clear()
             return None
@@ -92,7 +100,7 @@ class AnimationManager(QObject):
         theme = normalize_theme_payload(payload)
         theme_widgets = cast(
             dict[str, dict[str, Any]],
-            theme_map(theme.get("widgets")) or {},
+            as_dict(theme.get("widgets")) or {},
         )
         animations = {
             target: styles["animations"]
@@ -110,7 +118,7 @@ class AnimationManager(QObject):
             if not widgets:
                 continue
 
-            base_styles = theme_map(theme_widgets.get(target)) or {}
+            base_styles = as_dict(theme_widgets.get(target)) or {}
 
             for widget in widgets:
                 self._register_widget(widget)
@@ -241,7 +249,7 @@ class AnimationManager(QObject):
             if self._handle_wheel_event(target_widget, event):
                 return True
 
-        action = EVENT_ACTIONS.get(event.type())
+        action = _EVENT_ACTIONS.get(event.type())
         if action:
             self._play(target_widget, action)
             if action in {'hover', 'leave'}:
@@ -576,7 +584,7 @@ class AnimationManager(QObject):
 
     def _dash_border_style_defaults(self, styles: dict[str, Any]) -> dict[str, Any] | None:
         raw: Any = None
-        paint = theme_map(styles.get('paint'))
+        paint = as_dict(styles.get('paint'))
         if paint is not None:
             raw = paint.get('dash_border') or paint.get('dashBorder') or paint.get('border')
         if raw is None:
@@ -809,7 +817,7 @@ class AnimationManager(QObject):
         base_styles: dict[str, Any],
         runtime: dict[str, Any],
     ) -> None:
-        effect_map = theme_map(spec.end)
+        effect_map = as_dict(spec.end)
         if effect_map is None:
             return
 
@@ -1646,51 +1654,51 @@ class AnimationManager(QObject):
                     and group in {'background', 'border'}
                     and key == 'color'
                 ):
-                    parts_theme = theme_map(styles.get('parts')) or {}
-                    part_data = theme_map(parts_theme.get(part))
-                    group_data = theme_map(None if part_data is None else part_data.get(group))
+                    parts_theme = as_dict(styles.get('parts')) or {}
+                    part_data = as_dict(parts_theme.get(part))
+                    group_data = as_dict(None if part_data is None else part_data.get(group))
                     if group_data is not None:
                         raw = group_data.get('color')
         elif property_key.startswith('parts.'):
             tokens = property_key.split('.')
             if len(tokens) >= 3:
-                parts_theme = theme_map(styles.get('parts')) or {}
+                parts_theme = as_dict(styles.get('parts')) or {}
                 part = tokens[1]
                 suffix = tokens[2:]
-                part_data = theme_map(parts_theme.get(part))
+                part_data = as_dict(parts_theme.get(part))
                 if suffix == ['color']:
                     if part_data is not None:
                         raw = part_data.get('color')
                 elif suffix == ['background', 'color']:
                     if part in {'groove', 'sub_page', 'add_page', 'handle'}:
-                        group_data = theme_map(None if part_data is None else part_data.get('background'))
+                        group_data = as_dict(None if part_data is None else part_data.get('background'))
                         if group_data is not None:
                             raw = group_data.get('color')
                     elif part_data is not None:
-                        background = theme_map(part_data.get('background')) or {}
+                        background = as_dict(part_data.get('background')) or {}
                         raw = background.get('color')
                 elif suffix == ['text', 'color']:
                     if part_data is not None:
-                        text = theme_map(part_data.get('text')) or {}
+                        text = as_dict(part_data.get('text')) or {}
                         raw = text.get('color')
                 elif suffix == ['border', 'color']:
                     if part in {'groove', 'sub_page', 'add_page', 'handle'}:
-                        group_data = theme_map(None if part_data is None else part_data.get('border'))
+                        group_data = as_dict(None if part_data is None else part_data.get('border'))
                         if group_data is not None:
                             raw = group_data.get('color')
                     elif part_data is not None:
-                        border = theme_map(part_data.get('border')) or {}
+                        border = as_dict(part_data.get('border')) or {}
                         raw = border.get('color')
         else:
             match property_key:
                 case 'background.color':
-                    background = theme_map(styles.get('background'))
+                    background = as_dict(styles.get('background'))
                     raw = None if background is None else background.get('color')
                 case 'color':
-                    text = theme_map(styles.get('text'))
+                    text = as_dict(styles.get('text'))
                     raw = None if text is None else text.get('color')
                 case 'border.color':
-                    border = theme_map(styles.get('border'))
+                    border = as_dict(styles.get('border'))
                     raw = None if border is None else border.get('color')
                 case _:
                     raw = None

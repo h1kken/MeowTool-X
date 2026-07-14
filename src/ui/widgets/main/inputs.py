@@ -1,9 +1,6 @@
-from copy import deepcopy
 from PySide6.QtCore import QPoint, QPointF, QRect, QRectF, QSize, Qt
 from PySide6.QtGui import (
     QColor,
-    QFocusEvent,
-    QPalette,
     QMouseEvent,
     QPaintEvent,
     QPainter,
@@ -23,10 +20,9 @@ from PySide6.QtWidgets import (
 )
 
 from src.theme.colors import to_qcolor
-from src.theme.schema.access import coerce_box_sides, coerce_number, theme_map
+from src.utils.conversion import coerce_box_sides, coerce_number
 from src.ui.painting import new_widget_painter
 from src.ui.widgets.main.paint_primitives import parse_pen_style, resolve_fill_brush
-from src.ui.widgets.types import WidgetThemeMap
 
 
 def _text_render_width(widget: QWidget, values: tuple[str, ...]) -> int:
@@ -74,8 +70,7 @@ class MTSlider(QSlider):
         self._dragging_anywhere = False
         self._drag_offset = 0
         self._animated_handle_color: QColor | None = None
-        self._default_parts = self._build_default_parts()
-        self._parts = deepcopy(self._default_parts)
+        self._parts = self._build_default_parts()
         self.valueChanged.connect(self.update)
         def _update_range(_: int, __: int) -> None:
             self.update()
@@ -416,52 +411,6 @@ class MTSlider(QSlider):
         height = max(0.0, rect.height() - handle_h)
         return QRect(int(round(x)), int(round(y)), int(round(thickness)), int(round(height)))
 
-    def reset_theme(self) -> None:
-        self._parts = deepcopy(self._default_parts)
-        self._animated_handle_color = None
-        self.update()
-
-    def apply_theme(self, data: WidgetThemeMap) -> None:
-        for part in ('groove', 'sub_page', 'add_page', 'handle'):
-            part_data = theme_map(data.get(part))
-            if part_data is None:
-                continue
-            background = theme_map(part_data.get('background')) or {}
-            border = theme_map(part_data.get('border')) or {}
-            color = to_qcolor(background.get('color'))
-            if color:
-                self._parts[part]['background_color'] = color
-                if part == 'handle':
-                    self._animated_handle_color = None
-            border_color = to_qcolor(border.get('color'))
-            if border_color:
-                self._parts[part]['border_color'] = border_color
-            border_width = coerce_number(border.get('width'))
-            if border_width is not None:
-                self._parts[part]['border_width'] = max(0.0, border_width)
-            border_style = border.get('style')
-            if isinstance(border_style, str) and border_style.strip():
-                self._parts[part]['border_style'] = border_style.strip().lower()
-            border_radius = border.get('radius')
-            if border_radius is not None:
-                self._parts[part]['border_radius'] = border_radius
-            if part == 'groove':
-                size = coerce_number(part_data.get('size'))
-                if size is not None:
-                    self._parts[part]['size'] = max(1.0, size)
-            elif part == 'handle':
-                width = coerce_number(part_data.get('width'))
-                if width is not None:
-                    self._parts[part]['width'] = max(1.0, width)
-                height = coerce_number(part_data.get('height'))
-                if height is not None:
-                    self._parts[part]['height'] = max(1.0, height)
-                margin = coerce_box_sides(part_data.get('margin'), allow_negative=True)
-                if margin is not None:
-                    self._parts[part]['margin'] = margin
-
-        self.update()
-
     def _rounded_path(self, rect: QRectF, tl: float, tr: float, br: float, bl: float) -> QPainterPath:
         if not rect.isValid() or rect.width() <= 0 or rect.height() <= 0:
             return QPainterPath()
@@ -587,66 +536,6 @@ class MTLineEdit(QLineEdit):
             self.setObjectName(obj_name)
             
         self._placeholder_tr_key: str | None = None
-        self._focused_alignment: Qt.AlignmentFlag | None = None
-        self._unfocused_alignment: Qt.AlignmentFlag | None = None
-        self._theme_text_color_override: QColor | None = None
-        self._theme_placeholder_color_override: QColor | None = None
-
-
-    def set_focus_alignments(
-        self,
-        *,
-        focused: Qt.AlignmentFlag | None = None,
-        unfocused: Qt.AlignmentFlag | None = None,
-    ) -> None:
-        self._focused_alignment = focused
-        self._unfocused_alignment = unfocused
-        self._apply_focus_alignment()
-
-    def clear_focus_alignments(self) -> None:
-        self._focused_alignment = None
-        self._unfocused_alignment = None
-
-    def set_line_edit_text_theme(
-        self,
-        *,
-        text_color: QColor | None = None,
-        placeholder_color: QColor | None = None,
-    ) -> None:
-        self._theme_text_color_override = QColor(text_color) if isinstance(text_color, QColor) and text_color.isValid() else None
-        self._theme_placeholder_color_override = (
-            QColor(placeholder_color)
-            if isinstance(placeholder_color, QColor) and placeholder_color.isValid()
-            else None
-        )
-        self._apply_theme_palette_overrides()
-
-    def clear_line_edit_text_theme(self) -> None:
-        self._theme_text_color_override = None
-        self._theme_placeholder_color_override = None
-        self._apply_theme_palette_overrides()
-
-    def focusInEvent(self, event: QFocusEvent) -> None:
-        super().focusInEvent(event)
-        self._apply_focus_alignment()
-
-    def focusOutEvent(self, event: QFocusEvent) -> None:
-        super().focusOutEvent(event)
-        self._apply_focus_alignment()
-
-    def _apply_focus_alignment(self) -> None:
-        alignment = self._focused_alignment if self.hasFocus() else self._unfocused_alignment
-        if alignment is not None:
-            self.setAlignment(alignment)
-
-    def _apply_theme_palette_overrides(self) -> None:
-        palette = QPalette(self.palette())
-        if isinstance(self._theme_text_color_override, QColor):
-            palette.setColor(QPalette.ColorRole.Text, self._theme_text_color_override)
-        if isinstance(self._theme_placeholder_color_override, QColor):
-            palette.setColor(QPalette.ColorRole.PlaceholderText, self._theme_placeholder_color_override)
-        self.setPalette(palette)
-        self.update()
 
 
 class MTSpinBox(QSpinBox):

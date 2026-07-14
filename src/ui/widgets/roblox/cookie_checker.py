@@ -10,7 +10,6 @@ from PySide6.QtWidgets import QWidget
 from src.config.defaults import SORT_KEYS, default_config
 from src.config.manager import Config
 from src.config.types import SortCategoryKind
-from src.theme.schema.access import theme_map
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets.types import WidgetThemeMap
 from src.ui.widgets import (
@@ -19,14 +18,15 @@ from src.ui.widgets import (
     MTSwitchSetting,
 )
 from src.services.roblox.constants import ROBLOX_COOKIE_CHECKER_MAIN_FIELDS
+from src.utils.conversion import as_dict
 
 
 def _sort_defaults() -> WidgetThemeMap:
-    root = theme_map(default_config()) or {}
-    roblox = theme_map(root.get("Roblox")) or {}
-    cookie_checker = theme_map(roblox.get("Cookie Checker")) or {}
-    sorting = theme_map(cookie_checker.get("Sorting")) or {}
-    categories = theme_map(sorting.get("Categories")) or {}
+    root = as_dict(default_config()) or {}
+    roblox = as_dict(root.get("Roblox")) or {}
+    cookie_checker = as_dict(roblox.get("Cookie Checker")) or {}
+    sorting = as_dict(cookie_checker.get("Sorting")) or {}
+    categories = as_dict(sorting.get("Categories")) or {}
     return categories
 
 
@@ -85,9 +85,6 @@ class _BoundSwitchRow(MTWidget):
 
         self._label = MTLabel(tr_key="", obj_name=f"{obj_name}_Label")
         self._label.setText(str(label_text))
-        self._label.setAlignment(
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
-        )
 
         self._switch = MTSwitch(obj_name=f"{obj_name}_Switch")
         self._switch.setChecked(
@@ -302,7 +299,7 @@ class _SortListEditor(MTWidget):
     def reload_from_config(self) -> None:
         enabled = bool(self._config.get(self._cfg_key_enabled, default=False))
         self._enabled_row.set_checked(enabled)
-        items = theme_map(self._config.get(self._cfg_key_items, default={})) or {}
+        items = as_dict(self._config.get(self._cfg_key_items, default={})) or {}
         self._rebuild_entries({str(key): bool(value) for key, value in items.items()})
         self._sync_enabled_state()
 
@@ -401,15 +398,12 @@ class _CookieCheckerSortPopup(MTPopup):
         self._config = config
         self._field_name = field_name
         self._sort_kind = sort_kind
-        self._category_defaults = deepcopy(theme_map(_COOKIE_CHECKER_SORT_DEFAULTS.get(field_name)) or {})
-
-        self.content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._category_defaults = deepcopy(as_dict(_COOKIE_CHECKER_SORT_DEFAULTS.get(field_name)) or {})
 
         self._header = MTWidget(obj_name=f"{obj_name}_Header_Widget")
         self._header_layout = create_layout(LayoutType.HBOX, parent=self._header)
 
         self._title = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Title")
-        self._title.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
         self._close_button = MTButton(
             tr_key="",
@@ -463,7 +457,7 @@ class _CookieCheckerSortPopup(MTPopup):
         return f"Roblox>Cookie Checker>Sorting>Categories>{self._field_name}>{suffix}"
 
     def _build_detail_widgets(self, obj_name: str) -> None:
-        options_defaults = theme_map(self._category_defaults.get("Options")) or {}
+        options_defaults = as_dict(self._category_defaults.get("Options")) or {}
         if self._sort_kind != "number":
             return
 

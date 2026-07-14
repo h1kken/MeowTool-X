@@ -1,12 +1,9 @@
 from functools import lru_cache
-from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap, QTransform
 from PySide6.QtWidgets import QWidget
-
-from src.app.paths import PATH_ROOT
 
 SETTING_ROW_HEIGHT = 0
 SETTING_ROW_GAP = 0
@@ -45,47 +42,6 @@ def repolish(widget: QWidget) -> None:
     style.unpolish(widget)
     style.polish(widget)
     widget.update()
-
-
-def measure(value: Any) -> float | None:
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, (int, float)):
-        return float(value)
-    if not isinstance(value, str):
-        return None
-
-    text = value.strip().lower()
-    if not text or text.endswith("%"):
-        return None
-    if text.endswith("px"):
-        text = text[:-2].strip()
-    try:
-        return float(text)
-    except ValueError:
-        return None
-
-
-def positive_int(value: Any) -> int | None:
-    number = measure(value)
-    if number is None:
-        return None
-    return max(1, int(round(number)))
-
-
-def theme_icon_path(value: Any) -> str | None:
-    if not isinstance(value, str) or not value.strip():
-        return None
-
-    path = Path(value.strip()).expanduser()
-    if path.is_absolute():
-        return str(path)
-
-    root_path = PATH_ROOT / path
-    if root_path.exists():
-        return str(root_path)
-
-    return str(path)
 
 
 def config_int(value: Any, default: int) -> int:

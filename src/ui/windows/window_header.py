@@ -127,9 +127,6 @@ class MTWindowHeader(MTWidget):
             self,
             obj_name=f'{_HEADER_OBJECT_NAME}_Title',
         )
-        self._title_label.setAlignment(
-            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
-        )
         self._title_label.setAttribute(
             Qt.WidgetAttribute.WA_TransparentForMouseEvents, True
         )
