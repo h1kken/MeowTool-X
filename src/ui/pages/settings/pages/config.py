@@ -54,9 +54,8 @@ class SettingsConfigPage(MTWidget):
 
         self._watcher = QFileSystemWatcher(self)
         self._watcher.addPath(str(PATH_CONFIGS))
-        self._refresh_timer = QTimer(self)
-        self._refresh_timer.setSingleShot(True)
-        self._refresh_timer.setInterval(CONFIGS_REFRESH_DEBOUNCE_MS)
+        
+        self._refresh_timer = QTimer(self, singleShot=True, interval=CONFIGS_REFRESH_DEBOUNCE_MS)
 
         self._watcher.directoryChanged.connect(self._on_configs_dir_changed)
         self._refresh_timer.timeout.connect(self._refresh_configs)
@@ -64,19 +63,22 @@ class SettingsConfigPage(MTWidget):
         self._autoload_checkbox.toggled.connect(self._on_autoload_toggled)
         self._auto_save_checkbox.toggled.connect(self._on_auto_save_toggled)
 
+        self._load_button.clicked.connect(self._load_selected_config)
         self._save_button.clicked.connect(self._save_selected_config)
+        self._open_location_button.clicked.connect(self._open_selected_location)
+        
         self._create_button.clicked.connect(self._start_create_edit)
         self._create_edit_line.returnPressed.connect(self._submit_create_edit)
         self._create_edit_cancel_button.clicked.connect(self._cancel_create_edit)
+        
         self._rename_button.clicked.connect(self._start_rename_edit)
         self._rename_edit_line.returnPressed.connect(self._submit_rename_edit)
         self._rename_edit_cancel_button.clicked.connect(self._cancel_rename_edit)
-        self._load_button.clicked.connect(self._load_selected_config)
+        
         self._delete_button.clicked.connect(self._start_delete_confirm)
         self._delete_confirm_button.clicked.connect(self._delete_selected_config)
         self._delete_cancel_button.clicked.connect(self._cancel_delete_confirm)
-        self._open_location_button.clicked.connect(self._open_selected_location)
-
+        
         self._config.config_loaded.connect(self._on_config_loaded)
 
         self._refresh_configs(preferred=self._config.name)

@@ -28,10 +28,10 @@ class ConfigMixinHost(Protocol):
 
     def dump_dict(self, old_data: ConfigMap, defaults: ConfigMap | None = None, indent: int = 0) -> list[str]: ...
 
-__all__ = [
+__all__ = (
     "ConfigMap",
     "ConfigMixinHost",
     "ConfigScalar",
     "ConfigValue",
     "SortCategoryKind",
-]
+)

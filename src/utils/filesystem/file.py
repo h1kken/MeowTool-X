@@ -125,13 +125,7 @@ def load_json(path: Path) -> JsonObject | None:
         logger.exception(f'Error in {path}')
 
 
-def get_safe(
-    data: Mapping[str, Any],
-    key: str,
-    *,
-    sep: str = '>',
-    default: TDefault | None = None,
-) -> object | TDefault | None:
+def get_safe(data: Mapping[str, Any], key: str, *, sep: str = '>', default: TDefault | None = None,) -> object | TDefault | None:
     keys = key.split(sep)
     current: object = data
     for part in keys:

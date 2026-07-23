@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import threading
 from time import time
 from typing import TYPE_CHECKING
@@ -9,6 +8,7 @@ from pypresence.exceptions import DiscordError, DiscordNotFound, InvalidPipe, Pi
 from pypresence.presence import Presence
 from pypresence.types import ActivityType
 
+from src.app.constants import PROGRAM_NAME
 from src.config.enums import ConfigKey as CKey
 from src.ui.types import PageState
 from src.utils.logging import logger
@@ -22,14 +22,15 @@ class DiscordRPC:
     APP_ID = "1493918950344626216"
 
     DEFAULT_PAGE = "Startup"
+    
     RETRY_DELAY_SECONDS = 5.0
-    TEXT_LIMIT = 128
 
-    NAME = "MeowTool X"
-    LARGE_IMAGE = ""
-    LARGE_TEXT = ""
-    SMALL_IMAGE = ""
-    SMALL_TEXT = ""
+    ACTIVITY_TYPE = ActivityType.PLAYING
+    NAME = PROGRAM_NAME
+    # LARGE_IMAGE = None
+    # LARGE_TEXT = None
+    # SMALL_IMAGE = None
+    # SMALL_TEXT = None
 
     def __init__(self, window: MainWindow, config: Config) -> None:
         self._config = config
@@ -215,13 +216,14 @@ class DiscordRPC:
     def _update(self, rpc: Presence, page: PageState, started_at: int) -> None:
         details = self._format_page(page)
         rpc.update( # pyright: ignore[reportUnknownMemberType]
-            pid=os.getpid(),
-            activity_type=ActivityType.PLAYING,
-            details=details[:self.TEXT_LIMIT],
-            name=self.NAME or None,
             start=max(1, started_at),
-            large_image=self.LARGE_IMAGE or None,
-            large_text=self.LARGE_TEXT[:self.TEXT_LIMIT] if self.LARGE_IMAGE else None,
-            small_image=self.SMALL_IMAGE or None,
-            small_text=self.SMALL_TEXT[:self.TEXT_LIMIT] if self.SMALL_IMAGE else None,
+            
+            activity_type=self.ACTIVITY_TYPE,
+            name=self.NAME,
+            details=details,
+            
+            # large_image=self.LARGE_IMAGE,
+            # large_text=self.LARGE_TEXT,
+            # small_image=self.SMALL_IMAGE,
+            # small_text=self.SMALL_TEXT,
         )

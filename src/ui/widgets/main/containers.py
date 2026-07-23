@@ -232,8 +232,7 @@ class MTComboBox(TranslatableComboBoxMixin, QWidget):
         self._popup_hide_expected = False
         self._suppress_next_mouse_press = False
         self._popup_close_notified = False
-        self._popup_hide_timer = QTimer(self)
-        self._popup_hide_timer.setSingleShot(True)
+        self._popup_hide_timer = QTimer(self, singleShot=True)
         self._popup_hide_timer.timeout.connect(self._finalize_popup_hide)
 
         if obj_name:

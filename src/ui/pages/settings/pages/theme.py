@@ -39,23 +39,26 @@ class SettingsThemePage(MTWidget):
 
         self._watcher = QFileSystemWatcher(self)
         self._watcher.addPath(str(PATH_THEMES_USER))
-        self._refresh_timer = QTimer(self)
-        self._refresh_timer.setSingleShot(True)
-        self._refresh_timer.setInterval(CONFIGS_REFRESH_DEBOUNCE_MS)
-
         self._watcher.directoryChanged.connect(self._queue_refresh)
+        
+        self._refresh_timer = QTimer(self, singleShot=True, interval=CONFIGS_REFRESH_DEBOUNCE_MS)
+
         self._refresh_timer.timeout.connect(self._refresh)
         self._themes_list.currentItemChanged.connect(self._sync_actions)
         self._load_button.clicked.connect(self._load_selected)
+        
         self._create_button.clicked.connect(self._start_create)
         self._create_line.returnPressed.connect(self._create)
         self._create_cancel.clicked.connect(self._cancel_create)
+        
         self._rename_button.clicked.connect(self._start_rename)
         self._rename_line.returnPressed.connect(self._rename)
         self._rename_cancel.clicked.connect(self._cancel_rename)
+        
         self._delete_button.clicked.connect(self._confirm_delete)
         self._delete_confirm.clicked.connect(self._delete)
         self._delete_cancel.clicked.connect(self._cancel_delete)
+        
         self._open_button.clicked.connect(self._open_location)
         self._config.config_loaded.connect(self._config_loaded)
 
@@ -73,16 +76,22 @@ class SettingsThemePage(MTWidget):
         )
         self._themes_list = self._list_column.list_widget
         actions = MTWidget(obj_name="Theme_Actions_Column")
-        body.addWidget(self._list_column, stretch=1)
-        body.addWidget(actions, stretch=1)
+        body.addWidget(self._list_column)
+        body.addWidget(actions)
 
         layout = create_layout(LayoutType.VBOX, parent=actions)
         self._selected_value = self._add_info_row(
-            layout, "SLCTD", "Theme_Selected_Info", "Theme_Selected_Label",
+            layout,
+            "SLCTD",
+            "Theme_Selected_Info",
+            "Theme_Selected_Label",
             "Theme_Selected_Value",
         )
         self._loaded_value = self._add_info_row(
-            layout, "LDD", "Theme_Loaded_Info", "Theme_Loaded_Label",
+            layout,
+            "LDD",
+            "Theme_Loaded_Info",
+            "Theme_Loaded_Label",
             "Theme_Loaded_Value",
         )
 
@@ -177,7 +186,7 @@ class SettingsThemePage(MTWidget):
         return stack
 
     def _configured_name(self) -> str:
-        value = self._config.get("General>Theme", default=PATH_DEFAULT_THEME.stem)
+        value = self._config.get("General>Theme")
         return theme_files.normalize_name(str(value)) or PATH_DEFAULT_THEME.stem
 
     def _refresh(self, *, preferred: str | None = None) -> None:

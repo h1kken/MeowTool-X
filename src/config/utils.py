@@ -91,10 +91,7 @@ def normalize_config(
     return validated
 
 
-def convert_value(
-    user_value: object | None = None,
-    default_value: ConfigValue | None = None,
-) -> ConfigValue | object | None:
+def convert_value(user_value: object | None = None, default_value: ConfigValue | None = None) -> ConfigValue | object | None:
     if default_value is not None:
         return _convert_user_value(user_value, default_value)
 
@@ -110,7 +107,7 @@ def _count_indent_levels(raw_line: str) -> int:
     if not leading:
         return 0
 
-    indent_unit = max(1, len(CONFIG_INDENT)) if CONFIG_INDENT and CONFIG_INDENT.isspace() else 2
+    indent_unit = max(1, len(CONFIG_INDENT))
     tabs = leading.count("\t")
     spaces = leading.count(" ") // indent_unit
     return tabs + spaces
@@ -138,13 +135,11 @@ def _parse_numeric(value: object) -> object:
 
 
 def _is_numeric_bound_tuple(value: tuple[ConfigValue, ...]) -> TypeGuard[tuple[int | float, int | float, int | float]]:
-    return len(value) == 3 and all(
-        isinstance(item, (int, float)) and not isinstance(item, bool)
-        for item in value
-    )
+    return (len(value) == 3) and all(type(item) in (int, float) for item in value)
 
 
 def _convert_user_value(user_value: object, default_value: ConfigValue) -> ConfigValue:
+    # tuple
     if isinstance(default_value, tuple):
         if _is_numeric_bound_tuple(default_value):
             default_scalar, min_value, max_value = default_value
@@ -171,6 +166,7 @@ def _convert_user_value(user_value: object, default_value: ConfigValue) -> Confi
 
         return _clone_default(default_value)
 
+    # bool
     if isinstance(default_value, bool):
         if isinstance(user_value, str):
             parsed = _convert_to_bool(user_value)
@@ -181,6 +177,7 @@ def _convert_user_value(user_value: object, default_value: ConfigValue) -> Confi
             return user_value
         return default_value
 
+    # int and not bool
     if isinstance(default_value, int) and not isinstance(default_value, bool):
         parsed = _parse_numeric(user_value)
         if isinstance(parsed, bool):
@@ -191,6 +188,7 @@ def _convert_user_value(user_value: object, default_value: ConfigValue) -> Confi
             return int(parsed)
         return default_value
 
+    # float
     if isinstance(default_value, float):
         parsed = _parse_numeric(user_value)
         if isinstance(parsed, bool):
@@ -199,16 +197,19 @@ def _convert_user_value(user_value: object, default_value: ConfigValue) -> Confi
             return float(parsed)
         return default_value
 
+    # str
     if isinstance(default_value, str):
         if user_value is None:
             return default_value
         return str(user_value)
 
+    # list
     if isinstance(default_value, list):
         if isinstance(user_value, list):
             return cast(ConfigValue, deepcopy(cast(list[ConfigValue], user_value)))
         return cast(ConfigValue, deepcopy(default_value))
 
+    # dict
     if isinstance(default_value, dict):
         if isinstance(user_value, dict):
             return cast(ConfigValue, deepcopy(cast(ConfigMap, user_value)))

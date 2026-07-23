@@ -22,14 +22,16 @@ def _is_theme_file(path: Path) -> bool:
 
 
 def iter_files(root: Path) -> list[Path]:
-    files: list[Path] = []
-    for extension in reversed(SUPPORTED_EXTENSIONS):
-        files.extend(
-            path
-            for path in root.glob(f'*{extension}')
-            if path.is_file()
-        )
-    return files
+    if not root.is_dir():
+        return []
+
+    paths = tuple(root.iterdir())
+    return [
+        path
+        for extension in reversed(SUPPORTED_EXTENSIONS)
+        for path in paths
+        if path.suffix.lower() == extension and path.is_file()
+    ]
 
 
 def read(path: Path) -> ThemeMap:
@@ -77,11 +79,7 @@ def find(directory: Path, name: str) -> Path | None:
 
 
 def load(config: Config, name: str | None = None) -> LoadedTheme | None:
-    requested = (
-        str(config.get("General>Theme", default=PATH_DEFAULT_THEME.stem)).strip()
-        if name is None
-        else str(name).strip()
-    )
+    requested = str(config.get("General>Theme")).strip() if name is None else str(name).strip()
     selected = _resolve(requested)
 
     for path in dict.fromkeys((selected, _default_path())):

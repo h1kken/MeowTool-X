@@ -86,8 +86,7 @@ class AnimationManager(QObject):
         self._toggle_action_slots: dict[QWidget, Any] = {}
         self._popup_action_slots: dict[QWidget, tuple[Any, Any]] = {}
 
-        self._hover_reconcile_timer = QTimer(self)
-        self._hover_reconcile_timer.setInterval(16)
+        self._hover_reconcile_timer = QTimer(self, interval=16)
         self._hover_reconcile_timer.timeout.connect(self._reconcile_hover_states)
 
     def load(self, name: str | None = None) -> Path | None:
@@ -488,7 +487,7 @@ class AnimationManager(QObject):
         if was_visible and widget.isVisible():
             overlay.show()
 
-    def _detect_runtime_border_config(self, widget: QWidget) -> dict[str, float | bool | str]:
+    def _detect_border_config(self, widget: QWidget) -> dict[str, float | bool | str]:
         declarations = self._collect_widget_declarations(widget)
         width_text = declarations.get('border-width')
         style_text = declarations.get('border-style')
@@ -624,17 +623,12 @@ class AnimationManager(QObject):
         match spec.kind:
             case 'color':
                 self._append_color_animation(widget, spec, group, base_styles, runtime)
-                return
-
             case 'number':
                 self._append_number_animation(widget, spec, group, runtime)
-                return
-
             case 'paint_dash_border':
                 self._append_dash_border_animation(widget, spec, group, base_styles, runtime)
-                return
             case _:
-                return
+                pass
 
     def _append_color_animation(
         self,
@@ -644,7 +638,7 @@ class AnimationManager(QObject):
         base_styles: dict[str, Any],
         runtime: dict[str, Any],
     ) -> None:
-        if self._append_runtime_border_color_animation(widget, spec, group, base_styles, runtime):
+        if self._append_border_color_animation(widget, spec, group, base_styles, runtime):
             return
 
         def on_start() -> None:
@@ -664,7 +658,7 @@ class AnimationManager(QObject):
         animation.setLoopCount(spec.loop_count)
         group.addAnimation(animation)
 
-    def _append_runtime_border_color_animation(
+    def _append_border_color_animation(
         self,
         widget: QWidget,
         spec: AnimationSpec,
@@ -675,7 +669,7 @@ class AnimationManager(QObject):
         if spec.property_key != 'border.color':
             return False
 
-        border_config = self._detect_runtime_border_config(widget)
+        border_config = self._detect_border_config(widget)
         if not bool(border_config.get('visible')):
             return False
 

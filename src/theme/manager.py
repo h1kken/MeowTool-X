@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, cast
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLayout, QWidget
 
-from src.theme import files as theme_files
+import src.theme.files as theme_files
 from src.theme.parser import ThemeMap, normalize_theme_payload
 from src.theme.qss import build_rules
 from src.theme.targets import (
@@ -23,19 +23,17 @@ if TYPE_CHECKING:
     from src.config.manager import Config
 
 _NO_ALIGNMENT = Qt.AlignmentFlag(0)
-_DEFAULT_CONTENT_ALIGNMENT = (
+_DEFAULT_ALIGNMENT = (
     Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
 )
 _ALIGNMENT_FLAGS: dict[str, Qt.AlignmentFlag] = {
-    "left": Qt.AlignmentFlag.AlignLeft,
-    "right": Qt.AlignmentFlag.AlignRight,
-    "hcenter": Qt.AlignmentFlag.AlignHCenter,
-    "horizontalcenter": Qt.AlignmentFlag.AlignHCenter,
     "top": Qt.AlignmentFlag.AlignTop,
     "bottom": Qt.AlignmentFlag.AlignBottom,
-    "vcenter": Qt.AlignmentFlag.AlignVCenter,
-    "verticalcenter": Qt.AlignmentFlag.AlignVCenter,
+    "left": Qt.AlignmentFlag.AlignLeft,
+    "right": Qt.AlignmentFlag.AlignRight,
     "center": Qt.AlignmentFlag.AlignCenter,
+    "hcenter": Qt.AlignmentFlag.AlignHCenter,
+    "vcenter": Qt.AlignmentFlag.AlignVCenter,
     "justify": Qt.AlignmentFlag.AlignJustify,
     "baseline": Qt.AlignmentFlag.AlignBaseline,
     "absolute": Qt.AlignmentFlag.AlignAbsolute,
@@ -61,16 +59,17 @@ class ThemeManager:
         widgets = cast(dict[str, ThemeMap], as_dict(theme.get("widgets")) or {})
         blocks: list[str] = []
 
-        self._reset_runtime_alignments()
+        self._reset_alignments()
         for target, styles in sorted(widgets.items(), key=self._sort_key):
-            self._apply_runtime_alignments(target, styles)
+            self._apply_alignments(target, styles)
             blocks.extend(self._build_target(target, styles, theme_dir))
 
         return "\n\n".join(blocks)
 
-    def _reset_runtime_alignments(self) -> None:
+    def _reset_alignments(self) -> None:
         for widget in (self._window, *self._window.findChildren(QWidget)):
-            self._set_widget_alignment(widget, _DEFAULT_CONTENT_ALIGNMENT)
+            self._set_widget_alignment(widget, _DEFAULT_ALIGNMENT)
+            
             layout = widget.layout()
             if layout is not None:
                 self._reset_layout_alignment(layout)
@@ -86,22 +85,11 @@ class ThemeManager:
             if child_layout is not None:
                 self._reset_layout_alignment(child_layout)
 
-    def _apply_runtime_alignments(self, target: str, styles: ThemeMap) -> None:
+    def _apply_alignments(self, target: str, styles: ThemeMap) -> None:
         content_alignment = self._content_alignment(styles)
         layout_alignment = self._section_alignment(styles, "layout")
-        item_alignment = self._section_alignment(
-            styles,
-            "layout_item",
-            "layout-item",
-        )
-        if all(
-            alignment is None
-            for alignment in (
-                content_alignment,
-                layout_alignment,
-                item_alignment,
-            )
-        ):
+        item_alignment = self._section_alignment(styles, "layout_item", "layout-item")
+        if all(alignment is None for alignment in (content_alignment, layout_alignment, item_alignment)):
             return
 
         widgets = resolve_target_widgets(self._window, target, include_window=True)
@@ -125,11 +113,7 @@ class ThemeManager:
             value = self._first_value(styles, "align", "alignment")
         return self._parse_alignment(value)
 
-    def _section_alignment(
-        self,
-        styles: ThemeMap,
-        *section_names: str,
-    ) -> Qt.AlignmentFlag | None:
+    def _section_alignment(self, styles: ThemeMap, *section_names: str) -> Qt.AlignmentFlag | None:
         for section_name in section_names:
             section = as_dict(styles.get(section_name))
             if section is None:
@@ -156,6 +140,7 @@ class ThemeManager:
             values = cast(tuple[object, ...], value)
         else:
             values = (value,)
+            
         alignment = _NO_ALIGNMENT
         matched = False
 
@@ -173,10 +158,7 @@ class ThemeManager:
         return alignment if matched else None
 
     @staticmethod
-    def _set_widget_alignment(
-        widget: QWidget,
-        alignment: Qt.AlignmentFlag,
-    ) -> None:
+    def _set_widget_alignment(widget: QWidget, alignment: Qt.AlignmentFlag) -> None:
         setter = getattr(widget, "setAlignment", None)
         if callable(setter):
             setter(alignment)
@@ -194,11 +176,7 @@ class ThemeManager:
         return None
 
     @classmethod
-    def _find_item_layout(
-        cls,
-        layout: QLayout,
-        widget: QWidget,
-    ) -> QLayout | None:
+    def _find_item_layout(cls, layout: QLayout, widget: QWidget) -> QLayout | None:
         for index in range(layout.count()):
             item = layout.itemAt(index)
             if item is None:
@@ -212,12 +190,7 @@ class ThemeManager:
                     return owner
         return None
 
-    def _build_target(
-        self,
-        target: str,
-        styles: ThemeMap,
-        theme_dir: Path,
-    ) -> list[str]:
+    def _build_target(self, target: str, styles: ThemeMap, theme_dir: Path) -> list[str]:
         if not self._needs_concrete_widgets(target, styles):
             return self._build_blocks((self._selector(target),), styles, theme_dir)
 
@@ -230,12 +203,7 @@ class ThemeManager:
             blocks.extend(self._build_blocks((f"#{name}",), resolved, theme_dir))
         return blocks
 
-    def _build_blocks(
-        self,
-        selectors: tuple[str, ...],
-        styles: ThemeMap,
-        theme_dir: Path,
-    ) -> list[str]:
+    def _build_blocks(self, selectors: tuple[str, ...], styles: ThemeMap, theme_dir: Path) -> list[str]:
         rules = build_rules(styles, theme_dir)
         if not rules:
             return []
@@ -266,11 +234,7 @@ class ThemeManager:
                 return True
         return False
 
-    def _resolve_percent_radius(
-        self,
-        styles: ThemeMap,
-        widget: QWidget,
-    ) -> ThemeMap:
+    def _resolve_percent_radius(self, styles: ThemeMap, widget: QWidget) -> ThemeMap:
         resolved = deepcopy(styles)
         base_size = self._radius_base_size(widget)
         if base_size <= 0:

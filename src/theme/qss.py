@@ -19,7 +19,13 @@ _IMAGE_EXTENSIONS = {
     ".svg",
     ".webp",
 }
-_FONT_EXTENSIONS = {".otf", ".ttc", ".ttf", ".woff", ".woff2"}
+_FONT_EXTENSIONS = {
+    ".otf",
+    ".ttc",
+    ".ttf",
+    ".woff",
+    ".woff2",
+}
 
 
 def _measure(value: Any) -> str | None:

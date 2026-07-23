@@ -110,11 +110,7 @@ class SettingsRobloxCookieCheckerPage(MTWidget):
 
     @staticmethod
     def _normalize_object_token(value: str) -> str:
-        return "_".join(
-            part
-                for part in NORMALIZE_QT_KEY_PATTERN.sub("_", str(value)).split("_")
-                    if part
-        )
+        return "_".join(part for part in NORMALIZE_QT_KEY_PATTERN.sub("_", str(value)).split("_") if part)
 
     def _change_main_fields_state(self) -> None:
         to_state = False

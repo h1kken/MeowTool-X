@@ -1,8 +1,9 @@
 import sys
 
-PROGRAM_NAME = "MeowTool... Meow :3"
+PROGRAM_TITLE = "MeowTool... Meow :3"
+
+PROGRAM_NAME = "MeowTool X"
 PROGRAM_VERSION = "1.0.0"
-APP_DIRNAME = "MeowTool X"
 
 ASCII_MEOWTOOL = rf"""
 {"‾" * 109}

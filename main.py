@@ -6,12 +6,12 @@ from PySide6.QtWidgets import QApplication
 
 import src.app.context as ctx
 from src.app.bootstrap import bootstrap
-from src.app.constants import PROGRAM_NAME
+from src.app.constants import PROGRAM_TITLE
 
 
 def main() -> None:
     app = QApplication(sys.argv)
-    app.setApplicationName(PROGRAM_NAME)
+    app.setApplicationName(PROGRAM_TITLE)
     
     bootstrap(app)
 

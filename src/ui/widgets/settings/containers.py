@@ -47,9 +47,7 @@ class MTColumnsSetting(MTScrollArea):
         self._column_assignments: tuple[tuple[int, ...], ...] = tuple(
             tuple() for _ in range(self._columns)
         )
-        self._rebalance_timer = QTimer(self)
-        self._rebalance_timer.setSingleShot(True)
-        self._rebalance_timer.setInterval(0)
+        self._rebalance_timer = QTimer(self, singleShot=True, interval=0)
         self._rebalance_timer.timeout.connect(self._rebalance_columns)
         if obj_name:
             self.setObjectName(f"{obj_name}_Columns_Widget")

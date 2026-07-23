@@ -4,7 +4,7 @@ import os
 import sys
 from pathlib import Path
 
-from src.app.constants import APP_DIRNAME
+from src.app.constants import PROGRAM_NAME
 
 def _find_bundle_root() -> Path:
     bundle_path = getattr(sys, '_MEIPASS', None)
@@ -31,7 +31,7 @@ PATH_APP_ROOT = _find_app_root(PATH_ROOT)
 PATH_SYSTEM_DRIVE = Path(os.environ['SystemDrive'])
 
 PATH_APPDATA = Path(os.environ['APPDATA'])
-PATH_APPDATA_APP_DIR = PATH_APPDATA / APP_DIRNAME
+PATH_APPDATA_APP_DIR = PATH_APPDATA / PROGRAM_NAME
 
 PATH_LOCALAPPDATA = Path(os.environ['LOCALAPPDATA'])
 

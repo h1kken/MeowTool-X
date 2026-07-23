@@ -10,7 +10,7 @@ from typing import Any, cast
 import loguru
 
 from src.app.paths import PATH_ROOT, PATH_LOGS
-from src.app.constants import APP_DIRNAME, IS_LAUNCHED_WITH_CONSOLE, PROGRAM_VERSION
+from src.app.constants import PROGRAM_NAME, IS_LAUNCHED_WITH_CONSOLE, PROGRAM_VERSION
 from src.utils.logging.constants import (
     DATE_LOGGER_FORMAT,
     LOGGER_INDENT_FUNCTION,
@@ -112,7 +112,7 @@ def _patcher(record: Any) -> None:
 class Logger:
     def __init__(
         self,
-        name: str = APP_DIRNAME,
+        name: str = PROGRAM_NAME,
         *,
         stream: bool = IS_LAUNCHED_WITH_CONSOLE,
         console_level: LogLevel = LogLevel.INFO,
@@ -173,7 +173,7 @@ class Logger:
             _LOG_ORIGIN.reset(token)
             
     def _log_environment_info(self):
-        self.info(f"Starting {APP_DIRNAME} v{PROGRAM_VERSION}")
+        self.info(f"Starting {PROGRAM_NAME} v{PROGRAM_VERSION}")
         self.info(f"OS: {platform.platform()}")
         self.info(f"Python: {platform.python_version()}")
             

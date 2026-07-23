@@ -3,7 +3,7 @@ import tempfile
 import time
 from collections.abc import Iterator
 from pathlib import Path
-from typing import TypeVar, cast
+from typing import cast
 
 from src.utils.logging import logger
 from src.app.paths import PATH_CONFIGS
@@ -17,21 +17,16 @@ from src.config.types import ConfigMap, ConfigMixinHost, ConfigValue
 from src.config.utils import convert_value
 from src.utils.filesystem import FS, del_safe, get_safe, set_safe
 
-TDefault = TypeVar("TDefault")
-
 
 class GetConfigMixin:
-    def get(self: ConfigMixinHost, key: str, *, sep: str = ">", default: TDefault | object = CONFIG_MISSING_DEFAULT) -> object | TDefault | None:
+    def get(self: ConfigMixinHost, key: str, *, sep: str = ">") -> object | None:
         value = get_safe(self.data, key, sep=sep, default=CONFIG_MISSING_DEFAULT)
         if value is not CONFIG_MISSING_DEFAULT:
             return value
-        if default is not CONFIG_MISSING_DEFAULT:
-            return default
 
         default_value = get_safe(self.defaults, key, sep=sep, default=CONFIG_MISSING_DEFAULT)
         if default_value is not CONFIG_MISSING_DEFAULT:
-            resolved_default = convert_value(None, cast(ConfigValue, default_value))
-            return resolved_default
+            return default_value
 
         return None
 
@@ -45,11 +40,11 @@ class SetConfigMixin:
         normalized_default = convert_value(None, typed_default)
         if value == normalized_default:
             del_safe(self.data, key, sep=sep)
-            logger.debug(f"resetted default to '{key.replace(sep, " > ")}'")
+            logger.debug(f"Resetted default to '{key.replace(sep, " > ")}'")
             return
 
         set_safe(self.data, key, cast(ConfigValue, value), sep=sep)
-        logger.debug(f"setted '{value}' to '{key.replace(sep, " > ")}'")
+        logger.debug(f"Setted '{value}' ({type(value).__name__}) to '{key.replace(sep, " > ")}'")
 
 
 class SaveConfigMixin:
@@ -116,7 +111,7 @@ class SaveConfigMixin:
                         break
                     except PermissionError:
                         tries = attempt + 1
-                        logger.warning(f"can't replace file: {temp_file_path} to {self.path}, try: #{tries}")
+                        logger.warning(f"Can't replace file: {temp_file_path} to {self.path}. Try: #{tries}")
                         if attempt == CONFIG_SAVE_RETRY_COUNT - 1:
                             raise
                         time.sleep(CONFIG_SAVE_RETRY_DELAY_SEC * tries)
