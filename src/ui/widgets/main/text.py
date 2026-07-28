@@ -8,7 +8,7 @@ from src.translation.mixin import TranslatableMixin
 
 
 class MTPlainLabel(QLabel):
-    def __init__(self, text: str = '', parent: QWidget | None = None, *, obj_name: str = '') -> None:
+    def __init__(self, text: str = "", parent: QWidget | None = None, *, obj_name: str = "") -> None:
         super().__init__(text, parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
@@ -17,7 +17,7 @@ class MTPlainLabel(QLabel):
 
 class MTLabel(TranslatableMixin, QLabel):
 
-    def __init__(self, tr_key: str = '', obj_name: str = '', *, parent: QWidget | None = None) -> None:
+    def __init__(self, tr_key: str = "", obj_name: str = "", *, parent: QWidget | None = None) -> None:
         super().__init__(tr_key, parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
@@ -30,8 +30,8 @@ class MTButton(TranslatableMixin, QAbstractButton):
         self,
         *,
         parent: QWidget | None = None,
-        tr_key: str = '',
-        obj_name: str = '',
+        tr_key: str = "",
+        obj_name: str = "",
         checkable: bool = False,
         checked: bool = False,
     ) -> None:
@@ -54,7 +54,7 @@ class MTButton(TranslatableMixin, QAbstractButton):
         self,
         *,
         source: str,
-        align: str = 'left',
+        align: str = "left",
         size: QSize | None = None,
         spacing: float = 4.0,
         color: QColor | None = None,
@@ -73,14 +73,18 @@ class MTButton(TranslatableMixin, QAbstractButton):
         self.setIcon(icon)
         self.setIconSize(icon_size)
         self._text_icon_state = {
-            'source': str(source),
-            'align': str(align or 'left'),
-            'size': QSize(icon_size),
-            'spacing': max(0.0, float(spacing)),
+            "source": str(source),
+            "align": str(align or "left"),
+            "size": QSize(icon_size),
+            "spacing": max(0.0, float(spacing)),
         }
         self.updateGeometry()
         self.update()
         return True
 
 
-__all__ = ('MTButton', 'MTLabel', 'MTPlainLabel')
+__all__ = (
+    "MTButton",
+    "MTLabel",
+    "MTPlainLabel",
+)
