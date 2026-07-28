@@ -1,26 +1,26 @@
 from __future__ import annotations
 
-from typing import Any, cast
+import typing as t
 
 
-def as_dict(value: object) -> dict[str, Any] | None:
-    return cast(dict[str, Any], value) if isinstance(value, dict) else None
+def as_dict(value: object) -> dict[str, t.Any] | None:
+    return t.cast(dict[str, t.Any], value) if isinstance(value, dict) else None
 
 
 def as_object_dict(value: object) -> dict[object, object] | None:
-    return cast(dict[object, object], value) if isinstance(value, dict) else None
+    return t.cast(dict[object, object], value) if isinstance(value, dict) else None
 
 
 def coerce_int(value: object, default: int | None = None) -> int | None:
     try:
-        return int(cast(Any, value))
+        return int(t.cast(t.Any, value))
     except (TypeError, ValueError):
         return default
 
 
 def coerce_float(value: object, default: float | None = None) -> float | None:
     try:
-        return float(cast(Any, value))
+        return float(t.cast(t.Any, value))
     except (TypeError, ValueError):
         return default
 
@@ -52,7 +52,7 @@ def coerce_box_sides(
     if isinstance(value, (int, float)):
         raw_values = [value]
     elif isinstance(value, (list, tuple)):
-        raw_values = list(cast(list[object] | tuple[object, ...], value))
+        raw_values = list(t.cast(list[object] | tuple[object, ...], value))
     elif isinstance(value, str):
         raw_values = [part for part in value.replace(',', ' ').split() if part]
     else:

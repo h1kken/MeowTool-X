@@ -1,10 +1,10 @@
-from typing import Collection
+import typing as t
 
 
 def format_duration(
     ms: int,
     *,
-    out_units: str | Collection[str] = 'all'
+    out_units: str | t.Collection[str] = 'all'
 ) -> dict[str, int]:
     s, ms = divmod(ms, 1000)
     m, s  = divmod(s,  60)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, cast
+import typing as t
 
 from PySide6.QtGui import QFontDatabase
 
@@ -28,7 +28,7 @@ _FONT_EXTENSIONS = {
 }
 
 
-def _measure(value: Any) -> str | None:
+def _measure(value: t.Any) -> str | None:
     if value is None or isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
@@ -45,15 +45,15 @@ def _measure(value: Any) -> str | None:
         return text
 
 
-def _box(value: Any) -> str | None:
+def _box(value: t.Any) -> str | None:
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         return _measure(value)
     if isinstance(value, str):
-        parts: list[Any] = value.replace(",", " ").split()
+        parts: list[t.Any] = value.replace(",", " ").split()
     elif isinstance(value, (list, tuple)):
-        parts = list(cast(list[Any] | tuple[Any, ...], value))
+        parts = list(t.cast(list[t.Any] | tuple[t.Any, ...], value))
     elif isinstance(value, dict):
-        data = cast(dict[str, Any], value)
+        data = t.cast(dict[str, t.Any], value)
         parts = [data.get(side) for side in ("top", "right", "bottom", "left")]
     else:
         return None
@@ -61,10 +61,10 @@ def _box(value: Any) -> str | None:
     if not 1 <= len(parts) <= 4:
         return None
     values = [_measure(part) for part in parts]
-    return " ".join(cast(list[str], values)) if all(values) else None
+    return " ".join(t.cast(list[str], values)) if all(values) else None
 
 
-def _image(value: Any, theme_dir: Path) -> str | None:
+def _image(value: t.Any, theme_dir: Path) -> str | None:
     if not isinstance(value, str):
         return None
     text = value.strip()
@@ -79,7 +79,7 @@ def _image(value: Any, theme_dir: Path) -> str | None:
     return f'url("{source}")' if suffix in _IMAGE_EXTENSIONS else text
 
 
-def _font_family(value: Any, theme_dir: Path) -> str | None:
+def _font_family(value: t.Any, theme_dir: Path) -> str | None:
     if not isinstance(value, str):
         return None
     text = value.strip()
@@ -282,7 +282,7 @@ def _partial_border_rules(
     return [f"{prefix}-{name}: {value};" for name, value in values if value]
 
 
-def _color(value: Any) -> str:
+def _color(value: t.Any) -> str:
     text = str(value or "").strip()
     return normalize_color(text, fallback_raw=True) if text else ""
 

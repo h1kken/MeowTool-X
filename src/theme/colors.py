@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Literal, cast, overload
+import typing as t
 
 from PySide6.QtGui import QColor
 
 
-def to_qcolor(value: Any, *, fallback: QColor | None = None) -> QColor | None:
+def to_qcolor(value: t.Any, *, fallback: QColor | None = None) -> QColor | None:
     if value is None:
         return fallback
 
@@ -19,7 +19,7 @@ def to_qcolor(value: Any, *, fallback: QColor | None = None) -> QColor | None:
         color = QColor(text)
 
     elif isinstance(value, tuple):
-        components = cast(tuple[object, ...], value)
+        components = t.cast(tuple[object, ...], value)
         if len(components) not in (3, 4):
             return fallback
         try:
@@ -28,7 +28,7 @@ def to_qcolor(value: Any, *, fallback: QColor | None = None) -> QColor | None:
             return fallback
 
     elif isinstance(value, list):
-        components = cast(list[object], value)
+        components = t.cast(list[object], value)
         if len(components) not in (3, 4):
             return fallback
         try:
@@ -45,13 +45,13 @@ def to_qcolor(value: Any, *, fallback: QColor | None = None) -> QColor | None:
     return color if color.isValid() else fallback
 
 
-@overload
-def normalize_color(value: Any, *, fallback_raw: Literal[False] = False) -> str | None: ...
+@t.overload
+def normalize_color(value: t.Any, *, fallback_raw: t.Literal[False] = False) -> str | None: ...
 
-@overload
-def normalize_color(value: Any, *, fallback_raw: Literal[True]) -> str: ...
+@t.overload
+def normalize_color(value: t.Any, *, fallback_raw: t.Literal[True]) -> str: ...
 
-def normalize_color(value: Any, *, fallback_raw: bool = False) -> str | None:
+def normalize_color(value: t.Any, *, fallback_raw: bool = False) -> str | None:
     color = to_qcolor(value)
     if color is None:
         return str(value).strip() if fallback_raw else None

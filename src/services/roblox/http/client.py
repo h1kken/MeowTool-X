@@ -1,4 +1,4 @@
-from typing import Any
+import typing as t
 
 from aiohttp import ClientResponse
 
@@ -30,13 +30,13 @@ class RobloxHttpClient(BaseHttpClient):
                 logger.debug(f'[{method.upper()}:{response.status}] URL: {url}')
                 raise RuntimeError(f'Unexpected HTTP status {response.status} for {method.upper()} {url}')
 
-    async def get(self, url: str, **kwargs: Any) -> ClientResponse:
+    async def get(self, url: str, **kwargs: t.Any) -> ClientResponse:
         response = await super().get(url, **kwargs)
         if response is None:
             raise RuntimeError(f'GET returned no response for {url}')
         return response
 
-    async def post(self, url: str, **kwargs: Any) -> ClientResponse:
+    async def post(self, url: str, **kwargs: t.Any) -> ClientResponse:
         response = await super().post(url, **kwargs)
         if response is None:
             raise RuntimeError(f'POST returned no response for {url}')

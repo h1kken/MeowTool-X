@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, cast
+import typing as t
 
 from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import QCursor, QHideEvent, QMouseEvent, QRegion, QResizeEvent, QShowEvent, QWheelEvent
@@ -300,7 +300,7 @@ class MTPopup(MTWidget):
         parent_widget = self.parentWidget()
         if isinstance(parent_widget, QWidget):
             parent_window = parent_widget.window()
-            host = cast(Any, parent_window)._popup_modal_host
+            host = t.cast(t.Any, parent_window)._popup_modal_host
             if isinstance(host, QWidget):
                 return host
             return parent_window

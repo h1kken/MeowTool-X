@@ -1,6 +1,6 @@
 import asyncio
 import re
-from typing import Collection, Literal, cast
+import typing as t
 
 from aiohttp import ClientResponse
 
@@ -58,11 +58,11 @@ class RobloxAccount:
     #     return await (await self._session.get('https://users.roblox.com/v1/users/authenticated', cookies=self._cookies)).json()
 
     async def get_complex_account_information(self) -> JsonDict:
-        return cast(JsonDict, await (await self._session.get(RobloxAPI.MYSETTINGSJSON)).json())
+        return t.cast(JsonDict, await (await self._session.get(RobloxAPI.MYSETTINGSJSON)).json())
 
     async def get_profile_information(
         self,
-        *components: Literal[
+        *components: t.Literal[
             'UserProfileHeader',
             'Actions',
             'About',
@@ -87,7 +87,7 @@ class RobloxAccount:
             'profileId': str(self._player_id),
             'profileType': 'User'
         }
-        return cast(
+        return t.cast(
             JsonDict,
             await (await self._session.post(f'{RobloxAPI.APIS}/profile-platform-api/v1/profiles/get', json=json)).json(),
         )
@@ -105,7 +105,7 @@ class RobloxAccount:
         return {'Display Name': self._account_information.get('DisplayName')}
     
     async def get_country_reg(self) -> JsonDict:
-        response = cast(
+        response = t.cast(
             JsonDict,
             await (await self._session.get(f'{RobloxAPI.USERS}/v1/users/authenticated/country-code')).json(),
         )
@@ -119,7 +119,7 @@ class RobloxAccount:
         }
     
     async def get_reg_date_dmy(self) -> JsonDict:
-        response = cast(
+        response = t.cast(
             JsonDict,
             await (await self._session.get(f'{RobloxAPI.USERS}/v1/users/{self._player_id}')).json(),
         )
@@ -129,14 +129,14 @@ class RobloxAccount:
         return {'Registration Date (In Days)': self._account_information.get('AccountAgeInDays')}
 
     async def get_robux(self) -> JsonDict:
-        response = cast(
+        response = t.cast(
             JsonDict,
             await (await self._session.get(f'{RobloxAPI.ECONOMY}/v1/user/currency')).json(),
         )
         return {'Robux': response.get('robux')}
     
     async def get_billing(self) -> JsonDict:
-        response = cast(
+        response = t.cast(
             JsonDict,
             await (await self._session.get(f'{RobloxAPI.BILLING}/v1/credit')).json(),
         )
@@ -145,13 +145,13 @@ class RobloxAccount:
     async def get_transactions_time_frame(
         self,
         *,
-        time_frame: Literal['Day', 'Week', 'Month', 'Year'] = TIME_FRAME_TRANSACTIONS,
+        time_frame: t.Literal['Day', 'Week', 'Month', 'Year'] = TIME_FRAME_TRANSACTIONS,
     ) -> JsonDict:
         params: JsonDict = {
             'timeFrame': time_frame,
             'transactionType': 'Summary'
         }
-        response = cast(
+        response = t.cast(
             JsonDict,
             await (await self._session.get(f'{RobloxAPI.ECONOMY}/v2/users/{self._player_id}/transaction-totals', params=params)).json(),
         )
@@ -208,7 +208,7 @@ class RobloxAccount:
         self,
         *,
         max_page: int = -1,
-        items_per_page: Literal[5, 10, 25, 50, 100] = ITEMS_PER_PAGE_RAP
+        items_per_page: t.Literal[5, 10, 25, 50, 100] = ITEMS_PER_PAGE_RAP
     ) -> dict[str, int]:
         rap = 0
         cur_page = 0
@@ -220,11 +220,11 @@ class RobloxAccount:
             params.get('cursor') is not None
             and cur_page != max_page
         ):
-            response = cast(
+            response = t.cast(
                 JsonDict,
                 await (await self._session.get(f'{RobloxAPI.INVENTORY}/v1/users/{self._player_id}/assets/collectibles', params=params, cookies=self._cookies)).json(),
             )
-            items = cast(JsonList, response.get('data') or [])
+            items = t.cast(JsonList, response.get('data') or [])
             rap += sum(
                 item['recentAveragePrice']
                 for item in items
@@ -235,7 +235,7 @@ class RobloxAccount:
         return {'Rap': rap}
     
     async def get_cards(self) -> JsonDict:
-        response = cast(
+        response = t.cast(
             JsonList,
             await (await self._session.get(f'{RobloxAPI.APIS}/payments-gateway/v1/payment-profiles', cookies=self._cookies)).json(),
         )
@@ -257,11 +257,11 @@ class RobloxAccount:
     
     async def get_gamepasses(
         self,
-        check_list_places: Collection[str],
+        check_list_places: t.Collection[str],
         check_list_gamepasses: dict[int, JsonDict],
         *,
         max_page: int = -1,
-        items_per_page: Literal[5, 10, 25, 50, 100] = ITEMS_PER_PAGE_GAMEPASSES
+        items_per_page: t.Literal[5, 10, 25, 50, 100] = ITEMS_PER_PAGE_GAMEPASSES
     ) -> JsonDict:
         found_gamepasses: PlaceDataMap = {place: {'data': {}} for place in check_list_places}
         cur_page = 0
@@ -274,11 +274,11 @@ class RobloxAccount:
             and cur_page != max_page
             and len(found_gamepasses) != len(check_list_gamepasses)
         ):
-            response = cast(
+            response = t.cast(
                 JsonDict,
                 await (await self._session.get(f'{RobloxAPI.APIS}/game-passes/v1/users/{self._player_id}/game-passes', params=params, cookies=self._cookies)).json(),
             )
-            gamepasses = cast(JsonList, response.get('gamePasses') or [])
+            gamepasses = t.cast(JsonList, response.get('gamePasses') or [])
             last_gamepass_id: int | None = None
             for gamepass in gamepasses:
                 gamepass_id = gamepass.get('gamePassId')
@@ -299,7 +299,7 @@ class RobloxAccount:
     
     async def get_badges(
         self,
-        check_list_places: Collection[str],
+        check_list_places: t.Collection[str],
         check_list_badges: dict[int, JsonDict],
     ) -> JsonDict:
         found_badges: PlaceDataMap = {place: {'data': {}} for place in check_list_places}
@@ -313,8 +313,8 @@ class RobloxAccount:
         ]
         results: list[ClientResponse] = await asyncio.gather(*tasks)
         for result in results:
-            response = cast(JsonDict, await result.json())
-            badges = cast(JsonList, response.get('data') or [])
+            response = t.cast(JsonDict, await result.json())
+            badges = t.cast(JsonList, response.get('data') or [])
             for badge in badges:
                 badge_id = badge.get('badgeId')
                 if not isinstance(badge_id, int) or badge_id not in check_list_badges:
@@ -333,7 +333,7 @@ class RobloxAccount:
         check_list_favorite_places: NamedIdMap,
         *,
         max_page: int = -1,
-        items_per_page: Literal[5, 10, 25, 50, 100] = ITEMS_PER_PAGE_FAVORITE_PLACES
+        items_per_page: t.Literal[5, 10, 25, 50, 100] = ITEMS_PER_PAGE_FAVORITE_PLACES
     ) -> dict[str, NamedIdMap]:
         found_favorite_places: NamedIdMap = {}
         cur_page = 0
@@ -346,13 +346,13 @@ class RobloxAccount:
             and cur_page != max_page
             and len(found_favorite_places) != len(check_list_favorite_places)
         ):
-            response = cast(
+            response = t.cast(
                 JsonDict,
                 await (await self._session.get(f'{RobloxAPI.GAMES}/v2/users/{self._player_id}/favorite/games', params=params, cookies=self._cookies)).json(),
             )
-            places = cast(JsonList, response.get('data') or [])
+            places = t.cast(JsonList, response.get('data') or [])
             for place in places:
-                root_place = cast(JsonDict, place.get('rootPlace') or {})
+                root_place = t.cast(JsonDict, place.get('rootPlace') or {})
                 place_id = root_place.get('id')
                 if place_id in check_list_favorite_places:
                     assert isinstance(place_id, int)
@@ -366,11 +366,11 @@ class RobloxAccount:
         check_list_places_weekly_playtime: NamedIdMap
     ) -> JsonDict:
         found_places_weekly_playtime: dict[int, dict[str, dict[str, int]]] = {}
-        response = cast(
+        response = t.cast(
             JsonDict,
             await (await self._session.get(f'{RobloxAPI.APIS}/parental-controls-api/v1/parental-controls/get-top-weekly-screentime-by-universe', cookies=self._cookies)).json(),
         )
-        universes = cast(JsonList, response.get('universeWeeklyScreentimes') or [])
+        universes = t.cast(JsonList, response.get('universeWeeklyScreentimes') or [])
         for universe in universes:
             universe_id = universe.get('universeId')
             if universe_id in check_list_places_weekly_playtime:
@@ -391,7 +391,7 @@ class RobloxAccount:
         check_list_bundles: NamedIdMap,
         *,
         max_page: int = -1,
-        items_per_page: Literal[5, 10, 25, 50, 100] = ITEMS_PER_PAGE_BUNDLES
+        items_per_page: t.Literal[5, 10, 25, 50, 100] = ITEMS_PER_PAGE_BUNDLES
     ) -> dict[str, NamedIdMap]:
         found_bundles: NamedIdMap = {}
         cur_page = 0
@@ -404,11 +404,11 @@ class RobloxAccount:
             and cur_page != max_page
             and len(found_bundles) != len(check_list_bundles)
         ):
-            response = cast(
+            response = t.cast(
                 JsonDict,
                 await (await self._session.get(f'{RobloxAPI.CATALOG}/v1/users/{self._player_id}/bundles/1', params=params, cookies=self._cookies)).json(),
             )
-            bundles = cast(JsonList, response.get('data') or [])
+            bundles = t.cast(JsonList, response.get('data') or [])
             for bundle in bundles:
                 bundle_id = bundle.get('id')
                 if isinstance(bundle_id, int) and bundle_id in check_list_bundles:
@@ -418,16 +418,16 @@ class RobloxAccount:
         return {'Bundles': found_bundles}
     
     async def get_inventory_privacy(self) -> dict[str, str]:
-        response = cast(
+        response = t.cast(
             JsonDict,
             await (await self._session.get(f'{RobloxAPI.APIS}/user-settings-api/v1/user-settings/settings-and-options', cookies=self._cookies)).json(),
         )
-        privacy_data = cast(JsonDict, response.get('whoCanSeeMyInventory') or {})
+        privacy_data = t.cast(JsonDict, response.get('whoCanSeeMyInventory') or {})
         privacy = privacy_data.get('currentValue')
         return {'Inventory Privacy': privacy if isinstance(privacy, str) else ''}
     
     async def get_trade_privacy(self) -> dict[str, str]:
-        response = cast(
+        response = t.cast(
             JsonDict,
             await (await self._session.get(f'{RobloxAPI.ACCOUNTSETTINGS}/v1/trade-privacy', cookies=self._cookies)).json(),
         )
@@ -451,16 +451,16 @@ class RobloxAccount:
             params['nextCursor'] is not None
             and cur_page != max_page
         ):
-            response = cast(
+            response = t.cast(
                 JsonDict,
                 await (await self._session.get(f'{RobloxAPI.APIS}/token-metadata-service/v1/sessions', params=params, cookies=self._cookies)).json(),
             )
-            raw_sessions = cast(JsonList, response.get('sessions') or [])
+            raw_sessions = t.cast(JsonList, response.get('sessions') or [])
             for session in raw_sessions:
                 sessions.append(
                     {
-                        'location': cast(JsonDict, session.get('location') or {}),
-                        'agent': cast(JsonDict, session.get('agent') or {}),
+                        'location': t.cast(JsonDict, session.get('location') or {}),
+                        'agent': t.cast(JsonDict, session.get('agent') or {}),
                         'ip': session.get('lastAccessedIp')
                     }
                 )
@@ -470,7 +470,7 @@ class RobloxAccount:
         return {'Sessions': sessions}
     
     async def get_email(self) -> JsonDict:
-        security_model = cast(JsonDict, self._account_information.get('MyAccountSecurityModel') or {})
+        security_model = t.cast(JsonDict, self._account_information.get('MyAccountSecurityModel') or {})
         return {
             'Email': {
                 'setted': security_model.get('IsEmailSet'),
@@ -479,14 +479,14 @@ class RobloxAccount:
         }
 
     async def get_verified_phone(self) -> dict[str, bool]:
-        response = cast(
+        response = t.cast(
             JsonDict,
             await (await self._session.get(f'{RobloxAPI.ACCOUNTINFORMATION}/v1/phone', cookies=self._cookies)).json(),
         )
         return {'Phone': bool(response.get('isVerified'))}
     
     async def get_2fa(self) -> dict[str, bool]:
-        security_model = cast(JsonDict, self._account_information.get('MyAccountSecurityModel') or {})
+        security_model = t.cast(JsonDict, self._account_information.get('MyAccountSecurityModel') or {})
         return {'2FA': bool(security_model.get('IsTwoStepEnabled'))}
     
     async def get_pin(self) -> dict[str, bool]:
@@ -537,12 +537,12 @@ class RobloxAccount:
     #     return groups_funds
     
     async def get_place_visits(self, data: JsonDict) -> JsonDict:
-        components = cast(JsonDict, data.get('components') or {})
-        statistics = cast(JsonDict, components.get('Statistics') or {})
+        components = t.cast(JsonDict, data.get('components') or {})
+        statistics = t.cast(JsonDict, components.get('Statistics') or {})
         return {'Place Visits': statistics.get('numberOfVisits')}
     
     async def get_age_group(self) -> JsonDict:
-        response = cast(
+        response = t.cast(
             JsonDict,
             await (await self._session.get(f'{RobloxAPI.APIS}/user-settings-api/v1/account-insights/age-group', cookies=self._cookies)).json(),
         )
@@ -550,34 +550,34 @@ class RobloxAccount:
         return {'Age Group': convert_age_group(translation_key if isinstance(translation_key, str) else '')}
     
     async def get_verified_age(self) -> JsonDict:
-        response = cast(
+        response = t.cast(
             JsonDict,
             await (await self._session.get(f'{RobloxAPI.APIS}/age-verification-service/v1/age-verification/verified-age', cookies=self._cookies)).json(),
         )
         return {'Verified Age': response.get('verifiedAge')}
     
     async def get_verified_voice(self) -> JsonDict:
-        response = cast(
+        response = t.cast(
             JsonDict,
             await (await self._session.get(f'{RobloxAPI.VOICE}/v1/settings', cookies=self._cookies)).json(),
         )
         return {'Verified Voice': response.get('isVerifiedForVoice')}
     
-    async def get_fff_counter(self, data: JsonDict, *, key: Literal['friends', 'followers', 'followings']) -> JsonDict:
-        components = cast(JsonDict, data.get('components') or {})
-        header = cast(JsonDict, components.get('UserProfileHeader') or {})
-        counts = cast(JsonDict, header.get('counts') or {})
+    async def get_fff_counter(self, data: JsonDict, *, key: t.Literal['friends', 'followers', 'followings']) -> JsonDict:
+        components = t.cast(JsonDict, data.get('components') or {})
+        header = t.cast(JsonDict, components.get('UserProfileHeader') or {})
+        counts = t.cast(JsonDict, header.get('counts') or {})
         return {key.capitalize(): counts.get(f'{key}Count')}
 
     async def get_roblox_badges(self, data: JsonDict) -> JsonDict:
-        components = cast(JsonDict, data.get('components') or {})
-        roblox_badges = cast(JsonDict, components.get('RobloxBadges') or {})
-        badge_list = cast(JsonList, roblox_badges.get('robloxBadgeList') or [])
+        components = t.cast(JsonDict, data.get('components') or {})
+        roblox_badges = t.cast(JsonDict, components.get('RobloxBadges') or {})
+        badge_list = t.cast(JsonList, roblox_badges.get('robloxBadgeList') or [])
         return {
             'Roblox Badges': [
                 badge_type.get('value')
                 for roblox_badge in badge_list
-                for badge_type in [cast(JsonDict, roblox_badge.get('type') or {})]
+                for badge_type in [t.cast(JsonDict, roblox_badge.get('type') or {})]
             ]
         }
 
@@ -619,11 +619,11 @@ class RobloxAccount:
 
     async def get_place_id_user_in(self) -> int | None:
         data = { 'userIds': [self._player_id] }
-        response = cast(
+        response = t.cast(
             JsonDict,
             await (await self._session.post(f'{RobloxAPI.PRESENCE}/v1/presence/users', data=data)).json(),
         )
-        presence_list = cast(JsonList, response.get('userPresences') or [])
+        presence_list = t.cast(JsonList, response.get('userPresences') or [])
         user_presences = presence_list[0] if presence_list else {}
         return user_presences.get('placeId')
 
@@ -634,7 +634,7 @@ class RobloxAccount:
         less_players: bool = True,
         exclude_full: bool = True,
         only_friends: bool = False,
-        items_per_page: Literal[5, 10, 25, 50, 100] = ITEMS_PER_PAGE_PLACE_SERVER_IDS
+        items_per_page: t.Literal[5, 10, 25, 50, 100] = ITEMS_PER_PAGE_PLACE_SERVER_IDS
     ) -> JsonDict:
         params = {
             'sortOrder': int(less_players),

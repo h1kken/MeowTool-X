@@ -3,11 +3,11 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+import typing as t
 
 from PySide6.QtCore import QFileSystemWatcher, QSignalBlocker, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import QLayout, QSizePolicy, QStackedWidget
+from PySide6.QtWidgets import QLayout, QSizePolicy
 
 import src.app.context as ctx
 from src.app.paths import PATH_DEFAULT_THEME, PATH_THEMES_SRC, PATH_THEMES_USER
@@ -23,8 +23,7 @@ from src.ui.widgets import (
     MTPlainLabel,
     MTWidget,
 )
-from src.utils.filesystem import FS
-from src.utils.filesystem.constants import FILENAME_SPECIAL_CHARS
+from src.utils.filesystem import FS, validate_filename
 
 
 class SettingsThemePage(MTWidget):
@@ -37,15 +36,15 @@ class SettingsThemePage(MTWidget):
         FS.ensure_dir(PATH_THEMES_USER)
         self._build_ui()
 
+        self._refresh_timer = QTimer(self, singleShot=True, interval=CONFIGS_REFRESH_DEBOUNCE_MS)
+        
         self._watcher = QFileSystemWatcher(self)
         self._watcher.addPath(str(PATH_THEMES_USER))
         self._watcher.directoryChanged.connect(self._queue_refresh)
-        
-        self._refresh_timer = QTimer(self, singleShot=True, interval=CONFIGS_REFRESH_DEBOUNCE_MS)
 
         self._refresh_timer.timeout.connect(self._refresh)
         self._themes_list.currentItemChanged.connect(self._sync_actions)
-        self._load_button.clicked.connect(self._load_selected)
+        self._load_button.clicked.connect(self._load)
         
         self._create_button.clicked.connect(self._start_create)
         self._create_line.returnPressed.connect(self._create)
@@ -96,13 +95,10 @@ class SettingsThemePage(MTWidget):
         )
 
         self._load_button = MTButton(tr_key="LOAD", obj_name="Theme_Apply_Button")
-        self._create_stack = self._editor_stack("create", "CREATE")
-        self._rename_stack = self._editor_stack("rename", "RENAME")
+        self._create_stack = self._editor_stack_widget("create", "CREATE")
+        self._rename_stack = self._editor_stack_widget("rename", "RENAME")
         self._delete_stack = self._delete_stack_widget()
-        self._open_button = MTButton(
-            tr_key="OPN_FL_LCTN",
-            obj_name="Theme_Open_Location_Button",
-        )
+        self._open_button = MTButton(tr_key="OPN_FL_LCTN", obj_name="Theme_Open_Location_Button")
 
         for widget in (
             self._load_button,
@@ -133,23 +129,20 @@ class SettingsThemePage(MTWidget):
         layout.addWidget(row)
         return value
 
-    def _editor_stack(self, mode: str, tr_key: str) -> QStackedWidget:
+    def _editor_stack_widget(self, mode: str, tr_key: str) -> MTInlineEditorStack:
         title = mode.capitalize()
+        
         stack = MTInlineEditorStack()
         stack.setObjectName(f"Theme_{title}_Stack")
         stack.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
-        button = MTButton(tr_key=tr_key, obj_name=f"Theme_{title}_Button")
         row = MTWidget(obj_name=f"Theme_{title}_Editor_Row")
         row_layout = create_layout(LayoutType.HBOX, parent=row)
+        
+        button = MTButton(tr_key=tr_key, obj_name=f"Theme_{title}_Button")
         line = MTLineEdit(obj_name=f"Theme_{title}_Editor_LineEdit")
-        line.setPlaceholderText("Theme name")
         cancel = MTButton(tr_key="✕", obj_name=f"Theme_{title}_Editor_Cancel_Button")
         cancel.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
-        row_layout.addWidget(line, 1)
-        row_layout.addWidget(cancel)
-        stack.addWidget(button)
-        stack.addWidget(row)
 
         if mode == "create":
             self._create_button = button
@@ -159,35 +152,34 @@ class SettingsThemePage(MTWidget):
             self._rename_button = button
             self._rename_line = line
             self._rename_cancel = cancel
+        
+        stack.addWidget(button)
+        stack.addWidget(row)
+        row_layout.addWidget(line, 1)
+        row_layout.addWidget(cancel)
         return stack
 
-    def _delete_stack_widget(self) -> QStackedWidget:
+    def _delete_stack_widget(self) -> MTInlineEditorStack:
         stack = MTInlineEditorStack()
         stack.setObjectName("Theme_Delete_Stack")
-        self._delete_button = MTButton(tr_key="DELETE", obj_name="Theme_Delete_Button")
+        
         row = MTWidget(obj_name="Theme_Delete_Confirm_Row")
-        layout = create_layout(LayoutType.HBOX, parent=row)
-        self._delete_confirm = MTButton(
-            tr_key="CONFIRM",
-            obj_name="Theme_Delete_Confirm_Button",
-        )
-        self._delete_cancel = MTButton(
-            tr_key="✕",
-            obj_name="Theme_Delete_Cancel_Button",
-        )
-        self._delete_cancel.setSizePolicy(
-            QSizePolicy.Policy.Maximum,
-            QSizePolicy.Policy.Preferred,
-        )
-        layout.addWidget(self._delete_confirm, 1)
-        layout.addWidget(self._delete_cancel)
+        row_layout = create_layout(LayoutType.HBOX, parent=row)
+        
+        self._delete_button = MTButton(tr_key="DELETE", obj_name="Theme_Delete_Button")
+        self._delete_confirm = MTButton(tr_key="CONFIRM", obj_name="Theme_Delete_Confirm_Button")
+        self._delete_cancel = MTButton(tr_key="✕", obj_name="Theme_Delete_Cancel_Button")
+        self._delete_cancel.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
+        
         stack.addWidget(self._delete_button)
         stack.addWidget(row)
+        row_layout.addWidget(self._delete_confirm, 1)
+        row_layout.addWidget(self._delete_cancel)
         return stack
 
     def _configured_name(self) -> str:
         value = self._config.get("General>Theme")
-        return theme_files.normalize_name(str(value)) or PATH_DEFAULT_THEME.stem
+        return str(value) or PATH_DEFAULT_THEME.stem
 
     def _refresh(self, *, preferred: str | None = None) -> None:
         themes: dict[str, Path] = {}
@@ -228,6 +220,7 @@ class SettingsThemePage(MTWidget):
 
     def _sync_actions(self, *_args: object) -> None:
         selected = self._selected_name()
+        
         user_theme = self._is_user_theme(self._selected_path())
         self._selected_value.setText(selected or "-")
         self._loaded_value.setText(self._loaded_name or "-")
@@ -239,31 +232,23 @@ class SettingsThemePage(MTWidget):
             self._cancel_rename()
             self._cancel_delete()
 
-    def _load(self, name: str, *, persist: bool) -> bool:
+    def _load(self, name: str | None) -> None:
+        name = name or self._selected_name()
+        if name is None:
+            return
+        
         path = ctx.services.theme_manager.load(name)
         if path is None:
-            return False
-        ctx.services.animation_manager.load(path.stem)
+            return
+        
         self._loaded_name = path.stem
-        if persist:
-            self._config.set("General>Theme", path.stem, force_save=True)
+        self._config.set("General>Theme", path.stem)
         self._sync_actions()
-        return True
 
     def _load_selected(self) -> None:
         name = self._selected_name()
         if name:
-            self._load(name, persist=True)
-
-    def _normalize_new_name(self, value: str) -> str:
-        name = theme_files.normalize_name(value)
-        if (
-            not name
-            or name.startswith(".")
-            or any(char in name for char in FILENAME_SPECIAL_CHARS)
-        ):
-            return ""
-        return name
+            self._load(name)
 
     def _start_create(self) -> None:
         self._create_line.clear()
@@ -275,12 +260,12 @@ class SettingsThemePage(MTWidget):
         self._create_stack.setCurrentIndex(0)
 
     def _create(self) -> None:
-        name = self._normalize_new_name(self._create_line.text())
-        if not name or theme_files.find(PATH_THEMES_USER, name) is not None:
+        name = validate_filename(self._create_line.text())
+        if name is None or theme_files.find(PATH_THEMES_USER, name) is not None:
             return
         path = theme_files.output_path(PATH_THEMES_USER, name)
         selected = self._selected_path()
-        payload: dict[str, Any] = (
+        payload: dict[str, t.Any] = (
             theme_files.read_safe(selected)
             if selected is not None
             else {"widgets": []}
@@ -308,7 +293,7 @@ class SettingsThemePage(MTWidget):
     def _rename(self) -> None:
         old_name = self._selected_name()
         old_path = self._selected_path()
-        new_name = self._normalize_new_name(self._rename_line.text())
+        new_name = validate_filename(self._rename_line.text())
         if (
             old_name is None
             or old_path is None
@@ -330,7 +315,7 @@ class SettingsThemePage(MTWidget):
             return
 
         if self._loaded_name == old_name:
-            self._load(new_name, persist=True)
+            self._load(new_name)
         self._cancel_rename()
         self._refresh(preferred=new_name)
 
@@ -351,7 +336,7 @@ class SettingsThemePage(MTWidget):
         except OSError:
             return
         if self._loaded_name == name:
-            self._load(PATH_DEFAULT_THEME.stem, persist=True)
+            self._load(PATH_DEFAULT_THEME.stem)
         self._cancel_delete()
         self._refresh(preferred=self._loaded_name)
 

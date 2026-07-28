@@ -1,8 +1,8 @@
 from time import monotonic
 from queue import Queue, Empty
-from typing import TYPE_CHECKING
+import typing as t
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from src.db.manager import DatabaseHandler
     from src.db.models.cookie_checker import CookieCheckerResult
 

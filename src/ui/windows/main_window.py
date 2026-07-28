@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import typing as t
 
 from PySide6.QtCore import QSize, Signal
 from PySide6.QtWidgets import QMainWindow
@@ -26,7 +26,7 @@ from src.ui.widgets import (
 from src.ui.windows.types import PageSpec
 from src.ui.windows.window_header import apply_frameless_window_header
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from src.config.manager import Config
 
 

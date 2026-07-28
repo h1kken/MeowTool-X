@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import threading
-from typing import TYPE_CHECKING
+import typing as t
 
 from PySide6.QtCore import QObject, Signal
 
@@ -13,7 +13,7 @@ from src.config.utils import normalize_config, parse_config
 from src.utils.filesystem import FS, get_safe
 from src.config.enums import ConfigLoaderKey as CLKey
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from pathlib import Path
     from src.config.types import ConfigMap
     

@@ -1,4 +1,4 @@
-from typing import Callable
+import typing as t
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -17,7 +17,7 @@ class PageController:
         self._tabs: dict[str, MTButton] = {}
         self._button_group = MTGroupButton()
         self._current_page: str | None = None
-        self._change_callbacks: list[Callable[[str], None]] = []
+        self._change_callbacks: list[t.Callable[[str], None]] = []
 
     def add_page(
         self, key: str, page: MTWidget, *, obj_name: str | None = None
@@ -36,7 +36,7 @@ class PageController:
         self._button_group.addButton(button)
         button.clicked.connect(self._make_show_handler(key))
 
-    def _make_show_handler(self, key: str) -> Callable[[bool], None]:
+    def _make_show_handler(self, key: str) -> t.Callable[[bool], None]:
         def _show_handler(_checked: bool) -> None:
             self.show(key)
 
@@ -70,13 +70,13 @@ class PageController:
             return
         return self._pages.get(self._current_page)
 
-    def on_change(self, callback: Callable[[str], None]) -> None:
+    def on_change(self, callback: t.Callable[[str], None]) -> None:
         self._change_callbacks.append(callback)
 
     def preload(
         self,
         *keys: str,
-        progress_callback: Callable[[int, int, str], None] | None = None,
+        progress_callback: t.Callable[[int, int, str], None] | None = None,
     ) -> None:
         if not keys:
             return

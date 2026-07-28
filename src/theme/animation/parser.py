@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from copy import deepcopy
-from typing import Any, cast
+import typing as t
 
 from src.utils.conversion import as_dict
 
@@ -17,14 +17,14 @@ from src.theme.colors import to_qcolor
 _NUMBER_VALUE_PATTERN = re.compile(r'^\s*([-+]?\d+(?:[.,]\d+)?)\s*(?:px)?\s*$', re.IGNORECASE)
 
 
-def _iterable_items(value: Any) -> list[Any]:
+def _iterable_items(value: t.Any) -> list[t.Any]:
     if isinstance(value, (list, tuple, set)):
-        items = cast(list[Any] | tuple[Any, ...] | set[Any], value)
+        items = t.cast(list[t.Any] | tuple[t.Any, ...] | set[t.Any], value)
         return list(items)
     return []
 
 
-def parse_specs(raw: Any) -> list[AnimationSpec]:
+def parse_specs(raw: t.Any) -> list[AnimationSpec]:
     specs: list[AnimationSpec] = []
     for payload in normalize_specs_payload(raw):
         spec = _build_spec(payload)
@@ -33,17 +33,17 @@ def parse_specs(raw: Any) -> list[AnimationSpec]:
     return specs
 
 
-def normalize_specs_payload(raw: Any) -> list[dict[str, Any]]:
-    payloads: list[dict[str, Any]] = []
+def normalize_specs_payload(raw: t.Any) -> list[dict[str, t.Any]]:
+    payloads: list[dict[str, t.Any]] = []
 
     if isinstance(raw, list):
-        items = cast(list[Any], raw)
+        items = t.cast(list[t.Any], raw)
         for item in items:
             _collect_payload_specs(payloads, item, default_action=None)
         return payloads
 
     if isinstance(raw, dict):
-        mapping = cast(dict[str, Any], raw)
+        mapping = t.cast(dict[str, t.Any], raw)
         if _looks_like_spec(mapping):
             _collect_payload_specs(payloads, mapping, default_action=None)
             return payloads
@@ -54,17 +54,17 @@ def normalize_specs_payload(raw: Any) -> list[dict[str, Any]]:
     return payloads
 
 
-def _collect_payload_specs(output: list[dict[str, Any]], payload: Any, default_action: str | None) -> None:
+def _collect_payload_specs(output: list[dict[str, t.Any]], payload: t.Any, default_action: str | None) -> None:
     if isinstance(payload, list):
-        items = cast(list[Any], payload)
+        items = t.cast(list[t.Any], payload)
         for item in items:
             _collect_payload_specs(output, item, default_action)
         return
 
     if isinstance(payload, dict):
-        mapping = cast(dict[str, Any], payload)
+        mapping = t.cast(dict[str, t.Any], payload)
         if default_action and not any(key in mapping for key in ('on', 'action', 'state', 'event')):
-            candidate: dict[str, Any] = {'on': default_action, **deepcopy(mapping)}
+            candidate: dict[str, t.Any] = {'on': default_action, **deepcopy(mapping)}
         else:
             candidate = deepcopy(mapping)
 
@@ -77,7 +77,7 @@ def _collect_payload_specs(output: list[dict[str, Any]], payload: Any, default_a
         if not actions:
             return
 
-        common: dict[str, Any] = {}
+        common: dict[str, t.Any] = {}
         if 'duration' in candidate or 'duration_ms' in candidate:
             common['duration'] = candidate.get('duration', candidate.get('duration_ms'))
         if 'easing' in candidate or 'curve' in candidate:
@@ -107,15 +107,15 @@ def _collect_payload_specs(output: list[dict[str, Any]], payload: Any, default_a
         output.extend(_normalize_raw_specs({'on': default_action, 'property': 'background.color', 'to': deepcopy(payload)}))
 
 
-def _action_value(raw: dict[str, Any], default_action: str | None = None) -> Any:
+def _action_value(raw: dict[str, t.Any], default_action: str | None = None) -> t.Any:
     for key in ('on', 'action', 'state', 'event'):
         if key in raw:
             return raw.get(key)
     return default_action
 
 
-def _normalize_raw_specs(raw: dict[str, Any]) -> list[dict[str, Any]]:
-    specs: list[dict[str, Any]] = []
+def _normalize_raw_specs(raw: dict[str, t.Any]) -> list[dict[str, t.Any]]:
+    specs: list[dict[str, t.Any]] = []
     for action in _normalize_actions(_action_value(raw)):
         candidate = deepcopy(raw)
         candidate['on'] = action
@@ -125,7 +125,7 @@ def _normalize_raw_specs(raw: dict[str, Any]) -> list[dict[str, Any]]:
     return specs
 
 
-def _normalize_raw_spec(raw: dict[str, Any]) -> dict[str, Any] | None:
+def _normalize_raw_spec(raw: dict[str, t.Any]) -> dict[str, t.Any] | None:
     action = _normalize_action(_action_value(raw))
     if not action:
         return None
@@ -143,7 +143,7 @@ def _normalize_raw_spec(raw: dict[str, Any]) -> dict[str, Any] | None:
     if end_raw is None:
         return None
 
-    normalized: dict[str, Any] = {
+    normalized: dict[str, t.Any] = {
         'on': action,
         'property': property_key,
         'to': deepcopy(end_raw),
@@ -165,12 +165,12 @@ def _normalize_raw_spec(raw: dict[str, Any]) -> dict[str, Any] | None:
     return normalized
 
 
-def _expand_shorthand(action: str, prop: str, value: Any, common: dict[str, Any]) -> list[dict[str, Any]]:
+def _expand_shorthand(action: str, prop: str, value: t.Any, common: dict[str, t.Any]) -> list[dict[str, t.Any]]:
     key = normalize_token(prop)
-    specs: list[dict[str, Any]] = []
+    specs: list[dict[str, t.Any]] = []
 
     if isinstance(value, dict):
-        mapping = cast(dict[str, Any], value)
+        mapping = t.cast(dict[str, t.Any], value)
         match key:
             case 'background' | 'bg':
                 if 'color' in mapping:
@@ -211,13 +211,13 @@ def _expand_shorthand(action: str, prop: str, value: Any, common: dict[str, Any]
     return specs
 
 
-def _expand_parts_shorthand(action: str, value: dict[str, Any], common: dict[str, Any]) -> list[dict[str, Any]]:
-    specs: list[dict[str, Any]] = []
+def _expand_parts_shorthand(action: str, value: dict[str, t.Any], common: dict[str, t.Any]) -> list[dict[str, t.Any]]:
+    specs: list[dict[str, t.Any]] = []
     for part, part_data in value.items():
         part_name = normalize_token(part)
         if not isinstance(part_data, dict) or not part_name:
             continue
-        mapping = cast(dict[str, Any], part_data)
+        mapping = t.cast(dict[str, t.Any], part_data)
 
         if 'color' in mapping:
             specs.append({'on': action, 'property': f'parts.{part_name}.color', 'to': mapping['color'], **common})
@@ -246,7 +246,7 @@ def _expand_parts_shorthand(action: str, value: dict[str, Any], common: dict[str
             state_name = normalize_token(state)
             if not isinstance(state_data, dict) or not state_name:
                 continue
-            state_mapping = cast(dict[str, Any], state_data)
+            state_mapping = t.cast(dict[str, t.Any], state_data)
 
             state_background = as_dict(state_mapping.get('background')) or {}
             if 'color' in state_background:
@@ -277,7 +277,7 @@ def _expand_parts_shorthand(action: str, value: dict[str, Any], common: dict[str
     return specs
 
 
-def _build_spec(raw: dict[str, Any]) -> AnimationSpec | None:
+def _build_spec(raw: dict[str, t.Any]) -> AnimationSpec | None:
     action = _normalize_action(_action_value(raw))
     if not action:
         return None
@@ -344,7 +344,7 @@ def _build_spec(raw: dict[str, Any]) -> AnimationSpec | None:
     return None
 
 
-def _resolve_duration(raw: dict[str, Any], *, default: int) -> int:
+def _resolve_duration(raw: dict[str, t.Any], *, default: int) -> int:
     value = raw.get('duration', raw.get('duration_ms', default))
     try:
         duration = int(value)
@@ -353,7 +353,7 @@ def _resolve_duration(raw: dict[str, Any], *, default: int) -> int:
     return max(duration, 1)
 
 
-def _to_number(value: Any) -> float | None:
+def _to_number(value: t.Any) -> float | None:
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         return float(value)
 
@@ -378,7 +378,7 @@ def _to_number(value: Any) -> float | None:
     return None
 
 
-def _looks_like_spec(data: Any) -> bool:
+def _looks_like_spec(data: t.Any) -> bool:
     if not isinstance(data, dict):
         return False
 
@@ -391,7 +391,7 @@ def _looks_like_spec(data: Any) -> bool:
     return False
 
 
-def _normalize_actions(action: Any) -> list[str]:
+def _normalize_actions(action: t.Any) -> list[str]:
     if isinstance(action, str):
         values = [part.strip() for part in re.split(r'[,|]', action) if part.strip()]
     elif isinstance(action, (list, tuple, set)):
@@ -409,7 +409,7 @@ def _normalize_actions(action: Any) -> list[str]:
     return actions
 
 
-def _normalize_action(action: Any) -> str:
+def _normalize_action(action: t.Any) -> str:
     if not isinstance(action, str):
         return ''
 

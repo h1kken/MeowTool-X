@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable
+import typing as t
 
 from PySide6.QtCore import QAbstractAnimation, QObject
 
@@ -13,9 +13,9 @@ class TimerAnimation(QAbstractAnimation):
     def __init__(
         self,
         duration: int,
-        easing_fn: Callable[[float], float],
-        on_start: Callable[[], None],
-        on_update: Callable[[float], None],
+        easing_fn: t.Callable[[float], float],
+        on_start: t.Callable[[], None],
+        on_update: t.Callable[[float], None],
         parent: QObject | None = None,
         *,
         restart_each_loop: bool = False,

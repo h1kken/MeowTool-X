@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import TypeGuard, cast
+import typing as t
 
 from src.config.types import ConfigMap, ConfigValue
 
@@ -25,7 +25,7 @@ class ConfigValidator:
     @staticmethod
     def _is_numeric_bound_tuple(
         value: tuple[ConfigValue, ...],
-    ) -> TypeGuard[tuple[int | float, int | float, int | float]]:
+    ) -> t.TypeGuard[tuple[int | float, int | float, int | float]]:
         return len(value) == 3 and all(
             isinstance(item, (int, float)) and not isinstance(item, bool)
             for item in value
@@ -54,12 +54,12 @@ class ConfigValidator:
                 return str(user_value) if user_value is not None else default_value
             case list() | dict():
                 if isinstance(user_value, list):
-                    return cast(ConfigValue, deepcopy(cast(list[ConfigValue], user_value)))
+                    return t.cast(ConfigValue, deepcopy(t.cast(list[ConfigValue], user_value)))
                 if isinstance(user_value, dict):
-                    return cast(ConfigValue, deepcopy(cast(ConfigMap, user_value)))
-                return cast(ConfigValue, deepcopy(default_value))
+                    return t.cast(ConfigValue, deepcopy(t.cast(ConfigMap, user_value)))
+                return t.cast(ConfigValue, deepcopy(default_value))
             case _:
-                return cast(ConfigValue, deepcopy(default_value))
+                return t.cast(ConfigValue, deepcopy(default_value))
 
     def _convert_without_default(self, user_value: object) -> object:
         if isinstance(user_value, str):

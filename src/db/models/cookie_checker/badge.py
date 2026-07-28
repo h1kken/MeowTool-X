@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import typing as t
 
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import CookieCheckerBase
 from src.db.models.mixins import BaseMixin, BadgeMixin, ResultBadgeMixin
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from . import CookieCheckerResult, Place
 
 

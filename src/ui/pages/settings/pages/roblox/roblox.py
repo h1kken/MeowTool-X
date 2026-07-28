@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TypeAlias
+import typing as t
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QSizePolicy
@@ -16,7 +16,7 @@ from src.ui.pages.settings.pages.roblox import (
 )
 from src.ui.widgets import MTButton, MTWidget
 
-RobloxSettingsPageClass: TypeAlias = (
+RobloxSettingsPageClass: t.TypeAlias = (
     type[SettingsRobloxCookieSorterPage]
     | type[SettingsRobloxCookieCheckerPage]
     | type[SettingsRobloxCookieRefresherPage]

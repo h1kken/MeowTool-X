@@ -1,7 +1,7 @@
-from typing import TypedDict
+import typing as t
 
 
-class _PageStateRequired(TypedDict):
+class _PageStateRequired(t.TypedDict):
     main: str
 
 

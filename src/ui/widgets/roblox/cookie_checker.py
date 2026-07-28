@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, cast
+import typing as t
 
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QMouseEvent, QResizeEvent
@@ -88,7 +88,7 @@ class _BoundSwitchRow(MTWidget):
 
         self._switch = MTSwitch(obj_name=f"{obj_name}_Switch")
         self._switch.setChecked(
-            bool(self._config.get(self._cfg_key, default=self._default))
+            bool(self._config.get(self._cfg_key))
         )
 
         self._main_layout.addWidget(self._label)
@@ -99,7 +99,7 @@ class _BoundSwitchRow(MTWidget):
         self._config.config_loaded.connect(self.reload_from_config)
 
     def reload_from_config(self) -> None:
-        self.set_checked(bool(self._config.get(self._cfg_key, default=self._default)))
+        self.set_checked(bool(self._config.get(self._cfg_key)))
 
     def set_checked(self, checked: bool) -> None:
         target = bool(checked)
@@ -297,9 +297,9 @@ class _SortListEditor(MTWidget):
         self.reload_from_config()
 
     def reload_from_config(self) -> None:
-        enabled = bool(self._config.get(self._cfg_key_enabled, default=False))
+        enabled = bool(self._config.get(self._cfg_key_enabled))
         self._enabled_row.set_checked(enabled)
-        items = as_dict(self._config.get(self._cfg_key_items, default={})) or {}
+        items = as_dict(self._config.get(self._cfg_key_items)) or {}
         self._rebuild_entries({str(key): bool(value) for key, value in items.items()})
         self._sync_enabled_state()
 
@@ -514,12 +514,7 @@ class _CookieCheckerSortPopup(MTPopup):
     def _sync_global_sorting_enabled(self) -> None:
         is_enabled = False
         for field in ROBLOX_COOKIE_CHECKER_MAIN_FIELDS:
-            if bool(
-                self._config.get(
-                    f"Roblox>Cookie Checker>Sorting>Categories>{field}>Enabled",
-                    default=False,
-                )
-            ):
+            if bool(self._config.get(f"Roblox>Cookie Checker>Sorting>Categories>{field}>Enabled")):
                 is_enabled = True
                 break
         self._config.set("Roblox>Cookie Checker>Sorting>Enabled", is_enabled)
@@ -538,13 +533,14 @@ class MTCookieCheckerFieldSetting(MTSwitchSetting):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(
-            config=config,
             tr_key=tr_key,
             cfg_key=cfg_key,
             default=default,
             obj_name=obj_name,
             parent=parent,
         )
+        self._config = config
+        
         self._field_name = field_name
         self._sort_kind: SortCategoryKind = SORT_KEYS.get(field_name, "none")
         self._sort_enabled_cfg_key = f"Roblox>Cookie Checker>Sorting>Categories>{self._field_name}>Enabled"
@@ -581,16 +577,14 @@ class MTCookieCheckerFieldSetting(MTSwitchSetting):
         parent_window = self.window()
         if parent_window is self:
             return
-        modal_host = getattr(cast(Any, parent_window), "_popup_modal_host", None)
+        modal_host = getattr(t.cast(t.Any, parent_window), "_popup_modal_host", None)
         if isinstance(modal_host, QWidget):
             self._sort_popup.set_modal_host(modal_host)
 
     def _sync_sort_button_state(self, *_args: object) -> None:
         if self._sort_button is None:
             return
-        self._sort_button.setChecked(
-            bool(self._config.get(self._sort_enabled_cfg_key, default=False))
-        )
+        self._sort_button.setChecked(bool(self._config.get(self._sort_enabled_cfg_key)))
 
     def _on_config_value_changed(self, key: str, value: object) -> None:
         if str(key).strip() == self._sort_enabled_cfg_key:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+import typing as t
 
 from PySide6.QtCore import QObject, Signal
 
@@ -10,7 +10,7 @@ from src.app.paths import PATH_DEFAULT_TRANSLATION, PATH_TRANSLATIONS_SRC, PATH_
 from src.config.constants import CONFIG_COMMENT_SYMBOLS
 from src.config import ConfigKey as CKey
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from src.config import Config
     
     
@@ -28,7 +28,7 @@ class TranslationManager(QObject):
 
     def load(self, name: str | None = None) -> None:        
         if name is None:
-            name = str(self._config.get(CKey.GENERAL_LANGUAGE, default=PATH_DEFAULT_TRANSLATION.stem)).strip()
+            name = str(self._config.get(CKey.GENERAL_LANGUAGE)).strip()
         
         try:
             path = self._resolve_translation(name)

@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Any
+import typing as t
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap, QTransform
@@ -44,7 +44,7 @@ def repolish(widget: QWidget) -> None:
     widget.update()
 
 
-def config_int(value: Any, default: int) -> int:
+def config_int(value: t.Any, default: int) -> int:
     if isinstance(value, bool):
         return default
     try:
@@ -53,7 +53,7 @@ def config_int(value: Any, default: int) -> int:
         return default
 
 
-def config_float(value: Any, default: float) -> float:
+def config_float(value: t.Any, default: float) -> float:
     if isinstance(value, bool):
         return default
     try:

@@ -3,9 +3,9 @@ from __future__ import annotations
 import re
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+import typing as t
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QObject, Signal
 from PySide6.QtWidgets import QLayout, QWidget
 
 import src.theme.files as theme_files
@@ -19,7 +19,7 @@ from src.theme.targets import (
 )
 from src.utils.conversion import as_dict
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from src.config.manager import Config
 
 _NO_ALIGNMENT = Qt.AlignmentFlag(0)
@@ -40,7 +40,9 @@ _ALIGNMENT_FLAGS: dict[str, Qt.AlignmentFlag] = {
 }
 
 
-class ThemeManager:
+class ThemeManager(QObject):
+    theme_loaded = Signal(object)
+    
     def __init__(self, window: QWidget, config: Config) -> None:
         self._window = window
         self._config = config
@@ -48,15 +50,17 @@ class ThemeManager:
     def load(self, name: str | None = None) -> Path | None:
         loaded = theme_files.load(self._config, name)
         if loaded is None:
+            self.theme_loaded.emit(loaded)
             return None
 
         path, payload = loaded
+        self.theme_loaded.emit(loaded)
         self._window.setStyleSheet(self.build(payload, theme_dir=path.parent))
         return path
 
     def build(self, payload: ThemeMap, *, theme_dir: Path) -> str:
         theme = normalize_theme_payload(payload, include_animations=False)
-        widgets = cast(dict[str, ThemeMap], as_dict(theme.get("widgets")) or {})
+        widgets = t.cast(dict[str, ThemeMap], as_dict(theme.get("widgets")) or {})
         blocks: list[str] = []
 
         self._reset_alignments()
@@ -81,7 +85,7 @@ class ThemeManager:
             if item is None:
                 continue
             item.setAlignment(_NO_ALIGNMENT)
-            child_layout = cast(QLayout | None, item.layout())
+            child_layout = t.cast(QLayout | None, item.layout())
             if child_layout is not None:
                 self._reset_layout_alignment(child_layout)
 
@@ -135,19 +139,19 @@ class ThemeManager:
             return Qt.AlignmentFlag(value)
 
         if isinstance(value, list):
-            values: list[object] | tuple[object, ...] = cast(list[object], value)
+            values: list[object] | tuple[object, ...] = t.cast(list[object], value)
         elif isinstance(value, tuple):
-            values = cast(tuple[object, ...], value)
+            values = t.cast(tuple[object, ...], value)
         else:
             values = (value,)
             
         alignment = _NO_ALIGNMENT
         matched = False
 
-        for raw_value in values:
-            if not isinstance(raw_value, str):
+        for value in values:
+            if not isinstance(value, str):
                 continue
-            for token in re.split(r"[\s|,+]+", raw_value.strip().lower()):
+            for token in re.split(r"[\s|,+]+", value.strip().lower()):
                 key = token.replace("-", "").replace("_", "")
                 flag = _ALIGNMENT_FLAGS.get(key)
                 if flag is None:
@@ -183,7 +187,7 @@ class ThemeManager:
                 continue
             if item.widget() is widget:
                 return layout
-            child_layout = cast(QLayout | None, item.layout())
+            child_layout = t.cast(QLayout | None, item.layout())
             if child_layout is not None:
                 owner = cls._find_item_layout(child_layout, widget)
                 if owner is not None:
@@ -271,7 +275,7 @@ class ThemeManager:
         return min(sizes) if sizes else 0
 
     @staticmethod
-    def _sort_key(item: tuple[str, Any]) -> tuple[int, int]:
+    def _sort_key(item: tuple[str, t.Any]) -> tuple[int, int]:
         target, _styles = item
         if target == "*":
             return 0, 0

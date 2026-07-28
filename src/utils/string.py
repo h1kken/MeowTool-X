@@ -1,5 +1,5 @@
 import ast
-from typing import Any
+import typing as t
 
 
 def remove_brackets_and_in(string: str, *, round: bool = True, square: bool = True) -> str:
@@ -15,7 +15,7 @@ def remove_brackets_and_in(string: str, *, round: bool = True, square: bool = Tr
     return new_string
 
 
-def safe_literal_eval(value: str) -> Any:
+def safe_literal_eval(value: str) -> t.Any:
     try:
         return ast.literal_eval(value)
     except (ValueError, SyntaxError):

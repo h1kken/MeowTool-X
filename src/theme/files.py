@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+import typing as t
 
 import json5
 
@@ -9,7 +9,7 @@ from src.app.paths import PATH_DEFAULT_THEME, PATH_THEMES_SRC, PATH_THEMES_USER
 from src.theme.parser import ThemeMap
 from src.utils.logging import logger
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from src.config.manager import Config
 
 SUPPORTED_EXTENSIONS: tuple[str, ...] = ('.json5', '.json')
@@ -36,10 +36,10 @@ def iter_files(root: Path) -> list[Path]:
 
 def read(path: Path) -> ThemeMap:
     text = path.read_text(encoding='utf-8')
-    data: object = cast(object, json5.loads(text)) if text.strip() else {}
+    data: object = t.cast(object, json5.loads(text)) if text.strip() else {}
     if not isinstance(data, dict):
         raise ValueError(f'Theme root must be an object: {path}')
-    return cast(ThemeMap, data)
+    return t.cast(ThemeMap, data)
 
 
 def read_safe(path: Path) -> ThemeMap:
@@ -55,11 +55,6 @@ def write(path: Path, payload: ThemeMap) -> None:
     path.write_text(f'{text}\n', encoding='utf-8')
 
 
-def normalize_name(value: str) -> str:
-    name = Path(str(value or '').strip()).stem.strip()
-    return name
-
-
 def output_path(directory: Path, name: str, *, preferred_suffix: str | None = None) -> Path:
     suffix = str(preferred_suffix or DEFAULT_EXTENSION).strip().lower()
     if suffix not in SUPPORTED_EXTENSIONS:
@@ -68,21 +63,16 @@ def output_path(directory: Path, name: str, *, preferred_suffix: str | None = No
 
 
 def find(directory: Path, name: str) -> Path | None:
-    normalized = normalize_name(name)
-    if not normalized:
-        return None
-
     for path in iter_files(directory):
-        if path.stem == normalized:
+        if path.stem == name:
             return path
     return None
 
 
 def load(config: Config, name: str | None = None) -> LoadedTheme | None:
-    requested = str(config.get("General>Theme")).strip() if name is None else str(name).strip()
-    selected = _resolve(requested)
+    theme_path = _resolve_path(str(config.get("General>Theme")) if name is None else name)
 
-    for path in dict.fromkeys((selected, _default_path())):
+    for path in dict.fromkeys((theme_path, PATH_DEFAULT_THEME)):
         if path is None:
             continue
         try:
@@ -92,30 +82,9 @@ def load(config: Config, name: str | None = None) -> LoadedTheme | None:
     return None
 
 
-def _resolve(name: str) -> Path | None:
-    raw = Path(str(name).strip())
-    theme_name = raw.stem.strip()
-    if not theme_name:
-        return None
-
-    suffixes = (
-        (raw.suffix.lower(),)
-        if raw.suffix.lower() in SUPPORTED_EXTENSIONS
-        else SUPPORTED_EXTENSIONS
-    )
-    for suffix in suffixes:
-        for directory in (PATH_THEMES_USER, PATH_THEMES_SRC):
-            path = directory / f"{theme_name}{suffix}"
-            if _is_theme_file(path):
-                return path
+def _resolve_path(name: str) -> Path | None:
+    for directory in (PATH_THEMES_USER, PATH_THEMES_SRC):
+        path = directory / name
+        if _is_theme_file(path):
+            return path
     return None
-
-
-def _default_path() -> Path:
-    if _is_theme_file(PATH_DEFAULT_THEME):
-        return PATH_DEFAULT_THEME
-    for suffix in SUPPORTED_EXTENSIONS:
-        candidate = PATH_THEMES_SRC / f"{PATH_DEFAULT_THEME.stem}{suffix}"
-        if _is_theme_file(candidate):
-            return candidate
-    return PATH_DEFAULT_THEME

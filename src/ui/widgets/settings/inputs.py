@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING
+import typing as t
 
 from PySide6.QtCore import QSize
 from PySide6.QtWidgets import QFileDialog, QSizePolicy, QWidget
@@ -21,10 +21,6 @@ from src.ui.widgets import (
     MTWidget,
 )
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
-from src.ui.widgets.main.helpers import config_float, config_int
-
-if TYPE_CHECKING:
-    from src.config import Config, ConfigLoader
 
 
 class MTTextSetting(MTWidget):
@@ -32,7 +28,6 @@ class MTTextSetting(MTWidget):
         self,
         tr_key: str,
         cfg_key: str,
-        default: str,
         *,
         parent: QWidget | None = None,
     ) -> None:
@@ -46,17 +41,13 @@ class MTTextSetting(MTWidget):
         self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
 
         self._line_edit = MTLineEdit(obj_name=f"{obj_name}_LineEdit")
-        self._line_edit.setText(str(config.get(self._cfg_key, default=default)))
+        self._line_edit.setText(str(config.get(self._cfg_key)))
         self._line_edit.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
 
         self._line_edit.editingFinished.connect(self._on_changed)
-        config.config_loaded.connect(
-            lambda d=default: self._line_edit.setText(
-                str(config.get(self._cfg_key, default=d))
-            )
-        )
+        config.config_loaded.connect(lambda : self._line_edit.setText(str(config.get(self._cfg_key)).strip()))
 
         self._layout.addWidget(self._label)
         self._layout.addWidget(self._line_edit, 1)
@@ -70,7 +61,6 @@ class MTPathSetting(MTWidget):
         self,
         tr_key: str = '',
         cfg_key: str = '',
-        default: Path | None = None,
         *,
         mode: str = "directory",
         file_filter: str = "",
@@ -90,7 +80,7 @@ class MTPathSetting(MTWidget):
         self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
 
         self._line_edit = MTLineEdit(obj_name=f"{obj_name}_LineEdit")
-        self._line_edit.setText(str(config.get(self._cfg_key, default=default)))
+        self._line_edit.setText(str(config.get(self._cfg_key)).strip())
 
         self._browse_button = MTButton(tr_key="", obj_name=f"{obj_name}_Browse_Button")
         self._browse_button.setText("")
@@ -103,11 +93,7 @@ class MTPathSetting(MTWidget):
 
         self._line_edit.editingFinished.connect(self._on_changed)
         self._browse_button.clicked.connect(self._browse_path)
-        config.config_loaded.connect(
-            lambda d=default: self._line_edit.setText(
-                str(config.get(self._cfg_key, default=d))
-            )
-        )
+        config.config_loaded.connect(lambda: self._line_edit.setText(str(config.get(self._cfg_key)).strip()))
 
         self._main_layout.addWidget(self._label)
         self._main_layout.addWidget(self._line_edit, 1)
@@ -168,28 +154,24 @@ class MTPathSetting(MTWidget):
 class MTSliderSetting(MTWidget):
     def __init__(
         self,
-        config: Config | ConfigLoader,
         tr_key: str,
         cfg_key: str,
         min_value: int | float,
         max_value: int | float,
-        default: int | float,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
 
-        config = config
         self._cfg_key = cfg_key
-        if isinstance(default, int):
-            current_value = config_int(config.get(self._cfg_key, default=default), default)
+        curr_value = t.cast(int | float, config.get(self._cfg_key))
+        if isinstance(curr_value, int):
             min_int = int(min_value)
             max_int = int(max_value)
-            self._prev_value = current_value if min_int <= current_value <= max_int else default
+            self._prev_value = min_int if curr_value <= min_int else max_int if curr_value >= max_int else curr_value
         else:
-            current_value = config_float(config.get(self._cfg_key, default=default), default)
             min_float = float(min_value)
             max_float = float(max_value)
-            self._prev_value = current_value if min_float <= current_value <= max_float else default
+            self._prev_value = min_float if curr_value <= min_float else max_float if curr_value >= max_float else curr_value
 
         obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, "_", self._cfg_key)
         self.setObjectName(f"{obj_name}_Slider_Setting")
@@ -199,7 +181,7 @@ class MTSliderSetting(MTWidget):
 
         self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
 
-        if isinstance(default, int):
+        if isinstance(curr_value, int):
             self._spin_box = MTSpinBox(obj_name=f"{obj_name}_SpinBox")
             self._spin_box.setRange(int(min_value), int(max_value))
             self._spin_box.setValue(int(self._prev_value))
@@ -207,30 +189,20 @@ class MTSliderSetting(MTWidget):
             self._spin_box = MTDoubleSpinBox(obj_name=f"{obj_name}_DoubleSpinBox")
             self._spin_box.setRange(float(min_value), float(max_value))
             self._spin_box.setValue(float(self._prev_value))
-        self._spin_box.setSizePolicy(
-            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred
-        )
+            
+        self._spin_box.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
 
+        # TODO: incorrect for float spinbox
         self._slider = MTSlider(obj_name=f"{obj_name}_Slider")
         self._slider.setRange(int(min_value), int(max_value))
         self._slider.setValue(int(self._prev_value))
 
         self._slider.valueChanged.connect(self._spin_box.setValue)
         self._spin_box.valueChanged.connect(self._slider.setValue)
-        self._spin_box.editingFinished.connect(
-            lambda: self._on_changed(self._spin_box.value())
-        )
+        self._spin_box.editingFinished.connect(lambda: self._on_changed(self._spin_box.value()))
         self._spin_box.editingFinished.connect(self._spin_box.clearFocus)
-        self._slider.sliderReleased.connect(
-            lambda: self._on_changed(self._slider.value())
-        )
-        config.config_loaded.connect(
-            lambda d=default: self._slider.setValue(
-                config_int(
-                    config.get(self._cfg_key, default=d),
-                    int(d))
-            )
-        )
+        self._slider.sliderReleased.connect(lambda: self._on_changed(self._slider.value()))
+        config.config_loaded.connect(lambda: self._slider.setValue(t.cast(int, config.get(self._cfg_key))))
 
         self._info_layout.addWidget(self._label)
         self._info_layout.addStretch()

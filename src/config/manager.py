@@ -4,7 +4,7 @@ from copy import deepcopy
 import threading
 from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+import typing as t
 
 from PySide6.QtCore import QObject, Signal
 
@@ -17,7 +17,7 @@ from src.config.utils import normalize_config, parse_config
 from src.config.enums import ConfigLoaderKey as CLKey
 from src.utils.filesystem import FS
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from src.config import ConfigLoader
 
 
@@ -87,7 +87,7 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             self.save()
 
     def set_many(self, items: Mapping[str, ConfigValue] | Iterable[tuple[str, ConfigValue]], *, sep: str = ">", force_save: bool = False) -> None:
-        lst: list[tuple[str, ConfigValue]] = list(cast(Mapping[str, ConfigValue], items).items()) if isinstance(items, Mapping) else list(items)
+        lst: list[tuple[str, ConfigValue]] = list(t.cast(Mapping[str, ConfigValue], items).items()) if isinstance(items, Mapping) else list(items)
         for key, value in lst:
             super().set(str(key), value, sep=sep)
             self.value_changed.emit(str(key).replace(sep, ">"), value)

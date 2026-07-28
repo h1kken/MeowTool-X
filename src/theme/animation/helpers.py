@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import re
-from typing import Any, Callable, cast
+import typing as t
 
 from PySide6.QtCore import QEasingCurve, Qt
 from PySide6.QtGui import QColor
@@ -15,9 +15,9 @@ _CUBIC_BEZIER_PATTERN = re.compile(
 )
 
 
-def _iterable_data(value: Any) -> list[Any]:
+def _iterable_data(value: t.Any) -> list[t.Any]:
     if isinstance(value, (list, tuple)):
-        items = cast(list[Any] | tuple[Any, ...], value)
+        items = t.cast(list[t.Any] | tuple[t.Any, ...], value)
         return [item for item in items]
     return []
 
@@ -26,22 +26,22 @@ def _clamp01(value: float) -> float:
     return max(0.0, min(1.0, float(value)))
 
 
-def normalize_token(value: Any) -> str:
+def normalize_token(value: t.Any) -> str:
     return str(value).strip().lower().replace('-', '_').replace(' ', '_')
 
 
-def _to_float(value: Any) -> float | None:
+def _to_float(value: t.Any) -> float | None:
     try:
         return float(value)
     except (TypeError, ValueError):
         return None
 
 
-def normalize_dash_border(data: Any) -> dict[str, Any] | None:
+def normalize_dash_border(data: t.Any) -> dict[str, t.Any] | None:
     default_dash = [4.0, 2.0]
 
     if isinstance(data, dict):
-        mapping = as_object_dict(cast(object, data)) or {}
+        mapping = as_object_dict(t.cast(object, data)) or {}
         provided: set[str] = set()
         if 'offset' in mapping or 'value' in mapping:
             provided.add('offset')
@@ -107,7 +107,7 @@ def normalize_dash_border(data: Any) -> dict[str, Any] | None:
     }
 
 
-def _parse_pen_style(raw: Any, *, default: Qt.PenStyle = Qt.PenStyle.CustomDashLine) -> Qt.PenStyle:
+def _parse_pen_style(raw: t.Any, *, default: Qt.PenStyle = Qt.PenStyle.CustomDashLine) -> Qt.PenStyle:
     if raw is None:
         return default
 
@@ -144,9 +144,9 @@ def interpolate_color(start: QColor, end: QColor, t: float) -> QColor:
     )
 
 
-def parse_easing(raw: Any) -> Callable[[float], float]:
+def parse_easing(raw: t.Any) -> t.Callable[[float], float]:
     if isinstance(raw, dict):
-        mapping = as_object_dict(cast(object, raw)) or {}
+        mapping = as_object_dict(t.cast(object, raw)) or {}
         easing_type = normalize_token(mapping.get('type', mapping.get('name', mapping.get('curve', 'linear'))))
 
         if easing_type in ('bezier', 'cubic_bezier'):
@@ -194,7 +194,7 @@ def parse_easing(raw: Any) -> Callable[[float], float]:
     return _linear_easing
 
 
-def parse_loop_count(raw: Any, *, default: int = 1) -> int:
+def parse_loop_count(raw: t.Any, *, default: int = 1) -> int:
     if raw is None:
         return default
 
@@ -225,7 +225,7 @@ def _linear_easing(value: float) -> float:
     return _clamp01(value)
 
 
-def _qt_easing(name: str) -> Callable[[float], float]:
+def _qt_easing(name: str) -> t.Callable[[float], float]:
     curve_map = {
         'linear': QEasingCurve.Type.Linear,
         'in_quad': QEasingCurve.Type.InQuad,
@@ -263,7 +263,7 @@ def _qt_easing(name: str) -> Callable[[float], float]:
     return lambda value: _clamp01(curve.valueForProgress(_clamp01(value)))
 
 
-def _cubic_bezier_easing(x1: float, y1: float, x2: float, y2: float) -> Callable[[float], float]:
+def _cubic_bezier_easing(x1: float, y1: float, x2: float, y2: float) -> t.Callable[[float], float]:
     def sample_curve_x(t: float) -> float:
         return ((1.0 - 3.0 * x2 + 3.0 * x1) * t ** 3) + ((3.0 * x2 - 6.0 * x1) * t ** 2) + (3.0 * x1 * t)
 
@@ -303,7 +303,7 @@ def _cubic_bezier_easing(x1: float, y1: float, x2: float, y2: float) -> Callable
     return lambda value: _clamp01(sample_curve_y(solve_curve_x(_clamp01(value))))
 
 
-def _steps_easing(count: int, jump: str) -> Callable[[float], float]:
+def _steps_easing(count: int, jump: str) -> t.Callable[[float], float]:
     count = max(1, int(count))
     jump_mode = jump if jump in {'start', 'end', 'both', 'none'} else 'end'
 

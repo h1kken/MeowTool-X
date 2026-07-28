@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import cast, Protocol
+import typing as t
 
 from PySide6.QtCore import Qt
 
@@ -22,7 +22,7 @@ class TranslatableMixin:
             setter(translator.tr(self._key))
 
 
-class _ComboBoxProtocol(Protocol):
+class _ComboBoxProtocol(t.Protocol):
     def addItem(self, text: str, user_data: object = ...) -> None: ...
     def count(self) -> int: ...
     def setItemData(self, index: int, value: object, role: int = ...) -> None: ...
@@ -37,7 +37,7 @@ class TranslatableComboBoxMixin():
         translator.language_changed.connect(self._update_text)
 
     def add_item(self, item: str) -> None:
-        combo = cast(_ComboBoxProtocol, self)
+        combo = t.cast(_ComboBoxProtocol, self)
         combo.addItem(translator.tr(item), item)
         index = combo.count() - 1
         combo.setItemData(index, item, Qt.ItemDataRole.UserRole + 1)
@@ -47,7 +47,7 @@ class TranslatableComboBoxMixin():
             self.add_item(item)
 
     def _update_text(self) -> None:
-        combo = cast(_ComboBoxProtocol, self)
+        combo = t.cast(_ComboBoxProtocol, self)
         for i in range(combo.count()):
             key = combo.itemData(i, Qt.ItemDataRole.UserRole + 1)
             if not isinstance(key, str):

@@ -1,16 +1,16 @@
-from typing import Literal, overload
+import typing as t
 
 from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLayout, QVBoxLayout, QWidget
 
 from src.ui.layouts.enums import LayoutType
 
 
-@overload
-def create_layout(layout_type: Literal[LayoutType.HBOX], *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0, parent: QWidget | None = None) -> QHBoxLayout: ...
-@overload
-def create_layout(layout_type: Literal[LayoutType.VBOX], *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0, parent: QWidget | None = None) -> QVBoxLayout: ...
-@overload
-def create_layout(layout_type: Literal[LayoutType.GRID], *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0, parent: QWidget | None = None) -> QGridLayout: ...
+@t.overload
+def create_layout(layout_type: t.Literal[LayoutType.HBOX], *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0, parent: QWidget | None = None) -> QHBoxLayout: ...
+@t.overload
+def create_layout(layout_type: t.Literal[LayoutType.VBOX], *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0, parent: QWidget | None = None) -> QVBoxLayout: ...
+@t.overload
+def create_layout(layout_type: t.Literal[LayoutType.GRID], *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0, parent: QWidget | None = None) -> QGridLayout: ...
 
 def create_layout(
     layout_type: LayoutType,

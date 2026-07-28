@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+import typing as t
 
 from sqlalchemy import ForeignKey, BigInteger, Boolean, Integer, JSON, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import CookieCheckerResultBase
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from . import (
         Cookie, Account, Card,
         Session, Email, BadgeOwned,
@@ -82,7 +82,7 @@ class CookieCheckerResult(CookieCheckerResultBase):
     is_roblox_badges_checked: Mapped[bool] = mapped_column(Boolean, default=False)
     roblox_badges: Mapped[list["RobloxBadgeOwned"]] = relationship(back_populates="result")
     
-    payload: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    payload: Mapped[dict[str, t.Any] | None] = mapped_column(JSON)
     
     cookie_ref_id: Mapped[int] = mapped_column(ForeignKey("cookies.id"))
     cookie: Mapped["Cookie"] = relationship(back_populates="cookie")

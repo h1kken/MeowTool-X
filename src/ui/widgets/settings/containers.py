@@ -1,5 +1,5 @@
 import re
-from typing import Any, Callable, Sequence
+import typing as t
 
 from PySide6.QtCore import QEvent, QObject, QSize, QSignalBlocker, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QIcon, QMouseEvent
@@ -31,7 +31,7 @@ COLUMN_REBALANCE_EVENT_TYPES = {
 class MTColumnsSetting(MTScrollArea):
     def __init__(
         self,
-        tabs: Sequence[QWidget] | None = None,
+        tabs: t.Sequence[QWidget] | None = None,
         columns: int = 2,
         obj_name: str = "",
         *,
@@ -207,7 +207,7 @@ class MTCollapsibleContainer(MTWidget):
         self,
         tr_key: str,
         obj_name: str,
-        widgets: Sequence[QWidget] | None = None,
+        widgets: t.Sequence[QWidget] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -521,9 +521,9 @@ class MTComboBoxSetting(MTWidget):
         self,
         tr_key: str,
         cfg_key: str,
-        items: Sequence[str | tuple[str, str]],
+        items: t.Sequence[str | tuple[str, str]],
         default: str,
-        on_changed: Callable[[str], None] | None = None,
+        on_changed: t.Callable[[str], None] | None = None,
         *,
         parent: QWidget | None = None,
     ) -> None:
@@ -549,19 +549,15 @@ class MTComboBoxSetting(MTWidget):
         self._combo_box.set_content_width_mode("current")
         self.set_items(items, keep_current=False)
 
-        self._set_current_value(config.get(self._cfg_key, default=default), fallback=default)
+        self._set_current_value(config.get(self._cfg_key), fallback=default)
         self._combo_box.currentIndexChanged.connect(self._on_index_changed)
-        config.config_loaded.connect(
-            lambda d=default: self._set_current_value(
-                config.get(self._cfg_key, default=d), fallback=d
-            )
-        )
+        config.config_loaded.connect(lambda d=default: self._set_current_value(config.get(self._cfg_key), fallback=d))
 
         self._main_layout.addWidget(self._label)
         self._main_layout.addWidget(self._combo_box, 1)
 
     def set_items(
-        self, items: Sequence[str | tuple[str, str]], *, keep_current: bool = True
+        self, items: t.Sequence[str | tuple[str, str]], *, keep_current: bool = True
     ) -> None:
         current_value: str | None = None
         if keep_current:
@@ -592,11 +588,7 @@ class MTComboBoxSetting(MTWidget):
             seen.add(value)
             normalized_items.append((display_value, value, translatable))
 
-        target_value = (
-            current_value
-            if keep_current
-            else str(config.get(self._cfg_key, default=self._default))
-        )
+        target_value = current_value if keep_current else str(config.get(self._cfg_key))
 
         with QSignalBlocker(self._combo_box):
             self._combo_box.clear()
@@ -607,7 +599,7 @@ class MTComboBoxSetting(MTWidget):
                 self._combo_box.addItem(display_text, value)
             self._set_current_value(target_value, fallback=self._default)
 
-    def _set_current_value(self, value: Any, *, fallback: str | None = None) -> None:
+    def _set_current_value(self, value: t.Any, *, fallback: str | None = None) -> None:
         index = self._find_index(value)
         if index < 0 and fallback is not None:
             index = self._find_index(fallback)
@@ -616,7 +608,7 @@ class MTComboBoxSetting(MTWidget):
         if index >= 0:
             self._combo_box.setCurrentIndex(index)
 
-    def _find_index(self, value: Any) -> int:
+    def _find_index(self, value: t.Any) -> int:
         if value is None:
             return -1
 

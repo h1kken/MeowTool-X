@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, is_dataclass
-from typing import Any, Callable, Iterable, Iterator, Sequence, cast
+import typing as t
 
 from src.services.http.types import (
     JsonObject,
@@ -88,7 +88,7 @@ class NativeHttpEngine:
     def __init__(
         self,
         *,
-        proxies: Sequence[ProxyLike] | None = None,
+        proxies: t.Sequence[ProxyLike] | None = None,
         config: NativeHttpEngineConfig | JsonObject | None = None,
     ) -> None:
         native = _import_native_module()
@@ -103,19 +103,19 @@ class NativeHttpEngine:
             payload_proxies, payload_config, debug_hook=debug_hook
         )
 
-    def run_batch(self, requests: Sequence[RequestLike]) -> list[JsonObject]:
+    def run_batch(self, requests: t.Sequence[RequestLike]) -> list[JsonObject]:
         return list(self._native.run_batch(_normalize_requests(requests)))
 
-    def submit_batch(self, requests: Sequence[RequestLike]) -> NativeHttpSubmission:
+    def submit_batch(self, requests: t.Sequence[RequestLike]) -> NativeHttpSubmission:
         batch_id = int(self._native.submit_batch(_normalize_requests(requests)))
         return NativeHttpSubmission(self, batch_id)
 
     def iter_chunked(
         self,
-        requests: Sequence[RequestLike] | Iterable[RequestLike],
+        requests: t.Sequence[RequestLike] | t.Iterable[RequestLike],
         *,
         chunk_size: int = 1_000,
-    ) -> Iterator[list[JsonObject]]:
+    ) -> t.Iterator[list[JsonObject]]:
         if chunk_size <= 0:
             raise ValueError("chunk_size must be > 0")
 
@@ -131,13 +131,13 @@ class NativeHttpEngine:
 
     def run_chunked(
         self,
-        requests: Sequence[RequestLike] | Iterable[RequestLike],
+        requests: t.Sequence[RequestLike] | t.Iterable[RequestLike],
         *,
         chunk_size: int = 1_000,
         flatten: bool = True,
-        on_chunk: Callable[[list[JsonObject]], Any] | None = None,
+        on_chunk: t.Callable[[list[JsonObject]], t.Any] | None = None,
     ) -> list[JsonObject] | list[list[JsonObject]]:
-        collected: list[Any] = []
+        collected: list[t.Any] = []
         for chunk in self.iter_chunked(requests, chunk_size=chunk_size):
             if on_chunk is not None:
                 on_chunk(chunk)
@@ -154,7 +154,7 @@ class NativeHttpEngine:
         self._native.reset_stats()
 
     def update_proxies(
-        self, proxies: Sequence[ProxyLike]
+        self, proxies: t.Sequence[ProxyLike]
     ) -> None:
         self._native.update_proxies(_normalize_proxies(proxies))
 
@@ -163,7 +163,7 @@ class NativeHttpEngine:
     ) -> JsonObject:
         raw = dict(self._native.poll_batch(int(batch_id), int(max_items) if max_items is not None else None))
         ready_raw = raw.pop("ready", [])
-        ready = list(cast(list[JsonObject], ready_raw or []))
+        ready = list(t.cast(list[JsonObject], ready_raw or []))
         return {
             "status": raw,
             "ready": ready,
@@ -185,10 +185,10 @@ class NativeHttpEngine:
         collected: list[JsonObject] = []
         while True:
             polled = self.poll_batch(batch_id, max_items=max_items_per_poll)
-            ready = cast(list[JsonObject], polled.get("ready") or [])
+            ready = t.cast(list[JsonObject], polled.get("ready") or [])
             if ready:
                 collected.extend(ready)
-            status = cast(JsonObject, polled.get("status") or {})
+            status = t.cast(JsonObject, polled.get("status") or {})
             if bool(status.get("done")):
                 return collected
             if interval > 0:
@@ -220,10 +220,10 @@ class NativeHttpBatchRunner:
 
     def run(
         self,
-        requests: Sequence[RequestLike] | Iterable[RequestLike],
+        requests: t.Sequence[RequestLike] | t.Iterable[RequestLike],
         *,
         flatten: bool = True,
-        on_chunk: Callable[[list[JsonObject]], Any] | None = None,
+        on_chunk: t.Callable[[list[JsonObject]], t.Any] | None = None,
     ) -> list[JsonObject] | list[list[JsonObject]]:
         return self._engine.run_chunked(
             requests,
@@ -234,14 +234,14 @@ class NativeHttpBatchRunner:
 
     def iter_chunks(
         self,
-        requests: Sequence[RequestLike] | Iterable[RequestLike],
-    ) -> Iterator[list[JsonObject]]:
+        requests: t.Sequence[RequestLike] | t.Iterable[RequestLike],
+    ) -> t.Iterator[list[JsonObject]]:
         return self._engine.iter_chunked(requests, chunk_size=self._chunk_size)
 
 
 def create_engine(
     *,
-    proxies: Sequence[ProxyLike] | None = None,
+    proxies: t.Sequence[ProxyLike] | None = None,
     config: NativeHttpEngineConfig | JsonObject | None = None,
 ) -> NativeHttpEngine:
     return NativeHttpEngine(proxies=proxies, config=config)
@@ -254,10 +254,10 @@ def create_batch_runner(
 
 
 def build_config_from_app_config(
-    config_source: Any | None = None,
-    **overrides: Any,
+    config_source: t.Any | None = None,
+    **overrides: t.Any,
 ) -> NativeHttpEngineConfig:
-    def _read(key: str, default: Any) -> Any:
+    def _read(key: str, default: t.Any) -> t.Any:
         getter = getattr(config_source, "get", None)
         if callable(getter):
             return getter(key, default=default)
@@ -306,9 +306,9 @@ def is_available() -> bool:
 
 
 def run_batch(
-    requests: Sequence[RequestLike],
+    requests: t.Sequence[RequestLike],
     *,
-    proxies: Sequence[ProxyLike] | None = None,
+    proxies: t.Sequence[ProxyLike] | None = None,
     config: NativeHttpEngineConfig | JsonObject | None = None,
 ) -> list[JsonObject]:
     with create_engine(proxies=proxies, config=config) as engine:
@@ -316,13 +316,13 @@ def run_batch(
 
 
 def run_chunked(
-    requests: Sequence[RequestLike] | Iterable[RequestLike],
+    requests: t.Sequence[RequestLike] | t.Iterable[RequestLike],
     *,
-    proxies: Sequence[ProxyLike] | None = None,
+    proxies: t.Sequence[ProxyLike] | None = None,
     config: NativeHttpEngineConfig | JsonObject | None = None,
     chunk_size: int = 1_000,
     flatten: bool = True,
-    on_chunk: Callable[[list[JsonObject]], Any] | None = None,
+    on_chunk: t.Callable[[list[JsonObject]], t.Any] | None = None,
 ) -> list[JsonObject] | list[list[JsonObject]]:
     with create_engine(proxies=proxies, config=config) as engine:
         return engine.run_chunked(
@@ -352,10 +352,10 @@ def _import_native_module() -> NativeHttpModuleProtocol:
         import meowtool_native_http
 
         if hasattr(meowtool_native_http, "NativeHttpEngineHandle"):
-            return cast(NativeHttpModuleProtocol, meowtool_native_http)
+            return t.cast(NativeHttpModuleProtocol, meowtool_native_http)
         import meowtool_native_http.meowtool_native_http as native_impl
 
-        return cast(NativeHttpModuleProtocol, native_impl)
+        return t.cast(NativeHttpModuleProtocol, native_impl)
     except (
         Exception
     ) as error:  # pragma: no cover - import depends on local native build
@@ -397,7 +397,7 @@ def _apply_concurrency_profile(normalized: JsonObject) -> None:
 
 
 def _normalize_proxies(
-    proxies: Sequence[ProxyLike],
+    proxies: t.Sequence[ProxyLike],
 ) -> list[JsonObject]:
     normalized: list[JsonObject] = []
     for proxy in proxies:
@@ -417,7 +417,7 @@ def _normalize_request(request: RequestLike) -> JsonObject:
 
 
 def _normalize_requests(
-    requests: Sequence[RequestLike],
+    requests: t.Sequence[RequestLike],
 ) -> list[JsonObject]:
     return [_normalize_request(request) for request in requests]
 

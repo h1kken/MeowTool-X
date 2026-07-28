@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
-from typing import Any, cast
+import typing as t
 
 import loguru
 
@@ -64,7 +64,7 @@ def _capture_origin(depth: int = 1) -> str:
         del frame
 
 
-def _patcher(record: Any) -> None:
+def _patcher(record: t.Any) -> None:
     name = record.get('name')
     if isinstance(name, str) and name.startswith('src.'):
         record['name'] = name.removeprefix('src.')
@@ -160,7 +160,7 @@ class Logger:
         *,
         overwrite: bool = False,
         depth: int = 1,
-    ) -> Any:
+    ) -> t.Any:
         current = _LOG_ORIGIN.get()
         if not overwrite and current != LOG_ORIGIN_DEFAULT:
             yield current
@@ -177,8 +177,8 @@ class Logger:
         self.info(f"OS: {platform.platform()}")
         self.info(f"Python: {platform.python_version()}")
             
-    def _resolve_record_kind(self, record: Any) -> str:
-        extra = cast(dict[str, Any], record.get('extra') or {})
+    def _resolve_record_kind(self, record: t.Any) -> str:
+        extra = t.cast(dict[str, t.Any], record.get('extra') or {})
         kind = str(extra.get('meow_kind') or record['level'].name).strip().lower()
         match kind:
             case 'trace':
@@ -188,8 +188,8 @@ class Logger:
             case _:
                 return kind
 
-    def _make_sink_filter(self) -> Any:
-        def _filter(record: Any) -> bool:
+    def _make_sink_filter(self) -> t.Any:
+        def _filter(record: t.Any) -> bool:
             return self._debug_settings.get(self._resolve_record_kind(record), True)
         return _filter
 

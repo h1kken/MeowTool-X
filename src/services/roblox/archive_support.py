@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+import typing as t
 
-ArchiveKind = Literal['zip', 'tar', '7z', 'rar', 'gz', 'bz2', 'xz', 'zst', 'lz4']
+ArchiveKind = t.Literal['zip', 'tar', '7z', 'rar', 'gz', 'bz2', 'xz', 'zst', 'lz4']
 
 ARCHIVE_ZIP_CONTAINER_EXTENSIONS = (
     '.zip',

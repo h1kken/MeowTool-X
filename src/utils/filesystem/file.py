@@ -4,7 +4,7 @@ import shutil
 import zipfile
 from collections.abc import Collection, Mapping, MutableMapping
 from pathlib import Path
-from typing import Any, TypeVar, cast
+import typing as t
 
 from src.exceptions.json import NotADictionaryError
 from src.app.paths import PATH_APP_ROOT
@@ -17,7 +17,7 @@ from src.utils.filesystem.constants import (
 from src.utils.filesystem.types import JsonObject
 from src.utils.logging import logger
 
-TDefault = TypeVar("TDefault")
+TDefault = t.TypeVar("TDefault")
 
 
 class FS:
@@ -108,11 +108,11 @@ def load_json(path: Path) -> JsonObject | None:
         if not isinstance(data, dict):
             raise NotADictionaryError
 
-        raw_data = cast(dict[object, object], data)
+        raw_data = t.cast(dict[object, object], data)
         if any(not isinstance(key, str) for key in raw_data):
             raise NotADictionaryError
 
-        return cast(JsonObject, raw_data)
+        return t.cast(JsonObject, raw_data)
     except FileNotFoundError:
         logger.warning(f'File not found: {path}')
     except NotADictionaryError:
@@ -125,42 +125,42 @@ def load_json(path: Path) -> JsonObject | None:
         logger.exception(f'Error in {path}')
 
 
-def get_safe(data: Mapping[str, Any], key: str, *, sep: str = '>', default: TDefault | None = None,) -> object | TDefault | None:
+def get_safe(data: Mapping[str, t.Any], key: str, *, sep: str = '>', default: TDefault | None = None,) -> object | TDefault | None:
     keys = key.split(sep)
     current: object = data
     for part in keys:
         if not isinstance(current, Mapping) or part not in current:
             return default
-        mapping = cast(Mapping[str, object], current)
+        mapping = t.cast(Mapping[str, object], current)
         current = mapping[part]
     return current
 
 
-def set_safe(data: MutableMapping[str, Any], key: str, value: Any, *, sep: str = '>') -> None:
+def set_safe(data: MutableMapping[str, t.Any], key: str, value: t.Any, *, sep: str = '>') -> None:
     keys = key.split(sep)
-    current: MutableMapping[str, Any] = data
+    current: MutableMapping[str, t.Any] = data
     for part in keys[:-1]:
         child = current.get(part)
         if isinstance(child, MutableMapping):
-            current = cast(MutableMapping[str, Any], child)
+            current = t.cast(MutableMapping[str, t.Any], child)
             continue
-        new_child: MutableMapping[str, Any] = {}
+        new_child: MutableMapping[str, t.Any] = {}
         current[part] = new_child
         current = new_child
     current[keys[-1]] = value
 
 
-def del_safe(data: MutableMapping[str, Any], key: str, *, sep: str = '>') -> bool:
+def del_safe(data: MutableMapping[str, t.Any], key: str, *, sep: str = '>') -> bool:
     keys = key.split(sep)
-    current: MutableMapping[str, Any] = data
-    stack: list[tuple[MutableMapping[str, Any], str]] = []
+    current: MutableMapping[str, t.Any] = data
+    stack: list[tuple[MutableMapping[str, t.Any], str]] = []
 
     for part in keys[:-1]:
         child = current.get(part)
         if not isinstance(child, MutableMapping):
             return False
         stack.append((current, part))
-        current = cast(MutableMapping[str, Any], child)
+        current = t.cast(MutableMapping[str, t.Any], child)
 
     leaf = keys[-1]
     if leaf not in current:
@@ -212,7 +212,7 @@ def count_lines_in_file(path: Path) -> int:
     return count
 
 
-def validate_filename(name: str, *, black_list: Collection[str] = (), default: str = 'output') -> str:
+def validate_filename(name: str, *, black_list: Collection[str] = (), default: str | None = None) -> str | None:
     name = str(name).strip()
     if (
         not name

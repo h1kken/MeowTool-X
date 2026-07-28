@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import threading
 from time import time
-from typing import TYPE_CHECKING
+import typing as t
 
 from pypresence.exceptions import DiscordError, DiscordNotFound, InvalidPipe, PipeClosed
 from pypresence.presence import Presence
@@ -13,7 +13,7 @@ from src.config.enums import ConfigKey as CKey
 from src.ui.types import PageState
 from src.utils.logging import logger
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from src.config.manager import Config
     from src.ui.windows.main_window import MainWindow
 
@@ -77,7 +77,7 @@ class DiscordRPC:
             self._worker = None
 
     def _read_enabled(self) -> bool:
-        return bool(self._config.get(CKey.OUTPUTS_DISCORD_RICH_PRESENCE, default=False))
+        return bool(self._config.get(CKey.OUTPUTS_DISCORD_RICH_PRESENCE))
 
     def _load_config(self) -> None:
         self._set_enabled(self._read_enabled())

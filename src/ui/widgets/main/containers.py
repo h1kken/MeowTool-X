@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Sequence, cast
+import typing as t
 
 from PySide6.QtCore import QEvent, QMimeData, QPoint, QPointF, QRectF, QSize, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import (
@@ -138,7 +138,7 @@ class _MTComboPopup(QFrame):
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
-        self.setGraphicsEffect(cast(Any, None))
+        self.setGraphicsEffect(t.cast(t.Any, None))
         self._layout = create_layout(LayoutType.VBOX, parent=self)
         self._items: list[_MTComboPopupItem] = []
         self._dirty = True
@@ -218,7 +218,7 @@ class MTComboBox(TranslatableComboBoxMixin, QWidget):
         *,
         obj_name: str = '',
     ) -> None:
-        self._items: list[dict[str, Any]] = []
+        self._items: list[dict[str, t.Any]] = []
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -766,7 +766,7 @@ class MTComboBox(TranslatableComboBoxMixin, QWidget):
 
         painter.save()
         painter.setFont(self.font())
-        padding = cast(tuple[object, object, object, object], self._part_data('item').get('padding', (0.0, 0.0, 0.0, 0.0)))
+        padding = t.cast(tuple[object, object, object, object], self._part_data('item').get('padding', (0.0, 0.0, 0.0, 0.0)))
         top, right, bottom, left = padding
         text_rect = rect.adjusted(
             float(coerce_number(left) or 0.0),
@@ -1180,7 +1180,7 @@ class MTLabeledList(MTWidget):
         self.list_widget = MTListWidget(self, obj_name=list_obj_name)
         layout.addWidget(self.list_widget)
 
-    def set_items(self, items: Sequence[str], *, preferred: str | None = None) -> bool:
+    def set_items(self, items: t.Sequence[str], *, preferred: str | None = None) -> bool:
         target = preferred if preferred in items else items[0] if items else None
         if self._plain_values() == [str(item) for item in items]:
             self.list_widget.setCurrentValue(target)
@@ -1192,12 +1192,7 @@ class MTLabeledList(MTWidget):
         self.list_widget.setCurrentValue(target)
         return True
 
-    def set_grouped_items(
-        self,
-        groups: Sequence[tuple[str, Sequence[tuple[str, str]]]],
-        *,
-        preferred: str | None = None,
-    ) -> None:
+    def set_grouped_items(self, groups: t.Sequence[tuple[str, t.Sequence[tuple[str, str]]]], *, preferred: str | None = None) -> None:
         available_values = [
             value
             for _, items in groups
@@ -1250,7 +1245,7 @@ class MTDropZone(MTWidget):
         *,
         accept_files: bool = True,
         accept_text: bool = True,
-        tr_key: str = 'Upload or Drag & Drop text/files here',
+        tr_key: str = '',
         obj_name: str = '',
     ) -> None:
         super().__init__(obj_name=f'{obj_name}_Drop_Zone' if obj_name else '')

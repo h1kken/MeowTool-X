@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import typing as t
 
 from sqlalchemy.orm import Mapped, relationship
 
 from .base import TransactionAnalysisBase
 from src.db.models.mixins import BaseMixin, TransactionMixin, ResultPlaceMixin
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from . import TransactionAnalysisResult, Place
 
 

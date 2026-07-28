@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TypeAlias
+import typing as t
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QSizePolicy
@@ -11,7 +11,7 @@ from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.pages.settings.pages.proxy import SettingsProxyCheckerPage
 from src.ui.widgets import MTButton, MTWidget
 
-ProxySettingsPageClass: TypeAlias = type[SettingsProxyCheckerPage]
+ProxySettingsPageClass: t.TypeAlias = type[SettingsProxyCheckerPage]
 
 
 class SettingsProxyPage(MTWidget):

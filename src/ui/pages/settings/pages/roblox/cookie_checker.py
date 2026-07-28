@@ -31,13 +31,11 @@ class SettingsRobloxCookieCheckerPage(MTWidget):
                 obj_name="Settings_Roblox_Cookie_Checker",
                 widgets=[
                     MTSwitchSetting(
-                        config=self._config,
                         tr_key="FRST_CHCK_FR_VLD",
                         cfg_key="Roblox>Cookie Checker>Firstly Check For Valid",
                         default=False,
                     ),
                     MTSliderSetting(
-                        config=self._config,
                         tr_key="VLD_THRDS",
                         cfg_key="Roblox>Cookie Checker>Valid Threads",
                         min_value=1,
@@ -45,7 +43,6 @@ class SettingsRobloxCookieCheckerPage(MTWidget):
                         default=50,
                     ),
                     MTSliderSetting(
-                        config=self._config,
                         tr_key="MAIN_THRDS",
                         cfg_key="Roblox>Cookie Checker>Main Threads",
                         min_value=1,
@@ -53,19 +50,16 @@ class SettingsRobloxCookieCheckerPage(MTWidget):
                         default=25,
                     ),
                     MTSwitchSetting(
-                        config=self._config,
                         tr_key="OTPT_FLNM_LK_INPT",
                         cfg_key="Roblox>Cookie Checker>Output Filename Like Input",
                         default=False,
                     ),
                     MTTextSetting(
-                        config=self._config,
                         tr_key="OTPT_FLNM",
                         cfg_key="Roblox>Cookie Checker>Output Filename",
                         default="output",
                     ),
                     MTSwitchSetting(
-                        config=self._config,
                         tr_key="MV_C_TO_THE_NXT_LN",
                         cfg_key="Roblox>Cookie Checker>Move Cookie To The Next Line",
                         default=False,

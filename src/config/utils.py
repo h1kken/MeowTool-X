@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import TypeGuard, cast
+import typing as t
 
 from src.config.types import ConfigMap, ConfigValue
 from src.config.constants import CONFIG_COMMENT_SYMBOLS, CONFIG_INDENT
@@ -20,7 +20,7 @@ def parse_config(text: str) -> ConfigMap:
 
         if ":" in line:
             key, value = map(str.strip, line.split(":", 1))
-            stack[-1][0][key] = cast(ConfigValue, safe_literal_eval(value))
+            stack[-1][0][key] = t.cast(ConfigValue, safe_literal_eval(value))
         else:
             while stack and stack[-1][1] >= indent:
                 stack.pop()
@@ -72,7 +72,7 @@ def normalize_config(
                     recovery_missing=recovery_missing,
                 )
         else:
-            validated[key] = cast(ConfigValue, convert_value(user_value, default_value))
+            validated[key] = t.cast(ConfigValue, convert_value(user_value, default_value))
 
     if keep_unknown:
         for key, user_value in user_config.items():
@@ -86,7 +86,7 @@ def normalize_config(
                     recovery_missing=recovery_missing,
                 )
             else:
-                validated[key] = cast(ConfigValue, convert_value(user_value))
+                validated[key] = t.cast(ConfigValue, convert_value(user_value))
 
     return validated
 
@@ -116,7 +116,7 @@ def _count_indent_levels(raw_line: str) -> int:
 def _clone_default(default_value: ConfigValue) -> ConfigValue:
     if isinstance(default_value, tuple):
         return deepcopy(default_value[0]) if default_value else None
-    return cast(ConfigValue, deepcopy(default_value))
+    return t.cast(ConfigValue, deepcopy(default_value))
 
 
 def _convert_to_bool(user_value: str) -> bool | str:
@@ -134,7 +134,7 @@ def _parse_numeric(value: object) -> object:
     return value
 
 
-def _is_numeric_bound_tuple(value: tuple[ConfigValue, ...]) -> TypeGuard[tuple[int | float, int | float, int | float]]:
+def _is_numeric_bound_tuple(value: tuple[ConfigValue, ...]) -> t.TypeGuard[tuple[int | float, int | float, int | float]]:
     return (len(value) == 3) and all(type(item) in (int, float) for item in value)
 
 
@@ -206,16 +206,16 @@ def _convert_user_value(user_value: object, default_value: ConfigValue) -> Confi
     # list
     if isinstance(default_value, list):
         if isinstance(user_value, list):
-            return cast(ConfigValue, deepcopy(cast(list[ConfigValue], user_value)))
-        return cast(ConfigValue, deepcopy(default_value))
+            return t.cast(ConfigValue, deepcopy(t.cast(list[ConfigValue], user_value)))
+        return t.cast(ConfigValue, deepcopy(default_value))
 
     # dict
     if isinstance(default_value, dict):
         if isinstance(user_value, dict):
-            return cast(ConfigValue, deepcopy(cast(ConfigMap, user_value)))
-        return cast(ConfigValue, deepcopy(default_value))
+            return t.cast(ConfigValue, deepcopy(t.cast(ConfigMap, user_value)))
+        return t.cast(ConfigValue, deepcopy(default_value))
 
     if user_value is None:
         return _clone_default(default_value)
 
-    return cast(ConfigValue, user_value)
+    return t.cast(ConfigValue, user_value)

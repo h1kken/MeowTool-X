@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import typing as t
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from PySide6.QtWidgets import QApplication
 
 
@@ -34,13 +34,14 @@ def bootstrap(app: QApplication) -> None:
     # TODO: refactor lighter
     from src.theme.manager import ThemeManager
     services.theme_manager = ThemeManager(services.window, services.config)
-    services.theme_manager.load()
     
     # TODO: refactor lighter
     from src.theme.animation.manager import AnimationManager
-    services.animation_manager = AnimationManager(services.window, services.config)
-    services.animation_manager.load()
-        
+    animation_manager = AnimationManager(services.window, services.config)
+    services.theme_manager.theme_loaded.connect(animation_manager.load)
+    
+    services.theme_manager.load()
+    
     from src.services.discord import DiscordRPC
     services.discord_rpc = DiscordRPC(services.window, services.config)
     app.aboutToQuit.connect(services.discord_rpc.shutdown)

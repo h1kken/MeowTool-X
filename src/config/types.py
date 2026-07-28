@@ -1,6 +1,6 @@
 import threading
 from pathlib import Path
-from typing import Literal, Protocol, TypeAlias
+import typing as t
 
 type ConfigScalar = None | bool | int | float | str
 type ConfigValue = (
@@ -9,11 +9,11 @@ type ConfigValue = (
     | tuple["ConfigValue", ...]
     | dict[str, "ConfigValue"]
 )
-ConfigMap: TypeAlias = dict[str, ConfigValue]
-type SortCategoryKind = Literal["none", "text", "number"]
+ConfigMap: t.TypeAlias = dict[str, ConfigValue]
+type SortCategoryKind = t.Literal["none", "text", "number"]
 
 
-class ConfigMixinHost(Protocol):    
+class ConfigMixinHost(t.Protocol):    
     @property
     def path(self) -> Path: ...
     

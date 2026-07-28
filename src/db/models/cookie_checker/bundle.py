@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import typing as t
 
 from sqlalchemy.orm import Mapped, relationship
 
@@ -8,7 +8,7 @@ from .base import CookieCheckerBase
 from src.db.models.mixins import BaseMixin, BundleMixin, ResultBundleMixin
 
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from . import CookieCheckerResult
 
 

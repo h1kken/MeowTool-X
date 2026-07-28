@@ -5,20 +5,13 @@ import re
 from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+import typing as t
 
-from PySide6.QtCore import (
-    QAbstractAnimation,
-    QEvent,
-    QObject,
-    QParallelAnimationGroup,
-    Qt,
-    QTimer,
-)
+from PySide6.QtCore import QAbstractAnimation, QEvent, QObject, QParallelAnimationGroup, Qt, QTimer
 from PySide6.QtGui import QColor, QCursor, QMouseEvent, QPalette, QWheelEvent
 from PySide6.QtWidgets import QApplication, QAbstractButton, QAbstractScrollArea, QAbstractSlider, QLayout, QSlider, QWidget
 
-from src.theme import files as theme_files
+from src.theme.files import LoadedTheme
 from src.theme.colors import normalize_color, to_qcolor
 from src.theme.parser import normalize_theme_payload
 from src.theme.targets import resolve_target_widgets
@@ -28,16 +21,13 @@ from src.ui.widgets.main.inputs import MTSlider
 from src.ui.widgets.settings.containers import MTCollapsibleContainer
 from src.utils.conversion import as_dict, coerce_float
 
-from .helpers import (
-    interpolate_color,
-    normalize_dash_border,
-)
+from .helpers import interpolate_color, normalize_dash_border
 from .overlays import DashBorderOverlay
 from .parser import parse_specs
 from .timer import TimerAnimation
 from .types import AnimationSpec
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from src.ui.windows.main_window import MainWindow
     from src.config import Config
 
@@ -66,7 +56,7 @@ class AnimationManager(QObject):
         self._config = config
         
         self._animations: dict[QWidget, dict[str, QParallelAnimationGroup]] = {}
-        self._cache: dict[QWidget, dict[str, Any]] = {}
+        self._cache: dict[QWidget, dict[str, t.Any]] = {}
         self._style_overrides: dict[QWidget, dict[str, str]] = {}
         self._slider_style_overrides: dict[QWidget, dict[str, dict[str, str]]] = {}
         self._base_styles: dict[QWidget, str] = {}
@@ -79,26 +69,25 @@ class AnimationManager(QObject):
         self._pending_checkable_reconcile_widgets: set[QWidget] = set()
         self._pending_hover_exit_widgets: set[QWidget] = set()
         self._paint_overlays: dict[QWidget, DashBorderOverlay] = {}
-        self._paint_border_profiles: dict[QWidget, dict[str, Any]] = {}
+        self._paint_border_profiles: dict[QWidget, dict[str, t.Any]] = {}
         self._wheel_event_deltas: dict[QWidget, dict[str, float]] = {}
         self._locked_tabs: set[QWidget] = set()
-        self._tab_toggle_slots: dict[QWidget, Any] = {}
-        self._toggle_action_slots: dict[QWidget, Any] = {}
-        self._popup_action_slots: dict[QWidget, tuple[Any, Any]] = {}
+        self._tab_toggle_slots: dict[QWidget, t.Any] = {}
+        self._toggle_action_slots: dict[QWidget, t.Any] = {}
+        self._popup_action_slots: dict[QWidget, tuple[t.Any, t.Any]] = {}
 
         self._hover_reconcile_timer = QTimer(self, interval=16)
         self._hover_reconcile_timer.timeout.connect(self._reconcile_hover_states)
 
-    def load(self, name: str | None = None) -> Path | None:
-        loaded = theme_files.load(self._config, name)
+    def load(self, loaded: LoadedTheme | None) -> Path | None:
         if loaded is None:
             self._clear()
             return None
 
         path, payload = loaded
         theme = normalize_theme_payload(payload)
-        theme_widgets = cast(
-            dict[str, dict[str, Any]],
+        theme_widgets = t.cast(
+            dict[str, dict[str, t.Any]],
             as_dict(theme.get("widgets")) or {},
         )
         animations = {
@@ -159,12 +148,7 @@ class AnimationManager(QObject):
 
         return path
 
-    def _build_auto_leave_specs(
-        self,
-        widget: QWidget,
-        specs: list[AnimationSpec],
-        base_styles: dict[str, Any],
-    ) -> list[AnimationSpec]:
+    def _build_auto_leave_specs(self, widget: QWidget, specs: list[AnimationSpec], base_styles: dict[str, t.Any]) -> list[AnimationSpec]:
         if any(spec.action == 'leave' for spec in specs):
             return []
 
@@ -187,12 +171,7 @@ class AnimationManager(QObject):
             )
         return auto_specs
 
-    def _sample_base_animation_value(
-        self,
-        widget: QWidget,
-        base_styles: dict[str, Any],
-        spec: AnimationSpec,
-    ) -> Any | None:
+    def _sample_base_animation_value(self, widget: QWidget, base_styles: dict[str, t.Any], spec: AnimationSpec) -> t.Any | None:
         match spec.kind:
             case 'color':
                 color = self._sample_style_color(base_styles, spec.property_key)
@@ -546,7 +525,7 @@ class AnimationManager(QObject):
         color = str(match.group(3)).strip()
         return width or None, style or None, color or None
 
-    def _parse_measure_value(self, value: Any) -> float | None:
+    def _parse_measure_value(self, value: t.Any) -> float | None:
         if isinstance(value, (int, float)):
             return float(value)
         if not isinstance(value, str):
@@ -563,7 +542,7 @@ class AnimationManager(QObject):
         except ValueError:
             return None
 
-    def _ensure_dash_overlay(self, widget: QWidget, config: dict[str, Any]) -> DashBorderOverlay:
+    def _ensure_dash_overlay(self, widget: QWidget, config: dict[str, t.Any]) -> DashBorderOverlay:
         overlay = self._paint_overlays.get(widget)
         if overlay is None:
             overlay = DashBorderOverlay(widget)
@@ -581,8 +560,8 @@ class AnimationManager(QObject):
         self._sync_paint_overlay_geometry(widget)
         return overlay
 
-    def _dash_border_style_defaults(self, styles: dict[str, Any]) -> dict[str, Any] | None:
-        raw: Any = None
+    def _dash_border_style_defaults(self, styles: dict[str, t.Any]) -> dict[str, t.Any] | None:
+        raw: t.Any = None
         paint = as_dict(styles.get('paint'))
         if paint is not None:
             raw = paint.get('dash_border') or paint.get('dashBorder') or paint.get('border')
@@ -593,7 +572,7 @@ class AnimationManager(QObject):
         normalized = normalize_dash_border(raw)
         return normalized if isinstance(normalized, dict) else None
 
-    def _merge_dash_border_style_defaults(self, effect: dict[str, Any], styles: dict[str, Any]) -> dict[str, Any]:
+    def _merge_dash_border_style_defaults(self, effect: dict[str, t.Any], styles: dict[str, t.Any]) -> dict[str, t.Any]:
         defaults = self._dash_border_style_defaults(styles)
         if not defaults:
             return effect
@@ -615,9 +594,9 @@ class AnimationManager(QObject):
         widget: QWidget,
         spec: AnimationSpec,
         group: QParallelAnimationGroup,
-        base_styles: dict[str, Any],
+        base_styles: dict[str, t.Any],
     ) -> None:
-        runtime: dict[str, Any] = {}
+        runtime: dict[str, t.Any] = {}
         self._remember_action_property(widget, spec)
 
         match spec.kind:
@@ -635,8 +614,8 @@ class AnimationManager(QObject):
         widget: QWidget,
         spec: AnimationSpec,
         group: QParallelAnimationGroup,
-        base_styles: dict[str, Any],
-        runtime: dict[str, Any],
+        base_styles: dict[str, t.Any],
+        runtime: dict[str, t.Any],
     ) -> None:
         if self._append_border_color_animation(widget, spec, group, base_styles, runtime):
             return
@@ -663,8 +642,8 @@ class AnimationManager(QObject):
         widget: QWidget,
         spec: AnimationSpec,
         group: QParallelAnimationGroup,
-        base_styles: dict[str, Any],
-        runtime: dict[str, Any],
+        base_styles: dict[str, t.Any],
+        runtime: dict[str, t.Any],
     ) -> bool:
         if spec.property_key != 'border.color':
             return False
@@ -673,7 +652,7 @@ class AnimationManager(QObject):
         if not bool(border_config.get('visible')):
             return False
 
-        border_state: dict[str, Any] = {'previous': None, 'captured': False}
+        border_state: dict[str, t.Any] = {'previous': None, 'captured': False}
 
         def capture_previous_border_override() -> None:
             if border_state['captured']:
@@ -757,7 +736,7 @@ class AnimationManager(QObject):
         widget: QWidget,
         spec: AnimationSpec,
         group: QParallelAnimationGroup,
-        runtime: dict[str, Any],
+        runtime: dict[str, t.Any],
     ) -> None:
         def on_start() -> None:
             self._notify_part_animation_state(widget, spec.property_key, True)
@@ -808,8 +787,8 @@ class AnimationManager(QObject):
         widget: QWidget,
         spec: AnimationSpec,
         group: QParallelAnimationGroup,
-        base_styles: dict[str, Any],
-        runtime: dict[str, Any],
+        base_styles: dict[str, t.Any],
+        runtime: dict[str, t.Any],
     ) -> None:
         effect_map = as_dict(spec.end)
         if effect_map is None:
@@ -1073,7 +1052,7 @@ class AnimationManager(QObject):
                 return spec
         return None
 
-    def _animation_end_signature(self, spec: AnimationSpec) -> tuple[str, Any]:
+    def _animation_end_signature(self, spec: AnimationSpec) -> tuple[str, t.Any]:
         if spec.kind == 'color':
             color = to_qcolor(spec.end)
             if color is not None:
@@ -1241,10 +1220,10 @@ class AnimationManager(QObject):
         self,
         widget: QWidget,
         spec: AnimationSpec,
-        base_styles: dict[str, Any],
-        cache: dict[str, Any],
+        base_styles: dict[str, t.Any],
+        cache: dict[str, t.Any],
     ) -> QColor:
-        candidates: list[Any]
+        candidates: list[t.Any]
         if spec.action in {'hover', 'leave'}:
             candidates = [
                 self._sample_override_color(widget, spec.css_property),
@@ -1637,8 +1616,8 @@ class AnimationManager(QObject):
             raw = self._style_overrides.get(widget, {}).get(css_property)
         return to_qcolor(raw) if isinstance(raw, str) else None
 
-    def _sample_style_color(self, styles: dict[str, Any], property_key: str) -> QColor | None:
-        raw: Any = None
+    def _sample_style_color(self, styles: dict[str, t.Any], property_key: str) -> QColor | None:
+        raw: t.Any = None
         if property_key.startswith('slider.'):
             tokens = property_key.split('.')
             if len(tokens) == 4:
@@ -1915,7 +1894,7 @@ class AnimationManager(QObject):
 
     def _padding_box(self, widget: QWidget) -> tuple[int, int, int, int]:
         raw = widget.property('_themePaddingBox')
-        sequence = cast(list[object] | tuple[object, ...] | None, raw if isinstance(raw, (list, tuple)) else None)
+        sequence = t.cast(list[object] | tuple[object, ...] | None, raw if isinstance(raw, (list, tuple)) else None)
         if sequence is not None and len(sequence) == 4:
             values: list[int] = []
             for value in sequence:

@@ -1,11 +1,11 @@
-from typing import Any, Callable
+import typing as t
 
 from PySide6.QtCore import QByteArray, QObject
 
 from src.utils.logging import logger
 
 
-def _normalize_property_name(value: Any) -> str:
+def _normalize_property_name(value: t.Any) -> str:
     if isinstance(value, QByteArray):
         return bytes(value.data()).decode('utf-8', errors='ignore')
 
@@ -15,7 +15,7 @@ def _normalize_property_name(value: Any) -> str:
     return str(value)
 
 
-def _format_property_value(value: Any) -> str | None:
+def _format_property_value(value: t.Any) -> str | None:
     if isinstance(value, bool):
         return 'True' if value else 'False'
 
@@ -71,7 +71,7 @@ def _dump_object_tree_recursive(
     indent: int,
     total_nodes: int,
     state: dict[str, int],
-    progress_callback: Callable[[int, int, QObject], None] | None = None,
+    progress_callback: t.Callable[[int, int, QObject], None] | None = None,
 ) -> None:
     state['visited'] += 1
     if progress_callback is not None:
@@ -97,7 +97,7 @@ def dump_object_tree(
     obj: QObject,
     indent: int = 0,
     *,
-    progress_callback: Callable[[int, int, QObject], None] | None = None,
+    progress_callback: t.Callable[[int, int, QObject], None] | None = None,
 ) -> None:
     total_nodes = _count_object_tree_nodes(obj)
     logger.debug(f'Object tree nodes: {total_nodes}')

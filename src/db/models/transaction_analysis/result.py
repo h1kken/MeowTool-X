@@ -1,12 +1,12 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+import typing as t
 
 from sqlalchemy import Boolean, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import TransactionAnalysisResultBase
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from . import Cookie, Transaction
 
 

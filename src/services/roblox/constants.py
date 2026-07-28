@@ -1,5 +1,5 @@
 import json
-from typing import cast
+import typing as t
 
 from src.app.paths import PATH_COUNTRY_CODES
 
@@ -12,7 +12,7 @@ def _load_country_codes() -> dict[str, str]:
         return {}
     if not isinstance(data, dict):
         return {}
-    raw = cast(dict[object, object], data)
+    raw = t.cast(dict[object, object], data)
     return {str(key): str(value) for key, value in raw.items()}
 
 

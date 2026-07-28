@@ -1,26 +1,26 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Iterable, Protocol
+import typing as t
 
 
 def _empty_str_dict() -> dict[str, str]:
     return {}
 
 
-type JsonObject = dict[str, Any]
+type JsonObject = dict[str, t.Any]
 
 
-class NativeHttpHandleProtocol(Protocol):
+class NativeHttpHandleProtocol(t.Protocol):
     def __init__(
         self,
         proxies: list[JsonObject] | None,
         config: JsonObject | None,
         *,
-        debug_hook: Callable[[str, str, str], None] | None = None,
+        debug_hook: t.Callable[[str, str, str], None] | None = None,
     ) -> None: ...
 
-    def run_batch(self, requests: list[JsonObject]) -> Iterable[JsonObject]: ...
+    def run_batch(self, requests: list[JsonObject]) -> t.Iterable[JsonObject]: ...
     def submit_batch(self, requests: list[JsonObject]) -> int: ...
     def get_stats(self) -> JsonObject: ...
     def reset_stats(self) -> None: ...
@@ -33,7 +33,7 @@ class NativeHttpHandleProtocol(Protocol):
     def is_closed(self) -> bool: ...
 
 
-class NativeHttpModuleProtocol(Protocol):
+class NativeHttpModuleProtocol(t.Protocol):
     NativeHttpEngineHandle: type[NativeHttpHandleProtocol]
 
     def version(self) -> str: ...
@@ -84,7 +84,7 @@ class NativeHttpRequest:
     params: dict[str, str] = field(default_factory=_empty_str_dict)
     body: str | None = None
     body_bytes: bytes | None = None
-    json_body: Any = None
+    json_body: t.Any = None
     timeout_ms: int | None = None
 
 

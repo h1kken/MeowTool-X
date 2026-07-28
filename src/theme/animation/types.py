@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable
+import typing as t
 
 
 @dataclass(slots=True)
@@ -12,8 +12,8 @@ class AnimationSpec:
     kind: str
     duration: int
     loop_count: int
-    easing: Callable[[float], float]
-    start: Any
-    end: Any
-    options: dict[str, Any] | None = None
+    easing: t.Callable[[float], float]
+    start: t.Any
+    end: t.Any
+    options: dict[str, t.Any] | None = None
 

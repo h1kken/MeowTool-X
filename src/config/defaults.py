@@ -1,11 +1,11 @@
 from copy import deepcopy
-from typing import Final, cast
+import typing as t
 
 from src.app.paths import PATH_DEFAULT_THEME, PATH_DEFAULT_TRANSLATION
 from src.config.types import ConfigMap, SortCategoryKind
 
 
-DEFAULT_CONFIG_LOADER: Final[ConfigMap] = {
+DEFAULT_CONFIG_LOADER: t.Final[ConfigMap] = {
   "Loader": {
     "Config On Load": "default",
     "Developer Mode": False
@@ -37,7 +37,7 @@ def default_config_loader() -> ConfigMap:
     return deepcopy(DEFAULT_CONFIG_LOADER)
 
 
-DEFAULT_CONFIG: Final[ConfigMap] = {
+DEFAULT_CONFIG: t.Final[ConfigMap] = {
   "General": {
     "Language": PATH_DEFAULT_TRANSLATION.stem,
     "Theme": PATH_DEFAULT_THEME.stem,
@@ -182,7 +182,7 @@ DEFAULT_CONFIG: Final[ConfigMap] = {
 
 
 # Generating [Roblox > Cookie Checker > Sorting > Categories]
-SORT_KEYS: Final[dict[str, SortCategoryKind]] = {
+SORT_KEYS: t.Final[dict[str, SortCategoryKind]] = {
   "Link": "none",
   "ID": "text",
   "Name": "text",
@@ -224,12 +224,12 @@ SORT_KEYS: Final[dict[str, SortCategoryKind]] = {
   "Roblox Badges": "number",
 }
 
-_roblox_config = cast(ConfigMap, DEFAULT_CONFIG["Roblox"])
-_cookie_checker_config = cast(ConfigMap, _roblox_config["Cookie Checker"])
-_sorting_config = cast(ConfigMap, _cookie_checker_config["Sorting"])
-_sorting_categories = cast(ConfigMap, _sorting_config["Categories"])
+_roblox_config = t.cast(ConfigMap, DEFAULT_CONFIG["Roblox"])
+_cookie_checker_config = t.cast(ConfigMap, _roblox_config["Cookie Checker"])
+_sorting_config = t.cast(ConfigMap, _cookie_checker_config["Sorting"])
+_sorting_categories = t.cast(ConfigMap, _sorting_config["Categories"])
 
-SORT_KEYS_NAMES: Final[tuple[str, ...]] = (
+SORT_KEYS_NAMES: t.Final[tuple[str, ...]] = (
   "Gamepasses",
   "Badges",
   "Custom Gamepasses",
@@ -239,7 +239,7 @@ SORT_KEYS_NAMES: Final[tuple[str, ...]] = (
   "Roblox Badges",
 )
 
-SORT_KEYS_PLACES: Final[tuple[str, ...]] = (
+SORT_KEYS_PLACES: t.Final[tuple[str, ...]] = (
   "Gamepasses",
   "Badges"
 )
@@ -271,11 +271,11 @@ for key_name, key_type in SORT_KEYS.items():
         }
 
 for key_name in SORT_KEYS_NAMES:
-    category = cast(ConfigMap, _sorting_categories[key_name])
+    category = t.cast(ConfigMap, _sorting_categories[key_name])
     category["Names"] = False
 
 for key_name in SORT_KEYS_PLACES:
-    category = cast(ConfigMap, _sorting_categories[key_name])
+    category = t.cast(ConfigMap, _sorting_categories[key_name])
     category["Places"] = False
 
 

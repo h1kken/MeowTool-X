@@ -3,7 +3,7 @@ import tempfile
 import time
 from collections.abc import Iterator
 from pathlib import Path
-from typing import cast
+import typing as t
 
 from src.utils.logging import logger
 from src.app.paths import PATH_CONFIGS
@@ -34,7 +34,7 @@ class GetConfigMixin:
 class SetConfigMixin:
     def set(self: ConfigMixinHost, key: str, value: object, *, sep: str = ">") -> None:
         default_value = get_safe(self.defaults, key, sep=sep, default=CONFIG_MISSING_DEFAULT)
-        typed_default = cast(ConfigValue, default_value)
+        typed_default = t.cast(ConfigValue, default_value)
         value = convert_value(value, typed_default)
 
         normalized_default = convert_value(None, typed_default)
@@ -43,7 +43,7 @@ class SetConfigMixin:
             logger.debug(f"Resetted default to '{key.replace(sep, " > ")}'")
             return
 
-        set_safe(self.data, key, cast(ConfigValue, value), sep=sep)
+        set_safe(self.data, key, t.cast(ConfigValue, value), sep=sep)
         logger.debug(f"Setted '{value}' ({type(value).__name__}) to '{key.replace(sep, " > ")}'")
 
 

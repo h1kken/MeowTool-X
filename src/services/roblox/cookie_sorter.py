@@ -11,7 +11,7 @@ from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Lock
-from typing import TYPE_CHECKING, Any, TypeAlias, cast
+import typing as t
 
 from PySide6.QtCore import QObject, Signal
 
@@ -47,11 +47,11 @@ try:
 except ImportError:
     lz4f = None
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from rarfile import RarFile
-    RarFileType: TypeAlias = RarFile
+    RarFileType: t.TypeAlias = RarFile
 else:
-    RarFileType: TypeAlias = Any
+    RarFileType: t.TypeAlias = t.Any
 class RobloxCookieSorter(QObject):
     statement = Signal(str)
     progress = Signal(int)
@@ -70,18 +70,15 @@ class RobloxCookieSorter(QObject):
         self._config = config
 
         # Settings
-        output_filename = self._config.get('Roblox>Cookie Sorter>Output Filename', default='output')
-        self._filename = validate_filename(output_filename if isinstance(output_filename, str) else 'output')
-        self._search_no_roblox_cookie_pattern = bool(
-            self._config.get('Roblox>Cookie Sorter>Search For 100 Plus Symbols Strings', default=False)
-        )
-        self._symbols_between_warning_and_cookie = str(
-            self._config.get('Roblox>General>Symbols Between Warning And Cookie', default='')
-        ).strip() if self._config.get('Roblox>General>Add Symbols Between Warning And Cookie', default=False) else ''
+        output_filename = str(self._config.get('Roblox>Cookie Sorter>Output Filename')).strip()
+        self._filename = validate_filename(output_filename if output_filename else 'output')
+        
+        self._search_no_roblox_cookie_pattern = bool(self._config.get('Roblox>Cookie Sorter>Search For 100 Plus Symbols Strings'))
+        self._symbols_between_warning_and_cookie = str(self._config.get('Roblox>General>Symbols Between Warning And Cookie')).strip() if self._config.get('Roblox>General>Add Symbols Between Warning And Cookie') else ''
 
         self._base_path = Path('Roblox', 'Cookie Sorter')
         self._default_outputs_path = self._base_path / 'outputs'
-        raw_save_path = self._config.get('Roblox>Cookie Sorter>Save Path', default=self._default_outputs_path)
+        raw_save_path = self._config.get('Roblox>Cookie Sorter>Save Path')
         self._save_path = Path(raw_save_path) if isinstance(raw_save_path, (str, Path)) else self._default_outputs_path
         self._input_paths = [Path(path) for path in (input_paths or [])]
         self._text_chunks = [chunk for chunk in (text_chunks or []) if chunk.strip()]
@@ -92,20 +89,11 @@ class RobloxCookieSorter(QObject):
         self._counter_incorrect = 0
 
         self._cookie_set: set[str] = set()
-        raw_workers = cast(
-            object,
-            self._config.get('Roblox>Cookie Sorter>Threads', default=None),
-        )
+        raw_workers = t.cast(object, self._config.get('Roblox>Cookie Sorter>Threads'))
         if raw_workers is None:
-            raw_workers = cast(
-                object,
-                self._config.get(
-                    'Roblox>Cookie Sorter>Main Threads',
-                    default=self._DEFAULT_SORTER_WORKERS,
-                ),
-            )
+            raw_workers = t.cast(object, self._config.get('Roblox>Cookie Sorter>Main Threads'))
         if isinstance(raw_workers, tuple):
-            tuple_workers = cast(tuple[object, ...], raw_workers)
+            tuple_workers = t.cast(tuple[object, ...], raw_workers)
             raw_workers = tuple_workers[0] if tuple_workers else self._DEFAULT_SORTER_WORKERS
         try:
             self._max_workers = max(1, int(raw_workers if isinstance(raw_workers, (int, float, str)) else self._DEFAULT_SORTER_WORKERS))
@@ -272,7 +260,7 @@ class RobloxCookieSorter(QObject):
 
         try:
             with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-                shutil.copyfileobj(cast(Any, stream), tmp, length=archive_support.ARCHIVE_STREAM_COPY_CHUNK_BYTES)
+                shutil.copyfileobj(t.cast(t.Any, stream), tmp, length=archive_support.ARCHIVE_STREAM_COPY_CHUNK_BYTES)
                 tmp_path = Path(tmp.name)
 
             nested = self._extract_archive_file(tmp_path, depth=depth, name_hint=name)
@@ -334,8 +322,8 @@ class RobloxCookieSorter(QObject):
     def _extract_from_rar(self, archive: RarFileType, *, depth: int) -> tuple[set[str], int]:
         cookies: set[str] = set()
         total_found = 0
-        archive_any = cast(Any, archive)
-        for info in cast(list[Any], archive_any.infolist()):
+        archive_any = t.cast(t.Any, archive)
+        for info in t.cast(list[t.Any], archive_any.infolist()):
             if not self._is_running:
                 break
 
@@ -363,7 +351,7 @@ class RobloxCookieSorter(QObject):
     def _extract_from_7z_file(self, path: Path, *, depth: int) -> tuple[set[str], int]:
         cookies: set[str] = set()
         total_found = 0
-        archive_mod = cast(Any, py7zr)
+        archive_mod = t.cast(t.Any, py7zr)
         with tempfile.TemporaryDirectory() as temp_dir:
             with archive_mod.SevenZipFile(path, mode='r') as archive:
                 archive.extractall(path=temp_dir)
@@ -415,7 +403,7 @@ class RobloxCookieSorter(QObject):
                 if zstd is None:
                     self._warn_missing_backend('zstandard')
                     return None
-                zstd_mod = cast(Any, zstd)
+                zstd_mod = t.cast(t.Any, zstd)
                 with open(path, 'rb') as fh:
                     dctx = zstd_mod.ZstdDecompressor()
                     with dctx.stream_reader(fh) as stream:
@@ -424,7 +412,7 @@ class RobloxCookieSorter(QObject):
                 if lz4f is None:
                     self._warn_missing_backend('lz4')
                     return None
-                lz4f_mod = cast(Any, lz4f)
+                lz4f_mod = t.cast(t.Any, lz4f)
                 with lz4f_mod.open(path, mode='rb') as stream:
                     return self._extract_from_stream(stream, name=out_name, depth=depth + 1)
             case _:
@@ -452,7 +440,7 @@ class RobloxCookieSorter(QObject):
                     if rarfile is None:
                         self._warn_missing_backend('rarfile')
                         return None
-                    rarfile_mod = cast(Any, rarfile)
+                    rarfile_mod = t.cast(t.Any, rarfile)
                     with rarfile_mod.RarFile(path) as archive:
                         return self._extract_from_rar(archive, depth=depth)
                 case _:

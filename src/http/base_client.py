@@ -1,7 +1,7 @@
 import asyncio
 import random
 from collections.abc import Mapping
-from typing import Any
+import typing as t
 
 from aiohttp import (
     ClientError,
@@ -106,11 +106,11 @@ class BaseHttpClient:
     #     return await self._request('options', url, **kwargs)
         
     @log_network_request
-    async def get(self, url: str, **kwargs: Any) -> ClientResponse | None:
+    async def get(self, url: str, **kwargs: t.Any) -> ClientResponse | None:
         return await self._request('get', url, **kwargs)
     
     @log_network_request
-    async def post(self, url: str, **kwargs: Any) -> ClientResponse | None:
+    async def post(self, url: str, **kwargs: t.Any) -> ClientResponse | None:
         return await self._request('post', url, **kwargs)
     
     # @log_network_request()
