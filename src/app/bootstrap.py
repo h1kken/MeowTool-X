@@ -27,16 +27,16 @@ def bootstrap(app: QApplication) -> None:
     services.translator = TranslationManager(services.config)
     services.translator.load()
     
-    # TODO: add "config" arg in pages in main window
-    # TODO: refactor lighter
+    # TODO: add "config" arg in pages in main window (every)
+    # TODO: refactor lighter (inner pages)
     from src.ui.windows.main_window import MainWindow
     services.window = MainWindow(services.config)
     
-    # TODO: refactor lighter
+    # TODO: refactor lighter | do strict format, no many variants of one parameter
     from src.theme.manager import ThemeManager
     services.theme_manager = ThemeManager(services.window, services.config)
     
-    # TODO: refactor lighter
+    # TODO: refactor lighter (pls)
     from src.theme.animation.manager import AnimationManager
     animation_manager = AnimationManager(services.window, services.config)
     services.theme_manager.theme_loaded.connect(animation_manager.load)

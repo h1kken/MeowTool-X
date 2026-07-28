@@ -4,7 +4,7 @@ from PySide6.QtCore import QObject, QSize, Qt, QUrl
 from PySide6.QtGui import QMovie, QPixmap, QResizeEvent
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
-from PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QSizePolicy, QWidget
 
 from src.app.paths import PATH_APP_ICON, PATH_ROOT
 from src.ui.constants import (
@@ -88,7 +88,7 @@ class MTMediaWidget(MTWidget):
         if self._transparent_for_mouse:
             self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
-        self._layout: QVBoxLayout = create_layout(
+        self._layout = create_layout(
             LayoutType.VBOX,
             parent=self,
             margins=self._content_margins,

@@ -1,9 +1,6 @@
 import typing as t
 
-from PySide6.QtWidgets import (
-    QApplication,
-    QLayout,
-)
+from PySide6.QtWidgets import QLayout
 
 from src.ui.widgets.main.containers import MTGroupButton, MTWidget
 from src.ui.widgets.main.text import MTButton
@@ -19,9 +16,7 @@ class PageController:
         self._current_page: str | None = None
         self._change_callbacks: list[t.Callable[[str], None]] = []
 
-    def add_page(
-        self, key: str, page: MTWidget, *, obj_name: str | None = None
-    ) -> None:
+    def add_page(self, key: str, page: MTWidget, *, obj_name: str | None = None) -> None:
         page.hide()
         self._pages[key] = page
         self._layout.addWidget(page)
@@ -73,47 +68,44 @@ class PageController:
     def on_change(self, callback: t.Callable[[str], None]) -> None:
         self._change_callbacks.append(callback)
 
-    def preload(
-        self,
-        *keys: str,
-        progress_callback: t.Callable[[int, int, str], None] | None = None,
-    ) -> None:
-        if not keys:
-            return
+    # TODO: possibly will not be used
+    # def preload(self, *keys: str, progress_callback: t.Callable[[int, int, str], None] | None = None) -> None:
+    #     if not keys:
+    #         return
 
-        preload_keys = [key for key in keys if key in self._pages]
-        if not preload_keys:
-            return
+    #     preload_keys = [key for key in keys if key in self._pages]
+    #     if not preload_keys:
+    #         return
 
-        host = self._layout.parentWidget()
-        updates_were_enabled = host.updatesEnabled()
-        host.setUpdatesEnabled(False)
+    #     host = self._layout.parentWidget()
+    #     updates_were_enabled = host.updatesEnabled()
+    #     host.setUpdatesEnabled(False)
 
-        current_key = self._current_page
+    #     current_key = self._current_page
 
-        try:
-            total = len(preload_keys)
-            for index, key in enumerate(preload_keys, start=1):
-                page = self._pages[key]
-                was_visible = page.isVisible()
-                page.ensurePolished()
-                layout = page.layout()
-                if layout is not None:
-                    layout.activate()
+    #     try:
+    #         total = len(preload_keys)
+    #         for index, key in enumerate(preload_keys, start=1):
+    #             page = self._pages[key]
+    #             was_visible = page.isVisible()
+    #             page.ensurePolished()
+    #             layout = page.layout()
+    #             if layout is not None:
+    #                 layout.activate()
 
-                if not was_visible:
-                    page.setVisible(True)
-                    QApplication.processEvents()
-                    page.setVisible(False)
+    #             if not was_visible:
+    #                 page.setVisible(True)
+    #                 QApplication.processEvents()
+    #                 page.setVisible(False)
 
-                if progress_callback is not None:
-                    progress_callback(index, total, key)
-        finally:
-            if current_key is not None and current_key in self._pages:
-                for key, page in self._pages.items():
-                    page.setVisible(key == current_key)
-                button = self._tabs.get(current_key)
-                if button is not None:
-                    button.setChecked(True)
+    #             if progress_callback is not None:
+    #                 progress_callback(index, total, key)
+    #     finally:
+    #         if current_key is not None and current_key in self._pages:
+    #             for key, page in self._pages.items():
+    #                 page.setVisible(key == current_key)
+    #             button = self._tabs.get(current_key)
+    #             if button is not None:
+    #                 button.setChecked(True)
 
-            host.setUpdatesEnabled(updates_were_enabled)
+    #         host.setUpdatesEnabled(updates_were_enabled)

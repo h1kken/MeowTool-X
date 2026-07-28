@@ -27,7 +27,7 @@ from src.ui.widgets.main.stacks import MTInlineEditorStack
 from src.ui.widgets.main.text import MTButton, MTLabel, MTPlainLabel
 
 # sidebar
-from src.ui.widgets.sidebar.buttons import SidebarButton
+from src.ui.widgets.sidebar.buttons import MTSidebarButton
 
 # settings
 from src.ui.widgets.settings.buttons import MTButtonSetting
@@ -62,7 +62,7 @@ __all__ = [
     'MTInlineEditorStack',
     
     # sidebar
-    'SidebarButton',
+    'MTSidebarButton',
     
     # settings
     'MTButtonSetting',

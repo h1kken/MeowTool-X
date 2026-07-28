@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QSize, Qt
 from PySide6.QtGui import QIcon, QMouseEvent, QResizeEvent
-from PySide6.QtWidgets import QApplication, QBoxLayout, QSizePolicy, QWidget
+from PySide6.QtWidgets import QApplication, QSizePolicy, QWidget
 
 from src.app.paths import PATH_HEADER_ICONS_SRC
 from src.ui.layouts.factory import LayoutType, create_layout
@@ -96,12 +96,7 @@ class _HeaderResizeGrip(QWidget):
 
 
 class MTWindowHeader(MTWidget):
-    def __init__(
-        self,
-        window: QWidget,
-        *,
-        title: str | None = None,
-    ) -> None:
+    def __init__(self, window: QWidget, *, title: str | None = None) -> None:
         super().__init__(parent=window, obj_name=_HEADER_OBJECT_NAME)
         self._window = window
         self._resize_margin = _HEADER_RESIZE_MARGIN
@@ -126,9 +121,7 @@ class MTWindowHeader(MTWidget):
             self,
             obj_name=f'{_HEADER_OBJECT_NAME}_Title',
         )
-        self._title_label.setAttribute(
-            Qt.WidgetAttribute.WA_TransparentForMouseEvents, True
-        )
+        self._title_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
         layout.addStretch(1)
 
@@ -137,9 +130,7 @@ class MTWindowHeader(MTWidget):
             obj_name=f'{_HEADER_OBJECT_NAME}_Buttons',
         )
         self._buttons_host.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
-        self._buttons_host.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding
-        )
+        self._buttons_host.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         buttons_layout = create_layout(LayoutType.HBOX, parent=self._buttons_host)
         layout.addWidget(self._buttons_host)
 
@@ -471,16 +462,3 @@ class MTWindowHeader(MTWidget):
             x = 0
             width = max(0, self.width() - right_reserved)
         self._title_label.setGeometry(QRect(x, 0, width, self.height()))
-
-
-def apply_frameless_window_header(
-    window: QWidget,
-    layout: QBoxLayout,
-    *,
-    title: str | None = None,
-) -> MTWindowHeader:
-    window.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
-    window.setWindowFlag(Qt.WindowType.Window, True)
-    header = MTWindowHeader(window, title=title)
-    layout.insertWidget(0, header)
-    return header
