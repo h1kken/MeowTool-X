@@ -24,7 +24,6 @@ class _HeaderIconButton(MTButton):
         )
         self.setText('')
         self.setCursor(Qt.CursorShape.ArrowCursor)
-        self.setFlat(True)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setMinimumSize(18, 18)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)

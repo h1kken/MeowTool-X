@@ -27,6 +27,7 @@ def bootstrap(app: QApplication) -> None:
     services.translator = TranslationManager(services.config)
     services.translator.load()
     
+    # TODO: add "config" arg in pages in main window
     # TODO: refactor lighter
     from src.ui.windows.main_window import MainWindow
     services.window = MainWindow(services.config)

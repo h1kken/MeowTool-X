@@ -104,11 +104,7 @@ def _resolve_theme_value(value: t.Any, vars_map: dict[str, t.Any], stack: tuple[
     return deepcopy(value)
 
 
-def parse_widgets(
-    widgets: t.Any,
-    *,
-    include_animations: bool = True,
-) -> dict[str, ThemeMap]:
+def parse_widgets(widgets: t.Any, *, include_animations: bool = True) -> dict[str, ThemeMap]:
     parsed: dict[str, ThemeMap] = {}
     if not isinstance(widgets, list):
         return parsed

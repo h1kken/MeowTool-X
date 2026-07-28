@@ -5,19 +5,20 @@ from PySide6.QtGui import QMouseEvent
 from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import QWidget
 
-import src.app.context as ctx
-config = ctx.services.config
 from src.ui.layouts.factory import LayoutType, create_layout
 from src.ui.widgets import MTWidget, MTLabel, MTSwitch
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 
+
+import src.app.context as ctx
+config = ctx.services.config
+# TODO: in classes add "config" arg, not hold it globally
 
 class MTCheckBoxSetting(MTWidget):
     def __init__(
         self,
         tr_key: str = '',
         cfg_key: str = '',
-        default: bool = False,
         *,
         parent: QWidget | None = None,
     ) -> None:
@@ -32,14 +33,10 @@ class MTCheckBoxSetting(MTWidget):
         self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
 
         self._check_box = MTSwitch(obj_name=f"{obj_name}_CheckBox")
-        self._check_box.setChecked(bool(config.get(self._cfg_key, default=default)))
+        self._check_box.setChecked(bool(config.get(self._cfg_key)))
 
         self._check_box.toggled.connect(self._on_check_box_toggled)
-        config.config_loaded.connect(
-            lambda d=default: self._check_box.setChecked(
-                bool(config.get(self._cfg_key, default=d))
-            )
-        )
+        config.config_loaded.connect(lambda: self._check_box.setChecked(bool(config.get(self._cfg_key))))
 
         self._layout.addWidget(self._label)
         self._layout.addStretch()
@@ -61,7 +58,6 @@ class MTSwitchSetting(MTWidget):
         self,
         tr_key: str,
         cfg_key: str,
-        default: bool,
         obj_name: str | None = None,
         *,
         parent: QWidget | None = None,
@@ -77,14 +73,10 @@ class MTSwitchSetting(MTWidget):
         self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
 
         self._switch = MTSwitch(obj_name=f"{obj_name}_Switch")
-        self._switch.setChecked(bool(config.get(self._cfg_key, default=default)))
+        self._switch.setChecked(bool(config.get(self._cfg_key)))
 
         self._switch.toggled.connect(self._on_switch_toggled)
-        config.config_loaded.connect(
-            lambda d=default: self._switch.setChecked(
-                bool(config.get(self._cfg_key, default=d))
-            )
-        )
+        config.config_loaded.connect(lambda: self._switch.setChecked(bool(config.get(self._cfg_key))))
 
         self._layout.addWidget(self._label)
         self._layout.addStretch()

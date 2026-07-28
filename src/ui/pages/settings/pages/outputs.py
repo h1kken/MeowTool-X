@@ -24,24 +24,17 @@ class SettingsOutputsPage(MTWidget):
                 obj_name="Settings_Telegram_Bot",
                 widgets=[
                     MTTextSetting(
-                        config=self._config,
                         tr_key="TKN",
                         cfg_key="Outputs>Telegram Bot>Token",
-                        default="",
                     ),
                     MTTextSetting(
-                        config=self._config,
                         tr_key="CHT_ID",
                         cfg_key="Outputs>Telegram Bot>Chat ID",
-                        default="",
                     ),
                     MTSwitchSetting(
-                        config=self._config,
                         tr_key="SND_RSLTS_TO_TG_BOT",
                         cfg_key="Outputs>Telegram Bot>Send Results To Telegram Bot",
-                        default=False,
                     ),
-                    # TODO: Test Meow
                 ],
             ),
             MTCollapsibleContainer(
@@ -49,18 +42,13 @@ class SettingsOutputsPage(MTWidget):
                 obj_name="Settings_Discord_Webhook",
                 widgets=[
                     MTTextSetting(
-                        config=self._config,
                         tr_key="URL",
                         cfg_key="Outputs>Discord Webhook>URL",
-                        default="",
                     ),
                     MTSwitchSetting(
-                        config=self._config,
                         tr_key="SND_RSLTS_TO_DS_WBHK",
                         cfg_key="Outputs>Discord Webhook>Send Results To Discord Webhook",
-                        default=False,
                     ),
-                    # TODO: Test Meow
                 ],
             ),
         ]
