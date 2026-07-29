@@ -6,18 +6,18 @@ from src.ui.layouts.enums import LayoutType
 
 
 @t.overload
-def create_layout(layout_type: t.Literal[LayoutType.HBOX], *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0, parent: QWidget | None = None) -> QHBoxLayout: ...
+def create_layout(layout_type: t.Literal[LayoutType.HBOX], parent: QWidget | None = None, *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0) -> QHBoxLayout: ...
 @t.overload
-def create_layout(layout_type: t.Literal[LayoutType.VBOX], *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0, parent: QWidget | None = None) -> QVBoxLayout: ...
+def create_layout(layout_type: t.Literal[LayoutType.VBOX], parent: QWidget | None = None, *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0) -> QVBoxLayout: ...
 @t.overload
-def create_layout(layout_type: t.Literal[LayoutType.GRID], *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0, parent: QWidget | None = None) -> QGridLayout: ...
+def create_layout(layout_type: t.Literal[LayoutType.GRID], parent: QWidget | None = None, *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0) -> QGridLayout: ...
 
 def create_layout(
     layout_type: LayoutType,
+    parent: QWidget | None = None,
     *,
     margins: int | tuple[int, int, int, int] = 0,
     spacing: int = 0,
-    parent: QWidget | None = None,
 ) -> QLayout:
     match layout_type:
         case LayoutType.HBOX:

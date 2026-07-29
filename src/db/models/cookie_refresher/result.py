@@ -7,7 +7,7 @@ from .base import CookieRefresherResultBase
 
 
 class CookieRefresherResult(CookieRefresherResultBase):
-    __tablename__ = "results"
+    __tablename__ = 'results'
 
     is_valid: Mapped[bool | None] = mapped_column(Boolean, index=True)
     

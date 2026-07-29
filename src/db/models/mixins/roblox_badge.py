@@ -8,5 +8,5 @@ class RobloxBadgeMixin:
 
 
 class ResultRobloxBadgeMixin:
-    roblox_badge_ref_id: Mapped[int] = mapped_column(ForeignKey("roblox_badges.id"), index=True)
-    result_ref_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
+    roblox_badge_ref_id: Mapped[int] = mapped_column(ForeignKey('roblox_badges.id'), index=True)
+    result_ref_id: Mapped[int] = mapped_column(ForeignKey('results.id'), index=True)

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from pathlib import Path
 import typing as t
 
+from pathlib import Path
 import json5
 
 from src.app.paths import PATH_DEFAULT_THEME, PATH_THEMES_SRC, PATH_THEMES_USER
@@ -10,7 +10,7 @@ from src.theme.parser import ThemeMap
 from src.utils.logging import logger
 
 if t.TYPE_CHECKING:
-    from src.config.manager import Config
+    from src.config import Config
 
 SUPPORTED_EXTENSIONS: tuple[str, ...] = ('.json5', '.json')
 DEFAULT_EXTENSION = '.json5'
@@ -46,7 +46,7 @@ def read_safe(path: Path) -> ThemeMap:
     try:
         return read(path)
     except (OSError, UnicodeError, ValueError, TypeError) as error:
-        logger.warning(f"Can't load theme '{path}'. Error: {error}")
+        logger.warning(f'Can\'t load theme \'{path}\'. Error: {error}')
     return {}
 
 
@@ -70,15 +70,15 @@ def find(directory: Path, name: str) -> Path | None:
 
 
 def load(config: Config, name: str | None = None) -> LoadedTheme | None:
-    theme_path = _resolve_path(str(config.get("General>Theme")) if name is None else name)
+    theme_path = _resolve_path(str(config.get('General>Theme')) if name is None else name)
 
     for path in dict.fromkeys((theme_path, PATH_DEFAULT_THEME)):
         if path is None:
             continue
         try:
             return path, read(path)
-        except (OSError, UnicodeError, ValueError, TypeError) as error:
-            logger.warning(f"Can't load theme '{path}'. Error: {error}")
+        except (OSError, UnicodeError, ValueError, TypeError) as e:
+            logger.warning(f'Can\'t load theme \'{path}\'. Error: {e}')
     return None
 
 

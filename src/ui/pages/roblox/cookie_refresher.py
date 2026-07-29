@@ -1,19 +1,35 @@
+from __future__ import annotations
+
+import typing as t
+
+from PySide6.QtWidgets import QWidget
+
+from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
-
-# from src.services.roblox import RobloxCookieRefresher
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets import MTButton, MTLabel, MTWidget
+from src.ui.widgets import MTButton, MTLabel
 
+if t.TYPE_CHECKING:
+    from src.config import Config
 
-class RobloxCookieRefresherPage(MTWidget):
-    def __init__(self):
-        super().__init__()
+class RobloxCookieRefresherPage(BasePage):
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        config: Config,
+        obj_name: str = '',
+    ):
+        super().__init__(
+            parent,
+            config=config,
+            obj_name=obj_name
+        )
 
-        main_layout = create_layout(LayoutType.VBOX, parent=self)
+        self._layout = create_layout(LayoutType.VBOX, self)
 
         lbl = MTLabel(tr_key='CK_RFRSHR', obj_name='Main_Roblox_Cookie_Refresher_Title_Label')
-        main_layout.addWidget(lbl)
+        btn = MTButton(tr_key='RFRSH', obj_name='Main_Roblox_Cookie_Refresher_Start_Button')
 
-        btn = MTButton(tr_key='CK_RFRSHR_STRT', obj_name='Main_Roblox_Cookie_Refresher_Start_Button')
-        # btn.clicked.connect(RobloxCookieRefresher)
-        main_layout.addWidget(btn)
+        self._layout.addWidget(lbl)
+        self._layout.addWidget(btn)

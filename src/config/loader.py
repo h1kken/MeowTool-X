@@ -31,6 +31,9 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         self._load()
 
     @property
+    def name(self) -> str: return self.path.name
+
+    @property
     def path(self) -> Path: return self._path
 
     @property
@@ -42,10 +45,10 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
     @property
     def save_lock(self) -> threading.Lock: return self._save_lock
 
-    def set(self, key: str, value: object, *, sep: str = ">") -> None:
+    def set(self, key: str, value: object, *, sep: str = '>') -> None:
         super().set(key, value, sep=sep)
 
-        normalized_key = key.replace(sep, ">")
+        normalized_key = key.replace(sep, '>')
         if normalized_key.startswith(CLKey.MISC_DEBUGGER_PATH):
             self._apply_logger_settings()
         
@@ -55,19 +58,19 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
     def _apply_logger_settings(self) -> None:
         logger.apply_debug_settings(
             debug=bool(
-                get_safe(self._data, CLKey.MISC_DEBUGGER_DEBUG, sep=">")
+                get_safe(self._data, CLKey.MISC_DEBUGGER_DEBUG, sep='>')
             ),
             info=bool(
-                get_safe(self._data, CLKey.MISC_DEBUGGER_INFO, sep=">")
+                get_safe(self._data, CLKey.MISC_DEBUGGER_INFO, sep='>')
             ),
             warning=bool(
-                get_safe(self._data, CLKey.MISC_DEBUGGER_WARNING, sep=">")
+                get_safe(self._data, CLKey.MISC_DEBUGGER_WARNING, sep='>')
             ),
             error=bool(
-                get_safe(self._data, CLKey.MISC_DEBUGGER_ERROR, sep=">")
+                get_safe(self._data, CLKey.MISC_DEBUGGER_ERROR, sep='>')
             ),
             exception=bool(
-                get_safe(self._data, CLKey.MISC_DEBUGGER_EXCEPTION, sep=">")
+                get_safe(self._data, CLKey.MISC_DEBUGGER_EXCEPTION, sep='>')
             ),
         )
 
@@ -75,7 +78,7 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         FS.ensure_file(self._path)
 
         try:
-            with self._path.open("r", encoding="utf-8", errors="ignore") as f:
+            with self._path.open('r', encoding='utf-8', errors='ignore') as f:
                 parsed = parse_config(f.read())
 
             self._data = normalize_config(parsed, self._defaults)
@@ -83,4 +86,4 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             self.save()
             self.config_loaded.emit()
         except (OSError, UnicodeError, ValueError, TypeError) as e:
-            logger.exception(f"Loader error: {e}")
+            logger.exception(f'Loader error: {e}')

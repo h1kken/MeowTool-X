@@ -7,9 +7,9 @@ from aiohttp import ClientResponse
 
 from src.utils.logging import logger
 
-P = t.ParamSpec("P")
-R = t.TypeVar("R")
-T = t.TypeVar("T")
+P = t.ParamSpec('P')
+R = t.TypeVar('R')
+T = t.TypeVar('T')
 
 
 @t.overload
@@ -29,10 +29,10 @@ def log_action(action: str, *, re_raise: bool = False) -> t.Callable[[t.Callable
                     try:
                         return func(path, *args, **kwargs)
                     except FileExistsError:
-                        logger.debug(f"Can't {action}: {path}. Error: File already exists")
+                        logger.debug(f'Can\'t {action}: {path}. Error: File already exists')
                         raise
                     except Exception as e:
-                        logger.exception(f"Can't {action}: {path}. Error: {type(e).__name__}")
+                        logger.exception(f'Can\'t {action}: {path}. Error: {type(e).__name__}')
                         raise
 
             return log_action_wrapper_reraise
@@ -43,11 +43,11 @@ def log_action(action: str, *, re_raise: bool = False) -> t.Callable[[t.Callable
                 try:
                     return func(path, *args, **kwargs)
                 except FileExistsError as e:
-                    logger.debug(f"Can't {action}: {path}. Error: File already exists")
+                    logger.debug(f'Can\'t {action}: {path}. Error: File already exists')
                     if re_raise:
                         raise
                 except Exception as e:
-                    logger.exception(f"Can't {action}: {path}. Error: {type(e).__name__}")
+                    logger.exception(f'Can\'t {action}: {path}. Error: {type(e).__name__}')
                     if re_raise:
                         raise
         return log_action_wrapper
@@ -63,6 +63,6 @@ def log_network_request(func: t.Callable[P, t.Awaitable[T]]) -> t.Callable[P, t.
             end = time.perf_counter()
             elapsed_ms = int((end - start) * 1000)
             if isinstance(result, ClientResponse):
-                logger.debug(f"[{func.__name__.upper()}:{result.status}] {result.url} for {elapsed_ms}ms")
+                logger.debug(f'[{func.__name__.upper()}:{result.status}] {result.url} for {elapsed_ms}ms')
             return result
     return wrapper

@@ -14,9 +14,9 @@ from src.ui.constants import (
     SIDEBAR_MEDIA_MARGIN,
     SIDEBAR_MEDIA_VIDEO_EXTENSIONS,
 )
-from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.widgets.main.containers import MTWidget
-from src.ui.widgets.main.text import MTLabel
+from src.ui.layouts.enums import LayoutType
+from src.ui.layouts.factory import create_layout
+from src.ui.widgets import MTWidget, MTLabel
 
 _MEDIA_FIT_CONTAIN = 'contain'
 _MEDIA_FIT_COVER = 'cover'
@@ -26,23 +26,41 @@ _DEFAULT_MEDIA_FIT = _MEDIA_FIT_CONTAIN
 
 
 class MTVideoWidget(QVideoWidget):
-    def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        obj_name: str = ''
+    ) -> None:
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        
         if obj_name:
             self.setObjectName(obj_name)
 
 
 class MTAudioOutput(QAudioOutput):
-    def __init__(self, parent: QObject | None = None, *, obj_name: str = '') -> None:
+    def __init__(
+        self,
+        parent: QObject | None = None,
+        *,
+        obj_name: str = ''
+    ) -> None:
         super().__init__(parent)
+        
         if obj_name:
             self.setObjectName(obj_name)
 
 
 class MTMediaPlayer(QMediaPlayer):
-    def __init__(self, parent: QObject | None = None, *, obj_name: str = '') -> None:
+    def __init__(
+        self,
+        parent: QObject | None = None,
+        *,
+        obj_name: str = ''
+    ) -> None:
         super().__init__(parent)
+        
         if obj_name:
             self.setObjectName(obj_name)
 

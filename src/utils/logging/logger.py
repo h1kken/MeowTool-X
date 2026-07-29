@@ -173,9 +173,9 @@ class Logger:
             _LOG_ORIGIN.reset(token)
             
     def _log_environment_info(self):
-        self.info(f"Starting {PROGRAM_NAME} v{PROGRAM_VERSION}")
-        self.info(f"OS: {platform.platform()}")
-        self.info(f"Python: {platform.python_version()}")
+        self.info(f'Starting {PROGRAM_NAME} v{PROGRAM_VERSION}')
+        self.info(f'OS: {platform.platform()}')
+        self.info(f'Python: {platform.python_version()}')
             
     def _resolve_record_kind(self, record: t.Any) -> str:
         extra = t.cast(dict[str, t.Any], record.get('extra') or {})

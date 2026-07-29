@@ -9,5 +9,5 @@ class GroupMixin:
 
 
 class ResultGroupMixin:
-    group_ref_id: Mapped[int] = mapped_column(ForeignKey("groups.id"), index=True)
-    result_ref_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
+    group_ref_id: Mapped[int] = mapped_column(ForeignKey('groups.id'), index=True)
+    result_ref_id: Mapped[int] = mapped_column(ForeignKey('results.id'), index=True)

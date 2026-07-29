@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import typing as t
+
 import re
 
 from PySide6.QtCore import Qt, QSignalBlocker
@@ -5,34 +9,36 @@ from PySide6.QtGui import QMouseEvent
 from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import QWidget
 
-from src.ui.layouts.factory import LayoutType, create_layout
+from src.ui.layouts.enums import LayoutType
+from src.ui.layouts.factory import create_layout
 from src.ui.widgets import MTWidget, MTLabel, MTSwitch
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 
+if t.TYPE_CHECKING:
+    from src.config import Config, ConfigLoader
 
-import src.app.context as ctx
-config = ctx.services.config
-# TODO: in classes add "config" arg, not hold it globally
 
 class MTCheckBoxSetting(MTWidget):
     def __init__(
         self,
-        tr_key: str = '',
-        cfg_key: str = '',
-        *,
         parent: QWidget | None = None,
+        *,
+        config: Config,
+        cfg_key: str,
+        tr_key: str = '',
     ) -> None:
         super().__init__(parent)
+        self._config = config
         self._cfg_key = cfg_key
 
-        obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, "_", self._cfg_key)
-        self.setObjectName(f"{obj_name}_CheckBox_Setting")
+        obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, '_', self._cfg_key)
+        self.setObjectName(f'{obj_name}_CheckBox_Setting')
 
-        self._layout = create_layout(LayoutType.HBOX, parent=self)
+        self._layout = create_layout(LayoutType.HBOX, self)
 
-        self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
+        self._label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Label')
 
-        self._check_box = MTSwitch(obj_name=f"{obj_name}_CheckBox")
+        self._check_box = MTSwitch(obj_name=f'{obj_name}_CheckBox')
         self._check_box.setChecked(bool(config.get(self._cfg_key)))
 
         self._check_box.toggled.connect(self._on_check_box_toggled)
@@ -43,7 +49,7 @@ class MTCheckBoxSetting(MTWidget):
         self._layout.addWidget(self._check_box)
 
     def _on_check_box_toggled(self, checked: bool) -> None:
-        config.set(self._cfg_key, checked)
+        self._config.set(self._cfg_key, checked)
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
@@ -56,23 +62,25 @@ class MTCheckBoxSetting(MTWidget):
 class MTSwitchSetting(MTWidget):
     def __init__(
         self,
-        tr_key: str,
-        cfg_key: str,
-        obj_name: str | None = None,
-        *,
         parent: QWidget | None = None,
+        *,
+        config: Config | ConfigLoader,
+        cfg_key: str,
+        tr_key: str = '',
+        obj_name: str = '',
     ) -> None:
         super().__init__(parent)
+        self._config = config
         self._cfg_key = cfg_key
         
-        obj_name = obj_name or re.sub(NORMALIZE_QT_KEY_PATTERN, "_", self._cfg_key)
-        self.setObjectName(f"{obj_name}_Switch_Setting")
+        obj_name = obj_name or re.sub(NORMALIZE_QT_KEY_PATTERN, '_', self._cfg_key)
+        self.setObjectName(f'{obj_name}_Switch_Setting')
 
-        self._layout = create_layout(LayoutType.HBOX, parent=self)
+        self._layout = create_layout(LayoutType.HBOX, self)
 
-        self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
+        self._label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Label')
 
-        self._switch = MTSwitch(obj_name=f"{obj_name}_Switch")
+        self._switch = MTSwitch(obj_name=f'{obj_name}_Switch')
         self._switch.setChecked(bool(config.get(self._cfg_key)))
 
         self._switch.toggled.connect(self._on_switch_toggled)
@@ -90,7 +98,7 @@ class MTSwitchSetting(MTWidget):
         )
 
     def _on_switch_toggled(self, value: bool) -> None:
-        config.set(self._cfg_key, value)
+        self._config.set(self._cfg_key, value)
 
     def set_checked(self, checked: bool, *, emit_signal: bool = True) -> None:
         if self._switch.isChecked() == checked:
@@ -127,19 +135,18 @@ class MTSwitchSetting(MTWidget):
 class MTSwitchRowSetting(MTWidget):
     def __init__(
         self,
-        tr_key: str,
-        obj_name: str,
-        *,
         parent: QWidget | None = None,
+        *,
+        tr_key: str = '',
+        obj_name: str = '',
     ) -> None:
         super().__init__(parent)
-        self.setObjectName(f"{obj_name}_Switch_Row_Setting")
+        self.setObjectName(f'{obj_name}_Switch_Row_Setting')
 
-        self._layout = create_layout(LayoutType.HBOX, parent=self)
+        self._layout = create_layout(LayoutType.HBOX, self)
 
-        self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
-
-        self._switch = MTSwitch()
+        self._label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Label')
+        self._switch = MTSwitch(obj_name=f'{obj_name}_Switch')
         
         self._layout.addWidget(self._label)
         self._layout.addStretch()

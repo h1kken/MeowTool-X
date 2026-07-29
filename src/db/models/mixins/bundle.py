@@ -8,5 +8,5 @@ class BundleMixin:
 
 
 class ResultBundleMixin:
-    bundle_ref_id: Mapped[int] = mapped_column(ForeignKey("bundles.id"), index=True)
-    result_ref_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
+    bundle_ref_id: Mapped[int] = mapped_column(ForeignKey('bundles.id'), index=True)
+    result_ref_id: Mapped[int] = mapped_column(ForeignKey('results.id'), index=True)

@@ -12,7 +12,7 @@ if t.TYPE_CHECKING:
 
 
 class Transaction(TransactionAnalysisBase, BaseMixin, TransactionMixin, ResultPlaceMixin):
-    __tablename__ = "transactions"
+    __tablename__ = 'transactions'
 
-    place: Mapped["Place"] = relationship(back_populates="extended")
-    result: Mapped["TransactionAnalysisResult"] = relationship(back_populates="transactions")
+    place: Mapped['Place'] = relationship(back_populates='extended')
+    result: Mapped['TransactionAnalysisResult'] = relationship(back_populates='transactions')

@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import typing as t
 
+import src.app.context as ctx
+from src.app.types import AppServices
+
 if t.TYPE_CHECKING:
     from PySide6.QtWidgets import QApplication
 
 
-def bootstrap(app: QApplication) -> None:
-    import src.app.context as ctx
-    from src.app.types import AppServices
+def bootstrap(app: QApplication) -> AppServices:
     services = ctx.services = AppServices()
     
     from src.utils.filesystem.file import create_start_paths
@@ -27,7 +28,6 @@ def bootstrap(app: QApplication) -> None:
     services.translator = TranslationManager(services.config)
     services.translator.load()
     
-    # TODO: add "config" arg in pages in main window (every)
     # TODO: change generations of all object names, do it with some logic
     # TODO: refactor lighter (inner pages)
     from src.ui.windows.main_window import MainWindow
@@ -47,3 +47,5 @@ def bootstrap(app: QApplication) -> None:
     from src.services.discord import DiscordRPC
     services.discord_rpc = DiscordRPC(services.window, services.config)
     app.aboutToQuit.connect(services.discord_rpc.shutdown)
+
+    return services

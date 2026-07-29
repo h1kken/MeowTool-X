@@ -15,7 +15,7 @@ import typing as t
 
 from PySide6.QtCore import QObject, Signal
 
-from src.config.manager import Config
+from src.config import Config
 from src.services.roblox import archive_support
 from src.services.roblox.constants import DATE_ROBLOX_COOKIE_SORTER_FORMAT, ROBLOX_COOKIE_START
 from src.services.roblox.regexes import (

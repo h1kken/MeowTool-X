@@ -5,4 +5,4 @@ from src.db.models.mixins import BaseMixin, CookieMixin
 
 
 class Cookie(CookieCheckerBase, BaseMixin, CookieMixin):
-    __tablename__ = "cookies"
+    __tablename__ = 'cookies'

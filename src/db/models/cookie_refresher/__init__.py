@@ -4,9 +4,9 @@ from .result import CookieRefresherResult
 
 
 __all__ = (
-    "CookieRefresherBase",
-    "CookieRefresherResultBase",
+    'CookieRefresherBase',
+    'CookieRefresherResultBase',
     
-    "CookieRefresherRun",
-    "CookieRefresherResult",
+    'CookieRefresherRun',
+    'CookieRefresherResult',
 )

@@ -2,10 +2,9 @@ from src.ui.widgets.main.checkables import MTSwitch
 from src.ui.widgets.main.containers import (
     MTComboBox,
     MTDropZone,
-    MTGroupButton,
+    MTButtonGroup,
     MTLabeledList,
     MTListWidget,
-    MTRadioButton,
     MTScrollArea,
     MTWidget,
 )
@@ -25,9 +24,6 @@ from src.ui.widgets.main.media import (
 from src.ui.widgets.main.popups import MTPopup
 from src.ui.widgets.main.stacks import MTInlineEditorStack
 from src.ui.widgets.main.text import MTButton, MTLabel, MTPlainLabel
-
-# sidebar
-from src.ui.widgets.sidebar.buttons import MTSidebarButton
 
 # settings
 from src.ui.widgets.settings.buttons import MTButtonSetting
@@ -50,19 +46,15 @@ __all__ = [
     'MTMediaWidget',
     'MTVideoWidget',
     'SidebarMediaWidget',
-    'MTRadioButton',
     'MTComboBox',
     'MTScrollArea',
     'MTWidget',
     'MTLabeledList',
     'MTListWidget',
     'MTDropZone',
-    'MTGroupButton',
+    'MTButtonGroup',
     'MTPopup',
     'MTInlineEditorStack',
-    
-    # sidebar
-    'MTSidebarButton',
     
     # settings
     'MTButtonSetting',

@@ -13,7 +13,7 @@ if t.TYPE_CHECKING:
 
 
 class Card(CookieCheckerBase, BaseMixin, CardMixin):
-    __tablename__ = "cards"
+    __tablename__ = 'cards'
 
-    result_ref_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
-    result: Mapped["CookieCheckerResult"] = relationship(back_populates="card")
+    result_ref_id: Mapped[int] = mapped_column(ForeignKey('results.id'), index=True)
+    result: Mapped['CookieCheckerResult'] = relationship(back_populates='card')

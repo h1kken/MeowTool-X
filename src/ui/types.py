@@ -10,5 +10,5 @@ class PageState(_PageStateRequired, total=False):
 
 
 __all__ = (
-    "PageState",
+    'PageState',
 )

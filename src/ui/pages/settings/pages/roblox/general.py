@@ -1,64 +1,70 @@
 from __future__ import annotations
 
-from src.config.manager import Config
-from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.widgets import (
-    MTCollapsibleContainer,
-    MTColumnsSetting,
-    MTComboBoxSetting,
-    MTWidget,
-    MTSwitchSetting,
-    MTTextSetting,
-)
+import typing as t
+
+from PySide6.QtWidgets import QWidget
+
+from src.ui.pages.base import BasePage
+from src.ui.layouts.enums import LayoutType
+from src.ui.layouts.factory import create_layout
+from src.ui.widgets import MTCollapsibleContainer, MTColumnsSetting, MTComboBoxSetting, MTSwitchSetting, MTTextSetting
+
+if t.TYPE_CHECKING:
+    from src.config import Config
 
 
-class SettingsRobloxGeneralPage(MTWidget):
-    def __init__(self, *, config: Config) -> None:
-        super().__init__()
-        self._config = config
+class SettingsRobloxGeneralPage(BasePage):
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        config: Config,
+        obj_name: str = '',
+    ):
+        super().__init__(
+            parent,
+            config=config,
+            obj_name=obj_name
+        )
 
-        main_layout = create_layout(LayoutType.VBOX, parent=self)
+        self._layout = create_layout(LayoutType.VBOX, self)
 
         tabs = [
             MTCollapsibleContainer(
-                tr_key="Cookie parse",
-                obj_name="Settings_Roblox_General_Cookie_Parse",
+                tr_key='Cookie parse',
+                obj_name='Settings_Roblox_General_Cookie_Parse',
                 widgets=[
                     MTSwitchSetting(
-                        config=self._config,
-                        tr_key="Add symbols between warning and cookie",
-                        cfg_key="Roblox>General>Add Symbols Between Warning And Cookie",
-                        default=False,
+                        config=config,
+                        cfg_key='Roblox>General>Add Symbols Between Warning And Cookie',
+                        tr_key='Add symbols between warning and cookie',
                     ),
                     MTTextSetting(
-                        config=self._config,
-                        tr_key="Symbols between warning and cookie",
-                        cfg_key="Roblox>General>Symbols Between Warning And Cookie",
-                        default="CAEaAhAB.",
+                        config=config,
+                        cfg_key='Roblox>General>Symbols Between Warning And Cookie',
+                        tr_key='Symbols between warning and cookie',
                     ),
                 ],
             ),
             MTCollapsibleContainer(
-                tr_key="Proxy",
-                obj_name="Settings_Roblox_General_Proxy",
+                tr_key='Proxy',
+                obj_name='Settings_Roblox_General_Proxy',
                 widgets=[
                     MTSwitchSetting(
-                        config=self._config,
-                        tr_key="Use proxy",
-                        cfg_key="Roblox>General>Proxy>Use Proxy",
-                        default=False,
+                        config=config,
+                        cfg_key='Roblox>General>Proxy>Use Proxy',
+                        tr_key='Use proxy',
                     ),
                     MTComboBoxSetting(
-                        config=self._config,
-                        tr_key="Auto protocol if not specified",
-                        cfg_key="Roblox>General>Proxy>Auto Protocol If Not Specified",
-                        items=["http", "https", "socks4", "socks5"],
-                        default="http",
+                        config=config,
+                        cfg_key='Roblox>General>Proxy>Auto Protocol If Not Specified',
+                        tr_key='Auto protocol if not specified',
+                        items=['http', 'https', 'socks4', 'socks5'],
+                        default='http',
                     ),
                 ],
             ),
         ]
 
-        main_layout.addWidget(
-            MTColumnsSetting(tabs, 2, obj_name="Settings_Roblox_General_Columns")
-        )
+        columns_widget = MTColumnsSetting(tabs=tabs, obj_name='Settings_Roblox_General_Columns')
+        self._layout.addWidget(columns_widget)

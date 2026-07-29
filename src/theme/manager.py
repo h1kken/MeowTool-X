@@ -20,23 +20,23 @@ from src.theme.targets import (
 from src.utils.conversion import as_dict
 
 if t.TYPE_CHECKING:
-    from src.config.manager import Config
+    from src.config import Config
 
 _NO_ALIGNMENT = Qt.AlignmentFlag(0)
 _DEFAULT_ALIGNMENT = (
     Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
 )
 _ALIGNMENT_FLAGS: dict[str, Qt.AlignmentFlag] = {
-    "top": Qt.AlignmentFlag.AlignTop,
-    "bottom": Qt.AlignmentFlag.AlignBottom,
-    "left": Qt.AlignmentFlag.AlignLeft,
-    "right": Qt.AlignmentFlag.AlignRight,
-    "center": Qt.AlignmentFlag.AlignCenter,
-    "hcenter": Qt.AlignmentFlag.AlignHCenter,
-    "vcenter": Qt.AlignmentFlag.AlignVCenter,
-    "justify": Qt.AlignmentFlag.AlignJustify,
-    "baseline": Qt.AlignmentFlag.AlignBaseline,
-    "absolute": Qt.AlignmentFlag.AlignAbsolute,
+    'top': Qt.AlignmentFlag.AlignTop,
+    'bottom': Qt.AlignmentFlag.AlignBottom,
+    'left': Qt.AlignmentFlag.AlignLeft,
+    'right': Qt.AlignmentFlag.AlignRight,
+    'center': Qt.AlignmentFlag.AlignCenter,
+    'hcenter': Qt.AlignmentFlag.AlignHCenter,
+    'vcenter': Qt.AlignmentFlag.AlignVCenter,
+    'justify': Qt.AlignmentFlag.AlignJustify,
+    'baseline': Qt.AlignmentFlag.AlignBaseline,
+    'absolute': Qt.AlignmentFlag.AlignAbsolute,
 }
 
 
@@ -60,7 +60,7 @@ class ThemeManager(QObject):
 
     def build(self, payload: ThemeMap, *, theme_dir: Path) -> str:
         theme = normalize_theme_payload(payload, include_animations=False)
-        widgets = t.cast(dict[str, ThemeMap], as_dict(theme.get("widgets")) or {})
+        widgets = t.cast(dict[str, ThemeMap], as_dict(theme.get('widgets')) or {})
         blocks: list[str] = []
 
         self._reset_alignments()
@@ -68,7 +68,7 @@ class ThemeManager(QObject):
             self._apply_alignments(target, styles)
             blocks.extend(self._build_target(target, styles, theme_dir))
 
-        return "\n\n".join(blocks)
+        return '\n\n'.join(blocks)
 
     def _reset_alignments(self) -> None:
         for widget in (self._window, *self._window.findChildren(QWidget)):
@@ -91,8 +91,8 @@ class ThemeManager(QObject):
 
     def _apply_alignments(self, target: str, styles: ThemeMap) -> None:
         content_alignment = self._content_alignment(styles)
-        layout_alignment = self._section_alignment(styles, "layout")
-        item_alignment = self._section_alignment(styles, "layout_item", "layout-item")
+        layout_alignment = self._section_alignment(styles, 'layout')
+        item_alignment = self._section_alignment(styles, 'layout_item', 'layout-item')
         if all(alignment is None for alignment in (content_alignment, layout_alignment, item_alignment)):
             return
 
@@ -111,10 +111,10 @@ class ThemeManager(QObject):
                     parent_layout.setAlignment(widget, item_alignment)
 
     def _content_alignment(self, styles: ThemeMap) -> Qt.AlignmentFlag | None:
-        content = as_dict(styles.get("content")) or {}
-        value = self._first_value(content, "align", "alignment")
+        content = as_dict(styles.get('content')) or {}
+        value = self._first_value(content, 'align', 'alignment')
         if value is None:
-            value = self._first_value(styles, "align", "alignment")
+            value = self._first_value(styles, 'align', 'alignment')
         return self._parse_alignment(value)
 
     def _section_alignment(self, styles: ThemeMap, *section_names: str) -> Qt.AlignmentFlag | None:
@@ -122,7 +122,7 @@ class ThemeManager(QObject):
             section = as_dict(styles.get(section_name))
             if section is None:
                 continue
-            value = self._first_value(section, "align", "alignment")
+            value = self._first_value(section, 'align', 'alignment')
             if value is not None:
                 return self._parse_alignment(value)
         return None
@@ -151,8 +151,8 @@ class ThemeManager(QObject):
         for value in values:
             if not isinstance(value, str):
                 continue
-            for token in re.split(r"[\s|,+]+", value.strip().lower()):
-                key = token.replace("-", "").replace("_", "")
+            for token in re.split(r'[\s|,+]+', value.strip().lower()):
+                key = token.replace('-', '').replace('_', '')
                 flag = _ALIGNMENT_FLAGS.get(key)
                 if flag is None:
                     continue
@@ -163,7 +163,7 @@ class ThemeManager(QObject):
 
     @staticmethod
     def _set_widget_alignment(widget: QWidget, alignment: Qt.AlignmentFlag) -> None:
-        setter = getattr(widget, "setAlignment", None)
+        setter = getattr(widget, 'setAlignment', None)
         if callable(setter):
             setter(alignment)
 
@@ -204,7 +204,7 @@ class ThemeManager(QObject):
             if not name:
                 continue
             resolved = self._resolve_percent_radius(styles, widget)
-            blocks.extend(self._build_blocks((f"#{name}",), resolved, theme_dir))
+            blocks.extend(self._build_blocks((f'#{name}',), resolved, theme_dir))
         return blocks
 
     def _build_blocks(self, selectors: tuple[str, ...], styles: ThemeMap, theme_dir: Path) -> list[str]:
@@ -212,29 +212,29 @@ class ThemeManager(QObject):
         if not rules:
             return []
 
-        body = "\n  ".join(rules)
-        return [f"{selector} {{\n  {body}\n}}" for selector in selectors if selector]
+        body = '\n  '.join(rules)
+        return [f'{selector} {{\n  {body}\n}}' for selector in selectors if selector]
 
     def _selector(self, target: str) -> str:
         normalized = normalize_qss_target(target)
-        if normalized.startswith(("*", "MT")):
+        if normalized.startswith(('*', 'MT')):
             return normalized
-        return f"#{normalized}"
+        return f'#{normalized}'
 
     def _needs_concrete_widgets(self, target: str, styles: ThemeMap) -> bool:
         parsed = parse_qss_target(target)
         base = parsed[0] if parsed else target
         return (
             parse_selector_chain(target) is not None
-            or (base != "*" and any(token in base for token in ("*", "?")))
+            or (base != '*' and any(token in base for token in ('*', '?')))
             or self._has_percent_radius(styles)
         )
 
     def _has_percent_radius(self, styles: ThemeMap) -> bool:
-        for section in ("background", "border"):
+        for section in ('background', 'border'):
             data = as_dict(styles.get(section))
-            radius = None if data is None else data.get("radius")
-            if isinstance(radius, str) and radius.strip().endswith("%"):
+            radius = None if data is None else data.get('radius')
+            if isinstance(radius, str) and radius.strip().endswith('%'):
                 return True
         return False
 
@@ -244,19 +244,19 @@ class ThemeManager(QObject):
         if base_size <= 0:
             return resolved
 
-        for section in ("background", "border"):
+        for section in ('background', 'border'):
             data = as_dict(resolved.get(section))
             if data is None:
                 continue
-            radius = data.get("radius")
-            if not isinstance(radius, str) or not radius.strip().endswith("%"):
+            radius = data.get('radius')
+            if not isinstance(radius, str) or not radius.strip().endswith('%'):
                 continue
             try:
                 percent = float(radius.strip()[:-1])
             except ValueError:
                 continue
             value = min(max(base_size * percent / 100.0, 0.0), base_size / 2.0)
-            data["radius"] = f"{value:g}px"
+            data['radius'] = f'{value:g}px'
         return resolved
 
     @staticmethod
@@ -277,12 +277,12 @@ class ThemeManager(QObject):
     @staticmethod
     def _sort_key(item: tuple[str, t.Any]) -> tuple[int, int]:
         target, _styles = item
-        if target == "*":
+        if target == '*':
             return 0, 0
         if parse_selector_chain(target) is not None:
             return 3, 0
         parsed = parse_qss_target(target)
         base, properties = parsed if parsed else (target, [])
-        if base.startswith("MT"):
+        if base.startswith('MT'):
             return 1, len(properties)
         return 2, len(properties)

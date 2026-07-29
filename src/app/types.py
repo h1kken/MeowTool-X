@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import typing as t
+
 from dataclasses import dataclass, field
 
-
 if t.TYPE_CHECKING:
-    from src.config.manager import Config
+    from src.config import Config
     from src.db.manager import DatabaseManager
     from src.translation.manager import TranslationManager
     from src.ui.windows.main_window import MainWindow

@@ -19,12 +19,12 @@ if t.TYPE_CHECKING:
 
 
 class CookieCheckerResult(CookieCheckerResultBase):
-    __tablename__ = "results"
+    __tablename__ = 'results'
 
     is_valid: Mapped[bool] = mapped_column(Boolean)
     
-    account_ref_id: Mapped[int | None] = mapped_column(ForeignKey("accounts.id"), index=True)
-    account: Mapped["Account | None"] = relationship()
+    account_ref_id: Mapped[int | None] = mapped_column(ForeignKey('accounts.id'), index=True)
+    account: Mapped['Account | None'] = relationship()
     
     country_code: Mapped[str | None] = mapped_column(String(2))
     registration_date: Mapped[datetime | None] = mapped_column(DateTime)
@@ -38,39 +38,39 @@ class CookieCheckerResult(CookieCheckerResultBase):
     rap: Mapped[int | None] = mapped_column(BigInteger)
     
     is_card_checked: Mapped[bool] = mapped_column(Boolean, default=False)
-    card: Mapped[list["Card"] | None] = relationship(back_populates="result")
+    card: Mapped[list['Card'] | None] = relationship(back_populates='result')
     
     has_premium: Mapped[bool | None] = mapped_column(Boolean)
     
     is_badges_checked: Mapped[bool] = mapped_column(Boolean, default=False)
-    badges: Mapped[list["BadgeOwned"]] = relationship(back_populates="result")
+    badges: Mapped[list['BadgeOwned']] = relationship(back_populates='result')
 
     is_gamepasses_checked: Mapped[bool] = mapped_column(Boolean, default=False)
-    gamepasses: Mapped[list["GamepassOwned"]] = relationship(back_populates="result")
+    gamepasses: Mapped[list['GamepassOwned']] = relationship(back_populates='result')
 
     is_products_checked: Mapped[bool] = mapped_column(Boolean, default=False)
-    products: Mapped[list["ProductOwned"]] = relationship(back_populates="result")
+    products: Mapped[list['ProductOwned']] = relationship(back_populates='result')
 
     is_places_favorited_checked: Mapped[bool] = mapped_column(Boolean, default=False)
-    places_favorited: Mapped[list["PlaceFavorited"]] = relationship(back_populates="result")
+    places_favorited: Mapped[list['PlaceFavorited']] = relationship(back_populates='result')
 
     is_places_played_checked: Mapped[bool] = mapped_column(Boolean, default=False)
-    places_played: Mapped[list["PlacePlayed"]] = relationship(back_populates="result")
+    places_played: Mapped[list['PlacePlayed']] = relationship(back_populates='result')
 
     is_places_owned_checked: Mapped[bool] = mapped_column(Boolean, default=False)
-    places_owned: Mapped[list["PlaceOwned"]] = relationship(back_populates="result")
+    places_owned: Mapped[list['PlaceOwned']] = relationship(back_populates='result')
 
     is_bundles_checked: Mapped[bool] = mapped_column(Boolean, default=False)
-    bundles: Mapped[list["BundleOwned"]] = relationship(back_populates="result")
+    bundles: Mapped[list['BundleOwned']] = relationship(back_populates='result')
 
-    sessions: Mapped[list["Session"]] = relationship(back_populates="result")
-    email: Mapped["Email | None"] = relationship(back_populates="result", uselist=False)
+    sessions: Mapped[list['Session']] = relationship(back_populates='result')
+    email: Mapped['Email | None'] = relationship(back_populates='result', uselist=False)
     has_phone: Mapped[bool | None] = mapped_column(Boolean)
     has_2fa: Mapped[bool | None] = mapped_column(Boolean)
     has_pin: Mapped[bool | None] = mapped_column(Boolean)
     
     is_groups_owned_checked: Mapped[bool] = mapped_column(Boolean, default=False)
-    groups_owned: Mapped[list["GroupOwned"]] = relationship(back_populates="result")
+    groups_owned: Mapped[list['GroupOwned']] = relationship(back_populates='result')
 
     age_group: Mapped[str | None] = mapped_column(String(3))
     is_verified_age: Mapped[bool | None] = mapped_column(Boolean)
@@ -80,9 +80,9 @@ class CookieCheckerResult(CookieCheckerResultBase):
     followings: Mapped[int | None] = mapped_column(Integer)
     
     is_roblox_badges_checked: Mapped[bool] = mapped_column(Boolean, default=False)
-    roblox_badges: Mapped[list["RobloxBadgeOwned"]] = relationship(back_populates="result")
+    roblox_badges: Mapped[list['RobloxBadgeOwned']] = relationship(back_populates='result')
     
     payload: Mapped[dict[str, t.Any] | None] = mapped_column(JSON)
     
-    cookie_ref_id: Mapped[int] = mapped_column(ForeignKey("cookies.id"))
-    cookie: Mapped["Cookie"] = relationship(back_populates="cookie")
+    cookie_ref_id: Mapped[int] = mapped_column(ForeignKey('cookies.id'))
+    cookie: Mapped['Cookie'] = relationship(back_populates='cookie')

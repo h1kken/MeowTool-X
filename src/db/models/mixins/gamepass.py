@@ -8,5 +8,5 @@ class GamepassMixin:
 
 
 class ResultGamepassMixin:
-    gamepass_ref_id: Mapped[int] = mapped_column(ForeignKey("gamepasses.id"), index=True)
-    result_ref_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
+    gamepass_ref_id: Mapped[int] = mapped_column(ForeignKey('gamepasses.id'), index=True)
+    result_ref_id: Mapped[int] = mapped_column(ForeignKey('results.id'), index=True)

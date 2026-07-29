@@ -11,4 +11,4 @@ class CookieRefresherBase(DeclarativeBase):
 class CookieRefresherResultBase(CookieRefresherBase, BaseMixin):
     __abstract__ = True
 
-    run_id: Mapped[int] = mapped_column(ForeignKey("runs.id"), index=True)
+    run_id: Mapped[int] = mapped_column(ForeignKey('runs.id'), index=True)

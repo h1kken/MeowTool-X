@@ -27,7 +27,6 @@ from PySide6.QtWidgets import (
     QButtonGroup,
     QFileDialog,
     QFrame,
-    QRadioButton,
     QScrollArea,
     QSizePolicy,
     QWidget,
@@ -36,9 +35,10 @@ from PySide6.QtWidgets import (
 from src.app.paths import PATH_SRC
 from src.theme.colors import to_qcolor
 from src.utils.conversion import as_dict, as_object_dict, coerce_number
-from src.ui.painting import draw_widget_background, new_widget_painter
 from src.translation.mixin import TranslatableComboBoxMixin
-from src.ui.layouts.factory import LayoutType, create_layout
+from src.ui.layouts.enums import LayoutType
+from src.ui.layouts.factory import create_layout
+from src.ui.painting import draw_widget_background, new_widget_painter
 from src.ui.widgets.main.paint_primitives import parse_pen_style, resolve_fill_brush, rounded_rect_path
 from src.ui.widgets.main.text import MTButton, MTLabel, MTPlainLabel
 from src.ui.widgets.types import WidgetThemeMap
@@ -61,16 +61,7 @@ def _draw_aligned_text(
     painter.restore()
 
 
-class MTRadioButton(QRadioButton):
-    def __init__(self, text: str = '', parent: QWidget | None = None, *, obj_name: str = '') -> None:
-        super().__init__(text, parent)
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-
-        if obj_name:
-            self.setObjectName(obj_name)
-
-
-class MTGroupButton(QButtonGroup):
+class MTButtonGroup(QButtonGroup):
     def __init__(
         self,
         *,
@@ -139,7 +130,7 @@ class _MTComboPopup(QFrame):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
         self.setGraphicsEffect(t.cast(t.Any, None))
-        self._layout = create_layout(LayoutType.VBOX, parent=self)
+        self._layout = create_layout(LayoutType.VBOX, self)
         self._items: list[_MTComboPopupItem] = []
         self._dirty = True
 
@@ -1006,7 +997,12 @@ class MTScrollArea(QScrollArea):
             self.setObjectName(obj_name)
 
 class MTWidget(QWidget):
-    def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        obj_name: str = ''
+    ) -> None:
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
@@ -1054,7 +1050,7 @@ class MTListWidget(MTScrollArea):
     def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
         super().__init__(parent, obj_name=obj_name)
         self._content = MTWidget(obj_name=f'{obj_name}_Content' if obj_name else '')
-        self._content_layout = create_layout(LayoutType.VBOX, parent=self._content)
+        self._content_layout = create_layout(LayoutType.VBOX, self._content)
         self.setWidget(self._content)
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -1091,14 +1087,14 @@ class MTListWidget(MTScrollArea):
         return item
 
     def add_header(self, text: str, *, obj_name: str = '') -> MTPlainLabel:
-        item = MTPlainLabel(str(text), obj_name=obj_name or self._item_object_name(text, suffix='Header'), parent=self._content)
+        item = MTPlainLabel(self._content, text=text, obj_name=obj_name or self._item_object_name(text, suffix='Header'))
         item.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self._items.append(item)
         self._content_layout.addWidget(item)
         return item
 
     def add_spacer(self, height: int = _GROUP_SECTION_SPACER_HEIGHT) -> MTWidget:
-        item = MTWidget(parent=self._content)
+        item = MTWidget(self._content)
         item.setFixedHeight(max(0, int(height)))
         item.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._items.append(item)
@@ -1175,7 +1171,7 @@ class MTLabeledList(MTWidget):
     ) -> None:
         super().__init__(parent=parent, obj_name=obj_name if obj_name else '')
 
-        layout = create_layout(LayoutType.VBOX, parent=self)
+        layout = create_layout(LayoutType.VBOX, self)
 
         self.list_widget = MTListWidget(self, obj_name=list_obj_name)
         layout.addWidget(self.list_widget)
@@ -1258,7 +1254,7 @@ class MTDropZone(MTWidget):
         if self._accept_files:
             self.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        layout = create_layout(LayoutType.VBOX, parent=self)
+        layout = create_layout(LayoutType.VBOX, self)
 
         self._title_label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Drop_Zone_Title' if obj_name else '')
         self._title_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)

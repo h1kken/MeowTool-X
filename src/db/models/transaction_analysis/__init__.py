@@ -7,13 +7,13 @@ from .transaction import Transaction
 
 
 __all__ = (
-    "TransactionAnalysisBase",
-    "TransactionAnalysisResultBase",
+    'TransactionAnalysisBase',
+    'TransactionAnalysisResultBase',
     
-    "TransactionAnalysisRun",
-    "TransactionAnalysisResult",
+    'TransactionAnalysisRun',
+    'TransactionAnalysisResult',
     
-    "Cookie",
-    "Place",
-    "Transaction",
+    'Cookie',
+    'Place',
+    'Transaction',
 )

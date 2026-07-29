@@ -13,21 +13,21 @@ if t.TYPE_CHECKING:
 
 
 class Group(CookieCheckerBase, BaseMixin, GroupMixin):
-    __tablename__ = "groups"
+    __tablename__ = 'groups'
 
 
 class GroupExtended(CookieCheckerBase, BaseMixin):
-    __tablename__ = "groups_extended"
+    __tablename__ = 'groups_extended'
     
-    group_ref_id: Mapped[int] = mapped_column(ForeignKey("groups.id"), unique=True)
-    group: Mapped["Group"] = relationship(back_populates="extended")
+    group_ref_id: Mapped[int] = mapped_column(ForeignKey('groups.id'), unique=True)
+    group: Mapped['Group'] = relationship(back_populates='extended')
     
     robux_pending: Mapped[int | None] = mapped_column(BigInteger)
     robux_funds: Mapped[int | None] = mapped_column(BigInteger)
 
 
 class GroupOwned(CookieCheckerBase, BaseMixin, ResultGroupMixin):
-    __tablename__ = "groups_owned"
+    __tablename__ = 'groups_owned'
 
-    group: Mapped["Group"] = relationship()
-    result: Mapped["CookieCheckerResult"] = relationship(back_populates="groups_owned")
+    group: Mapped['Group'] = relationship()
+    result: Mapped['CookieCheckerResult'] = relationship(back_populates='groups_owned')

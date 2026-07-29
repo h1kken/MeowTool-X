@@ -20,11 +20,11 @@ class MTSwitch(QCheckBox):
 
     def __init__(
         self,
-        text: str = '',
-        checked: bool = False,
-        obj_name: str = '',
-        *,
         parent: QWidget | None = None,
+        *,
+        text: str = '',
+        obj_name: str = '',
+        checked: bool = False,
     ) -> None:
         super().__init__(text, parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -49,14 +49,14 @@ class MTSwitch(QCheckBox):
         self._default_size = (40, 20)
         self._animated_handle_color: QColor | None = None
 
-        self._track = MTWidget(parent=self)
+        self._track = MTWidget(self)
         self._track.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-        self._track.setProperty('switchPart', 'track')
+        self._track.setProperty('part', 'track')
         self._track.hide()
 
-        self._handle = MTWidget(parent=self)
+        self._handle = MTWidget(self)
         self._handle.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-        self._handle.setProperty('switchPart', 'handle')
+        self._handle.setProperty('part', 'handle')
         self._handle.hide()
 
         self.toggled.connect(self._on_toggled)

@@ -1,72 +1,79 @@
-from src.config.loader import ConfigLoader
-from src.config.manager import Config
-from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.widgets import (
-    MTCollapsibleContainer,
-    MTColumnsSetting,
-    MTSwitchSetting,
-    MTWidget,
-)
+from __future__ import annotations
+
+import typing as t
+
+from PySide6.QtWidgets import QWidget
+
+from src.ui.pages.base import BasePage
+from src.ui.layouts.enums import LayoutType
+from src.ui.layouts.factory import create_layout
+from src.ui.widgets import MTCollapsibleContainer, MTColumnsSetting, MTSwitchSetting
 from src.config.enums import ConfigKey, ConfigLoaderKey as CLKey
 
+if t.TYPE_CHECKING:
+    from src.config import Config
 
-class SettingsMiscPage(MTWidget):
-    def __init__(self, *, config_loader: ConfigLoader, config: Config) -> None:
-        super().__init__()
-        self._config_loader = config_loader
-        self._config = config
 
-        main_layout = create_layout(LayoutType.VBOX, parent=self)
+class SettingsMiscPage(BasePage):
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        config: Config,
+        obj_name: str = '',
+    ):
+        super().__init__(
+            parent,
+            config=config,
+            obj_name=obj_name
+        )
+
+        self._layout = create_layout(LayoutType.VBOX, self)
 
         tabs = [
             MTCollapsibleContainer(
-                tr_key="DBGR",
-                obj_name="Settings_Misc_Debugger",
+                tr_key='DBGR',
+                obj_name='Settings_Misc_Debugger',
                 widgets=[
                     MTSwitchSetting(
-                        config=self._config_loader,
-                        tr_key="DEBUG",
+                        config=config.loader,
                         cfg_key=CLKey.MISC_DEBUGGER_DEBUG,
-                        default=False,
+                        tr_key='DEBUG',
                     ),
                     MTSwitchSetting(
-                        config=self._config_loader,
-                        tr_key="INFO",
+                        config=config.loader,
                         cfg_key=CLKey.MISC_DEBUGGER_INFO,
-                        default=False,
+                        tr_key='INFO',
                     ),
                     MTSwitchSetting(
-                        config=self._config_loader,
-                        tr_key="WARNING",
+                        config=config.loader,
                         cfg_key=CLKey.MISC_DEBUGGER_WARNING,
-                        default=False,
+                        tr_key='WARNING',
                     ),
                     MTSwitchSetting(
-                        config=self._config_loader,
-                        tr_key="ERROR",
+                        config=config.loader,
                         cfg_key=CLKey.MISC_DEBUGGER_ERROR,
-                        default=False,
+                        tr_key='ERROR',
                     ),
                     MTSwitchSetting(
-                        config=self._config_loader,
-                        tr_key="EXCEPTION",
+                        config=config.loader,
                         cfg_key=CLKey.MISC_DEBUGGER_EXCEPTION,
-                        default=False,
+                        tr_key='EXCEPTION',
                     ),
                 ],
             ),
             MTCollapsibleContainer(
-                tr_key="DS_RPC",
-                obj_name="Settings_Misc_Discord_RPC",
+                tr_key='DS_RPC',
+                obj_name='Settings_Misc_Discord_RPC',
                 widgets=[
                     MTSwitchSetting(
-                        config=self._config,
-                        tr_key="ENBL_DS_RPC",
+                        config=config.loader,
                         cfg_key=ConfigKey.OUTPUTS_DISCORD_RICH_PRESENCE,
-                        default=False,
+                        tr_key='ENBL_DS_RPC',
                     ),
                 ],
             ),
         ]
 
-        main_layout.addWidget(MTColumnsSetting(tabs, 2, obj_name="Settings_Misc"))
+        columns_widget = MTColumnsSetting(tabs=tabs, obj_name='Settings_Misc')
+        self._layout.addWidget(columns_widget)

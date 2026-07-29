@@ -1,18 +1,36 @@
+from __future__ import annotations
+
+import typing as t
+
 from pathlib import Path
 
+from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import QThread
 
-from src.config.manager import Config
-from src.services.roblox.cookie_sorter import RobloxCookieSorter
+from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets import MTButton, MTDropZone, MTLabel, MTWidget
+from src.ui.widgets import MTButton, MTDropZone, MTLabel
+from src.services.roblox.cookie_sorter import RobloxCookieSorter
+
+if t.TYPE_CHECKING:
+    from src.config import Config
 
 
-class RobloxCookieSorterPage(MTWidget):
-    def __init__(self, *, config: Config) -> None:
-        super().__init__()
-        self._config = config
+class RobloxCookieSorterPage(BasePage):
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        config: Config,
+        obj_name: str = '',
+    ):
+        super().__init__(
+            parent,
+            config=config,
+            obj_name=obj_name
+        )
+        
         self._thread: QThread | None = None
         self._sorter: RobloxCookieSorter | None = None
 
@@ -21,7 +39,7 @@ class RobloxCookieSorterPage(MTWidget):
         self._source_text_blocks: list[str] = []
         self._use_default_folder = True
 
-        main_layout = create_layout(LayoutType.VBOX, parent=self)
+        main_layout = create_layout(LayoutType.VBOX, self)
 
         self._drop_zone = MTDropZone(
             accept_files=True,

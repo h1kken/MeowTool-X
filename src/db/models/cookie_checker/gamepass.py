@@ -13,14 +13,14 @@ if t.TYPE_CHECKING:
 
 
 class Gamepass(CookieCheckerBase, BaseMixin, GamepassMixin):
-    __tablename__ = "gamepasses"
+    __tablename__ = 'gamepasses'
 
-    place_ref_id: Mapped[int] = mapped_column(ForeignKey("places.id"), index=True)
-    place: Mapped["Place"] = relationship(back_populates="gamepasses")
+    place_ref_id: Mapped[int] = mapped_column(ForeignKey('places.id'), index=True)
+    place: Mapped['Place'] = relationship(back_populates='gamepasses')
 
 
 class GamepassOwned(CookieCheckerBase, BaseMixin, ResultGamepassMixin):
-    __tablename__ = "gamepasses_owned"
+    __tablename__ = 'gamepasses_owned'
 
-    gamepass: Mapped["Gamepass"] = relationship()
-    result: Mapped["CookieCheckerResult"] = relationship(back_populates="gamepasses")
+    gamepass: Mapped['Gamepass'] = relationship()
+    result: Mapped['CookieCheckerResult'] = relationship(back_populates='gamepasses')

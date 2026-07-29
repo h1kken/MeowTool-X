@@ -5,15 +5,18 @@ import typing as t
 type ConfigScalar = None | bool | int | float | str
 type ConfigValue = (
     ConfigScalar
-    | list["ConfigValue"]
-    | tuple["ConfigValue", ...]
-    | dict[str, "ConfigValue"]
+    | list['ConfigValue']
+    | tuple['ConfigValue', ...]
+    | dict[str, 'ConfigValue']
 )
 ConfigMap: t.TypeAlias = dict[str, ConfigValue]
-type SortCategoryKind = t.Literal["none", "text", "number"]
+type SortCategoryKind = t.Literal['none', 'text', 'number']
 
 
-class ConfigMixinHost(t.Protocol):    
+class ConfigMixinHost(t.Protocol):
+    @property
+    def name(self) -> str: ...
+    
     @property
     def path(self) -> Path: ...
     
@@ -28,10 +31,11 @@ class ConfigMixinHost(t.Protocol):
 
     def dump_dict(self, old_data: ConfigMap, defaults: ConfigMap | None = None, indent: int = 0) -> list[str]: ...
 
+
 __all__ = (
-    "ConfigMap",
-    "ConfigMixinHost",
-    "ConfigScalar",
-    "ConfigValue",
-    "SortCategoryKind",
+    'ConfigMap',
+    'ConfigMixinHost',
+    'ConfigScalar',
+    'ConfigValue',
+    'SortCategoryKind',
 )

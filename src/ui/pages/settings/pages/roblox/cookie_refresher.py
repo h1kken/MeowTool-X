@@ -1,37 +1,46 @@
 from __future__ import annotations
 
-from src.config.manager import Config
-from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.widgets import (
-    MTCollapsibleContainer,
-    MTColumnsSetting,
-    MTWidget,
-    MTSwitchSetting,
-)
+import typing as t
+
+from PySide6.QtWidgets import QWidget
+
+from src.ui.pages.base import BasePage
+from src.ui.layouts.enums import LayoutType
+from src.ui.layouts.factory import create_layout
+from src.ui.widgets import MTCollapsibleContainer, MTColumnsSetting, MTSwitchSetting
+
+if t.TYPE_CHECKING:
+    from src.config import Config
 
 
-class SettingsRobloxCookieRefresherPage(MTWidget):
-    def __init__(self, *, config: Config) -> None:
-        super().__init__()
-        self._config = config
+class SettingsRobloxCookieRefresherPage(BasePage):
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        config: Config,
+        obj_name: str = '',
+    ):
+        super().__init__(
+            parent,
+            config=config,
+            obj_name=obj_name
+        )
 
-        main_layout = create_layout(LayoutType.VBOX, parent=self)
+        self._layout = create_layout(LayoutType.VBOX, self)
 
         tabs = [
             MTCollapsibleContainer(
-                tr_key="GNRL",
-                obj_name="Settings_Roblox_Cookie_Refresher",
+                tr_key='GNRL',
+                obj_name='Settings_Roblox_Cookie_Refresher',
                 widgets=[
                     MTSwitchSetting(
-                        config=self._config,
-                        tr_key="BRK_OLD_C",
-                        cfg_key="Roblox>Cookie Refresher>Break Old Cookies",
-                        default=False,
+                        config=config,
+                        cfg_key='Roblox>Cookie Refresher>Break Old Cookies',
+                        tr_key='BRK_OLD_C',
                     ),
                 ],
             ),
         ]
 
-        main_layout.addWidget(
-            MTColumnsSetting(tabs, 2, obj_name="Settings_Roblox_Cookie_Refresher")
-        )
+        self._layout.addWidget(MTColumnsSetting(tabs=tabs, obj_name='Settings_Roblox_Cookie_Refresher'))

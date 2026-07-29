@@ -1,8 +1,8 @@
-from src.ui.widgets.main.containers import MTWidget
+from src.ui.pages import BasePage
 
-type PageSpec = tuple[str, str, str, type[MTWidget]]
+type PageSpec = tuple[str | None, str, str, type[BasePage]]
 
 
 __all__ = (
-    "PageSpec",
+    'PageSpec',
 )

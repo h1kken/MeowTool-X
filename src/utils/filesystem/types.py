@@ -1,3 +1,5 @@
 type JsonObject = dict[str, object]
 
-__all__ = ("JsonObject",)
+__all__ = (
+    'JsonObject',
+)

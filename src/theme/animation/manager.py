@@ -88,12 +88,12 @@ class AnimationManager(QObject):
         theme = normalize_theme_payload(payload)
         theme_widgets = t.cast(
             dict[str, dict[str, t.Any]],
-            as_dict(theme.get("widgets")) or {},
+            as_dict(theme.get('widgets')) or {},
         )
         animations = {
-            target: styles["animations"]
+            target: styles['animations']
             for target, styles in theme_widgets.items()
-            if "animations" in styles
+            if 'animations' in styles
         }
 
         self._clear()

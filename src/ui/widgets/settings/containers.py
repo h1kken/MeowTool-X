@@ -1,23 +1,23 @@
-import re
+from __future__ import annotations
+
 import typing as t
+
+import re
 
 from PySide6.QtCore import QEvent, QObject, QSize, QSignalBlocker, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QIcon, QMouseEvent
 from PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 
-import src.app.context as ctx
-config = ctx.services.config
 from src.app.paths import PATH_CONTAINER_ARROW_ICON
-from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.widgets import (
-    MTButton,
-    MTLabel,
-    MTScrollArea,
-    MTWidget,
-)
+from src.ui.layouts.enums import LayoutType
+from src.ui.layouts.factory import create_layout
+from src.ui.widgets import MTButton, MTLabel, MTComboBox, MTScrollArea, MTWidget
 from src.ui.widgets.main.helpers import icon, repolish
-from src.ui.widgets import MTComboBox
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
+
+if t.TYPE_CHECKING:
+    from src.config import Config
+
 
 SETTING_ROW_GAP = 0
 COLLAPSIBLE_TOGGLE_BUTTON_SIZE = 20
@@ -27,31 +27,31 @@ COLUMN_REBALANCE_EVENT_TYPES = {
     QEvent.Type.Hide,
 }
 
-
 class MTColumnsSetting(MTScrollArea):
     def __init__(
         self,
+        parent: QWidget | None = None,
+        *,
         tabs: t.Sequence[QWidget] | None = None,
         columns: int = 2,
-        obj_name: str = "",
-        *,
-        parent: QWidget | None = None,
+        obj_name: str = '',
     ) -> None:
+        super().__init__(parent)
+        
         self._tabs: list[QWidget] = []
         self._rebalancing = False
-        super().__init__(parent)
 
         self._columns = max(1, int(columns))
         self._layouts: list[QVBoxLayout] = []
         self._column_heights: list[int] = [0 for _ in range(self._columns)]
-        self._column_assignments: tuple[tuple[int, ...], ...] = tuple(
-            tuple() for _ in range(self._columns)
-        )
+        self._column_assignments: tuple[tuple[int, ...], ...] = tuple(tuple() for _ in range(self._columns))
         self._rebalance_timer = QTimer(self, singleShot=True, interval=0)
         self._rebalance_timer.timeout.connect(self._rebalance_columns)
+        
         if obj_name:
-            self.setObjectName(f"{obj_name}_Columns_Widget")
-        content_obj_name = f"{obj_name}_Columns_Content_Widget" if obj_name else ""
+            self.setObjectName(f'{obj_name}_Columns_Widget')
+            
+        content_obj_name = f'{obj_name}_Columns_Content_Widget' if obj_name else ''
         self._scroll_area_content = MTWidget(obj_name=content_obj_name)
         self.setWidget(self._scroll_area_content)
 
@@ -60,14 +60,9 @@ class MTColumnsSetting(MTScrollArea):
         )
 
         for index in range(self._columns):
-            column_widget = MTWidget(
-                obj_name=f"{obj_name}_Columns_{index}_Column_Widget" if obj_name else ""
-            )
-            column_widget.setSizePolicy(
-                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
-            )
-            column_widget.setMinimumWidth(0)
-            column_layout = create_layout(LayoutType.VBOX, parent=column_widget)
+            column_widget = MTWidget(obj_name=f'{obj_name}_Columns_{index}_Column_Widget' if obj_name else '')
+            column_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+            column_layout = create_layout(LayoutType.VBOX, column_widget)
             self._main_layout.addWidget(column_widget, stretch=1)
             self._layouts.append(column_layout)
 
@@ -205,13 +200,14 @@ class MTCollapsibleContainer(MTWidget):
 
     def __init__(
         self,
-        tr_key: str,
-        obj_name: str,
-        widgets: t.Sequence[QWidget] | None = None,
         parent: QWidget | None = None,
+        *,
+        tr_key: str = '',
+        obj_name: str = '',
+        widgets: t.Sequence[QWidget] | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setObjectName(f"{obj_name}_Container_Widget")
+        self.setObjectName(f'{obj_name}_Container_Widget')
 
         self._default_toggle_arrow_source = str(PATH_CONTAINER_ARROW_ICON)
         self._default_toggle_arrow_size = COLLAPSIBLE_TOGGLE_ICON_SIZE
@@ -223,39 +219,27 @@ class MTCollapsibleContainer(MTWidget):
         self._toggle_arrow_rotation = self._default_toggle_arrow_expanded_rotation
         self._content_height_animation_active = False
 
-        self._main_layout = create_layout(LayoutType.VBOX, parent=self)
+        self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        self._header_widget = MTWidget(obj_name=f"{obj_name}_Container_Header_Widget")
+        self._header_widget = MTWidget(obj_name=f'{obj_name}_Container_Header_Widget')
         self._header_widget.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._header_layout = create_layout(LayoutType.HBOX, parent=self._header_widget)
-        self._header_separator = MTWidget(
-            obj_name=f"{obj_name}_Container_Header_Separator"
-        )
-        self._header_separator.setAttribute(
-            Qt.WidgetAttribute.WA_TransparentForMouseEvents, True
-        )
+        self._header_layout = create_layout(LayoutType.HBOX, self._header_widget)
+        self._header_separator = MTWidget(obj_name=f'{obj_name}_Container_Header_Separator')
+        self._header_separator.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._header_separator.setFixedHeight(1)
-        self._header_separator.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        self._header_separator.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
-        self._label = MTLabel(
-            tr_key=tr_key, obj_name=f"{obj_name}_Container_Header_Title"
-        )
+        self._label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Container_Header_Title')
         self._label.setCursor(Qt.CursorShape.PointingHandCursor)
 
         self._toggle_button = MTButton(
-            tr_key="",
+            obj_name=f'{obj_name}_Container_Header_Button',
             checkable=True,
             checked=True,
-            obj_name=f"{obj_name}_Container_Header_Button",
         )
-        self._toggle_button.setText("")
         self._apply_toggle_button_metrics()
-        self._content_widget = MTWidget(obj_name=f"{obj_name}_Container_Content_Widget")
-        self._content_layout = create_layout(
-            LayoutType.VBOX, parent=self._content_widget
-        )
+        self._content_widget = MTWidget(obj_name=f'{obj_name}_Container_Content_Widget')
+        self._content_layout = create_layout(LayoutType.VBOX, self._content_widget)
 
         self._header_layout.addWidget(self._label)
         self._header_layout.addStretch()
@@ -272,9 +256,9 @@ class MTCollapsibleContainer(MTWidget):
         self._content_widget.installEventFilter(self)
 
         initial_checked = self._toggle_button.isChecked()
-        self.setProperty("expanded", initial_checked)
-        self._header_widget.setProperty("expanded", initial_checked)
-        self._toggle_button.setProperty("expanded", initial_checked)
+        self.setProperty('expanded', initial_checked)
+        self._header_widget.setProperty('expanded', initial_checked)
+        self._toggle_button.setProperty('expanded', initial_checked)
         self._content_widget.setMaximumHeight(self._content_target_height())
         self._toggle_arrow_rotation = (
             self._toggle_arrow_expanded_rotation
@@ -290,19 +274,19 @@ class MTCollapsibleContainer(MTWidget):
             self._sync_content_height_to_layout()
 
     def _toggle_collapsed(self, checked: bool) -> None:
-        self.setProperty("expanded", checked)
-        self._header_widget.setProperty("expanded", checked)
-        self._toggle_button.setProperty("expanded", checked)
+        self.setProperty('expanded', checked)
+        self._header_widget.setProperty('expanded', checked)
+        self._toggle_button.setProperty('expanded', checked)
 
-        if bool(self.property("_themeAnimatedContentHeight")):
+        if bool(self.property('_themeAnimatedContentHeight')):
             if checked:
                 self._content_widget.setMaximumHeight(0)
                 self._content_widget.setVisible(True)
                 self._header_separator.setVisible(True)
         else:
             target_height = self._content_target_height() if checked else 0
-            self.set_part_metric("content", ("height",), float(target_height))
-        if bool(self.property("_themeAnimatedArrowRotation")):
+            self.set_part_metric('content', ('height',), float(target_height))
+        if bool(self.property('_themeAnimatedArrowRotation')):
             self._refresh_toggle_icon()
         else:
             target_rotation = (
@@ -310,7 +294,7 @@ class MTCollapsibleContainer(MTWidget):
                 if checked
                 else self._toggle_arrow_collapsed_rotation
             )
-            self.set_part_metric("icon", ("rotation",), target_rotation)
+            self.set_part_metric('icon', ('rotation',), target_rotation)
         repolish(self)
         repolish(self._header_widget)
         repolish(self._header_separator)
@@ -447,10 +431,10 @@ class MTCollapsibleContainer(MTWidget):
     def current_part_metric(
         self, part: str, path: tuple[str, ...], fallback: float
     ) -> float:
-        if part == "icon" and path and path[0] == "rotation":
+        if part == 'icon' and path and path[0] == 'rotation':
             return float(self._toggle_arrow_rotation)
 
-        if part != "content" or not path or path[0] not in {"height", "size"}:
+        if part != 'content' or not path or path[0] not in {'height', 'size'}:
             return float(fallback)
 
         maximum_height = self._content_widget.maximumHeight()
@@ -464,15 +448,15 @@ class MTCollapsibleContainer(MTWidget):
         self, part: str, path: tuple[str, ...] | str, value: float
     ) -> bool:
         tokens = (path,) if isinstance(path, str) else tuple(path)
-        if part == "icon" and tokens and tokens[0] == "rotation":
+        if part == 'icon' and tokens and tokens[0] == 'rotation':
             self._toggle_arrow_rotation = float(value)
             self._refresh_toggle_icon()
             return True
 
-        if part != "content":
+        if part != 'content':
             return False
 
-        if not tokens or tokens[0] not in {"height", "size"}:
+        if not tokens or tokens[0] not in {'height', 'size'}:
             return False
 
         target_height = self._content_target_height()
@@ -497,9 +481,9 @@ class MTCollapsibleContainer(MTWidget):
     def normalize_part_metric(
         self, part: str, path: tuple[str, ...], value: float
     ) -> float:
-        if part == "icon" and path and path[0] == "rotation":
+        if part == 'icon' and path and path[0] == 'rotation':
             return float(value)
-        if part == "content" and path and path[0] in {"height", "size"}:
+        if part == 'content' and path and path[0] in {'height', 'size'}:
             target_height = self._content_target_height()
             resolved_value = max(0.0, float(value))
             if target_height > 0:
@@ -510,7 +494,7 @@ class MTCollapsibleContainer(MTWidget):
     def handle_part_animation_state(
         self, part: str, path: tuple[str, ...], active: bool
     ) -> None:
-        if part == "content" and path and path[0] in {"height", "size"}:
+        if part == 'content' and path and path[0] in {'height', 'size'}:
             self._content_height_animation_active = bool(active)
             if not active and self._toggle_button.isChecked():
                 self._sync_content_height_to_layout()
@@ -519,34 +503,36 @@ class MTCollapsibleContainer(MTWidget):
 class MTComboBoxSetting(MTWidget):
     def __init__(
         self,
-        tr_key: str,
+        parent: QWidget | None = None,
+        *,
+        config: Config,
         cfg_key: str,
+        tr_key: str = '',
         items: t.Sequence[str | tuple[str, str]],
         default: str,
         on_changed: t.Callable[[str], None] | None = None,
-        *,
-        parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
+        self._config = config
         self._cfg_key = cfg_key
         self._on_changed = on_changed
         self._default = default
         
-        obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, "_", self._cfg_key)
-        self.setObjectName(f"{obj_name}_ComboBox_Setting")
+        obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, '_', self._cfg_key)
+        self.setObjectName(f'{obj_name}_ComboBox_Setting')
 
-        self._main_layout = create_layout(LayoutType.HBOX, parent=self)
+        self._main_layout = create_layout(LayoutType.HBOX, self)
 
-        self._label = MTLabel(tr_key=tr_key, obj_name=f"{obj_name}_Label")
+        self._label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Label')
         self._label.setSizePolicy(
             QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred
         )
 
-        self._combo_box = MTComboBox(obj_name=f"{obj_name}_ComboBox")
+        self._combo_box = MTComboBox(obj_name=f'{obj_name}_ComboBox')
         self._combo_box.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
-        self._combo_box.set_content_width_mode("current")
+        self._combo_box.set_content_width_mode('current')
         self.set_items(items, keep_current=False)
 
         self._set_current_value(config.get(self._cfg_key), fallback=default)
@@ -588,7 +574,7 @@ class MTComboBoxSetting(MTWidget):
             seen.add(value)
             normalized_items.append((display_value, value, translatable))
 
-        target_value = current_value if keep_current else str(config.get(self._cfg_key))
+        target_value = current_value if keep_current else str(self._config.get(self._cfg_key))
 
         with QSignalBlocker(self._combo_box):
             self._combo_box.clear()
@@ -638,6 +624,6 @@ class MTComboBoxSetting(MTWidget):
         value = self._combo_box.itemData(index)
         if value is None:
             value = self._combo_box.currentText()
-        config.set(self._cfg_key, value)
+        self._config.set(self._cfg_key, value)
         if self._on_changed is not None:
             self._on_changed(str(value))

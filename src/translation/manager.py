@@ -35,9 +35,9 @@ class TranslationManager(QObject):
             translations = self._parse_translations(path)
                 
             if not translations:
-                logger.warning("Translation file is empty. Using keys...")
+                logger.warning('Translation file is empty. Using keys...')
         except (OSError, UnicodeError, ValueError, TypeError) as e:
-            logger.warning(f"Translations can't be loaded. Error: {e}")
+            logger.warning(f'Translations can\'t be loaded. Error: {e}')
             return
 
         self.path = path
@@ -62,8 +62,8 @@ class TranslationManager(QObject):
 
     def _resolve_translation(self, name: str) -> Path:
         for path in (
-            PATH_TRANSLATIONS_USER / f"{name}.axis",
-            PATH_TRANSLATIONS_SRC / f"{name}.axis",
+            PATH_TRANSLATIONS_USER / f'{name}.axis',
+            PATH_TRANSLATIONS_SRC / f'{name}.axis',
         ):
             if path.is_file():
                 return path
@@ -71,17 +71,17 @@ class TranslationManager(QObject):
 
     def _parse_translations(self, path: Path) -> dict[str, str]:
         translations: dict[str, str] = {}
-        with path.open("r", encoding="utf-8", errors="ignore") as file:
+        with path.open('r', encoding='utf-8', errors='ignore') as file:
             for line in file:
                 line = line.strip()
                 if (
                     not line
                     or line.startswith(CONFIG_COMMENT_SYMBOLS)
-                    or "=" not in line
+                    or '=' not in line
                 ):
                     continue
                 
-                key, label = map(str.strip, line.split("=", 1))
+                key, label = map(str.strip, line.split('=', 1))
                 if not key:
                     continue
                     

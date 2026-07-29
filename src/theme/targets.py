@@ -70,7 +70,7 @@ def normalize_qss_target(target: str) -> str:
         for key, value in properties:
             escaped = value.replace('\\', '\\\\').replace('"', '\\"')
             prop_chunks.append(f'[{key}="{escaped}"]')
-        return f'{obj_name}{"".join(prop_chunks)}'
+        return f'{obj_name}{''.join(prop_chunks)}'
     return target
 
 

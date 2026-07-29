@@ -14,14 +14,14 @@ from src.ui.types import PageState
 from src.utils.logging import logger
 
 if t.TYPE_CHECKING:
-    from src.config.manager import Config
+    from src.config import Config
     from src.ui.windows.main_window import MainWindow
 
 
 class DiscordRPC:
-    APP_ID = "1493918950344626216"
+    APP_ID = '1493918950344626216'
 
-    DEFAULT_PAGE = "Startup"
+    DEFAULT_PAGE = 'Startup'
     
     RETRY_DELAY_SECONDS = 5.0
 
@@ -59,7 +59,7 @@ class DiscordRPC:
             
             self._worker = threading.Thread(
                 target=self._run,
-                name="DiscordRPC",
+                name='DiscordRPC',
                 daemon=True,
             )
 
@@ -108,14 +108,14 @@ class DiscordRPC:
 
     @classmethod
     def _normalize_state(cls, state: PageState) -> PageState:
-        main = state.get("main", "") or cls.DEFAULT_PAGE
-        new_state: PageState = {"main": main}
+        main = state.get('main', '') or cls.DEFAULT_PAGE
+        new_state: PageState = {'main': main}
 
-        raw_inner = state.get("inner")
+        raw_inner = state.get('inner')
         if isinstance(raw_inner, tuple):
             inner = tuple(part for part in (item for item in raw_inner) if part)
             if inner:
-                new_state["inner"] = inner
+                new_state['inner'] = inner
 
         return new_state
 
@@ -125,10 +125,10 @@ class DiscordRPC:
 
     @staticmethod
     def _format_page(page: PageState) -> str:
-        main = page["main"]
-        inner = page.get("inner")
+        main = page['main']
+        inner = page.get('inner')
         if inner:
-            return f"{main}: {' > '.join(inner)}"
+            return f'{main}: {' > '.join(inner)}'
         return main
 
     def _connect(self) -> Presence | None:
@@ -137,17 +137,17 @@ class DiscordRPC:
             try:
                 rpc = Presence(self.APP_ID, pipe=pipe)
                 rpc.connect()
-                logger.info(f"Discord Presence connected (pipe {pipe})")
+                logger.info(f'Discord Presence connected (pipe {pipe})')
                 return rpc
             except (DiscordNotFound, InvalidPipe, PipeClosed, OSError):
                 self._disconnect(rpc, clear=False)
             except DiscordError as e:
                 self._disconnect(rpc, clear=False)
-                logger.warning(f"Discord Presence connection failed: {e}")
+                logger.warning(f'Discord Presence connection failed: {e}')
                 return None
             except Exception as e:
                 self._disconnect(rpc, clear=False)
-                logger.exception(f"Discord Presence connection failed: {e}")
+                logger.exception(f'Discord Presence connection failed: {e}')
                 return None
 
         return None
@@ -183,7 +183,7 @@ class DiscordRPC:
                     if rpc is not None:
                         self._disconnect(rpc)
                         rpc = None
-                        logger.debug("Discord Presence disconnected")
+                        logger.debug('Discord Presence disconnected')
                     self._wake.wait()
                     continue
 
@@ -201,7 +201,7 @@ class DiscordRPC:
                     self._wake.wait(self.RETRY_DELAY_SECONDS)
                     continue
                 except Exception as e:
-                    logger.exception(f"Discord Presence update failed: {e}")
+                    logger.exception(f'Discord Presence update failed: {e}')
                     self._disconnect(rpc, clear=False)
                     rpc = None
                     self._wake.wait(self.RETRY_DELAY_SECONDS)
@@ -211,7 +211,7 @@ class DiscordRPC:
         finally:
             if rpc is not None:
                 self._disconnect(rpc)
-                logger.debug("Discord Presence disconnected")
+                logger.debug('Discord Presence disconnected')
 
     def _update(self, rpc: Presence, page: PageState, started_at: int) -> None:
         details = self._format_page(page)

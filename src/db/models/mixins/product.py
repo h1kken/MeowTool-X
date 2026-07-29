@@ -8,5 +8,5 @@ class ProductMixin:
 
 
 class ResultProductMixin:
-    product_ref_id: Mapped[int] = mapped_column(ForeignKey("products.id"), index=True)
-    result_ref_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
+    product_ref_id: Mapped[int] = mapped_column(ForeignKey('products.id'), index=True)
+    result_ref_id: Mapped[int] = mapped_column(ForeignKey('results.id'), index=True)

@@ -46,12 +46,12 @@ class NativeHttpEngineConfig:
     proxy_cooldown_429_ms: int = 30_000
     proxy_cooldown_transport_ms: int = 10_000
     proxy_cooldown_5xx_ms: int = 0
-    concurrency_profile: str = "auto"
+    concurrency_profile: str = 'auto'
     per_proxy_max_in_flight: int | None = None
     direct_max_in_flight: int | None = None
     max_concurrency: int | None = None
     capture_text_body: bool = False
-    response_body_mode: str = "none"
+    response_body_mode: str = 'none'
     max_response_bytes: int | None = 262_144
     preview_response_bytes: int | None = 4_096
     max_retries: int | None = 0
@@ -98,13 +98,13 @@ type ProxyLike = JsonObject | str | NativeProxySpec
 type RequestLike = JsonObject | NativeHttpRequest
 
 __all__ = (
-    "JsonObject",
-    "NativeHttpChunkOptions",
-    "NativeHttpEngineConfig",
-    "NativeHttpHandleProtocol",
-    "NativeHttpModuleProtocol",
-    "NativeHttpRequest",
-    "NativeProxySpec",
-    "ProxyLike",
-    "RequestLike",
+    'JsonObject',
+    'NativeHttpChunkOptions',
+    'NativeHttpEngineConfig',
+    'NativeHttpHandleProtocol',
+    'NativeHttpModuleProtocol',
+    'NativeHttpRequest',
+    'NativeProxySpec',
+    'ProxyLike',
+    'RequestLike',
 )

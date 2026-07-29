@@ -4,9 +4,9 @@ from .result import CookieSorterResult
 
 
 __all__ = (
-    "CookieSorterBase",
-    "CookieSorterResultBase",
+    'CookieSorterBase',
+    'CookieSorterResultBase',
     
-    "CookieSorterRun",
-    "CookieSorterResult",
+    'CookieSorterRun',
+    'CookieSorterResult',
 )

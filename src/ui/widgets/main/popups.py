@@ -6,19 +6,24 @@ from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QRectF, QSize, Qt, Si
 from PySide6.QtGui import QCursor, QHideEvent, QMouseEvent, QRegion, QResizeEvent, QShowEvent, QWheelEvent
 from PySide6.QtWidgets import QApplication, QBoxLayout, QLayout, QSizePolicy, QWidget
 
-from src.ui.layouts.factory import LayoutType, create_layout
-from src.ui.widgets.main.containers import MTWidget
+from src.ui.layouts.enums import LayoutType
+from src.ui.layouts.factory import create_layout
+from src.ui.widgets import MTWidget
 from src.ui.widgets.main.paint_primitives import resolve_uniform_radius, rounded_rect_path
 from src.ui.widgets.types import PopupPlacement
 
 
 class _PopupBackdrop(MTWidget):
-    def __init__(self, popup: MTPopup, parent: QWidget) -> None:
+    def __init__(
+        self,
+        parent: QWidget,
+        *,
+        popup: MTPopup,
+    ) -> None:
         super().__init__(parent=parent, obj_name=f'{popup.objectName()}_Backdrop_Widget')
         self._popup = popup
         self.setProperty('popupBackdrop', True)
         self.setProperty('popup', True)
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, False)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
         self.setAutoFillBackground(False)
@@ -26,18 +31,13 @@ class _PopupBackdrop(MTWidget):
         self.hide()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        event.accept()
         if self._popup.close_on_outside_click:
             self._popup.hide()
-
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         event.accept()
 
-    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
-        event.accept()
-
-    def wheelEvent(self, event: QWheelEvent) -> None:
-        event.accept()
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None: event.accept()
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None: event.accept()
+    def wheelEvent(self, event: QWheelEvent) -> None: event.accept()
 
 
 class MTPopup(MTWidget):
@@ -71,7 +71,7 @@ class MTPopup(MTWidget):
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
 
-        self._root_layout = create_layout(LayoutType.VBOX, parent=self)
+        self._root_layout = create_layout(LayoutType.VBOX, self)
         self._content = MTWidget(parent=self, obj_name=f'{obj_name}_Content')
         self._content.setProperty('popupContent', True)
         self._content_layout = create_layout(layout_type, parent=self._content)
@@ -321,7 +321,7 @@ class MTPopup(MTWidget):
             self._backdrop_parent.installEventFilter(self)
 
         if self._backdrop is None and self._backdrop_parent is not None:
-            self._backdrop = _PopupBackdrop(self, self._backdrop_parent)
+            self._backdrop = _PopupBackdrop(self._backdrop_parent, popup=self)
             self._backdrop.setGeometry(self._backdrop_parent.rect())
 
     def _sync_backdrop_geometry(self) -> None:

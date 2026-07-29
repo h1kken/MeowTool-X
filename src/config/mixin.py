@@ -19,7 +19,7 @@ from src.utils.filesystem import FS, del_safe, get_safe, set_safe
 
 
 class GetConfigMixin:
-    def get(self: ConfigMixinHost, key: str, *, sep: str = ">") -> object | None:
+    def get(self: ConfigMixinHost, key: str, *, sep: str = '>') -> object | None:
         value = get_safe(self.data, key, sep=sep, default=CONFIG_MISSING_DEFAULT)
         if value is not CONFIG_MISSING_DEFAULT:
             return value
@@ -32,7 +32,7 @@ class GetConfigMixin:
 
 
 class SetConfigMixin:
-    def set(self: ConfigMixinHost, key: str, value: object, *, sep: str = ">") -> None:
+    def set(self: ConfigMixinHost, key: str, value: object, *, sep: str = '>') -> None:
         default_value = get_safe(self.defaults, key, sep=sep, default=CONFIG_MISSING_DEFAULT)
         typed_default = t.cast(ConfigValue, default_value)
         value = convert_value(value, typed_default)
@@ -40,11 +40,11 @@ class SetConfigMixin:
         normalized_default = convert_value(None, typed_default)
         if value == normalized_default:
             del_safe(self.data, key, sep=sep)
-            logger.debug(f"Resetted default to '{key.replace(sep, " > ")}'")
+            logger.debug(f'Resetted default to \'{key.replace(sep, ' > ')}\'')
             return
 
         set_safe(self.data, key, t.cast(ConfigValue, value), sep=sep)
-        logger.debug(f"Setted '{value}' ({type(value).__name__}) to '{key.replace(sep, " > ")}'")
+        logger.debug(f'Setted \'{value}\' ({type(value).__name__}) to \'{key.replace(sep, ' > ')}\'')
 
 
 class SaveConfigMixin:
@@ -71,7 +71,7 @@ class SaveConfigMixin:
         for key, value in self._iter_ordered_items(old_data, defaults):
             child_defaults = defaults.get(key) if defaults is not None else None
             if isinstance(value, dict):
-                new_data.append(f"{indent_prefix}{key}")
+                new_data.append(f'{indent_prefix}{key}')
                 new_data.extend(
                     self.dump_dict(
                         value,
@@ -81,24 +81,24 @@ class SaveConfigMixin:
                 )
             else:
                 if type(value) is bool:
-                    value = "Yes" if value else "No"
-                new_data.append(f"{indent_prefix}{key}: {value}")
+                    value = 'Yes' if value else 'No'
+                new_data.append(f'{indent_prefix}{key}: {value}')
         return new_data
 
     def save(self: ConfigMixinHost) -> None:
         FS.ensure_dir(PATH_CONFIGS)
-        text = "\n".join(self.dump_dict(self.data, self.defaults))
+        text = '\n'.join(self.dump_dict(self.data, self.defaults))
 
         with self.save_lock:
             temp_file_path: Path | None = None
             try:
                 with tempfile.NamedTemporaryFile(
-                    mode="w",
-                    encoding="utf-8",
+                    mode='w',
+                    encoding='utf-8',
                     delete=False,
                     dir=self.path.parent,
-                    prefix=f"{self.path.stem}.",
-                    suffix=".tmp",
+                    prefix=f'{self.path.stem}.',
+                    suffix='.tmp',
                 ) as temp_file:
                     temp_file.write(text)
                     temp_file.flush()
@@ -111,7 +111,7 @@ class SaveConfigMixin:
                         break
                     except PermissionError:
                         tries = attempt + 1
-                        logger.warning(f"Can't replace file: {temp_file_path} to {self.path}. Try: #{tries}")
+                        logger.warning(f'Can\'t replace {temp_file_path} with {self.path}. Try: #{tries}')
                         if attempt == CONFIG_SAVE_RETRY_COUNT - 1:
                             raise
                         time.sleep(CONFIG_SAVE_RETRY_DELAY_SEC * tries)

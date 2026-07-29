@@ -17,7 +17,7 @@ class TranslatableMixin:
         self._update_text()
 
     def _update_text(self) -> None:
-        setter = getattr(self, "setText", None)
+        setter = getattr(self, 'setText', None)
         if callable(setter):
             setter(translator.tr(self._key))
 
@@ -30,7 +30,7 @@ class _ComboBoxProtocol(t.Protocol):
     def setItemText(self, index: int, text: str) -> None: ...
 
 
-class TranslatableComboBoxMixin():
+class TranslatableComboBoxMixin:
     def __init__(self, *args: object, **kwargs: object) -> None:
         super().__init__(*args, **kwargs)
 

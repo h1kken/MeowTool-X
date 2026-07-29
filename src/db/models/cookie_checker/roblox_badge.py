@@ -12,11 +12,11 @@ if t.TYPE_CHECKING:
 
 
 class RobloxBadge(CookieCheckerBase, BaseMixin, RobloxBadgeMixin):
-    __tablename__ = "roblox_badges"
+    __tablename__ = 'roblox_badges'
 
 
 class RobloxBadgeOwned(CookieCheckerBase, BaseMixin, ResultRobloxBadgeMixin):
-    __tablename__ = "roblox_badges_owned"
+    __tablename__ = 'roblox_badges_owned'
     
-    roblox_badge: Mapped["RobloxBadge"] = relationship()
-    result: Mapped["CookieCheckerResult"] = relationship(back_populates="roblox_badges")
+    roblox_badge: Mapped['RobloxBadge'] = relationship()
+    result: Mapped['CookieCheckerResult'] = relationship(back_populates='roblox_badges')

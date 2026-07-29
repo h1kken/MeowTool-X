@@ -8,5 +8,5 @@ class BadgeMixin:
 
 
 class ResultBadgeMixin:
-    badge_ref_id: Mapped[int] = mapped_column(ForeignKey("badges.id"), index=True)
-    result_ref_id: Mapped[int] = mapped_column(ForeignKey("results.id"), index=True)
+    badge_ref_id: Mapped[int] = mapped_column(ForeignKey('badges.id'), index=True)
+    result_ref_id: Mapped[int] = mapped_column(ForeignKey('results.id'), index=True)

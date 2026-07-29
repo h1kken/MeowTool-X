@@ -35,6 +35,9 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         self._save_lock = threading.Lock()
 
     @property
+    def name(self) -> str: return self.path.name
+
+    @property
     def path(self) -> Path: return self._path
 
     @property
@@ -47,29 +50,29 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
     def save_lock(self) -> threading.Lock: return self._save_lock
 
     def create_config(self, name: str) -> None:
-        path = PATH_CONFIGS / f"{name}.txt"
+        path = PATH_CONFIGS / f'{name}.txt'
         if path.exists():
             return
 
         FS.ensure_dir(PATH_CONFIGS)
         try:
             snapshot = deepcopy(self._data)
-            text = "\n".join(self.dump_dict(snapshot, self._defaults))
-            path.write_text(text, encoding="utf-8")
+            text = '\n'.join(self.dump_dict(snapshot, self._defaults))
+            path.write_text(text, encoding='utf-8')
             self.load(name)
         except OSError as e:
-            logger.exception(f"Can't create config '{name}'. Error: {e}")
+            logger.exception(f'Can\'t create config \'{name}\'. Error: {e}')
         
     def load(self, name: str | None = None) -> None:
         if name is None:
             name = str(self.loader.get(CLKey.LOADER_CONFIG_ON_LOAD)).strip()
         
-        path = PATH_CONFIGS / f"{name}.txt"
+        path = PATH_CONFIGS / f'{name}.txt'
         if not path.is_file():
             return
         
         try:
-            with path.open("r", encoding="utf-8", errors="ignore") as f:
+            with path.open('r', encoding='utf-8', errors='ignore') as f:
                 parsed = parse_config(f.read())
 
             self._data = normalize_config(parsed, self._defaults)
@@ -77,31 +80,31 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             self.save()
             self.config_loaded.emit()
         except (OSError, UnicodeError, ValueError, TypeError) as e:
-            logger.exception(f"Can't load config '{name}'. Error: {e}")
+            logger.exception(f'Can\'t load config \'{name}\'. Error: {e}')
 
-    def set(self, key: str, value: object, *, sep: str = ">", force_save: bool = False) -> None:
+    def set(self, key: str, value: object, *, sep: str = '>', force_save: bool = False) -> None:
         super().set(key, value, sep=sep)
-        self.value_changed.emit(key.replace(sep, ">"), value)
+        self.value_changed.emit(key.replace(sep, '>'), value)
 
         if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES) or force_save:
             self.save()
 
-    def set_many(self, items: Mapping[str, ConfigValue] | Iterable[tuple[str, ConfigValue]], *, sep: str = ">", force_save: bool = False) -> None:
+    def set_many(self, items: Mapping[str, ConfigValue] | Iterable[tuple[str, ConfigValue]], *, sep: str = '>', force_save: bool = False) -> None:
         lst: list[tuple[str, ConfigValue]] = list(t.cast(Mapping[str, ConfigValue], items).items()) if isinstance(items, Mapping) else list(items)
         for key, value in lst:
             super().set(str(key), value, sep=sep)
-            self.value_changed.emit(str(key).replace(sep, ">"), value)
+            self.value_changed.emit(str(key).replace(sep, '>'), value)
 
         if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES) or force_save:
             self.save()
 
-    def rename(self, path: Path, name: Path) -> None:
+    def rename(self, path: Path, name: str) -> None:
         if not path.is_file():
             return
         if path.stem == name:
             return
 
-        new_path = PATH_CONFIGS / f"{name}.txt"
+        new_path = PATH_CONFIGS / f'{name}.txt'
         if new_path.is_file():
             return
 
@@ -109,5 +112,5 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             path.rename(new_path)
             self._path = new_path
         except OSError as e:
-            logger.exception(f"Can't rename config '{path.stem}' to '{name}'. Error: {e}")
+            logger.exception(f'Can\'t rename config \'{path.stem}\' to \'{name}\'. Error: {e}')
             return

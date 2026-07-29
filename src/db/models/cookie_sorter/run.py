@@ -3,4 +3,4 @@ from src.db.models.mixins import BaseMixin, RunMixin
 
 
 class CookieSorterRun(CookieSorterBase, BaseMixin, RunMixin):
-    __tablename__ = "runs"
+    __tablename__ = 'runs'

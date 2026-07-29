@@ -5,7 +5,8 @@ from PySide6.QtGui import QIcon, QMouseEvent, QResizeEvent
 from PySide6.QtWidgets import QApplication, QSizePolicy, QWidget
 
 from src.app.paths import PATH_HEADER_ICONS_SRC
-from src.ui.layouts.factory import LayoutType, create_layout
+from src.ui.layouts.enums import LayoutType
+from src.ui.layouts.factory import create_layout
 from src.ui.widgets import MTButton, MTPlainLabel, MTWidget
 
 _HEADER_RESIZE_MARGIN = 8
@@ -15,13 +16,13 @@ _QT_MAX_SIZE = 16_777_215
 
 class _HeaderIconButton(MTButton):
     def __init__(self, icon_name: str) -> None:
-        button_name = '_'.join(
-            part.capitalize() for part in icon_name.split('_')
-        )
+        button_name = '_'.join(part.capitalize() for part in icon_name.split('_'))
+        
         super().__init__(
             tr_key='',
             obj_name=f'{_HEADER_OBJECT_NAME}_{button_name}_Button',
         )
+        
         self.setText('')
         self.setCursor(Qt.CursorShape.ArrowCursor)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -42,12 +43,12 @@ class _HeaderIconButton(MTButton):
 class _HeaderTitleLabel(MTPlainLabel):
     def __init__(
         self,
-        text: str = '',
         parent: QWidget | None = None,
         *,
+        text: str = '',
         obj_name: str = '',
     ) -> None:
-        super().__init__(text, parent, obj_name=obj_name)
+        super().__init__(parent, text=text, obj_name=obj_name)
 
     def setAlignment(self, alignment: Qt.AlignmentFlag) -> None:
         super().setAlignment(alignment)
@@ -114,11 +115,11 @@ class MTWindowHeader(MTWidget):
         self.setMouseTracking(True)
         self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
 
-        layout = create_layout(LayoutType.HBOX, parent=self)
+        layout = create_layout(LayoutType.HBOX, self)
 
         self._title_label = _HeaderTitleLabel(
-            title or window.windowTitle(),
             self,
+            text=title or window.windowTitle(),
             obj_name=f'{_HEADER_OBJECT_NAME}_Title',
         )
         self._title_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
@@ -131,7 +132,7 @@ class MTWindowHeader(MTWidget):
         )
         self._buttons_host.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
         self._buttons_host.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
-        buttons_layout = create_layout(LayoutType.HBOX, parent=self._buttons_host)
+        buttons_layout = create_layout(LayoutType.HBOX, self._buttons_host)
         layout.addWidget(self._buttons_host)
 
         self._minimize_button = _HeaderIconButton('minimize')

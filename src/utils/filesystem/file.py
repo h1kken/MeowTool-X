@@ -17,7 +17,7 @@ from src.utils.filesystem.constants import (
 from src.utils.filesystem.types import JsonObject
 from src.utils.logging import logger
 
-TDefault = t.TypeVar("TDefault")
+TDefault = t.TypeVar('TDefault')
 
 
 class FS:
