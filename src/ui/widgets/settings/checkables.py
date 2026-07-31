@@ -42,7 +42,7 @@ class MTCheckBoxSetting(MTWidget):
         self._check_box.setChecked(bool(config.get(self._cfg_key)))
 
         self._check_box.toggled.connect(self._on_check_box_toggled)
-        config.config_loaded.connect(lambda: self._check_box.setChecked(bool(config.get(self._cfg_key))))
+        config.configLoaded.connect(lambda: self._check_box.setChecked(bool(config.get(self._cfg_key))))
 
         self._layout.addWidget(self._label)
         self._layout.addStretch()
@@ -84,7 +84,7 @@ class MTSwitchSetting(MTWidget):
         self._switch.setChecked(bool(config.get(self._cfg_key)))
 
         self._switch.toggled.connect(self._on_switch_toggled)
-        config.config_loaded.connect(lambda: self._switch.setChecked(bool(config.get(self._cfg_key))))
+        config.configLoaded.connect(lambda: self._switch.setChecked(bool(config.get(self._cfg_key))))
 
         self._layout.addWidget(self._label)
         self._layout.addStretch()

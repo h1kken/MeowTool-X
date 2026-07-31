@@ -8,7 +8,7 @@ from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets import (
-    MTButtonSetting,
+    MTButton,
     MTCollapsibleContainer,
     MTColumnsSetting,
     MTSliderSetting,
@@ -94,7 +94,7 @@ class SettingsRobloxCookieCheckerPage(BasePage):
 
     def _build_main_fields_widgets(self) -> list[QWidget]:
         widgets: list[QWidget] = [
-            MTButtonSetting(
+            MTButton(
                 tr_key='ENBL_ALL_DSBL_ALL',
                 obj_name='Settings_Roblox_Cookie_Checker_Main_Change_All_Button',
                 action=self._change_main_fields_state,

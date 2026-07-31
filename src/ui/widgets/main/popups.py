@@ -20,7 +20,7 @@ class _PopupBackdrop(MTWidget):
         *,
         popup: MTPopup,
     ) -> None:
-        super().__init__(parent=parent, obj_name=f'{popup.objectName()}_Backdrop_Widget')
+        super().__init__(parent, obj_name=f'{popup.objectName()}_Backdrop_Widget')
         self._popup = popup
         self.setProperty('popupBackdrop', True)
         self.setProperty('popup', True)
@@ -46,13 +46,13 @@ class MTPopup(MTWidget):
 
     def __init__(
         self,
-        *,
-        obj_name: str,
         parent: QWidget | None = None,
+        *,
+        obj_name: str = '',
         layout_type: LayoutType = LayoutType.VBOX,
         close_on_outside_click: bool = True,
     ) -> None:
-        super().__init__(parent=parent, obj_name=obj_name)
+        super().__init__(parent, obj_name=obj_name)
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.NoDropShadowWindowHint

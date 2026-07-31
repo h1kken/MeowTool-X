@@ -1,23 +1,6 @@
 from PySide6.QtCore import QPoint, QPointF, QRect, QRectF, QSize, Qt
-from PySide6.QtGui import (
-    QColor,
-    QMouseEvent,
-    QPaintEvent,
-    QPainter,
-    QPainterPath,
-    QPen,
-    QWheelEvent,
-)
-from PySide6.QtWidgets import (
-    QDoubleSpinBox,
-    QLineEdit,
-    QSlider,
-    QSpinBox,
-    QStyle,
-    QStyleOptionSpinBox,
-    QStyleOptionSlider,
-    QWidget,
-)
+from PySide6.QtGui import QColor, QMouseEvent, QPaintEvent, QPainter, QPainterPath, QPen, QWheelEvent
+from PySide6.QtWidgets import QDoubleSpinBox, QLineEdit, QSlider, QSpinBox, QStyle, QStyleOptionSpinBox, QStyleOptionSlider, QWidget
 
 from src.theme.colors import to_qcolor
 from src.utils.conversion import coerce_box_sides, coerce_number

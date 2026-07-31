@@ -12,38 +12,43 @@ if t.TYPE_CHECKING:
 def bootstrap(app: QApplication) -> AppServices:
     services = ctx.services = AppServices()
     
+    # Filesystem
     from src.utils.filesystem.file import create_start_paths
     create_start_paths()
     
+    # Config
     from src.config import ConfigLoader, Config
-    config_loader = ConfigLoader()
-
-    services.config = Config(config_loader)
+    services.config = Config(ConfigLoader())
     services.config.load()
 
+    # Database
     from src.db.manager import DatabaseManager
     services.database = DatabaseManager()
 
+    # Translation
     from src.translation.manager import TranslationManager
     services.translator = TranslationManager(services.config)
+    
+    from src.translation.mixins import TranslatorAwareMixin
+    TranslatorAwareMixin.set_translator(services.translator)
+    
     services.translator.load()
     
-    # TODO: change generations of all object names, do it with some logic
-    # TODO: refactor lighter (inner pages)
+    # UI
     from src.ui.windows.main_window import MainWindow
-    services.window = MainWindow(services.config)
+    services.window = MainWindow(services.config) # TODO: refactor lighter (inner pages) + change generations of all object names, do it with some logic
     
-    # TODO: refactor lighter | do strict format, no many variants of one parameter
+    # Theme
     from src.theme.manager import ThemeManager
-    services.theme_manager = ThemeManager(services.window, services.config)
+    services.theme_manager = ThemeManager(services.window, services.config) # TODO: refactor lighter | do strict format, no many variants of one parameter
     
-    # TODO: refactor lighter (pls)
     from src.theme.animation.manager import AnimationManager
-    animation_manager = AnimationManager(services.window, services.config)
-    services.theme_manager.theme_loaded.connect(animation_manager.load)
+    animation_manager = AnimationManager(services.window, services.config) # TODO: refactor lighter (pls)
+    services.theme_manager.themeLoaded.connect(animation_manager.load)
     
     services.theme_manager.load()
     
+    # Services
     from src.services.discord import DiscordRPC
     services.discord_rpc = DiscordRPC(services.window, services.config)
     app.aboutToQuit.connect(services.discord_rpc.shutdown)

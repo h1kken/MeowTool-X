@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import collections.abc as cabc
+
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QLabel, QAbstractButton, QWidget
 
-from src.translation.mixin import TranslatableMixin
+from src.translation.mixins import TranslatableMixin
 
 
 class MTPlainLabel(QLabel):
@@ -29,7 +31,7 @@ class MTLabel(TranslatableMixin, QLabel):
         tr_key: str = '',
         obj_name: str = '',
     ) -> None:
-        super().__init__(tr_key, parent)
+        super().__init__(parent, tr_key=tr_key)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         if obj_name:
@@ -44,17 +46,21 @@ class MTButton(TranslatableMixin, QAbstractButton):
         obj_name: str = '',
         checkable: bool = False,
         checked: bool = False,
+        action: cabc.Callable[[], None] | None = None,
     ) -> None:
-        super().__init__(tr_key, parent)
+        super().__init__(parent, tr_key=tr_key)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+
+        if obj_name:
+            self.setObjectName(obj_name)
 
         if checkable:
             self.setCheckable(True)
             self.setChecked(checked)
 
-        if obj_name:
-            self.setObjectName(obj_name)
+        if action is not None:
+            self.clicked.connect(action)
 
         self._icon_state: dict[str, object] | None = None
 

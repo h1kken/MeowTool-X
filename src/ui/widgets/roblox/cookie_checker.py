@@ -95,7 +95,7 @@ class _BoundSwitchRow(MTWidget):
         self._layout.addWidget(self._switch)
 
         self._switch.toggled.connect(self._on_switch_toggled)
-        self._config.config_loaded.connect(self.reload_from_config)
+        self._config.configLoaded.connect(self.reload_from_config)
 
     def reload_from_config(self) -> None:
         self.set_checked(bool(self._config.get(self._cfg_key)))
@@ -150,7 +150,7 @@ class _BoundSwitchRow(MTWidget):
 
 
 class _SortActionButton(MTButton):
-    right_clicked = Signal(bool)
+    rightClicked = Signal(bool)
     _DEFAULT_ICON_SOURCE = 'src/assets/icons/sort.svg'
 
     def __init__(
@@ -159,7 +159,7 @@ class _SortActionButton(MTButton):
         *,
         obj_name: str = '',
     ) -> None:
-        super().__init__(tr_key='', checkable=True, obj_name=obj_name, parent=parent)
+        super().__init__(parent, checkable=True, obj_name=obj_name)
         self.set_icon(
             source=self._DEFAULT_ICON_SOURCE,
             align='left',
@@ -177,7 +177,7 @@ class _SortActionButton(MTButton):
             if self.rect().contains(point) and self.isEnabled():
                 next_value = not self.isChecked()
                 self.setChecked(next_value)
-                self.right_clicked.emit(next_value)
+                self.rightClicked.emit(next_value)
                 event.accept()
                 return
         super().mouseReleaseEvent(event)
@@ -291,7 +291,7 @@ class _SortListEditor(MTWidget):
         self._enabled_row.checked.connect(self._sync_enabled_state)
         self._enabled_row.checked.connect(self._on_enabled_row_toggled)
         self._add_button.clicked.connect(self._add_empty_entry)
-        self._config.config_loaded.connect(self.reload_from_config)
+        self._config.configLoaded.connect(self.reload_from_config)
 
         self.reload_from_config()
 
@@ -381,7 +381,7 @@ class _SortListEditor(MTWidget):
 
 
 class _CookieCheckerSortPopup(MTPopup):
-    enabled_changed = Signal(bool)
+    enabledChanged = Signal(bool)
 
     def __init__(
         self,
@@ -393,7 +393,7 @@ class _CookieCheckerSortPopup(MTPopup):
         field_name: str,
         sort_kind: SortCategoryKind,
     ) -> None:
-        super().__init__(obj_name=obj_name, parent=parent, close_on_outside_click=True)
+        super().__init__(parent, obj_name=obj_name, close_on_outside_click=True)
         self._config = config
         self._field_name = field_name
         self._sort_kind = sort_kind
@@ -430,9 +430,9 @@ class _CookieCheckerSortPopup(MTPopup):
 
         self._enabled_row.checked.connect(self._sync_enabled_state)
         self._enabled_row.checked.connect(self._on_enabled_toggled)
-        self._enabled_row.checked.connect(self.enabled_changed.emit)
+        self._enabled_row.checked.connect(self.enabledChanged.emit)
         self._close_button.clicked.connect(self.hide)
-        self._config.config_loaded.connect(self.reload_from_config)
+        self._config.configLoaded.connect(self.reload_from_config)
 
         self.reload_from_config()
 
@@ -532,6 +532,7 @@ class MTCookieCheckerFieldSetting(MTSwitchSetting):
     ) -> None:
         super().__init__(
             parent,
+            config=config,
             cfg_key=cfg_key,
             tr_key=tr_key,
             obj_name=obj_name,
@@ -559,10 +560,10 @@ class MTCookieCheckerFieldSetting(MTSwitchSetting):
             )
             self._apply_sort_popup_modal_host()
             self._sort_button.clicked.connect(self._toggle_sort_popup)
-            self._sort_button.right_clicked.connect(self._toggle_sort_enabled)
-            self._sort_popup.enabled_changed.connect(self._on_sort_enabled_changed)
-            self._config.config_loaded.connect(self._sync_sort_button_state)
-            self._config.value_changed.connect(self._on_config_value_changed)
+            self._sort_button.rightClicked.connect(self._toggle_sort_enabled)
+            self._sort_popup.enabledChanged.connect(self._on_sort_enabled_changed)
+            self._config.configLoaded.connect(self._sync_sort_button_state)
+            self._config.valueChanged.connect(self._on_config_value_changed)
             self._sync_sort_button_state()
 
     def _apply_sort_popup_modal_host(self) -> None:

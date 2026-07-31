@@ -44,9 +44,9 @@ class DiscordRPC:
         self._state = self._normalize_state(window.current_state())
         self._started_at = int(time())
 
-        window.page_changed.connect(self._set_state)
-        config.config_loaded.connect(self._load_config)
-        config.value_changed.connect(self._on_config_changed)
+        window.pageChanged.connect(self._set_state)
+        config.configLoaded.connect(self._load_config)
+        config.valueChanged.connect(self._on_config_changed)
 
     def start(self) -> None:
         with self._lock:

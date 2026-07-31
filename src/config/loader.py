@@ -19,8 +19,8 @@ if t.TYPE_CHECKING:
     
 
 class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
-    config_loaded = Signal()
-    value_changed = Signal(str, object)
+    configLoaded = Signal()
+    valueChanged = Signal(str, object)
 
     def __init__(self) -> None:
         super().__init__()
@@ -52,7 +52,7 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         if normalized_key.startswith(CLKey.MISC_DEBUGGER_PATH):
             self._apply_logger_settings()
         
-        self.value_changed.emit(normalized_key, value)
+        self.valueChanged.emit(normalized_key, value)
         self.save()
 
     def _apply_logger_settings(self) -> None:
@@ -84,6 +84,6 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             self._data = normalize_config(parsed, self._defaults)
             self._apply_logger_settings()
             self.save()
-            self.config_loaded.emit()
+            self.configLoaded.emit()
         except (OSError, UnicodeError, ValueError, TypeError) as e:
             logger.exception(f'Loader error: {e}')

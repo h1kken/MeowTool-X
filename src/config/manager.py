@@ -22,8 +22,8 @@ if t.TYPE_CHECKING:
 
 
 class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
-    config_loaded = Signal()
-    value_changed = Signal(str, object)
+    configLoaded = Signal()
+    valueChanged = Signal(str, object)
 
     def __init__(self, loader: ConfigLoader) -> None:
         super().__init__()
@@ -78,13 +78,13 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             self._data = normalize_config(parsed, self._defaults)
             self._path = path
             self.save()
-            self.config_loaded.emit()
+            self.configLoaded.emit()
         except (OSError, UnicodeError, ValueError, TypeError) as e:
             logger.exception(f'Can\'t load config \'{name}\'. Error: {e}')
 
     def set(self, key: str, value: object, *, sep: str = '>', force_save: bool = False) -> None:
         super().set(key, value, sep=sep)
-        self.value_changed.emit(key.replace(sep, '>'), value)
+        self.valueChanged.emit(key.replace(sep, '>'), value)
 
         if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES) or force_save:
             self.save()
@@ -93,7 +93,7 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         lst: list[tuple[str, ConfigValue]] = list(t.cast(Mapping[str, ConfigValue], items).items()) if isinstance(items, Mapping) else list(items)
         for key, value in lst:
             super().set(str(key), value, sep=sep)
-            self.value_changed.emit(str(key).replace(sep, '>'), value)
+            self.valueChanged.emit(str(key).replace(sep, '>'), value)
 
         if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES) or force_save:
             self.save()

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import typing as t
+
 import math
 import re
 from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
-import typing as t
 
 from PySide6.QtCore import QAbstractAnimation, QEvent, QObject, QParallelAnimationGroup, Qt, QTimer
 from PySide6.QtGui import QColor, QCursor, QMouseEvent, QPalette, QWheelEvent

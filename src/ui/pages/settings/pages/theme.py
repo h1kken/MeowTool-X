@@ -74,7 +74,7 @@ class SettingsThemePage(BasePage):
         self._delete_cancel.clicked.connect(self._cancel_delete)
         
         self._open_button.clicked.connect(self._open_location)
-        self._config.config_loaded.connect(self._config_loaded)
+        self._config.configLoaded.connect(self._config_loaded)
 
         self._refresh(preferred=self._loaded_name)
 

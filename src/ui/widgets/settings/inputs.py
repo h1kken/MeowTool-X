@@ -45,7 +45,7 @@ class MTTextSetting(MTWidget):
         )
 
         self._line_edit.editingFinished.connect(self._on_changed)
-        config.config_loaded.connect(lambda : self._line_edit.setText(str(config.get(self._cfg_key)).strip()))
+        config.configLoaded.connect(lambda : self._line_edit.setText(str(config.get(self._cfg_key)).strip()))
 
         self._layout.addWidget(self._label)
         self._layout.addWidget(self._line_edit, 1)
@@ -93,7 +93,7 @@ class MTPathSetting(MTWidget):
 
         self._line_edit.editingFinished.connect(self._on_changed)
         self._browse_button.clicked.connect(self._browse_path)
-        self._config.config_loaded.connect(lambda: self._line_edit.setText(str(self._config.get(self._cfg_key)).strip()))
+        self._config.configLoaded.connect(lambda: self._line_edit.setText(str(self._config.get(self._cfg_key)).strip()))
 
         self._main_layout.addWidget(self._label)
         self._main_layout.addWidget(self._line_edit, 1)
@@ -205,7 +205,7 @@ class MTSliderSetting(MTWidget):
         self._spin_box.editingFinished.connect(lambda: self._on_changed(self._spin_box.value()))
         self._spin_box.editingFinished.connect(self._spin_box.clearFocus)
         self._slider.sliderReleased.connect(lambda: self._on_changed(self._slider.value()))
-        config.config_loaded.connect(lambda: self._slider.setValue(t.cast(int, config.get(self._cfg_key))))
+        config.configLoaded.connect(lambda: self._slider.setValue(t.cast(int, config.get(self._cfg_key))))
 
         self._info_layout.addWidget(self._label)
         self._info_layout.addStretch()

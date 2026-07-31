@@ -8,7 +8,7 @@ from src.ui.widgets.main.text import MTButton
 
 
 class PageController(QObject):
-    page_changed = Signal(object)
+    pageChanged = Signal(object)
     
     def __init__(self, layout: QLayout) -> None:
         self._layout = layout

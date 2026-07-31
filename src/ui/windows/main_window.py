@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QMainWindow
 
 from src.app.paths import PATH_SIDEBAR_ICONS_SRC
-from src.ui.constants import MAIN_WINDOW_PAGE_LABEL_FALLBACK, WINDOW_X, WINDOW_Y
+from src.ui.constants import WINDOW_X, WINDOW_Y
 from src.ui.controllers import PageController
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -18,7 +18,7 @@ from src.ui.pages import (
     SettingsPage,
 )
 from src.ui.types import PageState
-from src.ui.widgets import MTButton, MTWidget, SidebarMediaWidget
+from src.ui.widgets import MTButton, MTWidget, MTImage
 from src.ui.windows.types import PageSpec
 from src.ui.windows.window_header import MTWindowHeader
 
@@ -36,17 +36,15 @@ _PAGES: list[PageSpec | None] = [
 
 
 class MainWindow(QMainWindow):
-    page_changed = Signal(dict)
+    pageChanged = Signal(dict)
 
     def __init__(self, config: Config) -> None:
         super().__init__()
         self._config = config
-        
-        self._page_state: PageState = {'main': 'Startup'}
-        
-        self._build(config)
+                
+        self._build()
 
-    def _build(self, config: Config) -> None:
+    def _build(self) -> None:
         self.setObjectName('Main_Window')
         self.resize(WINDOW_X, WINDOW_Y)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
@@ -62,7 +60,7 @@ class MainWindow(QMainWindow):
         
         sidebar_widget = MTWidget(obj_name='Sidebar_Widget')
         sidebar_layout = create_layout(LayoutType.VBOX, sidebar_widget)
-        sidebar_layout.addWidget(SidebarMediaWidget(sidebar_widget))
+        sidebar_layout.addWidget(MTImage(sidebar_widget))
         
         main_content = MTWidget(obj_name='Main_Content_Widget')
         pages_layout = create_layout(LayoutType.VBOX, main_content)
@@ -97,11 +95,11 @@ class MainWindow(QMainWindow):
             sidebar_layout.addWidget(button)
 
         self._page_controller.show(_PAGES[0][2]) # type: ignore[index] | show the first page
-        self._page_controller.page_changed.emit()
+        self._page_controller.pageChanged.emit()
         self._set_page_state({'main': _PAGES[0][1]}) # type: ignore[index]
 
     def _set_page_state(self, state: PageState) -> None:
-        normalized: PageState = {'main': state.get('main', '') or MAIN_WINDOW_PAGE_LABEL_FALLBACK}
+        normalized: PageState = {'main': state.get('main', '')}
         inner = state.get('inner')
         if isinstance(inner, tuple):
             normalized_inner = tuple(
@@ -116,7 +114,7 @@ class MainWindow(QMainWindow):
             return
 
         self._page_state = normalized
-        self.page_changed.emit(normalized)
+        self.pageChanged.emit(normalized)
 
     def _on_settings_page_changed(self, state: PageState) -> None:
         if self._page_controller.current_key() == 'STNGS':

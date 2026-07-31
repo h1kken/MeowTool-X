@@ -1,14 +1,6 @@
 {
   "widgets": [
     {
-      "targets": ["MTMediaWidget > MTLabel"],
-      "styles": {
-        "content": {
-          "align": "center"
-        }
-      }
-    },
-    {
       "targets": ["Sidebar_Media_Image_Label"],
       "styles": {
         "layout_item": {

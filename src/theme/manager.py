@@ -41,7 +41,7 @@ _ALIGNMENT_FLAGS: dict[str, Qt.AlignmentFlag] = {
 
 
 class ThemeManager(QObject):
-    theme_loaded = Signal(object)
+    themeLoaded = Signal(object)
     
     def __init__(self, window: QWidget, config: Config) -> None:
         self._window = window
@@ -50,11 +50,11 @@ class ThemeManager(QObject):
     def load(self, name: str | None = None) -> Path | None:
         loaded = theme_files.load(self._config, name)
         if loaded is None:
-            self.theme_loaded.emit(loaded)
+            self.themeLoaded.emit(loaded)
             return None
 
         path, payload = loaded
-        self.theme_loaded.emit(loaded)
+        self.themeLoaded.emit(loaded)
         self._window.setStyleSheet(self.build(payload, theme_dir=path.parent))
         return path
 

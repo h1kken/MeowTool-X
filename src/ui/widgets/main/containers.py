@@ -35,7 +35,7 @@ from PySide6.QtWidgets import (
 from src.app.paths import PATH_SRC
 from src.theme.colors import to_qcolor
 from src.utils.conversion import as_dict, as_object_dict, coerce_number
-from src.translation.mixin import TranslatableComboBoxMixin
+from src.translation.mixins import TranslatableComboBoxMixin
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.painting import draw_widget_background, new_widget_painter
@@ -77,7 +77,7 @@ class MTButtonGroup(QButtonGroup):
 
 class _MTComboPopupItem(MTButton):
     def __init__(self, combo_box: 'MTComboBox', index: int, parent: QWidget | None = None) -> None:
-        super().__init__(tr_key='', checkable=True, obj_name=combo_box.popup_item_object_name(index), parent=parent)
+        super().__init__(parent, checkable=True, obj_name=combo_box.popup_item_object_name(index))
         self._combo_box = combo_box
         self._index = index
         self.setText(combo_box.itemText(index))
@@ -1009,11 +1009,12 @@ class MTWidget(QWidget):
         if obj_name:
             self.setObjectName(obj_name)
 
-    def paintEvent(self, event: QPaintEvent) -> None:
-        painter = new_widget_painter(self, antialias=False)
-        draw_widget_background(self, painter)
-        painter.end()
-        super().paintEvent(event)
+    # TODO: return it if problems
+    # def paintEvent(self, event: QPaintEvent) -> None:
+    #     painter = new_widget_painter(self, antialias=False)
+    #     draw_widget_background(self, painter)
+    #     painter.end()
+    #     super().paintEvent(event)
 
 
 class _MTListItem(MTButton):
@@ -1025,8 +1026,9 @@ class _MTListItem(MTButton):
         obj_name: str,
         parent: QWidget | None = None,
     ) -> None:
-        super().__init__(tr_key='', checkable=True, obj_name=obj_name, parent=parent)
+        super().__init__(parent, checkable=True, obj_name=obj_name)
         self._value = str(value)
+        
         self.setText(str(text))
         self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
 
@@ -1169,7 +1171,7 @@ class MTLabeledList(MTWidget):
         list_obj_name: str = '',
         parent: QWidget | None = None,
     ) -> None:
-        super().__init__(parent=parent, obj_name=obj_name if obj_name else '')
+        super().__init__(parent, obj_name=obj_name if obj_name else '')
 
         layout = create_layout(LayoutType.VBOX, self)
 

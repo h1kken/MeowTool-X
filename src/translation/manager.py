@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import MappingProxyType
 import typing as t
 
 from PySide6.QtCore import QObject, Signal
@@ -15,17 +16,26 @@ if t.TYPE_CHECKING:
     
     
 class TranslationManager(QObject):
-    language_changed = Signal()
+    languageChanged = Signal()
 
     def __init__(self, config: Config) -> None:
         super().__init__()
         self._config = config
         
-        self.path = PATH_DEFAULT_TRANSLATION
+        self._path = PATH_DEFAULT_TRANSLATION
         self._translations: dict[str, str] = {}
 
-        self._config.config_loaded.connect(self.load)
+        self._config.configLoaded.connect(self.load)
 
+    @property
+    def name(self) -> str: return self._path.name
+    
+    @property
+    def path(self) -> Path: return self._path
+    
+    @property
+    def translations(self) -> MappingProxyType[str, str]: return MappingProxyType(self._translations)
+    
     def load(self, name: str | None = None) -> None:        
         if name is None:
             name = str(self._config.get(CKey.GENERAL_LANGUAGE)).strip()
@@ -40,9 +50,9 @@ class TranslationManager(QObject):
             logger.warning(f'Translations can\'t be loaded. Error: {e}')
             return
 
-        self.path = path
+        self._path = path
         self._translations = translations
-        self.language_changed.emit()
+        self.languageChanged.emit()
 
     def tr(
         self,

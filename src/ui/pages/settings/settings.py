@@ -74,7 +74,7 @@ class SettingsPage(BasePage):
             page.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             
             if isinstance(page, (SettingsProxyPage, SettingsRobloxPage)):
-                page.page_changed.connect(self._emit_page_changed)
+                page.pageChanged.connect(self._emit_page_changed)
 
             self._page_controller.add_page(tr_key, page, obj_name=f'Settings_{obj_name}_Page')
 
@@ -84,7 +84,7 @@ class SettingsPage(BasePage):
 
         tabs_layout.addStretch()
         self._page_controller.show(_PAGES[0][2]) # type: ignore[index] | show the first page
-        self._page_controller.page_changed.emit()
+        self._page_controller.pageChanged.emit()
         self._emit_page_changed()
 
     def current_page(self) -> PageState:
@@ -103,4 +103,4 @@ class SettingsPage(BasePage):
         return state
 
     def _emit_page_changed(self) -> None:
-        self._page_controller.page_changed.emit(self.current_page())
+        self._page_controller.pageChanged.emit(self.current_page())

@@ -537,7 +537,7 @@ class MTComboBoxSetting(MTWidget):
 
         self._set_current_value(config.get(self._cfg_key), fallback=default)
         self._combo_box.currentIndexChanged.connect(self._on_index_changed)
-        config.config_loaded.connect(lambda d=default: self._set_current_value(config.get(self._cfg_key), fallback=d))
+        config.configLoaded.connect(lambda d=default: self._set_current_value(config.get(self._cfg_key), fallback=d))
 
         self._main_layout.addWidget(self._label)
         self._main_layout.addWidget(self._combo_box, 1)

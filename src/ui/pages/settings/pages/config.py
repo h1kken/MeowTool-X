@@ -96,7 +96,7 @@ class SettingsConfigPage(BasePage):
         self._delete_confirm_button.clicked.connect(self._delete_selected_config)
         self._delete_cancel_button.clicked.connect(self._cancel_delete_confirm)
         
-        self._config.config_loaded.connect(self._on_config_loaded)
+        self._config.configLoaded.connect(self._on_config_loaded)
 
         self._refresh_configs(preferred=self._config.name)
 

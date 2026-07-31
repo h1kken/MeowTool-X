@@ -25,7 +25,7 @@ _PAGES: list[PageSpec | None] = [
 
 
 class SettingsProxyPage(BasePage):
-    page_changed = Signal()
+    pageChanged = Signal()
 
     def __init__(
         self,
@@ -69,7 +69,7 @@ class SettingsProxyPage(BasePage):
         
         tabs_layout.addStretch()
         self._page_controller.show(_PAGES[0][2]) # type: ignore[index] | show the first page
-        self._page_controller.page_changed.emit()
+        self._page_controller.pageChanged.emit()
 
     def current_page_inner(self) -> tuple[str, ...]:
         key = self._page_controller.current_key()
