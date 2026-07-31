@@ -36,26 +36,26 @@ class SettingsProxyCheckerPage(BasePage):
                 widgets=[
                     MTSliderSetting(
                         config=config,
-                        cfg_key='Proxy>Checker>General>Main Threads',
+                        cfg_key='Proxy>Checker>Main Threads',
                         tr_key='MAIN_THRDS',
                         min_value=1,
                         max_value=1000,
                     ),
                     MTSliderSetting(
                         config=config,
-                        cfg_key='Proxy>Checker>General>Maximum Wait Response',
+                        cfg_key='Proxy>Checker>Maximum Wait Response',
                         tr_key='MAX_WT_RESP',
                         min_value=1,
                         max_value=60,
                     ),
                     MTSwitchSetting(
                         config=config,
-                        cfg_key='Proxy>Checker>General>Save Good In Custom File',
+                        cfg_key='Proxy>Checker>Save Good In Custom File',
                         tr_key='SV_GD_IN_CSTM_FL',
                     ),
                     MTSwitchSetting(
                         config=config,
-                        cfg_key='Proxy>Checker>General>Save Without Protocol',
+                        cfg_key='Proxy>Checker>Save Without Protocol',
                         tr_key='SV_WTOUT_PRTCL',
                     ),
                 ],

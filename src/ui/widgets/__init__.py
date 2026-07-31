@@ -14,7 +14,7 @@ from src.ui.widgets.settings.checkables import MTCheckBoxSetting, MTSwitchSettin
 from src.ui.widgets.settings.containers import MTColumnsSetting, MTCollapsibleContainer, MTComboBoxSetting
 from src.ui.widgets.settings.inputs import MTTextSetting, MTPathSetting, MTSliderSetting
 
-__all__ = [
+__all__ = (
     # main
     'MTLabel',
     'MTPlainLabel',
@@ -46,4 +46,4 @@ __all__ = [
     'MTTextSetting',
     'MTPathSetting',
     'MTSliderSetting',
-]
+)

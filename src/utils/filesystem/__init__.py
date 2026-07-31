@@ -10,7 +10,7 @@ from src.utils.filesystem.file import (
 )
 from src.utils.filesystem.roblox import detect_roblox_path
 
-__all__ = [
+__all__ = (
     'FS',
     'load_json',
     'get_safe',
@@ -20,4 +20,4 @@ __all__ = [
     'count_lines_in_file',
     'validate_filename',
     'detect_roblox_path',
-]
+)

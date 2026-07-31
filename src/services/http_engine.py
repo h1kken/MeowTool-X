@@ -436,7 +436,7 @@ def _native_debug_log_hook(level: str, event: str, message: str) -> None:
             logger.debug(line)
 
 
-__all__ = [
+__all__ = (
     'NativeHttpBatchRunner',
     'NativeHttpChunkOptions',
     'NativeHttpEngine',
@@ -455,4 +455,4 @@ __all__ = [
     'run_batch',
     'run_chunked',
     'version',
-]
+)

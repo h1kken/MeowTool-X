@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 import typing as t
 
 from PySide6.QtWidgets import QWidget
 
-from src.ui.widgets.main.containers import MTWidget
+from src.ui.widgets import MTWidget
 
 if t.TYPE_CHECKING:
-    from src.config.manager import Config
+    from src.config import Config
 
 
 class MTBaseSetting(MTWidget):
@@ -18,6 +20,5 @@ class MTBaseSetting(MTWidget):
         obj_name: str = '',
     ) -> None:
         super().__init__(parent, obj_name=obj_name)
-
         self._config = config
         self._cfg_key = cfg_key

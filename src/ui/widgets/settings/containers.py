@@ -36,9 +36,10 @@ class MTColumnsSetting(MTScrollArea):
         columns: int = 2,
         obj_name: str = '',
     ) -> None:
+        self._tabs: list[QWidget] = []
+        
         super().__init__(parent)
         
-        self._tabs: list[QWidget] = []
         self._rebalancing = False
 
         self._columns = max(1, int(columns))

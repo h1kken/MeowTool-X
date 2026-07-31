@@ -24,6 +24,7 @@ class GetConfigMixin:
         if value is not CONFIG_MISSING_DEFAULT:
             return value
 
+        print(self.defaults)
         default_value = get_safe(self.defaults, key, sep=sep, default=CONFIG_MISSING_DEFAULT)
         if default_value is not CONFIG_MISSING_DEFAULT:
             return default_value

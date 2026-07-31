@@ -20,6 +20,7 @@ from src.ui.widgets import MTButton, MTWidget
 if t.TYPE_CHECKING:
     from src.config import Config
 
+
 _PAGES: list[PageSpec | None] = [
     (None, 'Cookie_Sorter',    'CK_SRTR',   SettingsRobloxCookieSorterPage),
     (None, 'Cookie_Checker',   'CK_CHCKR',  SettingsRobloxCookieCheckerPage),

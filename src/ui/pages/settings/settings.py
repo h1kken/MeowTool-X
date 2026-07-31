@@ -24,6 +24,7 @@ from src.ui.widgets import MTButton, MTWidget
 if t.TYPE_CHECKING:
     from src.config import Config
 
+
 _PAGES: list[PageSpec | None] = [
     (None, 'Main',    'MAIN',    SettingsMainPage),
     (None, 'Outputs', 'OUTPUTS', SettingsOutputsPage),

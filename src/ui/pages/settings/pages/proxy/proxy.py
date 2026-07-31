@@ -10,13 +10,12 @@ from src.ui.pages.base import BasePage
 from src.ui.controllers import PageController
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.pages.settings.pages import SettingsProxyCheckerPage
 from src.ui.widgets import MTButton, MTWidget
-
-ProxySettingsPageClass: t.TypeAlias = type[SettingsProxyCheckerPage]
+from src.ui.pages.settings.pages.proxy import SettingsProxyCheckerPage
 
 if t.TYPE_CHECKING:
     from src.config import Config
+
 
 _PAGES: list[PageSpec | None] = [
     (None, 'Checker', 'CHCKR', SettingsProxyCheckerPage),
@@ -42,13 +41,13 @@ class SettingsProxyPage(BasePage):
         
         self._tab_labels_by_key: dict[str, str] = {}
 
-        main_layout = create_layout(LayoutType.VBOX, self)
+        self._layout = create_layout(LayoutType.VBOX, self)
         main_widget = MTWidget(obj_name='Settings_Proxy_Tabs_Widget')
-        main_layout.addWidget(main_widget)
+        self._layout.addWidget(main_widget)
 
         tabs_layout = create_layout(LayoutType.HBOX, main_widget)
 
-        self._page_controller = PageController(main_layout)
+        self._page_controller = PageController(self._layout)
 
         for page_spec in _PAGES:
             if page_spec is None:

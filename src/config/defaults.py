@@ -1,8 +1,8 @@
-from copy import deepcopy
 import typing as t
 
 from src.app.paths import PATH_DEFAULT_THEME, PATH_DEFAULT_TRANSLATION
 from src.config.types import ConfigMap, SortCategoryKind
+from src.config.utils import normalize_config
 
 
 DEFAULT_CONFIG_LOADER: t.Final[ConfigMap] = {
@@ -34,7 +34,7 @@ DEFAULT_CONFIG_LOADER: t.Final[ConfigMap] = {
 
 
 def default_config_loader() -> ConfigMap:
-    return deepcopy(DEFAULT_CONFIG_LOADER)
+    return normalize_config(DEFAULT_CONFIG_LOADER, DEFAULT_CONFIG_LOADER)
 
 
 DEFAULT_CONFIG: t.Final[ConfigMap] = {
@@ -280,4 +280,4 @@ for key_name in SORT_KEYS_PLACES:
 
 
 def default_config() -> ConfigMap:
-    return deepcopy(DEFAULT_CONFIG)
+    return normalize_config(DEFAULT_CONFIG, DEFAULT_CONFIG)

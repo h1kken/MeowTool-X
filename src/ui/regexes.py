@@ -1,5 +1,6 @@
 import re
 
+
 SIGNAL_NAME_PATTERN = re.compile(
     r'SignalInstance (\w+)\('
 )

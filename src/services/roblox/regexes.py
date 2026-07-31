@@ -1,5 +1,6 @@
 import re
 
+
 ROBLOX_COOKIE_PATTERN = re.compile(
     r'_\|(?:_|[^\s\r\n]*\|_)\S{100,}'
 )

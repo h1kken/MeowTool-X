@@ -25,6 +25,7 @@ from src.ui.windows.window_header import MTWindowHeader
 if t.TYPE_CHECKING:
     from src.config import Config
 
+
 _PAGES: list[PageSpec | None] = [
     ('checker.svg',   'Proxy_Checker',           'CHCKR',     ProxyCheckerPage),
     ('sorter.svg',    'Roblox_Cookie_Sorter',    'CK_SRTR',   RobloxCookieSorterPage),
