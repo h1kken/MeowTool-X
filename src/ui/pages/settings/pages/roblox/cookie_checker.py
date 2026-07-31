@@ -7,14 +7,8 @@ from PySide6.QtWidgets import QWidget
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets import (
-    MTButton,
-    MTCollapsibleContainer,
-    MTColumnsSetting,
-    MTSliderSetting,
-    MTSwitchSetting,
-    MTTextSetting,
-)
+from src.ui.widgets.common import MTButton, MTCollapsibleContainer
+from src.ui.widgets.settings import MTColumnsSetting, MTSliderSetting, MTSwitchSetting, MTLineEditSetting
 from src.ui.widgets.roblox.cookie_checker import MTCookieCheckerFieldSetting
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 from src.services.roblox.constants import ROBLOX_COOKIE_CHECKER_MAIN_FIELDS
@@ -70,7 +64,7 @@ class SettingsRobloxCookieCheckerPage(BasePage):
                         cfg_key='Roblox>Cookie Checker>Output Filename Like Input',
                         tr_key='OTPT_FLNM_LK_INPT',
                     ),
-                    MTTextSetting(
+                    MTLineEditSetting(
                         config=config,
                         cfg_key='Roblox>Cookie Checker>Output Filename',
                         tr_key='OTPT_FLNM',
@@ -103,13 +97,13 @@ class SettingsRobloxCookieCheckerPage(BasePage):
         self._main_field_switches.clear()
         for field in ROBLOX_COOKIE_CHECKER_MAIN_FIELDS:
             normalized_field_name = self._normalize_object_token(field)
-            field_obj_name = f'Settings_Roblox_Cookie_Checker_Main_{normalized_field_name}'
+            obj_name = f'Settings_Roblox_Cookie_Checker_Main_{normalized_field_name}'
             
             switch = MTCookieCheckerFieldSetting(
                 config=self._config,
                 cfg_key=f'Roblox>Cookie Checker>Main>{field}>Enabled',
                 tr_key=f'FLD_{normalized_field_name.upper()}',
-                obj_name=field_obj_name,
+                obj_name=obj_name,
                 field_name=field,
             )
             self._main_field_switches.append(switch)

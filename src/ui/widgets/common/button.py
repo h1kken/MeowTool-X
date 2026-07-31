@@ -2,40 +2,12 @@ from __future__ import annotations
 
 import collections.abc as cabc
 
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtWidgets import QWidget, QAbstractButton
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QLabel, QAbstractButton, QWidget
 
 from src.translation.mixins import TranslatableMixin
 
-
-class MTPlainLabel(QLabel):
-    def __init__(
-        self,
-        parent: QWidget | None = None,
-        *,
-        text: str = '',
-        obj_name: str = ''
-    ) -> None:
-        super().__init__(text, parent)
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-
-        if obj_name:
-            self.setObjectName(obj_name)
-
-class MTLabel(TranslatableMixin, QLabel):
-    def __init__(
-        self,
-        parent: QWidget | None = None,
-        *,
-        tr_key: str = '',
-        obj_name: str = '',
-    ) -> None:
-        super().__init__(parent, tr_key=tr_key)
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-
-        if obj_name:
-            self.setObjectName(obj_name)
 
 class MTButton(TranslatableMixin, QAbstractButton):
     def __init__(
@@ -89,10 +61,3 @@ class MTButton(TranslatableMixin, QAbstractButton):
             'size': icon_size,
             'spacing': max(0.0, float(spacing)),
         }
-
-
-__all__ = (
-    'MTButton',
-    'MTLabel',
-    'MTPlainLabel',
-)

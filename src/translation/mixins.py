@@ -5,20 +5,12 @@ import typing as t
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget
 
-if t.TYPE_CHECKING:
-    from src.translation.manager import TranslationManager
+import src.app.context as ctx
+translator = ctx.services.translator
 
 
 # TODO: check it work, because MRO can make me mad
-class TranslatorAwareMixin:
-    _translator: TranslationManager
-
-    @classmethod
-    def set_translator(cls, translator: TranslationManager) -> None:
-        cls._translator = translator
-
-
-class TranslatableMixin(TranslatorAwareMixin):
+class TranslatableMixin:
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -29,13 +21,13 @@ class TranslatableMixin(TranslatorAwareMixin):
         super().__init__(parent, *args, **kwargs) # type: ignore
         self._tr_key = tr_key
         
-        self._translator.languageChanged.connect(self._update_text)
+        translator.languageChanged.connect(self._update_text)
         self._update_text()
 
     def _update_text(self) -> None:
         setter = getattr(self, 'setText', None)
         if callable(setter):
-            setter(self._translator.tr(self._tr_key))
+            setter(translator.tr(self._tr_key))
 
 
 class _ComboBoxProtocol(t.Protocol):
@@ -46,7 +38,7 @@ class _ComboBoxProtocol(t.Protocol):
     def setItemText(self, index: int, text: str) -> None: ...
 
 
-class TranslatableComboBoxMixin(TranslatorAwareMixin):
+class TranslatableComboBoxMixin:
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -55,11 +47,11 @@ class TranslatableComboBoxMixin(TranslatorAwareMixin):
     ) -> None:
         super().__init__(parent, *args, **kwargs) # type: ignore
 
-        self._translator.languageChanged.connect(self._update_text)
+        translator.languageChanged.connect(self._update_text)
 
     def add_item(self, item: str) -> None:
         combo = t.cast(_ComboBoxProtocol, self)
-        combo.addItem(self._translator.tr(item), item)
+        combo.addItem(translator.tr(item), item)
         index = combo.count() - 1
         combo.setItemData(index, item, Qt.ItemDataRole.UserRole + 1)
 
@@ -73,4 +65,4 @@ class TranslatableComboBoxMixin(TranslatorAwareMixin):
             tr_key = combo.itemData(i, Qt.ItemDataRole.UserRole + 1)
             if not isinstance(tr_key, str):
                 continue
-            combo.setItemText(i, self._translator.tr(tr_key))
+            combo.setItemText(i, translator.tr(tr_key))

@@ -10,19 +10,12 @@ from PySide6.QtCore import QFileSystemWatcher, QSignalBlocker, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QLayout, QWidget, QSizePolicy
 
+import src.app.context as ctx
 from src.app.paths import PATH_DEFAULT_THEME, PATH_THEMES_SRC, PATH_THEMES_USER
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets import (
-    MTButton,
-    MTInlineEditorStack,
-    MTLabel,
-    MTLabeledList,
-    MTLineEdit,
-    MTPlainLabel,
-    MTWidget,
-)
+from src.ui.widgets.common import MTButton, MTInlineEditorStack, MTLabel, MTLabeledList, MTLineEdit, MTPlainLabel, MTWidget
 from src.config.constants import CONFIGS_REFRESH_DEBOUNCE_MS
 from src.theme import files as theme_files
 from src.utils.filesystem import FS, validate_filename
@@ -84,27 +77,15 @@ class SettingsThemePage(BasePage):
         self._layout.addWidget(content)
 
         body = create_layout(LayoutType.HBOX, content)
-        self._list_column = MTLabeledList(obj_name='Theme_List_Column', list_obj_name='Theme_List')
+        self._list_column = MTLabeledList(obj_name='Theme_List')
         self._themes_list = self._list_column.list_widget
         actions = MTWidget(obj_name='Theme_Actions_Column')
         body.addWidget(self._list_column)
         body.addWidget(actions)
 
         layout = create_layout(LayoutType.VBOX, actions)
-        self._selected_value = self._add_info_row(
-            layout,
-            'SLCTD',
-            'Theme_Selected_Info',
-            'Theme_Selected_Label',
-            'Theme_Selected_Value',
-        )
-        self._loaded_value = self._add_info_row(
-            layout,
-            'LDD',
-            'Theme_Loaded_Info',
-            'Theme_Loaded_Label',
-            'Theme_Loaded_Value',
-        )
+        self._selected_value = self._add_info_row(layout, tr_key='SLCTD', obj_name='Theme_Selected')
+        self._loaded_value = self._add_info_row(layout, tr_key='LDD', obj_name='Theme_Loaded')
 
         self._load_button = MTButton(tr_key='LOAD', obj_name='Theme_Apply_Button')
         self._create_stack = self._editor_stack_widget('create', 'CREATE')
@@ -125,16 +106,15 @@ class SettingsThemePage(BasePage):
     def _add_info_row(
         self,
         layout: QLayout,
+        *,
         tr_key: str,
-        row_name: str,
-        label_name: str,
-        value_name: str,
+        obj_name: str,
     ) -> MTPlainLabel:
-        row = MTWidget(obj_name=row_name)
+        row = MTWidget(obj_name=f'{obj_name}_Info')
         row_layout = create_layout(LayoutType.HBOX, row)
-        label = MTLabel(tr_key=tr_key, obj_name=label_name)
+        label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Label')
         label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
-        value = MTPlainLabel(text='-', obj_name=value_name)
+        value = MTPlainLabel(text='-', obj_name=f'{obj_name}_Value')
         value.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         row_layout.addWidget(label)
         row_layout.addWidget(value, stretch=1)

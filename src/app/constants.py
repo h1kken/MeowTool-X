@@ -1,5 +1,6 @@
 import sys
 
+
 PROGRAM_TITLE = 'MeowTool... Meow :3'
 
 PROGRAM_NAME = 'MeowTool X'
@@ -31,4 +32,4 @@ def _is_console_stream(stream: object) -> bool:
 IS_LAUNCHED_WITH_CONSOLE = _is_console_stream(sys.stdout)
 
 
-__all__ = tuple(name for name in globals() if name.isupper())
+__all__ = [name for name in globals() if name.isupper()]

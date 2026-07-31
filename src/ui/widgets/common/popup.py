@@ -8,8 +8,8 @@ from PySide6.QtWidgets import QApplication, QBoxLayout, QLayout, QSizePolicy, QW
 
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets import MTWidget
-from src.ui.widgets.main.paint_primitives import resolve_uniform_radius, rounded_rect_path
+from src.ui.widgets.common import MTWidget
+from src.ui.widgets.paint_primitives import resolve_uniform_radius, rounded_rect_path
 from src.ui.widgets.types import PopupPlacement
 
 
@@ -78,16 +78,13 @@ class MTPopup(MTWidget):
         self._root_layout.addWidget(self._content)
 
     @property
-    def close_on_outside_click(self) -> bool:
-        return self._close_on_outside_click
+    def close_on_outside_click(self) -> bool: return self._close_on_outside_click
 
     @property
-    def content_widget(self) -> MTWidget:
-        return self._content
+    def content_widget(self) -> MTWidget: return self._content
 
     @property
-    def content_layout(self) -> QLayout:
-        return self._content_layout
+    def content_layout(self) -> QLayout: return self._content_layout
 
     def add_widget(self, widget: QWidget, stretch: int = 0) -> None:
         if isinstance(self._content_layout, QBoxLayout):

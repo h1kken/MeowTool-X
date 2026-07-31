@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from copy import deepcopy
 import typing as t
+
+from copy import deepcopy
 
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QMouseEvent, QResizeEvent
@@ -9,8 +10,11 @@ from PySide6.QtWidgets import QWidget
 
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
+from src.ui.widgets.settings.base import MTBaseSetting
 from src.ui.widgets.types import WidgetThemeMap
-from src.ui.widgets import MTSwitch, MTWidget, MTButton, MTLabel, MTLineEdit, MTPopup, MTSwitchSetting
+from src.ui.widgets.common import MTSwitch, MTWidget, MTButton, MTLabel, MTLineEdit, MTPopup
+from src.ui.widgets.settings import MTSwitchSetting
+
 from src.config.defaults import SORT_KEYS, default_config
 from src.config.types import SortCategoryKind
 from src.services.roblox.constants import ROBLOX_COOKIE_CHECKER_MAIN_FIELDS
@@ -58,23 +62,19 @@ _COOKIE_CHECKER_SORT_TEXT_FLAGS: dict[str, dict[str, str]] = {
 }
 
 
-class _BoundSwitchRow(MTWidget):
+class _BoundSwitchRow(MTBaseSetting):
     checked = Signal(bool)
 
     def __init__(
         self,
+        parent: QWidget | None = None,
         *,
         config: Config,
-        label_text: str,
         cfg_key: str,
-        default: bool,
-        obj_name: str,
-        parent: QWidget | None = None,
+        text: str = '',
+        obj_name: str = '',
     ) -> None:
-        super().__init__(parent)
-        self._config = config
-        self._cfg_key = cfg_key
-        self._default = bool(default)
+        super().__init__(parent, config=config, cfg_key=cfg_key)
         self._suspend_config_write = False
 
         self.setObjectName(f'{obj_name}_Row')
@@ -83,12 +83,10 @@ class _BoundSwitchRow(MTWidget):
         self._layout = create_layout(LayoutType.HBOX, self)
 
         self._label = MTLabel(tr_key='', obj_name=f'{obj_name}_Label')
-        self._label.setText(str(label_text))
+        self._label.setText(str(text))
 
         self._switch = MTSwitch(obj_name=f'{obj_name}_Switch')
-        self._switch.setChecked(
-            bool(self._config.get(self._cfg_key))
-        )
+        self._switch.setChecked(bool(self._config.get(self._cfg_key)))
 
         self._layout.addWidget(self._label)
         self._layout.addStretch()
@@ -273,9 +271,8 @@ class _SortListEditor(MTWidget):
 
         self._enabled_row = _BoundSwitchRow(
             config=self._config,
-            label_text=label_text,
+            text=label_text,
             cfg_key=self._cfg_key_enabled,
-            default=False,
             obj_name=f'{obj_name}_Enabled',
         )
         self._main_layout.addWidget(self._enabled_row)
@@ -418,9 +415,8 @@ class _CookieCheckerSortPopup(MTPopup):
 
         self._enabled_row = _BoundSwitchRow(
             config=self._config,
-            label_text='Sort',
+            text='Sort',
             cfg_key=self._category_key('Enabled'),
-            default=bool(self._category_defaults.get('Enabled', False)),
             obj_name=f'{obj_name}_Enabled',
         )
         self.add_widget(self._enabled_row)
@@ -456,15 +452,13 @@ class _CookieCheckerSortPopup(MTPopup):
         return f'Roblox>Cookie Checker>Sorting>Categories>{self._field_name}>{suffix}'
 
     def _build_detail_widgets(self, obj_name: str) -> None:
-        options_defaults = as_dict(self._category_defaults.get('Options')) or {}
         if self._sort_kind != 'number':
             return
 
         self._zero_row = _BoundSwitchRow(
             config=self._config,
-            label_text='Zero',
+            text='Zero',
             cfg_key=self._category_key('Options>Zero'),
-            default=bool(options_defaults.get('Zero', False)),
             obj_name=f'{obj_name}_Zero',
         )
         self.add_widget(self._zero_row)
@@ -497,9 +491,8 @@ class _CookieCheckerSortPopup(MTPopup):
         ).items():
             row = _BoundSwitchRow(
                 config=self._config,
-                label_text=label_text,
+                text=label_text,
                 cfg_key=self._category_key(option_key),
-                default=bool(self._category_defaults.get(option_key, False)),
                 obj_name=f'{obj_name}_{option_key}',
             )
             self.add_widget(row)

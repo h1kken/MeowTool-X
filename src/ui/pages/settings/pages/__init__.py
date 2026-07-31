@@ -6,6 +6,7 @@ from .misc import SettingsMiscPage
 from .config import SettingsConfigPage
 from .theme import SettingsThemePage
 
+
 __all__ = (
     'SettingsMainPage',
     'SettingsOutputsPage',

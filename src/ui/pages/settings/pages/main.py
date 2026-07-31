@@ -8,7 +8,8 @@ from src.app.paths import PATH_DEFAULT_TRANSLATION, PATH_TRANSLATIONS_SRC, PATH_
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets import MTCollapsibleContainer, MTColumnsSetting, MTComboBoxSetting
+from src.ui.widgets.common import MTCollapsibleContainer
+from src.ui.widgets.settings import MTColumnsSetting, MTComboBoxSetting
 
 if t.TYPE_CHECKING:
     from src.config import Config

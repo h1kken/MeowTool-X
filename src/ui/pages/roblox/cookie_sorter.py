@@ -10,7 +10,7 @@ from PySide6.QtCore import QThread
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets import MTButton, MTDropZone, MTLabel
+from src.ui.widgets.common import MTButton, MTDropZone, MTLabel
 from src.services.roblox.cookie_sorter import RobloxCookieSorter
 
 if t.TYPE_CHECKING:
@@ -47,8 +47,8 @@ class RobloxCookieSorterPage(BasePage):
             tr_key='Upload or Drag & Drop text/files here',
             obj_name='Roblox_Cookie_Sorter',
         )
-        self._drop_zone.files_dropped.connect(self._add_source_files)
-        self._drop_zone.text_dropped.connect(self._add_source_text)
+        self._drop_zone.filesDropped.connect(self._add_source_files)
+        self._drop_zone.textDropped.connect(self._add_source_text)
         main_layout.addWidget(self._drop_zone)
 
         self._sort_btn = MTButton(tr_key='CK_SRTR_STRT', obj_name='Roblox_Cookie_Sorter_Start_Button')

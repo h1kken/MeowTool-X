@@ -1,48 +1,11 @@
 from PySide6.QtCore import QPoint, QPointF, QRect, QRectF, QSize, Qt
 from PySide6.QtGui import QColor, QMouseEvent, QPaintEvent, QPainter, QPainterPath, QPen, QWheelEvent
-from PySide6.QtWidgets import QDoubleSpinBox, QLineEdit, QSlider, QSpinBox, QStyle, QStyleOptionSpinBox, QStyleOptionSlider, QWidget
+from PySide6.QtWidgets import QSlider, QStyle, QStyleOptionSlider, QWidget
 
 from src.theme.colors import to_qcolor
 from src.utils.conversion import coerce_box_sides, coerce_number
 from src.ui.painting import new_widget_painter
-from src.ui.widgets.main.paint_primitives import parse_pen_style, resolve_fill_brush
-
-
-def _text_render_width(widget: QWidget, values: tuple[str, ...]) -> int:
-    metrics = widget.fontMetrics()
-    widths = [metrics.horizontalAdvance(str(value)) for value in values if str(value)]
-    return max(widths or [1])
-
-
-def _line_edit_horizontal_margins(line_edit: QLineEdit) -> int:
-    margins = line_edit.textMargins()
-    return max(0, margins.left() + margins.right())
-
-
-def _spin_box_text_safety_width(spin_box: QSpinBox | QDoubleSpinBox) -> int:
-    metrics = spin_box.fontMetrics()
-    return max(4, metrics.horizontalAdvance('0'))
-
-
-def _spin_box_content_size_hint(spin_box: QSpinBox | QDoubleSpinBox, values: tuple[str, ...]) -> QSize:
-    text_width = (
-        _text_render_width(spin_box, values) +
-        _line_edit_horizontal_margins(spin_box.lineEdit()) +
-        _spin_box_text_safety_width(spin_box)
-    )
-    content_size = QSize(max(1, text_width), max(1, spin_box.fontMetrics().height()))
-
-    option = QStyleOptionSpinBox()
-    spin_box.initStyleOption(option)
-    option.buttonSymbols = QSpinBox.ButtonSymbols.NoButtons
-    option.frame = False
-
-    return spin_box.style().sizeFromContents(
-        QStyle.ContentsType.CT_SpinBox,
-        option,
-        content_size,
-        spin_box,
-    )
+from src.ui.widgets.paint_primitives import parse_pen_style, resolve_fill_brush
 
 
 class MTSlider(QSlider):
@@ -501,90 +464,3 @@ class MTSlider(QSlider):
         self._draw_part_rect(painter, groove_rect, 'groove', draw_fill=False, draw_border=True)
         self._draw_part_rect(painter, handle_rect, 'handle')
         painter.end()
-
-class MTLineEdit(QLineEdit):
-    def __init__(
-        self,
-        text: str = '',
-        obj_name: str = '',
-        *,
-        parent: QWidget | None = None,
-    ) -> None:
-        super().__init__(text, parent)
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setFrame(False)
-        self.setTextMargins(0, 0, 0, 0)
-        
-        if obj_name:
-            self.setObjectName(obj_name)
-            
-        self._placeholder_tr_key: str | None = None
-
-
-class MTSpinBox(QSpinBox):
-    def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
-        super().__init__(parent)
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
-        self.setFrame(False)
-        self.lineEdit().setTextMargins(0, 0, 0, 0)
-        
-        if obj_name:
-            self.setObjectName(obj_name)
-
-
-    def sizeHint(self) -> QSize:
-        return _spin_box_content_size_hint(
-            self,
-            (
-                self.textFromValue(self.minimum()),
-                self.textFromValue(self.maximum()),
-            ),
-        )
-
-    def minimumSizeHint(self) -> QSize:
-        return _spin_box_content_size_hint(
-            self,
-            (
-                self.textFromValue(self.minimum()),
-                self.textFromValue(self.maximum()),
-            ),
-        )
-
-    def wheelEvent(self, event: QWheelEvent):
-        event.ignore()
-        self.clearFocus()
-
-
-class MTDoubleSpinBox(QDoubleSpinBox):
-    def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
-        super().__init__(parent)
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
-        self.setFrame(False)
-        self.lineEdit().setTextMargins(0, 0, 0, 0)
-
-        if obj_name:
-            self.setObjectName(obj_name)
-
-    def sizeHint(self) -> QSize:
-        return _spin_box_content_size_hint(
-            self,
-            (
-                self.textFromValue(self.minimum()),
-                self.textFromValue(self.maximum()),
-            ),
-        )
-
-    def minimumSizeHint(self) -> QSize:
-        return _spin_box_content_size_hint(
-            self,
-            (
-                self.textFromValue(self.minimum()),
-                self.textFromValue(self.maximum()),
-            ),
-        )
-
-    def wheelEvent(self, event: QWheelEvent):
-        event.ignore()
-        self.clearFocus()

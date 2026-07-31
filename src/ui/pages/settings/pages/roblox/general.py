@@ -7,7 +7,8 @@ from PySide6.QtWidgets import QWidget
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets import MTCollapsibleContainer, MTColumnsSetting, MTComboBoxSetting, MTSwitchSetting, MTTextSetting
+from src.ui.widgets.common import MTCollapsibleContainer
+from src.ui.widgets.settings import MTColumnsSetting, MTComboBoxSetting, MTSwitchSetting, MTLineEditSetting
 
 if t.TYPE_CHECKING:
     from src.config import Config
@@ -39,7 +40,7 @@ class SettingsRobloxGeneralPage(BasePage):
                         cfg_key='Roblox>General>Add Symbols Between Warning And Cookie',
                         tr_key='Add symbols between warning and cookie',
                     ),
-                    MTTextSetting(
+                    MTLineEditSetting(
                         config=config,
                         cfg_key='Roblox>General>Symbols Between Warning And Cookie',
                         tr_key='Symbols between warning and cookie',

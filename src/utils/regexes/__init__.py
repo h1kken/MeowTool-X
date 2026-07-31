@@ -6,6 +6,7 @@ from .proxy import (
     PROXY_PROTOCOL_USER_PASS_IP_PORT_PATTERN,
 )
 
+
 __all__ = (
     'FILENAME_SPECIAL_CHARS_PATTERN',
     'PROXY_PROTOCOL_IP_PORT_PATTERN',

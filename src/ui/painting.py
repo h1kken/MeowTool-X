@@ -41,4 +41,8 @@ def draw_widget_background(widget: QWidget, painter: QPainter) -> None:
     widget.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, option, painter, widget)
 
 
-__all__ = ('configure_painter', 'new_widget_painter', 'draw_widget_background')
+__all__ = (
+    'configure_painter',
+    'new_widget_painter',
+    'draw_widget_background',
+)

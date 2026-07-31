@@ -1,6 +1,6 @@
-from src.config.manager import Config
-from src.config.loader import ConfigLoader
-from src.config.enums import ConfigKey, ConfigLoaderKey
+from .manager import Config
+from .loader import ConfigLoader
+from .enums import ConfigKey, ConfigLoaderKey
 
 
 __all__ = (

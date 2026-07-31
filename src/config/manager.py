@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import typing as t
+import collections.abc as cabc
+
 from copy import deepcopy
 import threading
-from collections.abc import Iterable, Mapping
 from pathlib import Path
-import typing as t
 
 from PySide6.QtCore import QObject, Signal
 
@@ -89,8 +90,8 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES) or force_save:
             self.save()
 
-    def set_many(self, items: Mapping[str, ConfigValue] | Iterable[tuple[str, ConfigValue]], *, sep: str = '>', force_save: bool = False) -> None:
-        lst: list[tuple[str, ConfigValue]] = list(t.cast(Mapping[str, ConfigValue], items).items()) if isinstance(items, Mapping) else list(items)
+    def set_many(self, items: cabc.Mapping[str, ConfigValue] | cabc.Iterable[tuple[str, ConfigValue]], *, sep: str = '>', force_save: bool = False) -> None:
+        lst: list[tuple[str, ConfigValue]] = list(t.cast(cabc.Mapping[str, ConfigValue], items).items()) if isinstance(items, cabc.Mapping) else list(items)
         for key, value in lst:
             super().set(str(key), value, sep=sep)
             self.valueChanged.emit(str(key).replace(sep, '>'), value)
@@ -98,19 +99,19 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES) or force_save:
             self.save()
 
-    def rename(self, path: Path, name: str) -> None:
-        if not path.is_file():
+    def rename(self, old_name: str, new_name: str) -> None:
+        old_path = PATH_CONFIGS / f'{old_name}.txt'
+        new_path = PATH_CONFIGS / f'{new_name}.txt'
+        if old_path == new_path:
             return
-        if path.stem == name:
+        if old_path.is_file():
             return
-
-        new_path = PATH_CONFIGS / f'{name}.txt'
-        if new_path.is_file():
+        if new_path.exists():
             return
 
         try:
-            path.rename(new_path)
+            old_path.rename(new_path)
             self._path = new_path
         except OSError as e:
-            logger.exception(f'Can\'t rename config \'{path.stem}\' to \'{name}\'. Error: {e}')
+            logger.exception(f'Can\'t rename config \'{old_name}.txt\' to \'{new_name}.txt\'. Error: {e}')
             return

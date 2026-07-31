@@ -1,3 +1,6 @@
+import typing as t
+import collections.abc as cabc
+
 import bz2
 import gzip
 import lzma
@@ -7,11 +10,9 @@ import shutil
 import tarfile
 import tempfile
 import zipfile
-from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Lock
-import typing as t
 
 from PySide6.QtCore import QObject, Signal
 
@@ -158,7 +159,7 @@ class RobloxCookieSorter(QObject):
             return False
         return True
 
-    def _iter_files_from_directory(self, directory: Path) -> Iterator[Path]:
+    def _iter_files_from_directory(self, directory: Path) -> cabc.Iterator[Path]:
         for path in directory.rglob('*'):
             if self._is_supported_input_file(path):
                 yield path
@@ -198,7 +199,7 @@ class RobloxCookieSorter(QObject):
             return token
         self._add_incorrect()
 
-    def _iter_lines(self, data: bytes | mmap.mmap) -> Iterator[bytes]:
+    def _iter_lines(self, data: bytes | mmap.mmap) -> cabc.Iterator[bytes]:
         start = 0
         data_len = len(data)
         while start < data_len:

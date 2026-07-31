@@ -4,7 +4,7 @@ import typing as t
 
 from PySide6.QtWidgets import QWidget
 
-from src.ui.widgets.main.containers import MTWidget
+from src.ui.widgets.common import MTWidget
 
 if t.TYPE_CHECKING:
     from src.config import Config

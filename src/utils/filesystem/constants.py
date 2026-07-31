@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+
 PROGRAM_NAME_SPECIAL_CHARS = {'<', '>', '|', '^', '&'}
 FILENAME_SPECIAL_CHARS = {'\\', '/', ':', '*', '?', '"', '<', '>', '|'}
 

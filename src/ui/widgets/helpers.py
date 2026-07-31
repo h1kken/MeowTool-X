@@ -4,12 +4,6 @@ from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap, QTransform
 from PySide6.QtWidgets import QWidget
 
-SETTING_ROW_HEIGHT = 0
-SETTING_ROW_GAP = 0
-SLIDER_COMPACT_PART_HEIGHT = 0
-COLLAPSIBLE_TOGGLE_BUTTON_SIZE = 20
-COLLAPSIBLE_TOGGLE_ICON_SIZE = 18
-
 
 @lru_cache(maxsize=128)
 def _load_pixmap(source: str, size: int) -> QPixmap:
@@ -40,6 +34,10 @@ def icon(source: str, color_name: str, rotation: float, size: int) -> QIcon:
         )
 
     return QIcon(tinted_pixmap)
+
+
+def normalize_obj_name(base: str, suffix: str) -> str:
+    return f'{base}_{suffix}' if base else ''
 
 
 def repolish(widget: QWidget) -> None:

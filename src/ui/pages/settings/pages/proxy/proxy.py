@@ -10,7 +10,7 @@ from src.ui.pages.base import BasePage
 from src.ui.controllers import PageController
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets import MTButton, MTWidget
+from src.ui.widgets.common import MTButton, MTWidget
 from src.ui.pages.settings.pages.proxy import SettingsProxyCheckerPage
 
 if t.TYPE_CHECKING:

@@ -2,6 +2,7 @@ import threading
 from pathlib import Path
 import typing as t
 
+
 type ConfigScalar = None | bool | int | float | str
 type ConfigValue = (
     ConfigScalar

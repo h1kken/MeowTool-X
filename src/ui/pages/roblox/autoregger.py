@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QWidget
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.pages.base import BasePage
-from src.ui.widgets import MTLabel
+from src.ui.widgets.common import MTLabel
 
 if t.TYPE_CHECKING:
     from src.config import Config

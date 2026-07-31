@@ -16,10 +16,7 @@ from src.theme.files import LoadedTheme
 from src.theme.colors import normalize_color, to_qcolor
 from src.theme.parser import normalize_theme_payload
 from src.theme.targets import resolve_target_widgets
-from src.ui.widgets.main.checkables import MTSwitch
-from src.ui.widgets.main.containers import MTComboBox
-from src.ui.widgets.main.inputs import MTSlider
-from src.ui.widgets.settings.containers import MTCollapsibleContainer
+from src.ui.widgets.common import MTSwitch, MTComboBox, MTSlider, MTCollapsibleContainer
 from src.utils.conversion import as_dict, coerce_float
 
 from .helpers import interpolate_color, normalize_dash_border

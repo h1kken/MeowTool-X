@@ -28,10 +28,6 @@ def bootstrap(app: QApplication) -> AppServices:
     # Translation
     from src.translation.manager import TranslationManager
     services.translator = TranslationManager(services.config)
-    
-    from src.translation.mixins import TranslatorAwareMixin
-    TranslatorAwareMixin.set_translator(services.translator)
-    
     services.translator.load()
     
     # UI

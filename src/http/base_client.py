@@ -1,7 +1,8 @@
+import typing as t
+import collections.abc as cabc
+
 import asyncio
 import random
-from collections.abc import Mapping
-import typing as t
 
 from aiohttp import (
     ClientError,
@@ -45,11 +46,11 @@ class BaseHttpClient:
         method: str,
         url: str,
         *,
-        data: Mapping[str, object] | None = None,
-        json: Mapping[str, object] | None = None,
-        params: Mapping[str, str] | None = None,
-        headers: Mapping[str, str] | None = None,
-        cookies: Mapping[str, str] | None = None,
+        data: cabc.Mapping[str, object] | None = None,
+        json: cabc.Mapping[str, object] | None = None,
+        params: cabc.Mapping[str, str] | None = None,
+        headers: cabc.Mapping[str, str] | None = None,
+        cookies: cabc.Mapping[str, str] | None = None,
         allow_redirects: bool = False,
         timeout: ClientTimeout | None = None,
         ssl: bool = False,

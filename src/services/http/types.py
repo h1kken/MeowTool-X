@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import typing as t
+
+from dataclasses import dataclass, field
 
 
 def _empty_str_dict() -> dict[str, str]:
@@ -96,6 +97,7 @@ class NativeHttpChunkOptions:
 
 type ProxyLike = JsonObject | str | NativeProxySpec
 type RequestLike = JsonObject | NativeHttpRequest
+
 
 __all__ = (
     'JsonObject',

@@ -7,7 +7,8 @@ from PySide6.QtWidgets import QWidget
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets import MTCollapsibleContainer, MTColumnsSetting, MTTextSetting
+from src.ui.widgets.common import MTCollapsibleContainer
+from src.ui.widgets.settings import MTColumnsSetting, MTLineEditSetting
 
 if t.TYPE_CHECKING:
     from src.config import Config
@@ -34,7 +35,7 @@ class SettingsRobloxCookieSorterPage(BasePage):
                 tr_key='GNRL',
                 obj_name='Settings_Roblox_Cookie_Sorter',
                 widgets=[
-                    MTTextSetting(
+                    MTLineEditSetting(
                         config=config,
                         cfg_key='Roblox>Cookie Sorter>Output Filename',
                         tr_key='OTPT_FLNM',

@@ -1,10 +1,11 @@
+import typing as t
+import collections.abc as cabc
+
 import json
 import mmap
 import shutil
 import zipfile
-from collections.abc import Collection, Mapping, MutableMapping
 from pathlib import Path
-import typing as t
 
 from src.exceptions.json import NotADictionaryError
 from src.app.paths import PATH_APP_ROOT
@@ -125,42 +126,42 @@ def load_json(path: Path) -> JsonObject | None:
         logger.exception(f'Error in {path}')
 
 
-def get_safe(data: Mapping[str, t.Any], key: str, *, sep: str = '>', default: TDefault | None = None,) -> object | TDefault | None:
+def get_safe(data: cabc.Mapping[str, t.Any], key: str, *, sep: str = '>', default: TDefault | None = None) -> object | TDefault | None:
     keys = key.split(sep)
     current: object = data
     for part in keys:
-        if not isinstance(current, Mapping) or part not in current:
+        if not isinstance(current, cabc.Mapping) or part not in current:
             return default
-        mapping = t.cast(Mapping[str, object], current)
+        mapping = t.cast(cabc.Mapping[str, object], current)
         current = mapping[part]
     return current
 
 
-def set_safe(data: MutableMapping[str, t.Any], key: str, value: t.Any, *, sep: str = '>') -> None:
+def set_safe(data: cabc.MutableMapping[str, t.Any], key: str, value: t.Any, *, sep: str = '>') -> None:
     keys = key.split(sep)
-    current: MutableMapping[str, t.Any] = data
+    current: cabc.MutableMapping[str, t.Any] = data
     for part in keys[:-1]:
         child = current.get(part)
-        if isinstance(child, MutableMapping):
-            current = t.cast(MutableMapping[str, t.Any], child)
+        if isinstance(child, cabc.MutableMapping):
+            current = t.cast(cabc.MutableMapping[str, t.Any], child)
             continue
-        new_child: MutableMapping[str, t.Any] = {}
+        new_child: cabc.MutableMapping[str, t.Any] = {}
         current[part] = new_child
         current = new_child
     current[keys[-1]] = value
 
 
-def del_safe(data: MutableMapping[str, t.Any], key: str, *, sep: str = '>') -> bool:
+def del_safe(data: cabc.MutableMapping[str, t.Any], key: str, *, sep: str = '>') -> bool:
     keys = key.split(sep)
-    current: MutableMapping[str, t.Any] = data
-    stack: list[tuple[MutableMapping[str, t.Any], str]] = []
+    current: cabc.MutableMapping[str, t.Any] = data
+    stack: list[tuple[cabc.MutableMapping[str, t.Any], str]] = []
 
     for part in keys[:-1]:
         child = current.get(part)
-        if not isinstance(child, MutableMapping):
+        if not isinstance(child, cabc.MutableMapping):
             return False
         stack.append((current, part))
-        current = t.cast(MutableMapping[str, t.Any], child)
+        current = t.cast(cabc.MutableMapping[str, t.Any], child)
 
     leaf = keys[-1]
     if leaf not in current:
@@ -170,7 +171,7 @@ def del_safe(data: MutableMapping[str, t.Any], key: str, *, sep: str = '>') -> b
     while stack:
         parent, part = stack.pop()
         child = parent.get(part)
-        if isinstance(child, MutableMapping) and not child:
+        if isinstance(child, cabc.MutableMapping) and not child:
             del parent[part]
             continue
         break
@@ -212,7 +213,7 @@ def count_lines_in_file(path: Path) -> int:
     return count
 
 
-def validate_filename(name: str, *, black_list: Collection[str] = (), default: str | None = None) -> str | None:
+def validate_filename(name: str, *, black_list: cabc.Collection[str] = (), default: str | None = None) -> str | None:
     name = str(name).strip()
     if (
         not name

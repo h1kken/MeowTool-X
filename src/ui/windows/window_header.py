@@ -7,7 +7,8 @@ from PySide6.QtWidgets import QApplication, QSizePolicy, QWidget
 from src.app.paths import PATH_HEADER_ICONS_SRC
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets import MTButton, MTPlainLabel, MTWidget
+from src.ui.widgets.common import MTButton, MTPlainLabel, MTWidget
+
 
 _HEADER_RESIZE_MARGIN = 8
 _HEADER_OBJECT_NAME = 'Main_Window_Header'

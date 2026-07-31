@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
+
 type WidgetThemeMap = dict[str, object]
 type PopupPlacement = t.Literal[
     'bottom-left',

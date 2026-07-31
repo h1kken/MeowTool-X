@@ -7,7 +7,8 @@ from PySide6.QtWidgets import QWidget
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets import MTCollapsibleContainer, MTColumnsSetting, MTSwitchSetting
+from src.ui.widgets.common import MTCollapsibleContainer
+from src.ui.widgets.settings import MTColumnsSetting, MTSwitchSetting
 
 if t.TYPE_CHECKING:
     from src.config import Config

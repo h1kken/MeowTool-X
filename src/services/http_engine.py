@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import asdict, is_dataclass
 import typing as t
+
+from dataclasses import asdict, is_dataclass
 
 from src.services.http.types import (
     JsonObject,

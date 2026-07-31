@@ -3,8 +3,7 @@ import typing as t
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QLayout
 
-from src.ui.widgets.main.containers import MTButtonGroup, MTWidget
-from src.ui.widgets.main.text import MTButton
+from src.ui.widgets.common import MTButton, MTButtonGroup, MTWidget
 
 
 class PageController(QObject):

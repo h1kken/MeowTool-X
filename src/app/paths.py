@@ -4,7 +4,8 @@ import os
 import sys
 from pathlib import Path
 
-from src.app.constants import PROGRAM_NAME
+from .constants import PROGRAM_NAME
+
 
 def _find_bundle_root() -> Path:
     bundle_path = getattr(sys, '_MEIPASS', None)
@@ -94,4 +95,4 @@ PATH_BLOXSTRAP = PATH_LOCALAPPDATA / 'Bloxstrap' / 'Bloxstrap.exe'
 PATH_ROBLOXPLAYERBETA = PATH_SYSTEM_DRIVE / 'Program Files (x86)' / 'Roblox' / 'Versions'
 
 
-__all__ = tuple(name for name in globals() if name.startswith('PATH_'))
+__all__ = [name for name in globals() if name.startswith('PATH_')]

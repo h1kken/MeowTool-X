@@ -4,8 +4,8 @@ from PySide6.QtWidgets import QCheckBox, QSizePolicy, QWidget
 
 from src.theme.colors import to_qcolor
 from src.ui.painting import new_widget_painter
-from src.ui.widgets.main.containers import MTWidget
-from src.ui.widgets.main.paint_primitives import (
+from src.ui.widgets.common import MTWidget
+from src.ui.widgets.paint_primitives import (
     parse_non_negative_float,
     parse_pen_style,
     resolve_fill_brush,

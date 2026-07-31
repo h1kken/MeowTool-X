@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from pathlib import Path
 import typing as t
+
+from pathlib import Path
 
 ArchiveKind = t.Literal['zip', 'tar', '7z', 'rar', 'gz', 'bz2', 'xz', 'zst', 'lz4']
 

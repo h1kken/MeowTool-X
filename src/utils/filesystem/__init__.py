@@ -1,14 +1,6 @@
-from src.utils.filesystem.file import (
-    FS,
-    count_lines_in_file,
-    del_safe,
-    get_files_from_folder,
-    get_safe,
-    load_json,
-    set_safe,
-    validate_filename,
-)
-from src.utils.filesystem.roblox import detect_roblox_path
+from .file import FS, validate_filename, load_json, del_safe, get_safe, set_safe, get_files_from_folder, count_lines_in_file
+from .roblox import detect_roblox_path
+
 
 __all__ = (
     'FS',

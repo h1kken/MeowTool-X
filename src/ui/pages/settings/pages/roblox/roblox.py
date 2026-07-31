@@ -15,7 +15,7 @@ from src.ui.pages.settings.pages.roblox import (
     SettingsRobloxCookieCheckerPage,
     SettingsRobloxCookieRefresherPage,
 )
-from src.ui.widgets import MTButton, MTWidget
+from src.ui.widgets.common import MTButton, MTWidget
 
 if t.TYPE_CHECKING:
     from src.config import Config

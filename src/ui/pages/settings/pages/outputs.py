@@ -7,7 +7,8 @@ from PySide6.QtWidgets import QWidget
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets import MTCollapsibleContainer, MTColumnsSetting, MTTextSetting, MTSwitchSetting
+from src.ui.widgets.common import MTCollapsibleContainer
+from src.ui.widgets.settings import MTColumnsSetting, MTLineEditSetting, MTSwitchSetting
 
 if t.TYPE_CHECKING:
     from src.config import Config
@@ -34,12 +35,12 @@ class SettingsOutputsPage(BasePage):
                 tr_key='TG_BOT',
                 obj_name='Settings_Telegram_Bot',
                 widgets=[
-                    MTTextSetting(
+                    MTLineEditSetting(
                         config=config,
                         cfg_key='Outputs>Telegram Bot>Token',
                         tr_key='TKN',
                     ),
-                    MTTextSetting(
+                    MTLineEditSetting(
                         config=config,
                         cfg_key='Outputs>Telegram Bot>Chat ID',
                         tr_key='CHT_ID',
@@ -55,7 +56,7 @@ class SettingsOutputsPage(BasePage):
                 tr_key='DS_WBHK',
                 obj_name='Settings_Discord_Webhook',
                 widgets=[
-                    MTTextSetting(
+                    MTLineEditSetting(
                         config=config,
                         cfg_key='Outputs>Discord Webhook>URL',
                         tr_key='URL',

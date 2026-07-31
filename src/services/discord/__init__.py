@@ -1,6 +1,6 @@
-from src.services.discord.rpc import DiscordRPC
+from .rpc import DiscordRPC
 
 
 __all__ = (
-    "DiscordRPC",
+    'DiscordRPC',
 )

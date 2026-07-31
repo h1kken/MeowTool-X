@@ -4,10 +4,10 @@ import typing as t
 
 from PySide6.QtWidgets import QWidget
 
-from src.ui.widgets import MTWidget
+from src.ui.widgets.common import MTWidget
 
 if t.TYPE_CHECKING:
-    from src.config import Config
+    from src.config import Config, ConfigLoader
 
 
 class MTBaseSetting(MTWidget):
@@ -15,7 +15,7 @@ class MTBaseSetting(MTWidget):
         self,
         parent: QWidget | None = None,
         *,
-        config: Config,
+        config: Config | ConfigLoader,
         cfg_key: str,
         obj_name: str = '',
     ) -> None:

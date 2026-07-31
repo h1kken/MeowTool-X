@@ -1,5 +1,6 @@
 import typing as t
 
+
 type JsonDict = dict[str, t.Any]
 type JsonList = list[JsonDict]
 type PlaceDataMap = dict[str, dict[str, dict[int, str]]]
@@ -11,10 +12,10 @@ class ReadableBinaryStream(t.Protocol):
     def read(self, size: int = -1, /) -> bytes: ...
 
 __all__ = (
-    "JsonDict",
-    "JsonList",
-    "NamedIdMap",
-    "PlaceDataMap",
-    "ReadableBinaryStream",
-    "SessionEntry",
+    'JsonDict',
+    'JsonList',
+    'NamedIdMap',
+    'PlaceDataMap',
+    'ReadableBinaryStream',
+    'SessionEntry',
 )

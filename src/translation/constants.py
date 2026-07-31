@@ -19,7 +19,7 @@ def _system_locale() -> str:
         if language and region:
             return f'{language.lower()}_{region.upper()}'
 
-    return 'en_US'
+    return 'en_US' # TODO: change to default const language
 
 
 SYSTEM_LOCALE = _system_locale()

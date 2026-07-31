@@ -27,7 +27,7 @@ class DatabaseHandler:
         self._expire_on_commit = expire_on_commit
         
         self.engine = create_engine(
-            f"sqlite:///{path.as_posix()}",
+            f'sqlite:///{path.as_posix()}',
             echo=False,
         )
 
@@ -37,8 +37,6 @@ class DatabaseHandler:
             expire_on_commit=False,
         )
         
-        # self.ensure_created_all()
-
     def ensure_created_all(self) -> None:
         FS.ensure_dir(self.path.parent)
         self.base.metadata.create_all(self.engine)

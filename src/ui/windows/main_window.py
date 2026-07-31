@@ -18,7 +18,7 @@ from src.ui.pages import (
     SettingsPage,
 )
 from src.ui.types import PageState
-from src.ui.widgets import MTButton, MTWidget, MTImage
+from src.ui.widgets.common import MTButton, MTWidget, MTImage
 from src.ui.windows.types import PageSpec
 from src.ui.windows.window_header import MTWindowHeader
 

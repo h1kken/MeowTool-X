@@ -1,18 +1,14 @@
+import typing as t
+import collections.abc as cabc
+
 import os
 import tempfile
 import time
-from collections.abc import Iterator
 from pathlib import Path
-import typing as t
 
 from src.utils.logging import logger
 from src.app.paths import PATH_CONFIGS
-from src.config.constants import (
-    CONFIG_INDENT,
-    CONFIG_MISSING_DEFAULT,
-    CONFIG_SAVE_RETRY_COUNT,
-    CONFIG_SAVE_RETRY_DELAY_SEC,
-)
+from src.config.constants import CONFIG_INDENT, CONFIG_MISSING_DEFAULT, CONFIG_SAVE_RETRY_COUNT, CONFIG_SAVE_RETRY_DELAY_SEC
 from src.config.types import ConfigMap, ConfigMixinHost, ConfigValue
 from src.config.utils import convert_value
 from src.utils.filesystem import FS, del_safe, get_safe, set_safe
@@ -24,7 +20,6 @@ class GetConfigMixin:
         if value is not CONFIG_MISSING_DEFAULT:
             return value
 
-        print(self.defaults)
         default_value = get_safe(self.defaults, key, sep=sep, default=CONFIG_MISSING_DEFAULT)
         if default_value is not CONFIG_MISSING_DEFAULT:
             return default_value
@@ -49,7 +44,7 @@ class SetConfigMixin:
 
 
 class SaveConfigMixin:
-    def _iter_ordered_items(self, data: ConfigMap, defaults: ConfigMap | None = None) -> Iterator[tuple[str, ConfigValue]]:
+    def _iter_ordered_items(self, data: ConfigMap, defaults: ConfigMap | None = None) -> cabc.Iterator[tuple[str, ConfigValue]]:
         if defaults is None:
             yield from data.items()
             return

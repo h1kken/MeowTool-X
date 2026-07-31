@@ -11,55 +11,15 @@ from PySide6.QtWidgets import QWidget
 
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets import MTWidget, MTLabel, MTSwitch
+from src.ui.widgets.common import MTWidget, MTLabel, MTSwitch
+from src.ui.widgets.settings import MTBaseSetting
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 
 if t.TYPE_CHECKING:
     from src.config import Config, ConfigLoader
 
 
-class MTCheckBoxSetting(MTWidget):
-    def __init__(
-        self,
-        parent: QWidget | None = None,
-        *,
-        config: Config,
-        cfg_key: str,
-        tr_key: str = '',
-    ) -> None:
-        super().__init__(parent)
-        self._config = config
-        self._cfg_key = cfg_key
-
-        obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, '_', self._cfg_key)
-        self.setObjectName(f'{obj_name}_CheckBox_Setting')
-
-        self._layout = create_layout(LayoutType.HBOX, self)
-
-        self._label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Label')
-
-        self._check_box = MTSwitch(obj_name=f'{obj_name}_CheckBox')
-        self._check_box.setChecked(bool(config.get(self._cfg_key)))
-
-        self._check_box.toggled.connect(self._on_check_box_toggled)
-        config.configLoaded.connect(lambda: self._check_box.setChecked(bool(config.get(self._cfg_key))))
-
-        self._layout.addWidget(self._label)
-        self._layout.addStretch()
-        self._layout.addWidget(self._check_box)
-
-    def _on_check_box_toggled(self, checked: bool) -> None:
-        self._config.set(self._cfg_key, checked)
-
-    def resizeEvent(self, event: QResizeEvent) -> None:
-        super().resizeEvent(event)
-        available_height = max(12, self.height())
-        self._check_box.sync_size(
-            bounds_height=available_height - 2, bounds_width=max(1, self.width() // 3)
-        )
-
-
-class MTSwitchSetting(MTWidget):
+class MTSwitchSetting(MTBaseSetting):
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -69,9 +29,7 @@ class MTSwitchSetting(MTWidget):
         tr_key: str = '',
         obj_name: str = '',
     ) -> None:
-        super().__init__(parent)
-        self._config = config
-        self._cfg_key = cfg_key
+        super().__init__(parent, config=config, cfg_key=cfg_key)
         
         obj_name = obj_name or re.sub(NORMALIZE_QT_KEY_PATTERN, '_', self._cfg_key)
         self.setObjectName(f'{obj_name}_Switch_Setting')
@@ -90,13 +48,6 @@ class MTSwitchSetting(MTWidget):
         self._layout.addStretch()
         self._layout.addWidget(self._switch)
 
-    def resizeEvent(self, event: QResizeEvent) -> None:
-        super().resizeEvent(event)
-        available_height = max(12, self.height())
-        self._switch.sync_size(
-            bounds_height=available_height - 2, bounds_width=max(1, self.width() // 3)
-        )
-
     def _on_switch_toggled(self, value: bool) -> None:
         self._config.set(self._cfg_key, value)
 
@@ -112,6 +63,13 @@ class MTSwitchSetting(MTWidget):
 
     def is_checked(self) -> bool:
         return self._switch.isChecked()
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        available_height = max(12, self.height())
+        self._switch.sync_size(
+            bounds_height=available_height - 2, bounds_width=max(1, self.width() // 3)
+        )
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
@@ -132,7 +90,7 @@ class MTSwitchSetting(MTWidget):
         super().mouseReleaseEvent(event)
 
 
-class MTSwitchRowSetting(MTWidget):
+class MTSwitchRowSetting(MTWidget): # MTBaseSetting?
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -151,6 +109,9 @@ class MTSwitchRowSetting(MTWidget):
         self._layout.addWidget(self._label)
         self._layout.addStretch()
         self._layout.addWidget(self._switch)
+    
+    @property
+    def switch(self): return self._switch
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
@@ -164,9 +125,7 @@ class MTSwitchRowSetting(MTWidget):
             point = event.position().toPoint()
             if self.rect().contains(point):
                 child = self.childAt(point)
-                if child is not None and (
-                    child is self._switch or self._switch.isAncestorOf(child)
-                ):
+                if child is not None and (child is self._switch or self._switch.isAncestorOf(child)):
                     super().mouseReleaseEvent(event)
                     return
 
