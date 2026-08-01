@@ -31,7 +31,7 @@ def bootstrap(app: QApplication) -> AppServices:
     services.translator.load()
     
     # UI
-    from src.ui.windows.main_window import MainWindow
+    from src.ui.windows import MainWindow
     services.window = MainWindow(services.config) # TODO: refactor lighter (inner pages) + change generations of all object names, do it with some logic
     
     # Theme
@@ -44,7 +44,7 @@ def bootstrap(app: QApplication) -> AppServices:
     
     services.theme_manager.load()
     
-    # Services
+    # Other
     from src.services.discord import DiscordRPC
     services.discord_rpc = DiscordRPC(services.window, services.config)
     app.aboutToQuit.connect(services.discord_rpc.shutdown)

@@ -11,15 +11,15 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QFrame, QSizePolicy, QWidget
 
 from src.app.paths import PATH_SRC
-from src.theme.colors import to_qcolor
-from src.utils.conversion import as_dict, as_object_dict, coerce_number
-from src.translation.mixins import TranslatableComboBoxMixin
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.painting import draw_widget_background, new_widget_painter
 from src.ui.widgets.common import MTButton
 from src.ui.widgets.paint_primitives import parse_pen_style, resolve_fill_brush, rounded_rect_path
 from src.ui.widgets.types import WidgetThemeMap
+from src.theme.colors import to_qcolor
+from src.utils.conversion import as_dict, as_object_dict, coerce_number
+from src.translation.mixins import TranslatableComboBoxMixin
 
 
 _DEFAULT_COMBOBOX_ARROW_SOURCE = str(PATH_SRC / 'assets/icons/MTComboBox/arrow_right.svg')

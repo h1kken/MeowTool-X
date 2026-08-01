@@ -43,9 +43,9 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._config = config
                 
-        self._build()
+        self._build_ui()
 
-    def _build(self) -> None:
+    def _build_ui(self) -> None:
         self.setObjectName('Main_Window')
         self.resize(WINDOW_X, WINDOW_Y)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)

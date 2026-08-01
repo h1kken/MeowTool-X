@@ -39,7 +39,7 @@ class RobloxCookieSorterPage(BasePage):
         self._source_text_blocks: list[str] = []
         self._use_default_folder = True
 
-        main_layout = create_layout(LayoutType.VBOX, self)
+        self._layout = create_layout(LayoutType.VBOX, self)
 
         self._drop_zone = MTDropZone(
             accept_files=True,
@@ -49,13 +49,13 @@ class RobloxCookieSorterPage(BasePage):
         )
         self._drop_zone.filesDropped.connect(self._add_source_files)
         self._drop_zone.textDropped.connect(self._add_source_text)
-        main_layout.addWidget(self._drop_zone)
+        self._layout.addWidget(self._drop_zone)
 
         self._sort_btn = MTButton(tr_key='CK_SRTR_STRT', obj_name='Roblox_Cookie_Sorter_Start_Button')
         self._sort_btn.clicked.connect(self._start_sorting)
 
         self._status_label = MTLabel(tr_key='CK_SRTR_STATUS', obj_name='Roblox_Cookie_Sorter_Status')
-        main_layout.addWidget(self._status_label)
+        self._layout.addWidget(self._status_label)
 
     def _add_source_files(self, paths: list[Path]) -> None:
         changed = False

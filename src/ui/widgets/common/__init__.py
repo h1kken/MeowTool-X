@@ -3,6 +3,7 @@ from .button import MTButton
 from .collapsible_container import MTCollapsibleContainer
 from .combo_box import MTComboBox
 from .drop_zone import MTDropZone
+from .icon import MTIcon
 from .image import MTImage
 from .inline_editor_stack import MTInlineEditorStack
 from .label import MTLabel, MTPlainLabel
@@ -23,6 +24,7 @@ __all__ = (
     'MTCollapsibleContainer',
     'MTComboBox',
     'MTDropZone',
+    'MTIcon',
     'MTImage',
     'MTInlineEditorStack',
     'MTLabel',

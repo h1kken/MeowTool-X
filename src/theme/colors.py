@@ -18,17 +18,8 @@ def to_qcolor(value: t.Any, *, fallback: QColor | None = None) -> QColor | None:
             return fallback
         color = QColor(text)
 
-    elif isinstance(value, tuple):
-        components = t.cast(tuple[object, ...], value)
-        if len(components) not in (3, 4):
-            return fallback
-        try:
-            color = QColor(*components)
-        except TypeError:
-            return fallback
-
-    elif isinstance(value, list):
-        components = t.cast(list[object], value)
+    elif isinstance(value, (list, tuple)):
+        components = t.cast(list[object] | tuple[object, ...], value)
         if len(components) not in (3, 4):
             return fallback
         try:
