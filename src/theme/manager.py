@@ -22,6 +22,7 @@ from src.utils.conversion import as_dict
 if t.TYPE_CHECKING:
     from src.config import Config
 
+
 _NO_ALIGNMENT = Qt.AlignmentFlag(0)
 _DEFAULT_ALIGNMENT = (
     Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter

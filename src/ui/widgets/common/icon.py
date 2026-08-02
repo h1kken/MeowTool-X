@@ -4,7 +4,7 @@ from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap, QTransform, QPaintEvent
 from PySide6.QtWidgets import QWidget, QSizePolicy
 
-from src.ui.widgets.common import MTWidget
+from .widget import MTWidget
 
 
 class MTIcon(MTWidget):
@@ -12,11 +12,11 @@ class MTIcon(MTWidget):
         self,
         parent: QWidget | None = None,
         *,
+        obj_name: str = '',
         source: str = '',
         color: str | None = None,
         rotation: float = 0.0,
         size: int = 16,
-        obj_name: str = '',
     ) -> None:
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
@@ -75,7 +75,7 @@ class MTIcon(MTWidget):
     def sizeHint(self) -> QSize:
         return QSize(self._size, self._size)
 
-    def paintEvent(self, event: QPaintEvent) -> None:
+    def paintEvent(self, _event: QPaintEvent) -> None:
         if self._pixmap.isNull():
             return
 

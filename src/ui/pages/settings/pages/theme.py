@@ -32,18 +32,128 @@ class SettingsThemePage(BasePage):
         config: Config,
         obj_name: str = '',
     ):
-        super().__init__(
-            parent,
-            config=config,
-            obj_name=obj_name
-        )
+        super().__init__(parent, config=config, obj_name=obj_name)
         
         self._themes: dict[str, Path] = {}
         self._loaded_name = self._configured_name()
 
         FS.ensure_dir(PATH_THEMES_USER)
+        
         self._build_ui()
+        self._connect_signals()
 
+        self._refresh(preferred=self._loaded_name)
+
+    def _build_ui(self) -> None:
+        self._main_layout = create_layout(LayoutType.VBOX, self)
+        
+        self._main_content = MTWidget(obj_name='Theme_Page_Widget')
+        self._main_layout.addWidget(self._main_content)
+
+        self._main_content_layout = create_layout(LayoutType.HBOX, self._main_content)
+        self._list_column = MTLabeledList(obj_name='Theme_List')
+        self._main_content_layout.addWidget(self._list_column)
+        
+        self._themes_list = self._list_column.list_widget
+        
+        self._actions_column = MTWidget(obj_name='Theme_Actions_Column')
+        self._main_content_layout.addWidget(self._actions_column)
+
+        self._actions_layout = create_layout(LayoutType.VBOX, self._actions_column)
+        self._selected_value = self._add_info_row(self._actions_layout, tr_key='SLCTD', obj_name='Theme_Selected')
+        self._loaded_value = self._add_info_row(self._actions_layout, tr_key='LDD', obj_name='Theme_Loaded')
+
+        self._load_button = MTButton(tr_key='LOAD', obj_name='Theme_Apply_Button')
+        self._create_stack = self._editor_stack_widget('create', 'CREATE')
+        self._rename_stack = self._editor_stack_widget('rename', 'RENAME')
+        self._delete_stack = self._delete_stack_widget()
+        self._open_button = MTButton(tr_key='OPN_FL_LCTN', obj_name='Theme_Open_Location_Button')
+
+        for widget in (
+            self._load_button,
+            self._create_stack,
+            self._rename_stack,
+            self._delete_stack,
+            self._open_button,
+        ):
+            self._actions_layout.addWidget(widget)
+        self._actions_layout.addStretch()
+
+    def _add_info_row(
+        self,
+        layout: QLayout,
+        *,
+        tr_key: str,
+        obj_name: str,
+    ) -> MTPlainLabel:
+        row = MTWidget(obj_name=f'{obj_name}_Info')
+        row_layout = create_layout(LayoutType.HBOX, row)
+        layout.addWidget(row)
+        
+        label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Label')
+        label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
+        row_layout.addWidget(label)
+        
+        value = MTPlainLabel(text='-', obj_name=f'{obj_name}_Value')
+        value.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        row_layout.addWidget(value, stretch=1)
+        
+        return value
+
+    def _editor_stack_widget(self, mode: str, tr_key: str) -> MTInlineEditorStack:
+        title = mode.capitalize()
+        
+        stack = MTInlineEditorStack()
+        stack.setObjectName(f'Theme_{title}_Stack')
+        stack.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        
+        button = MTButton(tr_key=tr_key, obj_name=f'Theme_{title}_Button')
+        stack.addWidget(button)
+
+        row = MTWidget(obj_name=f'Theme_{title}_Editor_Row')
+        row_layout = create_layout(LayoutType.HBOX, row)
+        stack.addWidget(row)
+        
+        
+        line = MTLineEdit(obj_name=f'Theme_{title}_Editor_LineEdit')
+        row_layout.addWidget(line, 1)
+        
+        cancel = MTButton(tr_key='✕', obj_name=f'Theme_{title}_Editor_Cancel_Button')
+        cancel.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
+        row_layout.addWidget(cancel)
+
+        if mode == 'create':
+            self._create_button = button
+            self._create_line = line
+            self._create_cancel = cancel
+        else:
+            self._rename_button = button
+            self._rename_line = line
+            self._rename_cancel = cancel
+        
+        return stack
+
+    def _delete_stack_widget(self) -> MTInlineEditorStack:
+        stack = MTInlineEditorStack()
+        stack.setObjectName('Theme_Delete_Stack')
+        
+        self._delete_button = MTButton(tr_key='DELETE', obj_name='Theme_Delete_Button')
+        stack.addWidget(self._delete_button)
+        
+        row = MTWidget(obj_name='Theme_Delete_Confirm_Row')
+        row_layout = create_layout(LayoutType.HBOX, row)
+        stack.addWidget(row)
+        
+        self._delete_confirm = MTButton(tr_key='CONFIRM', obj_name='Theme_Delete_Confirm_Button')
+        row_layout.addWidget(self._delete_confirm, 1)
+        
+        self._delete_cancel = MTButton(tr_key='✕', obj_name='Theme_Delete_Cancel_Button')
+        self._delete_cancel.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
+        row_layout.addWidget(self._delete_cancel)
+        
+        return stack
+
+    def _connect_signals(self) -> None:
         self._refresh_timer = QTimer(self, singleShot=True, interval=CONFIGS_REFRESH_DEBOUNCE_MS)
         
         self._watcher = QFileSystemWatcher(self)
@@ -68,106 +178,6 @@ class SettingsThemePage(BasePage):
         
         self._open_button.clicked.connect(self._open_location)
         self._config.configLoaded.connect(self._config_loaded)
-
-        self._refresh(preferred=self._loaded_name)
-
-    def _build_ui(self) -> None:
-        self._layout = create_layout(LayoutType.VBOX, self)
-        content = MTWidget(obj_name='Theme_Page_Widget')
-        self._layout.addWidget(content)
-
-        body = create_layout(LayoutType.HBOX, content)
-        self._list_column = MTLabeledList(obj_name='Theme_List')
-        self._themes_list = self._list_column.list_widget
-        actions = MTWidget(obj_name='Theme_Actions_Column')
-        body.addWidget(self._list_column)
-        body.addWidget(actions)
-
-        layout = create_layout(LayoutType.VBOX, actions)
-        self._selected_value = self._add_info_row(layout, tr_key='SLCTD', obj_name='Theme_Selected')
-        self._loaded_value = self._add_info_row(layout, tr_key='LDD', obj_name='Theme_Loaded')
-
-        self._load_button = MTButton(tr_key='LOAD', obj_name='Theme_Apply_Button')
-        self._create_stack = self._editor_stack_widget('create', 'CREATE')
-        self._rename_stack = self._editor_stack_widget('rename', 'RENAME')
-        self._delete_stack = self._delete_stack_widget()
-        self._open_button = MTButton(tr_key='OPN_FL_LCTN', obj_name='Theme_Open_Location_Button')
-
-        for widget in (
-            self._load_button,
-            self._create_stack,
-            self._rename_stack,
-            self._delete_stack,
-            self._open_button,
-        ):
-            layout.addWidget(widget)
-        layout.addStretch()
-
-    def _add_info_row(
-        self,
-        layout: QLayout,
-        *,
-        tr_key: str,
-        obj_name: str,
-    ) -> MTPlainLabel:
-        row = MTWidget(obj_name=f'{obj_name}_Info')
-        row_layout = create_layout(LayoutType.HBOX, row)
-        label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Label')
-        label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
-        value = MTPlainLabel(text='-', obj_name=f'{obj_name}_Value')
-        value.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
-        row_layout.addWidget(label)
-        row_layout.addWidget(value, stretch=1)
-        layout.addWidget(row)
-        return value
-
-    def _editor_stack_widget(self, mode: str, tr_key: str) -> MTInlineEditorStack:
-        title = mode.capitalize()
-        
-        stack = MTInlineEditorStack()
-        stack.setObjectName(f'Theme_{title}_Stack')
-        stack.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-
-        row = MTWidget(obj_name=f'Theme_{title}_Editor_Row')
-        row_layout = create_layout(LayoutType.HBOX, row)
-        
-        button = MTButton(tr_key=tr_key, obj_name=f'Theme_{title}_Button')
-        line = MTLineEdit(obj_name=f'Theme_{title}_Editor_LineEdit')
-        cancel = MTButton(tr_key='✕', obj_name=f'Theme_{title}_Editor_Cancel_Button')
-        cancel.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
-
-        if mode == 'create':
-            self._create_button = button
-            self._create_line = line
-            self._create_cancel = cancel
-        else:
-            self._rename_button = button
-            self._rename_line = line
-            self._rename_cancel = cancel
-        
-        stack.addWidget(button)
-        stack.addWidget(row)
-        row_layout.addWidget(line, 1)
-        row_layout.addWidget(cancel)
-        return stack
-
-    def _delete_stack_widget(self) -> MTInlineEditorStack:
-        stack = MTInlineEditorStack()
-        stack.setObjectName('Theme_Delete_Stack')
-        
-        row = MTWidget(obj_name='Theme_Delete_Confirm_Row')
-        row_layout = create_layout(LayoutType.HBOX, row)
-        
-        self._delete_button = MTButton(tr_key='DELETE', obj_name='Theme_Delete_Button')
-        self._delete_confirm = MTButton(tr_key='CONFIRM', obj_name='Theme_Delete_Confirm_Button')
-        self._delete_cancel = MTButton(tr_key='✕', obj_name='Theme_Delete_Cancel_Button')
-        self._delete_cancel.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
-        
-        stack.addWidget(self._delete_button)
-        stack.addWidget(row)
-        row_layout.addWidget(self._delete_confirm, 1)
-        row_layout.addWidget(self._delete_cancel)
-        return stack
 
     def _configured_name(self) -> str:
         value = self._config.get('General>Theme')

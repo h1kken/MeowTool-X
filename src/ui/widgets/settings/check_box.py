@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import typing as t
 
-import re
-
 from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QResizeEvent
 
@@ -11,42 +9,50 @@ from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import MTLabel, MTSwitch
 from src.ui.widgets.settings import MTBaseSetting
-from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 
 if t.TYPE_CHECKING:
-    from src.config import Config
+    from src.config import Config, ConfigLoader
 
 
-class MTCheckBoxSetting(MTBaseSetting):
+class MTCheckBoxSetting(MTBaseSetting[bool]):
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
-        config: Config,
+        config: Config | ConfigLoader,
         cfg_key: str,
         tr_key: str = '',
+        obj_name: str = '',
     ) -> None:
         super().__init__(parent, config=config, cfg_key=cfg_key)
-
-        obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, '_', self._cfg_key)
         self.setObjectName(f'{obj_name}_CheckBox_Setting')
 
-        self._layout = create_layout(LayoutType.HBOX, self)
+        self._build_ui(tr_key=tr_key, obj_name=obj_name)
+        self._connect_signals()
+
+    def _build_ui(
+        self,
+        *,
+        tr_key: str,
+        obj_name: str,
+    ) -> None:
+        self._main_layout = create_layout(LayoutType.HBOX, self)
 
         self._label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Label')
+        self._main_layout.addWidget(self._label)
+
+        self._main_layout.addStretch()
 
         self._check_box = MTSwitch(obj_name=f'{obj_name}_CheckBox')
-        self._check_box.setChecked(bool(config.get(self._cfg_key)))
+        self._check_box.setChecked(self.value)
+        self._main_layout.addWidget(self._check_box)
 
+    def _connect_signals(self) -> None:
         self._check_box.toggled.connect(self._on_check_box_toggled)
-        config.configLoaded.connect(lambda: self._check_box.setChecked(bool(config.get(self._cfg_key))))
-
-        self._layout.addWidget(self._label)
-        self._layout.addStretch()
-        self._layout.addWidget(self._check_box)
+        self._config.configLoaded.connect(lambda: self._check_box.setChecked(self.value))
 
     def _on_check_box_toggled(self, checked: bool) -> None:
-        self._config.set(self._cfg_key, checked)
+        self.value = checked
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)

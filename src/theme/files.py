@@ -12,6 +12,7 @@ from src.utils.logging import logger
 if t.TYPE_CHECKING:
     from src.config import Config
 
+
 SUPPORTED_EXTENSIONS: tuple[str, ...] = ('.json5', '.json')
 DEFAULT_EXTENSION = '.json5'
 type LoadedTheme = tuple[Path, ThemeMap]

@@ -22,21 +22,20 @@ class SettingsRobloxCookieSorterPage(BasePage):
         config: Config,
         obj_name: str = '',
     ):
-        super().__init__(
-            parent,
-            config=config,
-            obj_name=obj_name
-        )
+        super().__init__(parent, config=config, obj_name=obj_name)
+        
+        self._build_ui()
 
-        self._layout = create_layout(LayoutType.VBOX, self)
+    def _build_ui(self) -> None:
+        self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        tabs = [
+        self._settings = [
             MTCollapsibleContainer(
                 tr_key='GNRL',
                 obj_name='Settings_Roblox_Cookie_Sorter',
                 widgets=[
                     MTLineEditSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Roblox>Cookie Sorter>Output Filename',
                         tr_key='OTPT_FLNM',
                     ),
@@ -44,5 +43,5 @@ class SettingsRobloxCookieSorterPage(BasePage):
             ),
         ]
 
-        columns_widget = MTColumnsSetting(tabs=tabs, columns=2, obj_name='Settings_Roblox_Cookie_Sorter')
-        self._layout.addWidget(columns_widget)
+        self._columns_widget = MTColumnsSetting(obj_name='Settings_Roblox_Cookie_Sorter', tabs=self._settings)
+        self._main_layout.addWidget(self._columns_widget)

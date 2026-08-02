@@ -44,26 +44,24 @@ class SettingsPage(BasePage):
         config: Config,
         obj_name: str = '',
     ):
-        super().__init__(
-            parent,
-            config=config,
-            obj_name=obj_name
-        )
-        
+        super().__init__(parent, config=config, obj_name=obj_name)
+
         self._tab_names_by_key: dict[str, str] = {}
         self._pages_by_key: dict[str, MTWidget] = {}
+        
+        self._build_ui()
 
-        self._layout = create_layout(LayoutType.VBOX, self)
-        main_widget = MTWidget(obj_name='Settings_Main_Tabs_Widget')
-        self._layout.addWidget(main_widget)
+    def _build_ui(self) -> None:
+        self._main_layout = create_layout(LayoutType.VBOX, self)
+        self._main_content = MTWidget(obj_name='Settings_Main_Tabs_Widget')
 
-        tabs_layout = create_layout(LayoutType.HBOX, main_widget)
+        self._tabs_layout = create_layout(LayoutType.HBOX, self._main_content)
 
-        self._page_controller = PageController(self._layout)
+        self._page_controller = PageController(self._main_layout)
 
         for page_spec in _PAGES:
             if page_spec is None:
-                tabs_layout.addStretch()
+                self._tabs_layout.addStretch()
                 continue
             
             _icon_name, obj_name, tr_key, page_class = page_spec
@@ -74,16 +72,17 @@ class SettingsPage(BasePage):
             self._pages_by_key[tr_key] = page
             page.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             
-            if isinstance(page, (SettingsProxyPage, SettingsRobloxPage)):
-                page.pageChanged.connect(self._emit_page_changed)
+            # if isinstance(page, (SettingsProxyPage, SettingsRobloxPage)): # TODO
+            #     page.pageChanged.connect(self._emit_page_changed)
 
             self._page_controller.add_page(tr_key, page, obj_name=f'Settings_{obj_name}_Page')
 
             btn = MTButton(tr_key=tr_key, obj_name=f'Settings_{obj_name}_Tab_Button')
             self._page_controller.bind_tab(tr_key, btn)
-            tabs_layout.addWidget(btn)
+            self._tabs_layout.addWidget(btn)
 
-        tabs_layout.addStretch()
+        self._main_layout.addWidget(self._main_content)
+        self._tabs_layout.addStretch()
         self._page_controller.show(_PAGES[0][2]) # type: ignore[index] | show the first page
         self._page_controller.pageChanged.emit()
         self._emit_page_changed()

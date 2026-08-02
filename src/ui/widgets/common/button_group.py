@@ -8,8 +8,7 @@ class MTButtonGroup(QButtonGroup):
         obj_name: str = '',
         exclusive: bool = True,
     ) -> None:
-        super().__init__()
-        self.setExclusive(exclusive)
+        super().__init__(exclusive=exclusive)
 
         if obj_name:
             self.setObjectName(obj_name)

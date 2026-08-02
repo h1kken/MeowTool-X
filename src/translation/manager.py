@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import typing as t
+
 from pathlib import Path
 from types import MappingProxyType
-import typing as t
 
 from PySide6.QtCore import QObject, Signal
 

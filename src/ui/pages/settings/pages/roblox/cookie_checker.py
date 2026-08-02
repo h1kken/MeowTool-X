@@ -25,52 +25,51 @@ class SettingsRobloxCookieCheckerPage(BasePage):
         config: Config,
         obj_name: str = '',
     ):
-        super().__init__(
-            parent,
-            config=config,
-            obj_name=obj_name
-        )
-        
-        self._layout = create_layout(LayoutType.VBOX, self)
+        super().__init__(parent, config=config, obj_name=obj_name)
+
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        self._main_layout = create_layout(LayoutType.VBOX, self)
         
         self._main_field_switches: list[MTCookieCheckerFieldSetting] = []
 
-        tabs = [
+        self._settings = [
             MTCollapsibleContainer(
                 tr_key='GNRL',
                 obj_name='Settings_Roblox_Cookie_Checker',
                 widgets=[
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Roblox>Cookie Checker>Firstly Check For Valid',
                         tr_key='FRST_CHCK_FR_VLD',
                     ),
                     MTSliderSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Roblox>Cookie Checker>Valid Threads',
                         tr_key='VLD_THRDS',
                         min_value=1,
                         max_value=1000,
                     ),
                     MTSliderSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Roblox>Cookie Checker>Main Threads',
                         tr_key='MAIN_THRDS',
                         min_value=1,
                         max_value=250,
                     ),
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Roblox>Cookie Checker>Output Filename Like Input',
                         tr_key='OTPT_FLNM_LK_INPT',
                     ),
                     MTLineEditSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Roblox>Cookie Checker>Output Filename',
                         tr_key='OTPT_FLNM',
                     ),
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Roblox>Cookie Checker>Move Cookie To The Next Line',
                         tr_key='MV_C_TO_THE_NXT_LN',
                     ),
@@ -83,8 +82,8 @@ class SettingsRobloxCookieCheckerPage(BasePage):
             ),
         ]
 
-        columns_widget = MTColumnsSetting(tabs=tabs, obj_name='Settings_Roblox_Cookie_Checker')
-        self._layout.addWidget(columns_widget)
+        self._columns_widget = MTColumnsSetting(obj_name='Settings_Roblox_Cookie_Checker', tabs=self._settings)
+        self._main_layout.addWidget(self._columns_widget)
 
     def _build_main_fields_widgets(self) -> list[QWidget]:
         widgets: list[QWidget] = [

@@ -2,11 +2,8 @@ import typing as t
 
 from PySide6.QtCore import QEvent, QPoint, QPointF, QRectF, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import (
-    QColor, QCursor, QEnterEvent,
-    QHideEvent, QIcon, QKeyEvent,
-    QMouseEvent, QPainter, QPainterPath,
-    QPaintEvent, QPen, QPixmap,
-    QRegion, QResizeEvent,
+    QColor, QCursor, QEnterEvent, QHideEvent, QIcon, QKeyEvent, QMouseEvent,
+    QPainter, QPainterPath, QPaintEvent, QPen, QPixmap, QRegion, QResizeEvent,
 )
 from PySide6.QtWidgets import QFrame, QSizePolicy, QWidget
 
@@ -14,12 +11,13 @@ from src.app.paths import PATH_SRC
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.painting import draw_widget_background, new_widget_painter
-from src.ui.widgets.common import MTButton
 from src.ui.widgets.paint_primitives import parse_pen_style, resolve_fill_brush, rounded_rect_path
 from src.ui.widgets.types import WidgetThemeMap
 from src.theme.colors import to_qcolor
 from src.utils.conversion import as_dict, as_object_dict, coerce_number
 from src.translation.mixins import TranslatableComboBoxMixin
+
+from .button import MTButton
 
 
 _DEFAULT_COMBOBOX_ARROW_SOURCE = str(PATH_SRC / 'assets/icons/MTComboBox/arrow_right.svg')
@@ -93,20 +91,20 @@ class _MTComboPopup(QFrame):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
         self.setGraphicsEffect(t.cast(t.Any, None))
-        self._layout = create_layout(LayoutType.VBOX, self)
+        self._main_layout = create_layout(LayoutType.VBOX, self)
         self._items: list[_MTComboPopupItem] = []
         self._dirty = True
 
     def rebuild(self) -> None:
         for item in self._items:
-            self._layout.removeWidget(item)
+            self._main_layout.removeWidget(item)
             item.deleteLater()
         self._items.clear()
 
         for index in range(self._combo_box.count()):
             item = _MTComboPopupItem(self._combo_box, index, parent=self)
             self._items.append(item)
-            self._layout.addWidget(item)
+            self._main_layout.addWidget(item)
         self.sync_items()
         self._dirty = False
 

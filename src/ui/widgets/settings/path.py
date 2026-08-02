@@ -16,15 +16,15 @@ from src.ui.widgets.settings import MTBaseSetting
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 
 if t.TYPE_CHECKING:
-    from src.config import Config
+    from src.config import Config, ConfigLoader
 
 
-class MTPathSetting(MTBaseSetting):
+class MTPathSetting(MTBaseSetting[str]):
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
-        config: Config,
+        config: Config | ConfigLoader,
         cfg_key: str,
         tr_key: str = '',
         mode: str = 'directory',
@@ -44,7 +44,7 @@ class MTPathSetting(MTBaseSetting):
         self._label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Label')
 
         self._line_edit = MTLineEdit(obj_name=f'{obj_name}_LineEdit')
-        self._line_edit.setText(str(self._config.get(self._cfg_key)).strip())
+        self._line_edit.setText(str(self.value).strip())
 
         self._browse_button = MTButton(obj_name=f'{obj_name}_Browse_Button')
         self._browse_button.set_icon(
@@ -56,14 +56,14 @@ class MTPathSetting(MTBaseSetting):
 
         self._line_edit.editingFinished.connect(self._on_changed)
         self._browse_button.clicked.connect(self._browse_path)
-        self._config.configLoaded.connect(lambda: self._line_edit.setText(str(self._config.get(self._cfg_key)).strip()))
+        self._config.configLoaded.connect(lambda: self._line_edit.setText(str(self.value).strip()))
 
         self._main_layout.addWidget(self._label)
         self._main_layout.addWidget(self._line_edit, 1)
         self._main_layout.addWidget(self._browse_button)
 
     def _on_changed(self) -> None:
-        self._config.set(self._cfg_key, self._line_edit.text())
+        self.value = self._line_edit.text().strip()
 
     def _browse_path(self) -> None:
         caption = self._caption or self._label.text().strip() or 'Select path'

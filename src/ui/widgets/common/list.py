@@ -3,7 +3,11 @@ from PySide6.QtWidgets import QFrame, QSizePolicy, QWidget
 
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets.common import MTButton, MTPlainLabel, MTScrollArea, MTWidget
+
+from .button import MTButton
+from .label import MTPlainLabel
+from .scroll_area import MTScrollArea
+from .widget import MTWidget
 
 
 _GROUP_SECTION_SPACER_HEIGHT = 8

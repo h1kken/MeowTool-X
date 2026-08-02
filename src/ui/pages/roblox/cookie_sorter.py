@@ -25,11 +25,7 @@ class RobloxCookieSorterPage(BasePage):
         config: Config,
         obj_name: str = '',
     ):
-        super().__init__(
-            parent,
-            config=config,
-            obj_name=obj_name
-        )
+        super().__init__(parent, config=config, obj_name=obj_name)
         
         self._thread: QThread | None = None
         self._sorter: RobloxCookieSorter | None = None
@@ -39,23 +35,25 @@ class RobloxCookieSorterPage(BasePage):
         self._source_text_blocks: list[str] = []
         self._use_default_folder = True
 
-        self._layout = create_layout(LayoutType.VBOX, self)
+        self._build_ui()
+        self._connect_signals()
+        
+    def _build_ui(self) -> None:
+        self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        self._drop_zone = MTDropZone(
-            accept_files=True,
-            accept_text=True,
-            tr_key='Upload or Drag & Drop text/files here',
-            obj_name='Roblox_Cookie_Sorter',
-        )
-        self._drop_zone.filesDropped.connect(self._add_source_files)
+        self._drop_zone = MTDropZone(tr_key='Upload or Drag & Drop text/files here', obj_name='Roblox_Cookie_Sorter')
+        self._main_layout.addWidget(self._drop_zone)
+        
+        self._label = MTLabel(tr_key='CK_SRTR_STATUS', obj_name='Roblox_Cookie_Sorter_Status')
+        self._main_layout.addWidget(self._label)
+        
+        self._button = MTButton(tr_key='CK_SRTR_STRT', obj_name='Roblox_Cookie_Sorter_Start_Button')
+        self._main_layout.addWidget(self._button)
+
+    def _connect_signals(self) -> None:
+        self._drop_zone.pathsDropped.connect(self._add_source_files)
         self._drop_zone.textDropped.connect(self._add_source_text)
-        self._layout.addWidget(self._drop_zone)
-
-        self._sort_btn = MTButton(tr_key='CK_SRTR_STRT', obj_name='Roblox_Cookie_Sorter_Start_Button')
-        self._sort_btn.clicked.connect(self._start_sorting)
-
-        self._status_label = MTLabel(tr_key='CK_SRTR_STATUS', obj_name='Roblox_Cookie_Sorter_Status')
-        self._layout.addWidget(self._status_label)
+        self._button.clicked.connect(self._start_sorting)
 
     def _add_source_files(self, paths: list[Path]) -> None:
         changed = False
@@ -68,13 +66,13 @@ class RobloxCookieSorterPage(BasePage):
             changed = True
 
         if changed:
-            self._status_label.setText(f'Added files/folders: +{len(paths)}')
+            self._label.setText(f'Added files/folders: +{len(paths)}')
 
     def _add_source_text(self, text: str) -> None:
         if not text.strip():
             return
         self._source_text_blocks.append(text)
-        self._status_label.setText('Added text block')
+        self._label.setText('Added text block')
 
     def _set_default_folder_mode(self, checked: bool) -> None:
         self._use_default_folder = bool(checked)
@@ -105,14 +103,14 @@ class RobloxCookieSorterPage(BasePage):
         self._sorter.finished.connect(self._on_finished)
         self._thread.finished.connect(self._cleanup_worker)
 
-        self._sort_btn.setEnabled(False)
+        self._button.setEnabled(False)
         self._thread.start()
 
     def _on_finished(self) -> None:
-        self._sort_btn.setEnabled(True)
+        self._button.setEnabled(True)
 
     def _cleanup_worker(self) -> None:
-        self._sort_btn.setEnabled(True)
+        self._button.setEnabled(True)
         if self._sorter is not None:
             self._sorter.deleteLater()
             self._sorter = None

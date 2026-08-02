@@ -22,31 +22,30 @@ class SettingsOutputsPage(BasePage):
         config: Config,
         obj_name: str = '',
     ):
-        super().__init__(
-            parent,
-            config=config,
-            obj_name=obj_name
-        )
+        super().__init__(parent, config=config, obj_name=obj_name)
 
-        self._layout = create_layout(LayoutType.VBOX, self)
+        self._build_ui()
 
-        tabs = [
+    def _build_ui(self) -> None:
+        self._main_layout = create_layout(LayoutType.VBOX, self)
+
+        self._settings = [
             MTCollapsibleContainer(
                 tr_key='TG_BOT',
                 obj_name='Settings_Telegram_Bot',
                 widgets=[
                     MTLineEditSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Outputs>Telegram Bot>Token',
                         tr_key='TKN',
                     ),
                     MTLineEditSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Outputs>Telegram Bot>Chat ID',
                         tr_key='CHT_ID',
                     ),
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Outputs>Telegram Bot>Send Results To Telegram Bot',
                         tr_key='SND_RSLTS_TO_TG_BOT',
                     ),
@@ -57,12 +56,12 @@ class SettingsOutputsPage(BasePage):
                 obj_name='Settings_Discord_Webhook',
                 widgets=[
                     MTLineEditSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Outputs>Discord Webhook>URL',
                         tr_key='URL',
                     ),
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Outputs>Discord Webhook>Send Results To Discord Webhook',
                         tr_key='SND_RSLTS_TO_DS_WBHK',
                     ),
@@ -70,5 +69,5 @@ class SettingsOutputsPage(BasePage):
             ),
         ]
 
-        columns_widget = MTColumnsSetting(tabs=tabs, obj_name='Settings_Outputs')
-        self._layout.addWidget(columns_widget)
+        self._columns_widget = MTColumnsSetting(obj_name='Settings_Outputs', tabs=self._settings)
+        self._main_layout.addWidget(self._columns_widget)

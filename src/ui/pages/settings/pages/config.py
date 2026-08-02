@@ -33,36 +33,41 @@ class SettingsConfigPage(BasePage):
         config: Config,
         obj_name: str = '',
     ):
-        super().__init__(
-            parent,
-            config=config,
-            obj_name=obj_name
-        )
-        
-        self._layout = create_layout(LayoutType.VBOX, self)
-        
+        super().__init__(parent, config=config, obj_name=obj_name)
+
         FS.ensure_dir(PATH_CONFIGS)
+        
+        self._build_ui()
+        self._connect_signals()
+        
+        self._refresh_configs(preferred=self._config.name)
+
+    def _build_ui(self) -> None:
+        self._main_layout = create_layout(LayoutType.VBOX, self)
+        
         self._autoload_name = self._read_autoload_name()
 
-        content = MTWidget(obj_name='Config_Page_Widget')
-        self._layout.addWidget(content)
+        self._main_content = MTWidget(obj_name='Config_Page_Widget')
+        self._main_layout.addWidget(self._main_content)
 
-        body_layout = create_layout(LayoutType.HBOX, content)
+        self._body_layout = create_layout(LayoutType.HBOX, self._main_content)
 
         self._list_column = MTLabeledList(obj_name='Config_List_Column')
         self._configs_list = self._list_column.list_widget
         self._actions_column = MTWidget(obj_name='Config_Actions_Column')
-        body_layout.addWidget(self._list_column, stretch=1)
-        body_layout.addWidget(self._actions_column, stretch=1)
 
         self._build_actions_column()
+        
+        self._body_layout.addWidget(self._list_column, stretch=1)
+        self._body_layout.addWidget(self._actions_column, stretch=1)
 
+    def _connect_signals(self) -> None:
+        self._refresh_timer = QTimer(self, singleShot=True, interval=CONFIGS_REFRESH_DEBOUNCE_MS)
+        self._refresh_timer.timeout.connect(self._refresh_configs)
+        
         self._watcher = QFileSystemWatcher(self)
         self._watcher.addPath(str(PATH_CONFIGS))
         self._watcher.directoryChanged.connect(self._on_configs_dir_changed)
-        
-        self._refresh_timer = QTimer(self, singleShot=True, interval=CONFIGS_REFRESH_DEBOUNCE_MS)
-        self._refresh_timer.timeout.connect(self._refresh_configs)
 
         self._configs_list.currentItemChanged.connect(self._on_selection_changed)
         self._auto_load_row.switch.toggled.connect(self._on_auto_load_toggled)
@@ -83,10 +88,8 @@ class SettingsConfigPage(BasePage):
         self._delete_button.clicked.connect(self._start_delete_confirm)
         self._delete_confirm_button.clicked.connect(self._delete_selected_config)
         self._delete_cancel_button.clicked.connect(self._cancel_delete_confirm)
-        
-        self._config.configLoaded.connect(self._on_config_loaded)
 
-        self._refresh_configs(preferred=self._config.name)
+        self._config.configLoaded.connect(self._on_config_loaded)
 
     def _build_actions_column(self) -> None:
         layout = create_layout(LayoutType.VBOX, self._actions_column)
@@ -257,6 +260,7 @@ class SettingsConfigPage(BasePage):
     def _refresh_configs(self, *, preferred: str | None = None) -> None:
         names = self._iter_config_names()
         target = self._pick_target_name(names, preferred=preferred)
+        
         with QSignalBlocker(self._configs_list):
             self._list_column.set_items(names, preferred=target)
 

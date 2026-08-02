@@ -13,7 +13,7 @@ from .list import MTList
 from .popup import MTPopup
 from .scroll_area import MTScrollArea
 from .slider import MTSlider
-from .spin_box import MTSpinBox, MTDoubleSpinBox
+from .spin_box import MTSpinBox
 from .switch import MTSwitch
 from .widget import MTWidget
 
@@ -36,7 +36,6 @@ __all__ = (
     'MTScrollArea',
     'MTSlider',
     'MTSpinBox',
-    'MTDoubleSpinBox',
     'MTSwitch',
     'MTWidget',
 )

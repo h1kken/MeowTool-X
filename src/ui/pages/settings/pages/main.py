@@ -23,21 +23,20 @@ class SettingsMainPage(BasePage):
         config: Config,
         obj_name: str = '',
     ):
-        super().__init__(
-            parent,
-            config=config,
-            obj_name=obj_name
-        )
-        
-        self._layout = create_layout(LayoutType.VBOX, self)
+        super().__init__(parent, config=config, obj_name=obj_name)
 
-        tabs = [
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        self._main_layout = create_layout(LayoutType.VBOX, self)
+
+        self._settings = [
             MTCollapsibleContainer(
                 tr_key='GNRL',
                 obj_name='Settings_General_Settings',
                 widgets=[
                     MTComboBoxSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='General>Language',
                         tr_key='LANG',
                         items=self._get_all_languages(),
@@ -48,8 +47,8 @@ class SettingsMainPage(BasePage):
             ),
         ]
 
-        columns = MTColumnsSetting(tabs=tabs, obj_name='Settings_General_Columns')
-        self._layout.addWidget(columns)
+        self._columns_widget = MTColumnsSetting(obj_name='Settings_General_Columns', tabs=self._settings)
+        self._main_layout.addWidget(self._columns_widget)
 
     def _get_all_languages(self) -> list[str]:
         languages = {PATH_DEFAULT_TRANSLATION.stem}

@@ -19,7 +19,7 @@ if t.TYPE_CHECKING:
     from src.config import Config, ConfigLoader
 
 
-class MTSwitchSetting(MTBaseSetting):
+class MTSwitchSetting(MTBaseSetting[bool]):
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -34,22 +34,32 @@ class MTSwitchSetting(MTBaseSetting):
         obj_name = obj_name or re.sub(NORMALIZE_QT_KEY_PATTERN, '_', self._cfg_key)
         self.setObjectName(f'{obj_name}_Switch_Setting')
 
-        self._layout = create_layout(LayoutType.HBOX, self)
+        self._build_ui(tr_key=tr_key, obj_name=obj_name)
+        self._connect_signals()
+
+    def _build_ui(
+        self,
+        *,
+        tr_key: str,
+        obj_name: str,
+    ) -> None:
+        self._main_layout = create_layout(LayoutType.HBOX, self)
 
         self._label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Label')
+        self._main_layout.addWidget(self._label)
 
+        self._main_layout.addStretch()
+        
         self._switch = MTSwitch(obj_name=f'{obj_name}_Switch')
-        self._switch.setChecked(bool(config.get(self._cfg_key)))
-
+        self._switch.setChecked(self.value)
+        self._main_layout.addWidget(self._switch)
+        
+    def _connect_signals(self) -> None:
         self._switch.toggled.connect(self._on_switch_toggled)
-        config.configLoaded.connect(lambda: self._switch.setChecked(bool(config.get(self._cfg_key))))
-
-        self._layout.addWidget(self._label)
-        self._layout.addStretch()
-        self._layout.addWidget(self._switch)
+        self._config.configLoaded.connect(lambda: self._switch.setChecked(self.value))
 
     def _on_switch_toggled(self, value: bool) -> None:
-        self._config.set(self._cfg_key, value)
+        self.value = value
 
     def set_checked(self, checked: bool, *, emit_signal: bool = True) -> None:
         if self._switch.isChecked() == checked:
@@ -101,14 +111,23 @@ class MTSwitchRowSetting(MTWidget): # MTBaseSetting?
         super().__init__(parent)
         self.setObjectName(f'{obj_name}_Switch_Row_Setting')
 
-        self._layout = create_layout(LayoutType.HBOX, self)
+        self._build_ui(tr_key=tr_key, obj_name=obj_name)
+
+    def _build_ui(
+        self,
+        *,
+        tr_key: str,
+        obj_name: str,
+    ) -> None:
+        self._main_layout = create_layout(LayoutType.HBOX, self)
 
         self._label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Label')
-        self._switch = MTSwitch(obj_name=f'{obj_name}_Switch')
+        self._main_layout.addWidget(self._label)
         
-        self._layout.addWidget(self._label)
-        self._layout.addStretch()
-        self._layout.addWidget(self._switch)
+        self._main_layout.addStretch()
+        
+        self._switch = MTSwitch(obj_name=f'{obj_name}_Switch')
+        self._main_layout.addWidget(self._switch)
     
     @property
     def switch(self): return self._switch
@@ -116,9 +135,7 @@ class MTSwitchRowSetting(MTWidget): # MTBaseSetting?
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         available_height = max(12, self.height())
-        self._switch.sync_size(
-            bounds_height=available_height - 2, bounds_width=max(1, self.width() // 3)
-        )
+        self._switch.sync_size(bounds_width=max(1, self.width() // 3), bounds_height=available_height - 2)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:

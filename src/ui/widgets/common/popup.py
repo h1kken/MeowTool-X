@@ -8,9 +8,10 @@ from PySide6.QtWidgets import QApplication, QBoxLayout, QLayout, QSizePolicy, QW
 
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets.common import MTWidget
 from src.ui.widgets.paint_primitives import resolve_uniform_radius, rounded_rect_path
 from src.ui.widgets.types import PopupPlacement
+
+from .widget import MTWidget
 
 
 class _PopupBackdrop(MTWidget):

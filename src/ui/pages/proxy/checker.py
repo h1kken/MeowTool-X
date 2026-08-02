@@ -21,16 +21,15 @@ class ProxyCheckerPage(BasePage):
         config: Config,
         obj_name: str = '',
     ):
-        super().__init__(
-            parent,
-            config=config,
-            obj_name=obj_name
-        )
+        super().__init__(parent, config=config, obj_name=obj_name)
 
-        self._layout = create_layout(LayoutType.VBOX, self)
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        self._main_layout = create_layout(LayoutType.VBOX, self)
         
-        lbl = MTLabel(tr_key='PRX_CHCKR', obj_name='Main_Proxy_Checker_Title_Label')
-        btn = MTButton(tr_key='CHCK', obj_name='Main_Proxy_Checker_Start_Button')
+        self._label = MTLabel(tr_key='PRX_CHCKR', obj_name='Main_Proxy_Checker_Title_Label')
+        self._button = MTButton(tr_key='CHCK', obj_name='Main_Proxy_Checker_Start_Button')
 
-        self._layout.addWidget(lbl)
-        self._layout.addWidget(btn)
+        self._main_layout.addWidget(self._label)
+        self._main_layout.addWidget(self._button)

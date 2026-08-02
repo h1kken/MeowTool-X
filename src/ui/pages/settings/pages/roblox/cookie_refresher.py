@@ -22,21 +22,20 @@ class SettingsRobloxCookieRefresherPage(BasePage):
         config: Config,
         obj_name: str = '',
     ):
-        super().__init__(
-            parent,
-            config=config,
-            obj_name=obj_name
-        )
+        super().__init__(parent, config=config, obj_name=obj_name)
+        
+        self._build_ui()
 
-        self._layout = create_layout(LayoutType.VBOX, self)
+    def _build_ui(self) -> None:
+        self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        tabs = [
+        self._settings = [
             MTCollapsibleContainer(
                 tr_key='GNRL',
                 obj_name='Settings_Roblox_Cookie_Refresher',
                 widgets=[
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Roblox>Cookie Refresher>Break Old Cookies',
                         tr_key='BRK_OLD_C',
                     ),
@@ -44,4 +43,5 @@ class SettingsRobloxCookieRefresherPage(BasePage):
             ),
         ]
 
-        self._layout.addWidget(MTColumnsSetting(tabs=tabs, obj_name='Settings_Roblox_Cookie_Refresher'))
+        self._columns_widget = MTColumnsSetting(obj_name='Settings_Roblox_Cookie_Refresher', tabs=self._settings)
+        self._main_layout.addWidget(self._columns_widget)

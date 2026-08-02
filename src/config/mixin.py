@@ -15,12 +15,12 @@ from src.utils.filesystem import FS, del_safe, get_safe, set_safe
 
 
 class GetConfigMixin:
-    def get(self: ConfigMixinHost, key: str, *, sep: str = '>') -> object | None:
-        value = get_safe(self.data, key, sep=sep, default=CONFIG_MISSING_DEFAULT)
+    def get(self: ConfigMixinHost, key: str, *, sep: str = '>') -> ConfigValue:
+        value = t.cast(ConfigValue, get_safe(self.data, key, sep=sep, default=CONFIG_MISSING_DEFAULT))
         if value is not CONFIG_MISSING_DEFAULT:
             return value
 
-        default_value = get_safe(self.defaults, key, sep=sep, default=CONFIG_MISSING_DEFAULT)
+        default_value = t.cast(ConfigValue, get_safe(self.defaults, key, sep=sep, default=CONFIG_MISSING_DEFAULT))
         if default_value is not CONFIG_MISSING_DEFAULT:
             return default_value
 
@@ -29,11 +29,10 @@ class GetConfigMixin:
 
 class SetConfigMixin:
     def set(self: ConfigMixinHost, key: str, value: object, *, sep: str = '>') -> None:
-        default_value = get_safe(self.defaults, key, sep=sep, default=CONFIG_MISSING_DEFAULT)
-        typed_default = t.cast(ConfigValue, default_value)
-        value = convert_value(value, typed_default)
+        default_value = t.cast(ConfigValue, get_safe(self.defaults, key, sep=sep, default=CONFIG_MISSING_DEFAULT))
+        value = convert_value(value, default_value)
 
-        normalized_default = convert_value(None, typed_default)
+        normalized_default = convert_value(None, default_value)
         if value == normalized_default:
             del_safe(self.data, key, sep=sep)
             logger.debug(f'Resetted default to \'{key.replace(sep, ' > ')}\'')

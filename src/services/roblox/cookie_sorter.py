@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import typing as t
 import collections.abc as cabc
 
@@ -16,17 +18,16 @@ from threading import Lock
 
 from PySide6.QtCore import QObject, Signal
 
-from src.config import Config
 from src.services.roblox import archive_support
 from src.services.roblox.constants import DATE_ROBLOX_COOKIE_SORTER_FORMAT, ROBLOX_COOKIE_START
-from src.services.roblox.regexes import (
-    ROBLOX_COOKIE_PATTERN_BYTES,
-    STRING_100_PLUS_SYMBOLS_PATTERN_BYTES,
-)
+from src.services.roblox.regexes import ROBLOX_COOKIE_PATTERN_BYTES, STRING_100_PLUS_SYMBOLS_PATTERN_BYTES
 from src.services.roblox.types import ReadableBinaryStream
 from src.utils.datetime import current_date
 from src.utils.filesystem import FS, validate_filename
 from src.utils.logging import logger
+
+if t.TYPE_CHECKING:
+    from src.config import Config
 
 try:
     import py7zr

@@ -7,7 +7,7 @@ class MTWidget(QWidget):
         self,
         parent: QWidget | None = None,
         *,
-        obj_name: str = ''
+        obj_name: str = '',
     ) -> None:
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)

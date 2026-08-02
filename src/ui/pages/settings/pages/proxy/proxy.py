@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import typing as t
 
-from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget, QSizePolicy
 
 from src.ui.windows.types import PageSpec
@@ -24,8 +23,6 @@ _PAGES: list[PageSpec | None] = [
 
 
 class SettingsProxyPage(BasePage):
-    pageChanged = Signal()
-
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -33,25 +30,24 @@ class SettingsProxyPage(BasePage):
         config: Config,
         obj_name: str = '',
     ):
-        super().__init__(
-            parent,
-            config=config,
-            obj_name=obj_name
-        )
-        
+        super().__init__(parent, config=config, obj_name=obj_name)
+
         self._tab_labels_by_key: dict[str, str] = {}
 
-        self._layout = create_layout(LayoutType.VBOX, self)
-        main_widget = MTWidget(obj_name='Settings_Proxy_Tabs_Widget')
-        self._layout.addWidget(main_widget)
+        self._build_ui()
 
-        tabs_layout = create_layout(LayoutType.HBOX, main_widget)
+    def _build_ui(self) -> None:
+        self._main_layout = create_layout(LayoutType.VBOX, self)
+        self._main_content = MTWidget(obj_name='Settings_Proxy_Tabs_Widget')
+        self._main_layout.addWidget(self._main_content)
 
-        self._page_controller = PageController(self._layout)
+        self._tabs_layout = create_layout(LayoutType.HBOX, self._main_content)
+
+        self._page_controller = PageController(self._main_layout)
 
         for page_spec in _PAGES:
             if page_spec is None:
-                tabs_layout.addStretch()
+                self._tabs_layout.addStretch()
                 continue
 
             _icon_name, obj_name, tr_key, page_class = page_spec
@@ -64,9 +60,9 @@ class SettingsProxyPage(BasePage):
 
             btn = MTButton(tr_key=tr_key, obj_name=f'Settings_Proxy_{obj_name}_Tab_Button')
             self._page_controller.bind_tab(tr_key, btn)
-            tabs_layout.addWidget(btn)
+            self._tabs_layout.addWidget(btn)
         
-        tabs_layout.addStretch()
+        self._tabs_layout.addStretch()
         self._page_controller.show(_PAGES[0][2]) # type: ignore[index] | show the first page
         self._page_controller.pageChanged.emit()
 

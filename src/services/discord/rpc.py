@@ -44,7 +44,7 @@ class DiscordRPC:
         self._state = self._normalize_state(window.current_state())
         self._started_at = int(time())
 
-        window.pageChanged.connect(self._set_state)
+        # window.pageChanged.connect(self._set_state)
         config.configLoaded.connect(self._load_config)
         config.valueChanged.connect(self._on_config_changed)
 

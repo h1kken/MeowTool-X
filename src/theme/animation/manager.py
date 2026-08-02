@@ -29,6 +29,7 @@ if t.TYPE_CHECKING:
     from src.ui.windows.main_window import MainWindow
     from src.config import Config
 
+
 _CSS_DECLARATION_PATTERN = re.compile(r'([a-zA-Z-]+)\s*:\s*([^;{}]+)')
 _EVENT_ACTIONS = {
     QEvent.Type.Enter: 'hover',

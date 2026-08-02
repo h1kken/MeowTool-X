@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QMainWindow
 
 from src.app.paths import PATH_SIDEBAR_ICONS_SRC
@@ -37,8 +37,6 @@ _PAGES: list[PageSpec | None] = [
 
 
 class MainWindow(QMainWindow):
-    pageChanged = Signal(dict)
-
     def __init__(self, config: Config) -> None:
         super().__init__()
         self._config = config
@@ -115,7 +113,7 @@ class MainWindow(QMainWindow):
             return
 
         self._page_state = normalized
-        self.pageChanged.emit(normalized)
+        # self.pageChanged.emit(normalized)
 
     def _on_settings_page_changed(self, state: PageState) -> None:
         if self._page_controller.current_key() == 'STNGS':

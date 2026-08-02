@@ -9,6 +9,10 @@ class MTInlineEditorStack(QStackedWidget):
     ) -> None:
         super().__init__(parent)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        
+        self._connect_signals()
+
+    def _connect_signals(self) -> None:
         self.currentChanged.connect(self.updateGeometry)
 
     def sizeHint(self) -> QSize:

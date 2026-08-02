@@ -4,7 +4,9 @@ from PySide6.QtWidgets import QWidget
 
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets.common import MTList, MTWidget
+
+from .list import MTList
+from .widget import MTWidget
 
 
 _GROUP_ITEM_INDENT = '   '
@@ -19,10 +21,17 @@ class MTLabeledList(MTWidget):
     ) -> None:
         super().__init__(parent, obj_name=obj_name)
 
-        layout = create_layout(LayoutType.VBOX, self)
+        self._build_ui(obj_name=obj_name)
+
+    def _build_ui(
+        self,
+        *,
+        obj_name: str = '',
+    ) -> None:
+        self._main_layout = create_layout(LayoutType.VBOX, self)
 
         self.list_widget = MTList(self, obj_name=obj_name)
-        layout.addWidget(self.list_widget)
+        self._main_layout.addWidget(self.list_widget)
 
     def set_items(self, items: t.Sequence[str], *, preferred: str | None = None) -> bool:
         target = preferred if preferred in items else items[0] if items else None

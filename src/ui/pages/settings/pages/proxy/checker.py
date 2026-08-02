@@ -22,40 +22,39 @@ class SettingsProxyCheckerPage(BasePage):
         config: Config,
         obj_name: str = '',
     ):
-        super().__init__(
-            parent,
-            config=config,
-            obj_name=obj_name
-        )
+        super().__init__(parent, config=config, obj_name=obj_name)
 
-        self._layout = create_layout(LayoutType.VBOX, self)
+        self._build_ui()
 
-        tabs = [
+    def _build_ui(self) -> None:
+        self._main_layout = create_layout(LayoutType.VBOX, self)
+
+        self._settings = [
             MTCollapsibleContainer(
                 tr_key='GNRL',
                 obj_name='Settings_Proxy_Checker_General',
                 widgets=[
                     MTSliderSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Proxy>Checker>Main Threads',
                         tr_key='MAIN_THRDS',
                         min_value=1,
                         max_value=1000,
                     ),
                     MTSliderSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Proxy>Checker>Maximum Wait Response',
                         tr_key='MAX_WT_RESP',
                         min_value=1,
                         max_value=60,
                     ),
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Proxy>Checker>Save Good In Custom File',
                         tr_key='SV_GD_IN_CSTM_FL',
                     ),
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Proxy>Checker>Save Without Protocol',
                         tr_key='SV_WTOUT_PRTCL',
                     ),
@@ -63,4 +62,5 @@ class SettingsProxyCheckerPage(BasePage):
             ),
         ]
 
-        self._layout.addWidget(MTColumnsSetting(tabs=tabs, obj_name='Settings_Proxy_Checker'))
+        self._columns_widget = MTColumnsSetting(obj_name='Settings_Proxy_Checker', tabs=self._settings)
+        self._main_layout.addWidget(self._columns_widget)

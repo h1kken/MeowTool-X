@@ -22,26 +22,25 @@ class SettingsRobloxGeneralPage(BasePage):
         config: Config,
         obj_name: str = '',
     ):
-        super().__init__(
-            parent,
-            config=config,
-            obj_name=obj_name
-        )
+        super().__init__(parent, config=config, obj_name=obj_name)
+        
+        self._build_ui()
 
-        self._layout = create_layout(LayoutType.VBOX, self)
+    def _build_ui(self) -> None:
+        self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        tabs = [
+        self._settings = [
             MTCollapsibleContainer(
                 tr_key='Cookie parse',
                 obj_name='Settings_Roblox_General_Cookie_Parse',
                 widgets=[
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Roblox>General>Add Symbols Between Warning And Cookie',
                         tr_key='Add symbols between warning and cookie',
                     ),
                     MTLineEditSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Roblox>General>Symbols Between Warning And Cookie',
                         tr_key='Symbols between warning and cookie',
                     ),
@@ -52,12 +51,12 @@ class SettingsRobloxGeneralPage(BasePage):
                 obj_name='Settings_Roblox_General_Proxy',
                 widgets=[
                     MTSwitchSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Roblox>General>Proxy>Use Proxy',
                         tr_key='Use proxy',
                     ),
                     MTComboBoxSetting(
-                        config=config,
+                        config=self._config,
                         cfg_key='Roblox>General>Proxy>Auto Protocol If Not Specified',
                         tr_key='Auto protocol if not specified',
                         items=['http', 'https', 'socks4', 'socks5'],
@@ -67,5 +66,5 @@ class SettingsRobloxGeneralPage(BasePage):
             ),
         ]
 
-        columns_widget = MTColumnsSetting(tabs=tabs, obj_name='Settings_Roblox_General_Columns')
-        self._layout.addWidget(columns_widget)
+        self._columns_widget = MTColumnsSetting(obj_name='Settings_Roblox_General_Columns', tabs=self._settings)
+        self._main_layout.addWidget(self._columns_widget)

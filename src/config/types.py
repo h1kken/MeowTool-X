@@ -1,6 +1,7 @@
+import typing as t
+
 import threading
 from pathlib import Path
-import typing as t
 
 
 type ConfigScalar = None | bool | int | float | str
@@ -35,7 +36,6 @@ class ConfigMixinHost(t.Protocol):
 
 __all__ = (
     'ConfigMap',
-    'ConfigMixinHost',
     'ConfigScalar',
     'ConfigValue',
     'SortCategoryKind',

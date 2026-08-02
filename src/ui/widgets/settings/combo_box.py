@@ -14,15 +14,15 @@ from src.ui.widgets.settings import MTBaseSetting
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 
 if t.TYPE_CHECKING:
-    from src.config import Config
+    from src.config import Config, ConfigLoader
 
 
-class MTComboBoxSetting(MTBaseSetting):
+class MTComboBoxSetting(MTBaseSetting[str]): # TODO: i broke it
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
-        config: Config,
+        config: Config | ConfigLoader,
         cfg_key: str,
         tr_key: str = '',
         items: t.Sequence[str | tuple[str, str]],
@@ -39,36 +39,24 @@ class MTComboBoxSetting(MTBaseSetting):
         self._main_layout = create_layout(LayoutType.HBOX, self)
 
         self._label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Label')
-        self._label.setSizePolicy(
-            QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred
-        )
+        self._label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
+        self._main_layout.addWidget(self._label)
 
         self._combo_box = MTComboBox(obj_name=f'{obj_name}_ComboBox')
-        self._combo_box.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        self._combo_box.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._combo_box.set_content_width_mode('current')
-        self.set_items(items, keep_current=False)
-
-        self._set_current_value(config.get(self._cfg_key), fallback=default)
-        self._combo_box.currentIndexChanged.connect(self._on_index_changed)
-        config.configLoaded.connect(lambda d=default: self._set_current_value(config.get(self._cfg_key), fallback=d))
-
-        self._main_layout.addWidget(self._label)
+        self.set_items(items)
         self._main_layout.addWidget(self._combo_box, 1)
 
-    def set_items(
-        self, items: t.Sequence[str | tuple[str, str]], *, keep_current: bool = True
-    ) -> None:
-        current_value: str | None = None
-        if keep_current:
-            current_index = self._combo_box.currentIndex()
-            current_data = self._combo_box.itemData(current_index)
-            current_value = (
-                str(current_data)
-                if current_data is not None
-                else self._combo_box.currentText()
-            )
+        self._set_current_value(self.value, fallback=default)
+        self._combo_box.currentIndexChanged.connect(self._on_index_changed)
+        self._config.configLoaded.connect(lambda d=default: self._set_current_value(self.value, fallback=d))
+
+
+    def set_items(self, items: t.Sequence[str | tuple[str, str]]) -> None:
+        current_index = self._combo_box.currentIndex()
+        current_data = self._combo_box.itemData(current_index)
+        current_value = str(current_data) if current_data is not None else self._combo_box.currentText()
 
         seen: set[str] = set()
         normalized_items: list[tuple[str, str, bool]] = []
@@ -89,7 +77,7 @@ class MTComboBoxSetting(MTBaseSetting):
             seen.add(value)
             normalized_items.append((display_value, value, translatable))
 
-        target_value = current_value if keep_current else str(self._config.get(self._cfg_key))
+        target_value = current_value if keep_current else self.value
 
         with QSignalBlocker(self._combo_box):
             self._combo_box.clear()
@@ -100,12 +88,14 @@ class MTComboBoxSetting(MTBaseSetting):
                 self._combo_box.addItem(display_text, value)
             self._set_current_value(target_value, fallback=self._default)
 
-    def _set_current_value(self, value: t.Any, *, fallback: str | None = None) -> None:
-        index = self._find_index(value)
+    def _set_current_value(self, value: str, *, fallback: str | None = None) -> None:
+        index = self._combo_box.findData(value)
         if index < 0 and fallback is not None:
             index = self._find_index(fallback)
+            
         if index < 0 and self._combo_box.count() > 0:
             index = 0
+            
         if index >= 0:
             self._combo_box.setCurrentIndex(index)
 
@@ -139,6 +129,6 @@ class MTComboBoxSetting(MTBaseSetting):
         value = self._combo_box.itemData(index)
         if value is None:
             value = self._combo_box.currentText()
-        self._config.set(self._cfg_key, value)
+        self.value = value
         if self._on_changed is not None:
             self._on_changed(str(value))

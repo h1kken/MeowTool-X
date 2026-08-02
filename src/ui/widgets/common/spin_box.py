@@ -73,37 +73,3 @@ class MTSpinBox(QSpinBox):
     def wheelEvent(self, event: QWheelEvent):
         event.ignore()
         self.clearFocus()
-
-
-class MTDoubleSpinBox(QDoubleSpinBox):
-    def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
-        super().__init__(parent)
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
-        self.setFrame(False)
-        self.lineEdit().setTextMargins(0, 0, 0, 0)
-
-        if obj_name:
-            self.setObjectName(obj_name)
-
-    def sizeHint(self) -> QSize:
-        return _spin_box_content_size_hint(
-            self,
-            (
-                self.textFromValue(self.minimum()),
-                self.textFromValue(self.maximum()),
-            ),
-        )
-
-    def minimumSizeHint(self) -> QSize:
-        return _spin_box_content_size_hint(
-            self,
-            (
-                self.textFromValue(self.minimum()),
-                self.textFromValue(self.maximum()),
-            ),
-        )
-
-    def wheelEvent(self, event: QWheelEvent):
-        event.ignore()
-        self.clearFocus()

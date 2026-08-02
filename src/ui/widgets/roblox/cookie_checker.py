@@ -21,7 +21,7 @@ from src.services.roblox.constants import ROBLOX_COOKIE_CHECKER_MAIN_FIELDS
 from src.utils.conversion import as_dict
 
 if t.TYPE_CHECKING:
-    from src.config import Config
+    from src.config import Config, ConfigLoader
 
 
 def _sort_defaults() -> WidgetThemeMap:
@@ -62,36 +62,46 @@ _COOKIE_CHECKER_SORT_TEXT_FLAGS: dict[str, dict[str, str]] = {
 }
 
 
-class _BoundSwitchRow(MTBaseSetting):
+class _BoundSwitchRow(MTBaseSetting[bool]):
     checked = Signal(bool)
 
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
-        config: Config,
+        config: Config | ConfigLoader,
         cfg_key: str,
         text: str = '',
         obj_name: str = '',
     ) -> None:
         super().__init__(parent, config=config, cfg_key=cfg_key)
-        self._suspend_config_write = False
-
         self.setObjectName(f'{obj_name}_Row')
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        self._layout = create_layout(LayoutType.HBOX, self)
+        self._suspend_config_write = False
+
+        self._build_ui(text=text, obj_name=obj_name)
+        self._connect_signals()
+
+    def _build_ui(
+        self,
+        *,
+        text: str,
+        obj_name: str,
+    ) -> None:
+        self._main_layout = create_layout(LayoutType.HBOX, self)
 
         self._label = MTLabel(tr_key='', obj_name=f'{obj_name}_Label')
         self._label.setText(str(text))
+        self._main_layout.addWidget(self._label)
+
+        self._main_layout.addStretch()
 
         self._switch = MTSwitch(obj_name=f'{obj_name}_Switch')
         self._switch.setChecked(bool(self._config.get(self._cfg_key)))
+        self._main_layout.addWidget(self._switch)
 
-        self._layout.addWidget(self._label)
-        self._layout.addStretch()
-        self._layout.addWidget(self._switch)
-
+    def _connect_signals(self) -> None:
         self._switch.toggled.connect(self._on_switch_toggled)
         self._config.configLoaded.connect(self.reload_from_config)
 
@@ -250,7 +260,7 @@ class _SortListEditor(MTWidget):
     def __init__(
         self,
         *,
-        config: Config,
+        config: Config | ConfigLoader,
         label_text: str,
         cfg_key_enabled: str,
         cfg_key_items: str,
@@ -384,7 +394,7 @@ class _CookieCheckerSortPopup(MTPopup):
         self,
         parent: QWidget | None = None,
         *,
-        config: Config,
+        config: Config | ConfigLoader,
         tr_key: str = '',
         obj_name: str = '',
         field_name: str,
@@ -517,20 +527,13 @@ class MTCookieCheckerFieldSetting(MTSwitchSetting):
         self,
         parent: QWidget | None = None,
         *,
-        config: Config,
+        config: Config | ConfigLoader,
         cfg_key: str,
         tr_key: str = '',
         obj_name: str = '',
         field_name: str,
     ) -> None:
-        super().__init__(
-            parent,
-            config=config,
-            cfg_key=cfg_key,
-            tr_key=tr_key,
-            obj_name=obj_name,
-        )
-        self._config = config
+        super().__init__(parent, config=config, cfg_key=cfg_key, tr_key=tr_key, obj_name=obj_name)
         
         self._field_name = field_name
         self._sort_kind: SortCategoryKind = SORT_KEYS.get(field_name, 'none')
@@ -540,8 +543,8 @@ class MTCookieCheckerFieldSetting(MTSwitchSetting):
 
         if self._sort_kind != 'none':
             self._sort_button = _SortActionButton(self, obj_name=f'{obj_name}_Sort_Button')
-            switch_index = self._layout.indexOf(self._switch)
-            self._layout.insertWidget(max(0, switch_index), self._sort_button)
+            switch_index = self._main_layout.indexOf(self._switch)
+            self._main_layout.insertWidget(max(0, switch_index), self._sort_button)
 
             self._sort_popup = _CookieCheckerSortPopup(
                 self.window(),
