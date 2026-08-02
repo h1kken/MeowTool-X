@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 import typing as t
 
-from PySide6.QtCore import QObject, Signal, SignalInstance
+from PySide6.QtCore import QObject, Signal
 
 from src.utils.logging import logger
 from src.app.paths import PATH_DEFAULT_CONFIG_LOADER
@@ -19,8 +19,8 @@ if t.TYPE_CHECKING:
     
 
 class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
-    configLoaded = t.cast(SignalInstance, Signal())
-    valueChanged = t.cast(SignalInstance, Signal(str, object))
+    configLoaded = Signal()
+    valueChanged = Signal(str, object)
 
     def __init__(self) -> None:
         super().__init__()
