@@ -1,23 +1,29 @@
+from __future__ import annotations
+
 import typing as t
 
 from PySide6.QtCore import QEvent, QPoint, QPointF, QRectF, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import (
-    QColor, QCursor, QEnterEvent, QHideEvent, QIcon, QKeyEvent, QMouseEvent,
-    QPainter, QPainterPath, QPaintEvent, QPen, QPixmap, QRegion, QResizeEvent,
+    QColor, QCursor, QEnterEvent,
+    QHideEvent, QIcon, QKeyEvent,
+    QMouseEvent, QPainter, QPainterPath,
+    QPaintEvent, QPen, QPixmap,
+    QRegion, QResizeEvent,
 )
 from PySide6.QtWidgets import QFrame, QSizePolicy, QWidget
 
 from src.app.paths import PATH_SRC
+from src.theme.colors import to_qcolor
+from src.utils.conversion import as_dict, as_object_dict, coerce_number
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.painting import draw_widget_background, new_widget_painter
 from src.ui.widgets.paint_primitives import parse_pen_style, resolve_fill_brush, rounded_rect_path
 from src.ui.widgets.types import WidgetThemeMap
-from src.theme.colors import to_qcolor
-from src.utils.conversion import as_dict, as_object_dict, coerce_number
 from src.translation.mixins import TranslatableComboBoxMixin
 
 from .button import MTButton
+from .widget import MTWidget
 
 
 _DEFAULT_COMBOBOX_ARROW_SOURCE = str(PATH_SRC / 'assets/icons/MTComboBox/arrow_right.svg')
@@ -36,8 +42,8 @@ def _draw_aligned_text(
     painter.restore()
 
 
-class _MTComboPopupItem(MTButton):
-    def __init__(self, combo_box: 'MTComboBox', index: int, parent: QWidget | None = None) -> None:
+class _MTComboItem(MTButton):
+    def __init__(self, combo_box: MTComboBox, index: int, parent: QWidget | None = None) -> None:
         super().__init__(parent, checkable=True, obj_name=combo_box.popup_item_object_name(index))
         self._combo_box = combo_box
         self._index = index
@@ -91,20 +97,20 @@ class _MTComboPopup(QFrame):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
         self.setGraphicsEffect(t.cast(t.Any, None))
-        self._main_layout = create_layout(LayoutType.VBOX, self)
-        self._items: list[_MTComboPopupItem] = []
+        self._layout = create_layout(LayoutType.VBOX, self)
+        self._items: list[_MTComboItem] = []
         self._dirty = True
 
     def rebuild(self) -> None:
         for item in self._items:
-            self._main_layout.removeWidget(item)
+            self._layout.removeWidget(item)
             item.deleteLater()
         self._items.clear()
 
         for index in range(self._combo_box.count()):
-            item = _MTComboPopupItem(self._combo_box, index, parent=self)
+            item = _MTComboItem(self._combo_box, index, parent=self)
             self._items.append(item)
-            self._main_layout.addWidget(item)
+            self._layout.addWidget(item)
         self.sync_items()
         self._dirty = False
 
@@ -157,9 +163,8 @@ class _MTComboPopup(QFrame):
         self.setMask(QRegion(path.toFillPolygon().toPolygon()))
 
 
-class MTComboBox(TranslatableComboBoxMixin, QWidget):
+class MTComboBox(TranslatableComboBoxMixin, MTWidget):
     currentIndexChanged = Signal(int)
-    currentTextChanged = Signal(str)
     activated = Signal(int)
     popupOpened = Signal()
     popupClosed = Signal()
@@ -171,11 +176,13 @@ class MTComboBox(TranslatableComboBoxMixin, QWidget):
         obj_name: str = '',
     ) -> None:
         self._items: list[dict[str, t.Any]] = []
-        super().__init__(parent)
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        
+        super().__init__(parent, obj_name=obj_name)
+        
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        
         self._current_index = -1
         self._parts: dict[str, WidgetThemeMap] = self._build_default_parts()
         self._alignment = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
@@ -186,9 +193,6 @@ class MTComboBox(TranslatableComboBoxMixin, QWidget):
         self._popup_close_notified = False
         self._popup_hide_timer = QTimer(self, singleShot=True)
         self._popup_hide_timer.timeout.connect(self._finalize_popup_hide)
-
-        if obj_name:
-            self.setObjectName(obj_name)
 
         self._popup = _MTComboPopup(self)
 
@@ -233,7 +237,6 @@ class MTComboBox(TranslatableComboBoxMixin, QWidget):
         self.update()
         if had_current != -1:
             self.currentIndexChanged.emit(-1)
-            self.currentTextChanged.emit('')
 
     def count(self) -> int:
         return len(self._items)
@@ -255,7 +258,6 @@ class MTComboBox(TranslatableComboBoxMixin, QWidget):
         self._popup.sync_items()
         self.update()
         self.currentIndexChanged.emit(index)
-        self.currentTextChanged.emit(self.currentText())
 
     def setCurrentText(self, text: str) -> None:
         index = self.findText(text)

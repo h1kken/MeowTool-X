@@ -15,7 +15,7 @@ def main() -> None:
     services = bootstrap(app)
     
     services.window.show()
-    services.discord_rpc.start()
+    # services.discord_rpc.start()
     
     sys.exit(app.exec())
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
+from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
 from src.ui.layouts.enums import LayoutType
@@ -43,11 +44,15 @@ class MTLineEditSetting(MTBaseSetting[str]):
         self._line_edit = MTLineEdit(obj_name=f'{obj_name}_LineEdit')
         self._line_edit.setText(self.value)
         self._line_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self._main_layout.addWidget(self._line_edit, 1)
+        self._main_layout.addWidget(self._line_edit, stretch=1)
 
     def _connect_signals(self) -> None:
-        self._line_edit.editingFinished.connect(self._on_changed)
-        self._config.configLoaded.connect(lambda: self._line_edit.setText(self.value.strip()))
+        self._config.configLoaded.connect(self._on_config_loaded)
+        self._line_edit.editingFinished.connect(self._on_value_changed)
 
-    def _on_changed(self) -> None:
+    def _on_config_loaded(self) -> None:
+        with QSignalBlocker(self._line_edit):
+            self._line_edit.setText(self.value.strip())
+
+    def _on_value_changed(self) -> None:
         self.value = self._line_edit.text().strip()

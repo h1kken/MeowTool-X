@@ -18,8 +18,8 @@ def parse_config(text: str) -> ConfigMap:
         indent = _count_indent_levels(line)
         line = stripped
 
-        if ":" in line:
-            key, value = map(str.strip, line.split(":", 1))
+        if ':' in line:
+            key, value = map(str.strip, line.split(':', 1))
             stack[-1][0][key] = t.cast(ConfigValue, safe_literal_eval(value))
         else:
             while stack and stack[-1][1] >= indent:
@@ -103,13 +103,13 @@ def convert_value(user_value: object | None = None, default_value: ConfigValue |
 
 
 def _count_indent_levels(raw_line: str) -> int:
-    leading = raw_line[: len(raw_line) - len(raw_line.lstrip(" \t"))]
+    leading = raw_line[: len(raw_line) - len(raw_line.lstrip(' \t'))]
     if not leading:
         return 0
 
     indent_unit = max(1, len(CONFIG_INDENT))
-    tabs = leading.count("\t")
-    spaces = leading.count(" ") // indent_unit
+    tabs = leading.count('\t')
+    spaces = leading.count(' ') // indent_unit
     return tabs + spaces
 
 
@@ -121,9 +121,9 @@ def _clone_default(default_value: ConfigValue) -> ConfigValue:
 
 def _convert_to_bool(user_value: str) -> bool | str:
     low = user_value.strip().lower()
-    if low in ("true", "yes", "да", "on", "+"):
+    if low in ('true', 'yes', 'да', 'on', '+'):
         return True
-    if low in ("false", "no", "нет", "off", "-"):
+    if low in ('false', 'no', 'нет', 'off', '-'):
         return False
     return user_value
 

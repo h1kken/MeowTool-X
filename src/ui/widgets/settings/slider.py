@@ -4,6 +4,7 @@ import typing as t
 
 import re
 
+from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
 from src.ui.layouts.enums import LayoutType
@@ -66,13 +67,23 @@ class MTSliderSetting(MTBaseSetting[int]):
         self._main_layout.addWidget(self._slider)
 
     def _connect_signals(self) -> None:
+        self._config.configLoaded.connect(self._on_config_loaded)
         self._slider.valueChanged.connect(self._spin_box.setValue)
-        self._slider.sliderReleased.connect(lambda: self._on_changed(self._slider.value()))
+        self._slider.sliderReleased.connect(self._on_slider_released)
         self._spin_box.valueChanged.connect(self._slider.setValue)
-        self._spin_box.editingFinished.connect(lambda: self._on_changed(self._spin_box.value()))
+        self._spin_box.editingFinished.connect(self._on_spin_editing_finished)
         self._spin_box.editingFinished.connect(self._spin_box.clearFocus)
-        self._config.configLoaded.connect(lambda: self._slider.setValue(self.value))
 
-    def _on_changed(self, value: int) -> None:
+    def _on_config_loaded(self) -> None:
+        with QSignalBlocker(self._slider):
+            self._slider.setValue(self.value)
+
+    def _set_value_if_changed(self, value: int) -> None:
         if value != self._prev_value:
             self.value = self._prev_value = value
+
+    def _on_slider_released(self) -> None:
+        self._set_value_if_changed(self._slider.value())
+
+    def _on_spin_editing_finished(self) -> None:
+        self._set_value_if_changed(self._spin_box.value())

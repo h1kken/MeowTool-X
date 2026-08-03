@@ -32,7 +32,7 @@ def bootstrap(app: QApplication) -> AppServices:
     
     # UI
     from src.ui.windows import MainWindow
-    services.window = MainWindow(services.config) # TODO: refactor lighter (inner pages) + change generations of all object names, do it with some logic
+    services.window = MainWindow(services.config)
     
     # Theme
     from src.theme.manager import ThemeManager
@@ -45,8 +45,8 @@ def bootstrap(app: QApplication) -> AppServices:
     services.theme_manager.load()
     
     # Other
-    from src.services.discord import DiscordRPC # TODO: fix | broken after remove PageState
-    services.discord_rpc = DiscordRPC(services.window, services.config)
-    app.aboutToQuit.connect(services.discord_rpc.shutdown)
+    # from src.services.discord import DiscordRPC # TODO: fix | broken after remove PageState
+    # services.discord_rpc = DiscordRPC(services.config)
+    # app.aboutToQuit.connect(services.discord_rpc.shutdown)
 
     return services

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
-from PySide6.QtWidgets import QWidget, QSizePolicy
+from PySide6.QtWidgets import QWidget
 
 from src.ui.windows.types import PageSpec
 from src.ui.pages.base import BasePage
@@ -49,7 +49,6 @@ class SettingsPage(BasePage):
         self._parent_page_controller = parent_page_controller
 
         self._tab_names_by_key: dict[str, str] = {}
-        self._pages_by_key: dict[str, MTWidget] = {}
         
         self._build_ui()
 
@@ -67,14 +66,15 @@ class SettingsPage(BasePage):
                 self._tabs_layout.addStretch()
                 continue
                         
-            self._tab_names_by_key[spec.tr_key] = spec.obj_name
+            name = spec.obj_name.replace('_', ' ')
+            self._tab_names_by_key[spec.tr_key] = name
             
             obj_name = f'Settings_{spec.obj_name}_Page'
             
             if spec.has_page_controller:
                 page = spec.page_class(
                     config=self._config,
-                    parent_controller=self._page_controller, # type: ignore[call-arg]
+                    parent_page_controller=self._page_controller, # type: ignore[call-arg]
                     obj_name=obj_name,
                 )
             else:
@@ -83,13 +83,12 @@ class SettingsPage(BasePage):
                     obj_name=obj_name,
                 )
             
-            self._pages_by_key[spec.tr_key] = page
-            page.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-
-            self._page_controller.add_page(spec.tr_key, page)
-
-            btn = MTButton(tr_key=spec.tr_key, obj_name=f'Settings_{spec.obj_name}_Tab_Button')
-            self._page_controller.bind_tab(spec.tr_key, btn)
-            self._tabs_layout.addWidget(btn)
-
-        self._page_controller.show(_PAGES[0].tr_key) # type: ignore[index] | show the first page
+            button = MTButton(tr_key=spec.tr_key, obj_name=f'Settings_{spec.obj_name}_Tab_Button')
+            self._tabs_layout.addWidget(button)
+            
+            self._page_controller.add_page(
+                key=spec.tr_key,
+                name=name,
+                page=page,
+                button=button,
+            )

@@ -4,7 +4,6 @@ import typing as t
 
 import threading
 from time import time
-from dataclasses import dataclass
 
 from pypresence.exceptions import DiscordError, DiscordNotFound, InvalidPipe, PipeClosed
 from pypresence.presence import Presence
@@ -16,14 +15,6 @@ from src.utils.logging import logger
 
 if t.TYPE_CHECKING:
     from src.config import Config
-    from src.ui.windows.main_window import MainWindow
-
-
-@dataclass(frozen=True, slots=True)
-class DiscordActivity:
-    details: str
-    state: str | None = None
-    started_at: int | None = None
 
 
 class DiscordRPC:
@@ -40,8 +31,10 @@ class DiscordRPC:
     # SMALL_IMAGE = None
     # SMALL_TEXT = None
 
-    def __init__(self, window: MainWindow, config: Config) -> None:
+    def __init__(self, config: Config) -> None:
         self._config = config
+        
+        self._started_at = int(time())
         
         self._lock = threading.Lock()
         self._wake = threading.Event()
@@ -49,12 +42,12 @@ class DiscordRPC:
         self._worker: threading.Thread | None = None
 
         self._enabled = self._read_enabled()
-        self._state = self._normalize_state(window.current_state())
-        self._started_at = int(time())
 
-        # window.pageChanged.connect(self._set_state)
-        config.configLoaded.connect(self._load_config)
-        config.valueChanged.connect(self._on_config_changed)
+        self._connect_signals()
+
+    def _connect_signals(self) -> None:
+        self._config.configLoaded.connect(self._on_config_loaded)
+        self._config.valueChanged.connect(self._on_config_changed)
 
     def start(self) -> None:
         with self._lock:
@@ -87,12 +80,12 @@ class DiscordRPC:
     def _read_enabled(self) -> bool:
         return bool(self._config.get(CKey.OUTPUTS_DISCORD_RICH_PRESENCE))
 
-    def _load_config(self) -> None:
+    def _on_config_loaded(self) -> None:
         self._set_enabled(self._read_enabled())
 
     def _on_config_changed(self, key: str, _value: object) -> None:
         if key == CKey.OUTPUTS_DISCORD_RICH_PRESENCE:
-            self._load_config()
+            self._on_config_loaded()
 
     def _set_enabled(self, enabled: bool) -> None:
         with self._lock:
@@ -104,40 +97,6 @@ class DiscordRPC:
                 self._started_at = int(time())
 
         self._wake.set()
-
-    def _set_state(self, state: PageState) -> None:
-        state = self._normalize_state(state)
-        with self._lock:
-            if state == self._state:
-                return
-            self._state = state
-
-        self._wake.set()
-
-    @classmethod
-    def _normalize_state(cls, state: PageState) -> PageState:
-        main = state.get('main', '') or cls.DEFAULT_PAGE
-        new_state: PageState = {'main': main}
-
-        raw_inner = state.get('inner')
-        if isinstance(raw_inner, tuple):
-            inner = tuple(part for part in (item for item in raw_inner) if part)
-            if inner:
-                new_state['inner'] = inner
-
-        return new_state
-
-    def _snapshot(self) -> tuple[bool, PageState, int]:
-        with self._lock:
-            return self._enabled, self._state, self._started_at
-
-    @staticmethod
-    def _format_page(page: PageState) -> str:
-        main = page['main']
-        inner = page.get('inner')
-        if inner:
-            return f'{main}: {' > '.join(inner)}'
-        return main
 
     def _connect(self) -> Presence | None:
         for pipe in range(10):
@@ -185,7 +144,7 @@ class DiscordRPC:
         try:
             while not self._stop.is_set():
                 self._wake.clear()
-                enabled, page, started_at = self._snapshot()
+                enabled, page = self._snapshot()
 
                 if not enabled:
                     if rpc is not None:
@@ -202,7 +161,7 @@ class DiscordRPC:
                     continue
 
                 try:
-                    self._update(rpc, page, started_at)
+                    self._update(rpc, page)
                 except (DiscordNotFound, InvalidPipe, PipeClosed, BrokenPipeError, OSError):
                     self._disconnect(rpc, clear=False)
                     rpc = None
@@ -221,10 +180,9 @@ class DiscordRPC:
                 self._disconnect(rpc)
                 logger.debug('Discord Presence disconnected')
 
-    def _update(self, rpc: Presence, page: PageState, started_at: int) -> None:
-        details = self._format_page(page)
+    def _update(self, rpc: Presence) -> None:
         rpc.update( # pyright: ignore[reportUnknownMemberType]
-            start=max(1, started_at),
+            start=max(1, self._started_at),
             
             activity_type=self.ACTIVITY_TYPE,
             name=self.NAME,

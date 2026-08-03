@@ -5,6 +5,7 @@ import typing as t
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QMainWindow
 
+from src.app.constants import PROGRAM_TITLE
 from src.app.paths import PATH_SIDEBAR_ICONS_SRC
 from src.ui.constants import WINDOW_X, WINDOW_Y
 from src.ui.windows.types import PageSpec
@@ -45,13 +46,16 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._config = config
         
+        self._tab_names_by_key: dict[str, str] = {}
+        
         self._build_ui()
         self._connect_signals()
 
     def _build_ui(self) -> None:
-        self.setObjectName('Main_Window')
+        self.setWindowTitle(PROGRAM_TITLE)
         self.resize(WINDOW_X, WINDOW_Y)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        self.setObjectName('Main_Window')
 
         self._central_widget = MTWidget(obj_name='Main_Window_Central_Widget')
         self.setCentralWidget(self._central_widget)
@@ -81,6 +85,9 @@ class MainWindow(QMainWindow):
                 self._sidebar_layout.addStretch()
                 continue
             
+            name = str(spec.obj_name).replace('_', ' ')
+            self._tab_names_by_key[spec.tr_key] = name
+            
             obj_name = f'Main_{spec.obj_name}_Page'
             
             if spec.has_page_controller:
@@ -101,13 +108,11 @@ class MainWindow(QMainWindow):
             
             self._page_controller.add_page(
                 key=spec.tr_key,
-                name=' '.join(spec.tr_key.split('_')),
+                name=name,
                 page=page,
-                button=button
+                button=button,
             )
             
-        self._page_controller.show(_PAGES[0].tr_key) # type: ignore[index] | show the first page
-
     def _connect_signals(self) -> None:
         self._page_controller.pageChanged.connect(self.pageChanged.emit)
 

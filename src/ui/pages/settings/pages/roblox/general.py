@@ -9,6 +9,7 @@ from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import MTCollapsibleContainer
 from src.ui.widgets.settings import MTColumnsSetting, MTComboBoxSetting, MTSwitchSetting, MTLineEditSetting
+from src.ui.widgets.types import ComboItem
 
 if t.TYPE_CHECKING:
     from src.config import Config
@@ -59,8 +60,7 @@ class SettingsRobloxGeneralPage(BasePage):
                         config=self._config,
                         cfg_key='Roblox>General>Proxy>Auto Protocol If Not Specified',
                         tr_key='Auto protocol if not specified',
-                        items=['http', 'https', 'socks4', 'socks5'],
-                        default='http',
+                        items=[ComboItem(item) for item in ('http', 'https', 'socks4', 'socks5')],
                     ),
                 ],
             ),

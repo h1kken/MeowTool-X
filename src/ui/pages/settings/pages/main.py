@@ -4,12 +4,14 @@ import typing as t
 
 from PySide6.QtWidgets import QWidget
 
+import src.app.context as ctx
 from src.app.paths import PATH_DEFAULT_TRANSLATION, PATH_TRANSLATIONS_SRC, PATH_TRANSLATIONS_USER
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import MTCollapsibleContainer
 from src.ui.widgets.settings import MTColumnsSetting, MTComboBoxSetting
+from src.ui.widgets.types import ComboItem
 
 if t.TYPE_CHECKING:
     from src.config import Config
@@ -40,8 +42,7 @@ class SettingsMainPage(BasePage):
                         cfg_key='General>Language',
                         tr_key='LANG',
                         items=self._get_all_languages(),
-                        default=PATH_DEFAULT_TRANSLATION.stem,
-                        on_changed=self._reload_language,
+                        on_changed=ctx.services.translator.load,
                     ),
                 ],
             ),
@@ -50,19 +51,16 @@ class SettingsMainPage(BasePage):
         self._columns_widget = MTColumnsSetting(obj_name='Settings_General_Columns', tabs=self._settings)
         self._main_layout.addWidget(self._columns_widget)
 
-    def _get_all_languages(self) -> list[str]:
-        languages = {PATH_DEFAULT_TRANSLATION.stem}
+    def _get_all_languages(self) -> list[ComboItem]:
+        languages: set[ComboItem] = set()
 
-        for base_path in (PATH_TRANSLATIONS_USER, PATH_TRANSLATIONS_SRC):
-            if not base_path.is_dir():
+        for translations_path in (PATH_TRANSLATIONS_USER, PATH_TRANSLATIONS_SRC):
+            if not translations_path.is_dir():
                 continue
 
-            for path in base_path.glob('*.axis'):
-                languages.add(path.stem)
+            for path in translations_path.glob('*.axis'):
+                languages.add(ComboItem(path.stem, path.stem))
 
-        return sorted(languages, key=str.lower)
-
-    def _reload_language(self, name: str) -> None:
-        import src.app.context as ctx
-
-        ctx.services.translator.load(name)
+        languages.add(ComboItem(PATH_DEFAULT_TRANSLATION.stem))
+        
+        return sorted(languages, key=lambda item: item.tr_key.lower())

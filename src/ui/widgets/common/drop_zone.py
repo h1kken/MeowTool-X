@@ -28,15 +28,15 @@ class MTDropZone(MTWidget):
         super().__init__(parent)
         self.setObjectName(f'{obj_name}_Drop_Zone_Widget')
 
-        self._accept_files = accept_files
-        self._accept_text = accept_text
-        self._browse_on_click = browse_on_click
-
         self.setAcceptDrops(accept_files or accept_text)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         
         if browse_on_click:
             self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        self._accept_files = accept_files
+        self._accept_text = accept_text
+        self._browse_on_click = browse_on_click
 
         self._build_ui(tr_key=tr_key, obj_name=obj_name)
         self._connect_signals()
@@ -137,10 +137,6 @@ class MTDropZone(MTWidget):
                 continue
             
             if path.is_dir():
-                files.extend(
-                    item
-                    for item in path.rglob('*')
-                    if item.is_file()
-                )
+                files.extend(item for item in path.rglob('*') if item.is_file())
     
         return files

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
+from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QResizeEvent
 
@@ -48,8 +49,12 @@ class MTCheckBoxSetting(MTBaseSetting[bool]):
         self._main_layout.addWidget(self._check_box)
 
     def _connect_signals(self) -> None:
+        self._config.configLoaded.connect(self._on_config_loaded)
         self._check_box.toggled.connect(self._on_check_box_toggled)
-        self._config.configLoaded.connect(lambda: self._check_box.setChecked(self.value))
+
+    def _on_config_loaded(self) -> None:
+        with QSignalBlocker(self._check_box):
+            self._check_box.setChecked(self.value)
 
     def _on_check_box_toggled(self, checked: bool) -> None:
         self.value = checked

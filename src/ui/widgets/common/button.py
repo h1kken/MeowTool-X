@@ -3,13 +3,13 @@ from __future__ import annotations
 import collections.abc as cabc
 
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtWidgets import QWidget, QAbstractButton
+from PySide6.QtWidgets import QWidget, QPushButton
 from PySide6.QtGui import QIcon
 
 from src.translation.mixins import TranslatableMixin
 
 
-class MTButton(TranslatableMixin, QAbstractButton):
+class MTButton(TranslatableMixin, QPushButton):
     def __init__(
         self,
         parent: QWidget | None = None,

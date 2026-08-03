@@ -15,14 +15,11 @@ _HEADER_OBJECT_NAME = 'Main_Window_Header'
 _QT_MAX_SIZE = 16_777_215
 
 
-class _HeaderIconButton(MTButton):
+class _HeaderIconButton(MTButton): # TODO: remove
     def __init__(self, icon_name: str) -> None:
         button_name = '_'.join(part.capitalize() for part in icon_name.split('_'))
         
-        super().__init__(
-            tr_key='',
-            obj_name=f'{_HEADER_OBJECT_NAME}_{button_name}_Button',
-        )
+        super().__init__(obj_name=f'{_HEADER_OBJECT_NAME}_{button_name}_Button')
         
         self.setText('')
         self.setCursor(Qt.CursorShape.ArrowCursor)
@@ -39,23 +36,6 @@ class _HeaderIconButton(MTButton):
             return
         self.setIcon(icon)
         self.setIconSize(QSize(14, 14))
-
-
-class _HeaderTitleLabel(MTPlainLabel):
-    def __init__(
-        self,
-        parent: QWidget | None = None,
-        *,
-        text: str = '',
-        obj_name: str = '',
-    ) -> None:
-        super().__init__(parent, text=text, obj_name=obj_name)
-
-    def setAlignment(self, alignment: Qt.AlignmentFlag) -> None:
-        super().setAlignment(alignment)
-        parent = self.parentWidget()
-        if isinstance(parent, MTWindowHeader):
-            parent.sync_title_geometry()
 
 
 class _HeaderResizeGrip(QWidget):
@@ -98,9 +78,10 @@ class _HeaderResizeGrip(QWidget):
 
 
 class MTWindowHeader(MTWidget):
-    def __init__(self, window: QWidget, *, title: str | None = None) -> None:
+    def __init__(self, window: QWidget) -> None:
         super().__init__(parent=window, obj_name=_HEADER_OBJECT_NAME)
         self._window = window
+        
         self._resize_margin = _HEADER_RESIZE_MARGIN
         self._drag_press_pos = QPoint()
         self._maximized_drag_pending = False
@@ -110,33 +91,29 @@ class MTWindowHeader(MTWidget):
         self._manual_resize_edges: Qt.Edge | None = None
         self._manual_resize_start_global = QPoint()
         self._manual_resize_start_geometry = QRect()
-        self._buttons_host: MTWidget | None = None
+        self._buttons: MTWidget | None = None
 
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.setMouseTracking(True)
         self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
 
-        self._build_ui(title=title)
+        self._build_ui()
         self._connect_signals()
 
-    def _build_ui(
-        self,
-        *,
-        title: str | None = None
-    ) -> None:
+    def _build_ui(self) -> None:
         self._main_layout = create_layout(LayoutType.HBOX, self)
 
-        self._title_label = _HeaderTitleLabel(self, text=title or self._window.windowTitle(), obj_name=f'{_HEADER_OBJECT_NAME}_Title')
+        self._title_label = MTPlainLabel(self, text=self._window.windowTitle(), obj_name=f'{_HEADER_OBJECT_NAME}_Title')
         self._title_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
         self._main_layout.addStretch(1)
 
-        self._buttons_host = MTWidget(self, obj_name=f'{_HEADER_OBJECT_NAME}_Buttons')
-        self._buttons_host.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
-        self._buttons_host.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
-        self._main_layout.addWidget(self._buttons_host)
+        self._buttons = MTWidget(self, obj_name=f'{_HEADER_OBJECT_NAME}_Buttons')
+        self._buttons.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+        self._buttons.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        self._main_layout.addWidget(self._buttons)
         
-        self._buttons_layout = create_layout(LayoutType.HBOX, self._buttons_host)
+        self._buttons_layout = create_layout(LayoutType.HBOX, self._buttons)
 
         self._minimize_button = _HeaderIconButton('minimize')
         self._buttons_layout.addWidget(self._minimize_button)
@@ -178,8 +155,8 @@ class MTWindowHeader(MTWidget):
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         self.sync_title_geometry()
-        if self._buttons_host is not None:
-            self._buttons_host.raise_()
+        if self._buttons is not None:
+            self._buttons.raise_()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if (
@@ -457,9 +434,9 @@ class MTWindowHeader(MTWidget):
                 grip.hide()
 
     def sync_title_geometry(self) -> None:
-        if self._buttons_host is None:
+        if self._buttons is None:
             return
-        right_reserved = max(0, self._buttons_host.width())
+        right_reserved = max(0, self._buttons.width())
         alignment = self._title_label.alignment()
         if alignment & Qt.AlignmentFlag.AlignHCenter:
             x = right_reserved

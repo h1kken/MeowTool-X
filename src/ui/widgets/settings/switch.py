@@ -55,8 +55,12 @@ class MTSwitchSetting(MTBaseSetting[bool]):
         self._main_layout.addWidget(self._switch)
         
     def _connect_signals(self) -> None:
+        self._config.configLoaded.connect(self._on_config_loaded)
         self._switch.toggled.connect(self._on_switch_toggled)
-        self._config.configLoaded.connect(lambda: self._switch.setChecked(self.value))
+
+    def _on_config_loaded(self) -> None:
+        with QSignalBlocker(self._switch):
+            self._switch.setChecked(self.value)
 
     def _on_switch_toggled(self, value: bool) -> None:
         self.value = value

@@ -45,6 +45,7 @@ class ThemeManager(QObject):
     themeLoaded = Signal(object)
     
     def __init__(self, window: QWidget, config: Config) -> None:
+        super().__init__()
         self._window = window
         self._config = config
 

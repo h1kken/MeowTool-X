@@ -5,7 +5,7 @@ import typing as t
 import re
 from pathlib import Path
 
-from PySide6.QtCore import QSize
+from PySide6.QtCore import QSize, QSignalBlocker
 from PySide6.QtWidgets import QFileDialog, QWidget
 
 from src.app.paths import PATH_FOLDER_ICON, PATH_ROOT
@@ -32,19 +32,31 @@ class MTPathSetting(MTBaseSetting[str]):
         caption: str | None = None,
     ) -> None:
         super().__init__(parent, config=config, cfg_key=cfg_key)
-        self._mode = mode
-        self._file_filter = file_filter
-        self._caption = caption.strip() if isinstance(caption, str) and caption.strip() else None
         
         obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, '_', self._cfg_key)
         self.setObjectName(f'{obj_name}_Path_Setting')
 
+        self._mode = mode
+        self._file_filter = file_filter
+        self._caption = caption.strip() if isinstance(caption, str) and caption.strip() else None
+
+        self._build_ui(tr_key=tr_key, obj_name=obj_name)
+        self._connect_signals()
+
+    def _build_ui(
+        self,
+        *,
+        tr_key: str,
+        obj_name: str,
+    ) -> None:
         self._main_layout = create_layout(LayoutType.HBOX, self)
 
         self._label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Label')
+        self._main_layout.addWidget(self._label)
 
         self._line_edit = MTLineEdit(obj_name=f'{obj_name}_LineEdit')
         self._line_edit.setText(str(self.value).strip())
+        self._main_layout.addWidget(self._line_edit, stretch=1)
 
         self._browse_button = MTButton(obj_name=f'{obj_name}_Browse_Button')
         self._browse_button.set_icon(
@@ -53,23 +65,24 @@ class MTPathSetting(MTBaseSetting[str]):
             size=QSize(18, 18),
             spacing=0.0,
         )
-
-        self._line_edit.editingFinished.connect(self._on_changed)
-        self._browse_button.clicked.connect(self._browse_path)
-        self._config.configLoaded.connect(lambda: self._line_edit.setText(str(self.value).strip()))
-
-        self._main_layout.addWidget(self._label)
-        self._main_layout.addWidget(self._line_edit, 1)
         self._main_layout.addWidget(self._browse_button)
+        
+    def _connect_signals(self) -> None:
+        self._config.configLoaded.connect(self._on_config_loaded)
+        self._line_edit.editingFinished.connect(self._on_value_changed)
+        self._browse_button.clicked.connect(self._browse_path)
 
-    def _on_changed(self) -> None:
+    def _on_config_loaded(self) -> None:
+        with QSignalBlocker(self._line_edit):
+            self._line_edit.setText(str(self.value).strip())
+
+    def _on_value_changed(self) -> None:
         self.value = self._line_edit.text().strip()
 
     def _browse_path(self) -> None:
         caption = self._caption or self._label.text().strip() or 'Select path'
         start_path = self._dialog_start_path()
 
-        selected_path = ''
         if self._mode == 'open-file':
             selected_path, _ = QFileDialog.getOpenFileName(
                 self,
@@ -95,7 +108,7 @@ class MTPathSetting(MTBaseSetting[str]):
             return
 
         self._line_edit.setText(selected_path)
-        self._on_changed()
+        self._on_value_changed()
 
     def _dialog_start_path(self) -> str:
         text = self._line_edit.text().strip()

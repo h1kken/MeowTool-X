@@ -31,6 +31,8 @@ class _CollapsibleHeader(MTWidget):
         
         self._build_ui(tr_key=tr_key, obj_name=obj_name)
     
+        self.setExpanded(True)
+    
     def _build_ui(
         self,
         *,
@@ -84,7 +86,7 @@ class MTCollapsibleContainer(MTWidget):
         
         self._build_ui(tr_key=tr_key, obj_name=obj_name, widgets=widgets)
         self._connect_signals()
-
+        
     def _build_ui(
         self,
         *,
@@ -96,22 +98,21 @@ class MTCollapsibleContainer(MTWidget):
 
         self._header = _CollapsibleHeader(self, tr_key=tr_key, obj_name=obj_name)
         self._header.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._main_layout.addWidget(self._header)
         
         self._separator = MTWidget(obj_name=f'{obj_name}_Container_Separator')
         self._separator.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._separator.setFixedHeight(1)
         self._separator.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._main_layout.addWidget(self._separator)
 
         self._content_widget = MTWidget(obj_name=f'{obj_name}_Container_Content_Widget')
         self._content_layout = create_layout(LayoutType.VBOX, self._content_widget)
+        self._main_layout.addWidget(self._content_widget)
 
         for widget in widgets or []:
             self._content_layout.addWidget(widget)
 
-        self._main_layout.addWidget(self._header)
-        self._main_layout.addWidget(self._separator)
-        self._main_layout.addWidget(self._content_widget)
-    
     def _connect_signals(self) -> None:
         self._header.clicked.connect(self.toggle)
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
-from PySide6.QtWidgets import QWidget, QSizePolicy
+from PySide6.QtWidgets import QWidget
 
 from src.ui.windows.types import PageSpec
 from src.ui.pages.base import BasePage
@@ -40,7 +40,7 @@ class SettingsRobloxPage(BasePage):
         super().__init__(parent, config=config, obj_name=obj_name)
         self._parent_page_controller = parent_page_controller
         
-        self._tab_labels_by_key: dict[str, str] = {}
+        self._tab_names_by_key: dict[str, str] = {}
         
         self._build_ui()
 
@@ -58,7 +58,8 @@ class SettingsRobloxPage(BasePage):
                 self._tabs_layout.addStretch()
                 continue
             
-            self._tab_labels_by_key[spec.tr_key] = str(spec.obj_name).replace('_', ' ')
+            name = spec.obj_name.replace('_', ' ')
+            self._tab_names_by_key[spec.tr_key] = name
 
             obj_name = f'Settings_Roblox_{spec.obj_name}_Page'
 
@@ -74,19 +75,12 @@ class SettingsRobloxPage(BasePage):
                     obj_name=obj_name,
                 )
                 
-            page.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-            self._page_controller.add_page(spec.tr_key, page)
-
-            btn = MTButton(tr_key=spec.tr_key, obj_name=f'Settings_Roblox_{spec.obj_name}_Tab_Button')
-            self._page_controller.bind_tab(spec.tr_key, btn)
-            self._tabs_layout.addWidget(btn)
-
-        self._page_controller.show(_PAGES[0].tr_key) # type: ignore[index] | show the first page
-
-    def current_page_inner(self) -> tuple[str, ...]:
-        key = self._page_controller.current_key()
-        if not isinstance(key, str):
-            return ()
-
-        label = self._tab_labels_by_key.get(key, key)
-        return (label,) if label else ()
+            button = MTButton(tr_key=spec.tr_key, obj_name=f'Settings_Roblox_{spec.obj_name}_Tab_Button')
+            self._tabs_layout.addWidget(button)
+            
+            self._page_controller.add_page(
+                key=spec.tr_key,
+                name=name,
+                page=page,
+                button=button,
+            )
