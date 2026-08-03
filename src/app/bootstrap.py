@@ -45,7 +45,7 @@ def bootstrap(app: QApplication) -> AppServices:
     services.theme_manager.load()
     
     # Other
-    from src.services.discord import DiscordRPC
+    from src.services.discord import DiscordRPC # TODO: fix | broken after remove PageState
     services.discord_rpc = DiscordRPC(services.window, services.config)
     app.aboutToQuit.connect(services.discord_rpc.shutdown)
 

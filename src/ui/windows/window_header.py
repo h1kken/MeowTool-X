@@ -116,43 +116,47 @@ class MTWindowHeader(MTWidget):
         self.setMouseTracking(True)
         self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
 
-        layout = create_layout(LayoutType.HBOX, self)
+        self._build_ui(title=title)
+        self._connect_signals()
 
-        self._title_label = _HeaderTitleLabel(
-            self,
-            text=title or window.windowTitle(),
-            obj_name=f'{_HEADER_OBJECT_NAME}_Title',
-        )
+    def _build_ui(
+        self,
+        *,
+        title: str | None = None
+    ) -> None:
+        self._main_layout = create_layout(LayoutType.HBOX, self)
+
+        self._title_label = _HeaderTitleLabel(self, text=title or self._window.windowTitle(), obj_name=f'{_HEADER_OBJECT_NAME}_Title')
         self._title_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
-        layout.addStretch(1)
+        self._main_layout.addStretch(1)
 
-        self._buttons_host = MTWidget(
-            parent=self,
-            obj_name=f'{_HEADER_OBJECT_NAME}_Buttons',
-        )
+        self._buttons_host = MTWidget(self, obj_name=f'{_HEADER_OBJECT_NAME}_Buttons')
         self._buttons_host.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
         self._buttons_host.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
-        buttons_layout = create_layout(LayoutType.HBOX, self._buttons_host)
-        layout.addWidget(self._buttons_host)
+        self._main_layout.addWidget(self._buttons_host)
+        
+        self._buttons_layout = create_layout(LayoutType.HBOX, self._buttons_host)
 
         self._minimize_button = _HeaderIconButton('minimize')
-        self._minimize_button.clicked.connect(self._window.showMinimized)
-        buttons_layout.addWidget(self._minimize_button)
+        self._buttons_layout.addWidget(self._minimize_button)
 
         self._maximize_button = _HeaderIconButton('maximize')
-        self._maximize_button.clicked.connect(self._toggle_maximized)
-        buttons_layout.addWidget(self._maximize_button)
+        self._buttons_layout.addWidget(self._maximize_button)
 
         self._close_button = _HeaderIconButton('close')
-        self._close_button.clicked.connect(self._window.close)
-        buttons_layout.addWidget(self._close_button)
+        self._buttons_layout.addWidget(self._close_button)
 
         self._window.installEventFilter(self)
         self._resize_grips = self._create_resize_grips()
         self.sync_window_meta()
         self.sync_title_geometry()
         self._sync_resize_grips()
+
+    def _connect_signals(self) -> None:
+        self._minimize_button.clicked.connect(self._window.showMinimized)
+        self._maximize_button.clicked.connect(self._toggle_maximized)
+        self._close_button.clicked.connect(self._window.close)
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         if obj is self._window:

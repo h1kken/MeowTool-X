@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import typing as t
+
 import threading
 from time import time
-import typing as t
+from dataclasses import dataclass
 
 from pypresence.exceptions import DiscordError, DiscordNotFound, InvalidPipe, PipeClosed
 from pypresence.presence import Presence
@@ -10,12 +12,18 @@ from pypresence.types import ActivityType
 
 from src.app.constants import PROGRAM_NAME
 from src.config.enums import ConfigKey as CKey
-from src.ui.types import PageState
 from src.utils.logging import logger
 
 if t.TYPE_CHECKING:
     from src.config import Config
     from src.ui.windows.main_window import MainWindow
+
+
+@dataclass(frozen=True, slots=True)
+class DiscordActivity:
+    details: str
+    state: str | None = None
+    started_at: int | None = None
 
 
 class DiscordRPC:

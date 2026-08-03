@@ -20,12 +20,12 @@ if t.TYPE_CHECKING:
     from src.config import Config
 
 
-_PAGES: list[PageSpec | None] = [
-    (None, 'Cookie_Sorter',    'CK_SRTR',   SettingsRobloxCookieSorterPage),
-    (None, 'Cookie_Checker',   'CK_CHCKR',  SettingsRobloxCookieCheckerPage),
-    (None, 'Cookie_Refresher', 'CK_RFRSHR', SettingsRobloxCookieRefresherPage),
+_PAGES: tuple[PageSpec | None, ...] = (
+    PageSpec(SettingsRobloxCookieSorterPage,    'CK_SRTR',   'Cookie_Sorter'),
+    PageSpec(SettingsRobloxCookieCheckerPage,   'CK_CHCKR',  'Cookie_Checker'),
+    PageSpec(SettingsRobloxCookieRefresherPage, 'CK_RFRSHR', 'Cookie_Refresher'),
     None,
-]
+)
 
 
 class SettingsRobloxPage(BasePage):
@@ -34,43 +34,54 @@ class SettingsRobloxPage(BasePage):
         parent: QWidget | None = None,
         *,
         config: Config,
+        parent_page_controller: PageController,
         obj_name: str = '',
     ):
         super().__init__(parent, config=config, obj_name=obj_name)
+        self._parent_page_controller = parent_page_controller
+        
+        self._tab_labels_by_key: dict[str, str] = {}
         
         self._build_ui()
 
     def _build_ui(self) -> None:
         self._main_layout = create_layout(LayoutType.VBOX, self)
-        
-        self._tab_labels_by_key: dict[str, str] = {}
-
         self._main_content = MTWidget(obj_name='Settings_Roblox_Tabs_Widget')
         self._main_layout.addWidget(self._main_content)
 
         self._tabs_layout = create_layout(LayoutType.HBOX, self._main_content)
 
-        self._page_controller = PageController(self._main_layout)
+        self._page_controller = PageController(self._main_layout, parent_page_controller=self._parent_page_controller)
 
-        for page_spec in _PAGES:
-            if page_spec is None:
+        for spec in _PAGES:
+            if spec is None:
                 self._tabs_layout.addStretch()
                 continue
-
-            _icon_name, obj_name, tr_key, page_class = page_spec
             
-            self._tab_labels_by_key[tr_key] = str(obj_name).replace('_', ' ')
+            self._tab_labels_by_key[spec.tr_key] = str(spec.obj_name).replace('_', ' ')
 
-            page = page_class(config=self._config)
+            obj_name = f'Settings_Roblox_{spec.obj_name}_Page'
+
+            if spec.has_page_controller:
+                page = spec.page_class(
+                    config=self._config,
+                    parent_page_controller=self._page_controller, # type: ignore[call-arg]
+                    obj_name=obj_name,
+                )
+            else:
+                page = spec.page_class(
+                    config=self._config,
+                    obj_name=obj_name,
+                )
+                
             page.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-            self._page_controller.add_page(tr_key, page, obj_name=f'Settings_Roblox_{obj_name}_Page')
+            self._page_controller.add_page(spec.tr_key, page)
 
-            btn = MTButton(tr_key=tr_key, obj_name=f'Settings_Roblox_{obj_name}_Tab_Button')
-            self._page_controller.bind_tab(tr_key, btn)
+            btn = MTButton(tr_key=spec.tr_key, obj_name=f'Settings_Roblox_{spec.obj_name}_Tab_Button')
+            self._page_controller.bind_tab(spec.tr_key, btn)
             self._tabs_layout.addWidget(btn)
 
-        self._page_controller.show(_PAGES[0][2]) # type: ignore[index] | show the first page
-        self._page_controller.pageChanged.emit()
+        self._page_controller.show(_PAGES[0].tr_key) # type: ignore[index] | show the first page
 
     def current_page_inner(self) -> tuple[str, ...]:
         key = self._page_controller.current_key()

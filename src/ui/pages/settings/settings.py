@@ -18,22 +18,22 @@ from src.ui.pages.settings.pages import (
     SettingsConfigPage,
     SettingsThemePage,
 )
-from src.ui.types import PageState
 from src.ui.widgets.common import MTButton, MTWidget
 
 if t.TYPE_CHECKING:
     from src.config import Config
 
 
-_PAGES: list[PageSpec | None] = [
-    (None, 'Main',    'MAIN',    SettingsMainPage),
-    (None, 'Outputs', 'OUTPUTS', SettingsOutputsPage),
-    (None, 'Proxy',   'PROXY',   SettingsProxyPage),
-    (None, 'Roblox',  'ROBLOX',  SettingsRobloxPage),
-    (None, 'Misc',    'MISC',    SettingsMiscPage),
-    (None, 'Config',  'CONFIG',  SettingsConfigPage),
-    (None, 'Theme',   'THEME',   SettingsThemePage),
-]
+_PAGES: tuple[PageSpec | None, ...] = (
+    PageSpec(SettingsMainPage,    'MAIN',    'Main'),
+    PageSpec(SettingsOutputsPage, 'OUTPUTS', 'Outputs'),
+    PageSpec(SettingsProxyPage,   'PROXY',   'Proxy', has_page_controller=True),
+    PageSpec(SettingsRobloxPage,  'ROBLOX',  'Roblox', has_page_controller=True),
+    PageSpec(SettingsMiscPage,    'MISC',    'Misc'),
+    PageSpec(SettingsConfigPage,  'CONFIG',  'Config'),
+    PageSpec(SettingsThemePage,   'THEME',   'Theme'),
+    None,
+)
 
 
 class SettingsPage(BasePage):
@@ -42,9 +42,11 @@ class SettingsPage(BasePage):
         parent: QWidget | None = None,
         *,
         config: Config,
+        parent_page_controller: PageController,
         obj_name: str = '',
     ):
         super().__init__(parent, config=config, obj_name=obj_name)
+        self._parent_page_controller = parent_page_controller
 
         self._tab_names_by_key: dict[str, str] = {}
         self._pages_by_key: dict[str, MTWidget] = {}
@@ -54,53 +56,40 @@ class SettingsPage(BasePage):
     def _build_ui(self) -> None:
         self._main_layout = create_layout(LayoutType.VBOX, self)
         self._main_content = MTWidget(obj_name='Settings_Main_Tabs_Widget')
+        self._main_layout.addWidget(self._main_content)
 
         self._tabs_layout = create_layout(LayoutType.HBOX, self._main_content)
 
-        self._page_controller = PageController(self._main_layout)
+        self._page_controller = PageController(self._main_layout, parent_page_controller=self._parent_page_controller)
 
-        for page_spec in _PAGES:
-            if page_spec is None:
+        for spec in _PAGES:
+            if spec is None:
                 self._tabs_layout.addStretch()
                 continue
+                        
+            self._tab_names_by_key[spec.tr_key] = spec.obj_name
             
-            _icon_name, obj_name, tr_key, page_class = page_spec
+            obj_name = f'Settings_{spec.obj_name}_Page'
             
-            self._tab_names_by_key[tr_key] = obj_name
+            if spec.has_page_controller:
+                page = spec.page_class(
+                    config=self._config,
+                    parent_controller=self._page_controller, # type: ignore[call-arg]
+                    obj_name=obj_name,
+                )
+            else:
+                page = spec.page_class(
+                    config=self._config,
+                    obj_name=obj_name,
+                )
             
-            page = page_class(config=self._config)
-            self._pages_by_key[tr_key] = page
+            self._pages_by_key[spec.tr_key] = page
             page.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-            
-            # if isinstance(page, (SettingsProxyPage, SettingsRobloxPage)): # TODO
-            #     page.pageChanged.connect(self._emit_page_changed)
 
-            self._page_controller.add_page(tr_key, page, obj_name=f'Settings_{obj_name}_Page')
+            self._page_controller.add_page(spec.tr_key, page)
 
-            btn = MTButton(tr_key=tr_key, obj_name=f'Settings_{obj_name}_Tab_Button')
-            self._page_controller.bind_tab(tr_key, btn)
+            btn = MTButton(tr_key=spec.tr_key, obj_name=f'Settings_{spec.obj_name}_Tab_Button')
+            self._page_controller.bind_tab(spec.tr_key, btn)
             self._tabs_layout.addWidget(btn)
 
-        self._main_layout.addWidget(self._main_content)
-        self._tabs_layout.addStretch()
-        self._page_controller.show(_PAGES[0][2]) # type: ignore[index] | show the first page
-        self._page_controller.pageChanged.emit()
-        self._emit_page_changed()
-
-    def current_page(self) -> PageState:
-        state: PageState = {'main': 'Settings'}
-        top_key = self._page_controller.current_key()
-        if not isinstance(top_key, str):
-            return state
-
-        top_label = self._tab_names_by_key.get(top_key, top_key)
-        state['inner'] = (top_label,)
-        page = self._pages_by_key.get(top_key)
-        if isinstance(page, (SettingsProxyPage, SettingsRobloxPage)):
-            inner = page.current_page_inner()
-            if inner:
-                state['inner'] = (top_label, *inner)
-        return state
-
-    def _emit_page_changed(self) -> None:
-        self._page_controller.pageChanged.emit(self.current_page())
+        self._page_controller.show(_PAGES[0].tr_key) # type: ignore[index] | show the first page

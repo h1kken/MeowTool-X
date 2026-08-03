@@ -1,4 +1,6 @@
-import typing as t
+from __future__ import annotations
+
+from dataclasses import dataclass
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QLayout
@@ -6,59 +8,76 @@ from PySide6.QtWidgets import QLayout
 from src.ui.widgets.common import MTButton, MTButtonGroup, MTWidget
 
 
+@dataclass(frozen=True, slots=True)
+class _PageEntry:
+    name: str
+    page: MTWidget
+    button: MTButton
+
+
 class PageController(QObject):
-    pageChanged = Signal(object)
+    pageChanged = Signal(tuple[str, ...])
     
-    def __init__(self, layout: QLayout) -> None:
+    def __init__(
+        self,
+        layout: QLayout,
+        *,
+        parent_page_controller: PageController | None = None
+    ) -> None:
+        super().__init__()
         self._layout = layout
+        self._parent_controller = parent_page_controller
 
-        self._pages: dict[str, MTWidget] = {}
-        self._tabs: dict[str, MTButton] = {}
+        self._pages: dict[str, _PageEntry] = {}
         self._button_group = MTButtonGroup()
-        self._current_page: str | None = None
-        self._change_callbacks: list[t.Callable[[str], None]] = []
+        self._current: _PageEntry
+    
+        self._connect_signals()
+    
+    def _connect_signals(self) -> None:
+        if self._parent_controller is not None:
+            self.pageChanged.connect(self._parent_controller._on_child_page_changed)
+    
+    @property
+    def current(self) -> _PageEntry:
+        return self._current
+    
+    @property
+    def parent_controller(self) -> PageController | None:
+        return self._parent_controller
 
-    def add_page(self, key: str, page: MTWidget, *, obj_name: str | None = None) -> None:
-        page.hide()
-        self._pages[key] = page
-        self._layout.addWidget(page)
-
-        if obj_name:
-            page.setObjectName(obj_name)
-
-    def bind_tab(self, key: str, button: MTButton) -> None:
-        self._tabs[key] = button
+    def add_page(self, key: str, name: str, page: MTWidget, button: MTButton) -> None:
         button.setCheckable(True)
         button.setProperty('pageTab', True)
-        self._button_group.addButton(button)
         button.clicked.connect(lambda _checked: self.show(key)) # type: ignore
+        self._button_group.addButton(button)
+        
+        page_entry = _PageEntry(
+            name=name,
+            page=page,
+            button=button,
+        )
+        
+        self._pages[key] = page_entry
+        self._layout.addWidget(page)
+        
+        if len(self._pages) == 1:
+            self._current = page_entry
+            page.show()
+            button.setChecked(True)
+        else:
+            page.hide()
 
     def show(self, key: str) -> None:
-        if key not in self._pages:
+        req = self._pages[key]
+        if self._current is req:
             return
-        if self._current_page == key:
-            return
 
-        current_page = self.current_page()
-        if current_page is not None:
-            current_page.setVisible(False)
+        self._current.page.hide()
+        
+        req.page.show()
+        req.button.setChecked(True)
+        self._current = req
 
-        self._pages[key].setVisible(True)
-        self._current_page = key
-
-        button = self._tabs.get(key)
-        if button is not None:
-            button.setChecked(True)
-        for callback in list(self._change_callbacks):
-            callback(key)
-
-    def current_key(self) -> str | None:
-        return self._current_page
-
-    def current_page(self) -> MTWidget | None:
-        if self._current_page is None:
-            return
-        return self._pages.get(self._current_page)
-
-    def on_change(self, callback: t.Callable[[str], None]) -> None:
-        self._change_callbacks.append(callback)
+    def _on_child_page_changed(self, child_paths: tuple[str, ...]) -> None:
+        self.pageChanged.emit((self.current.name, *child_paths))
