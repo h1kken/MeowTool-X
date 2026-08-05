@@ -4,6 +4,8 @@ from src.utils.qt import build_object_name
 
 
 class MTButtonGroup(QButtonGroup):
+    _OBJECT_NAME = 'ButtonGroup'
+    
     def __init__(
         self,
         *,
@@ -11,4 +13,4 @@ class MTButtonGroup(QButtonGroup):
         exclusive: bool = True,
     ) -> None:
         super().__init__(exclusive=exclusive)
-        self.setObjectName(build_object_name((*obj_name, 'ButtonGroup')))
+        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))

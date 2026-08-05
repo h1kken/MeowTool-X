@@ -7,6 +7,8 @@ from src.utils.qt import build_object_name
 
 
 class MTImage(QLabel):
+    _OBJECT_NAME = 'Image'
+    
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -16,7 +18,7 @@ class MTImage(QLabel):
         fixed_height: int | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setObjectName(build_object_name(obj_name))
+        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
 
         if fixed_height is not None:
             self.setFixedHeight(fixed_height)

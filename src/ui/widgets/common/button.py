@@ -11,6 +11,8 @@ from src.utils.qt import build_object_name
 
 
 class MTButton(TranslatableMixin, QPushButton):
+    _OBJECT_NAME = 'Button'
+    
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -22,9 +24,9 @@ class MTButton(TranslatableMixin, QPushButton):
         action: cabc.Callable[[], None] | None = None,
     ) -> None:
         super().__init__(parent, tr_key=tr_key)
+        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setObjectName(build_object_name((*obj_name, 'Button')))
 
         if checkable:
             self.setCheckable(True)

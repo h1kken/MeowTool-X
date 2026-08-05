@@ -30,23 +30,24 @@ class MTSwitchSetting(MTBaseSetting[bool]):
     ) -> None:
         super().__init__(parent, config=config, cfg_key=cfg_key, obj_name=(*obj_name, self._OBJECT_NAME))
         
-        self._build_ui(tr_key=tr_key, obj_name=obj_name)
+        self._build_ui(tr_key=tr_key)
         self._connect_signals()
 
     def _build_ui(
         self,
         *,
         tr_key: str = '',
-        obj_name: tuple[str, ...] = (),
     ) -> None:
+        obj_name = self.objectName()
+        
         self._main_layout = create_layout(LayoutType.HBOX, self)
 
-        self._label = MTLabel(tr_key=tr_key, obj_name=obj_name)
+        self._label = MTLabel(tr_key=tr_key, obj_name=(obj_name,))
         self._main_layout.addWidget(self._label)
 
         self._main_layout.addStretch()
         
-        self._switch = MTSwitch(obj_name=obj_name)
+        self._switch = MTSwitch(obj_name=(obj_name,))
         self._switch.setChecked(self.value)
         self._main_layout.addWidget(self._switch)
         

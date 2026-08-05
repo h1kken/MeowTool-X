@@ -12,5 +12,5 @@ class MTWidget(QWidget):
         obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent)
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setObjectName(build_object_name(obj_name))
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)

@@ -82,24 +82,25 @@ class _BoundSwitchRow(MTBaseSetting[bool]):
 
         self._suspend_config_write = False
 
-        self._build_ui(text=text, obj_name=obj_name)
+        self._build_ui(text=text)
         self._connect_signals()
 
     def _build_ui(
         self,
         *,
-        text: str,
-        obj_name: tuple[str, ...] = (),
+        text: str = '',
     ) -> None:
+        obj_name = self.objectName()
+        
         self._main_layout = create_layout(LayoutType.HBOX, self)
 
-        self._label = MTLabel(tr_key='', obj_name=obj_name)
+        self._label = MTLabel(obj_name=(obj_name,))
         self._label.setText(str(text))
         self._main_layout.addWidget(self._label)
 
         self._main_layout.addStretch()
 
-        self._switch = MTSwitch(obj_name=obj_name)
+        self._switch = MTSwitch(obj_name=(obj_name,))
         self._switch.setChecked(bool(self._config.get(self._cfg_key)))
         self._main_layout.addWidget(self._switch)
 
@@ -197,6 +198,8 @@ class _SortListEntryRow(MTWidget):
     changed = Signal()
     remove_requested = Signal(QWidget)
 
+    _OBJECT_NAME = 'Sort_List_Entry_Row'
+
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -206,10 +209,9 @@ class _SortListEntryRow(MTWidget):
         start_value: str = '',
         end_value: str = '',
     ) -> None:
-        super().__init__(parent)
+        super().__init__(parent, obj_name=(*obj_name, self._OBJECT_NAME))
         
         self._range_mode = bool(range_mode)
-        self.setObjectName(f'{obj_name}_Entry_Row')
 
         self._main_layout = create_layout(LayoutType.HBOX, self)
 
@@ -281,7 +283,7 @@ class _SortListEditor(MTWidget):
         self._entry_rows: list[_SortListEntryRow] = []
         self._suspend_save = False
 
-        self._build_ui(text=text, obj_name=(*obj_name, self._OBJECT_NAME))
+        self._build_ui(text=text)
 
         self.reload_from_config()
 
@@ -289,18 +291,19 @@ class _SortListEditor(MTWidget):
         self,
         *,
         text: str = '',
-        obj_name: tuple[str, ...] = (),
     ) -> None:
+        obj_name = self.objectName()
+        
         self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        self._enabled_row = _BoundSwitchRow(config=self._config, text=text, cfg_key=self._cfg_key_enabled, obj_name=(*obj_name, 'Enabled'))
+        self._enabled_row = _BoundSwitchRow(config=self._config, text=text, cfg_key=self._cfg_key_enabled, obj_name=(obj_name, 'Enabled'))
         self._main_layout.addWidget(self._enabled_row)
 
-        self._entries_widget = MTWidget(obj_name=(*obj_name, 'Entries'))
+        self._entries_widget = MTWidget(obj_name=(obj_name, 'Entries'))
         self._entries_layout = create_layout(LayoutType.VBOX, self._entries_widget)
         self._main_layout.addWidget(self._entries_widget)
 
-        self._add_button = MTButton(obj_name=(*obj_name, 'Add'))
+        self._add_button = MTButton(obj_name=(obj_name, 'Add'))
         # self._add_button.set_icon()
         self._main_layout.addWidget(self._add_button)
 
@@ -331,7 +334,7 @@ class _SortListEditor(MTWidget):
 
     def _append_entry_row(self, start_value: str, end_value: str) -> None:
         row = _SortListEntryRow(
-            obj_name=f'{self.objectName()}_{len(self._entry_rows)}',
+            obj_name=(self.objectName(), str(len(self._entry_rows))),
             range_mode=self._range_mode,
             start_value=start_value,
             end_value=end_value,
@@ -419,11 +422,7 @@ class _CookieCheckerSortPopup(MTPopup):
 
         self._title = MTLabel(tr_key=tr_key, obj_name=(*obj_name, 'Title'))
 
-        self._close_button = MTButton(
-            tr_key='',
-            obj_name=(*obj_name, 'Close_Button'),
-            parent=self._header,
-        )
+        self._close_button = MTButton(self._header, obj_name=(*obj_name, 'Close_Button'))
         self._close_button.setText('X')
 
         self._header_layout.addWidget(self._title)

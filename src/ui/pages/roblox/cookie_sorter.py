@@ -37,23 +37,21 @@ class RobloxCookieSorterPage(BasePage):
         self._source_text_blocks: list[str] = []
         self._use_default_folder = True
 
-        self._build_ui(obj_name=(*obj_name, self._OBJECT_NAME))
+        self._build_ui()
         self._connect_signals()
         
-    def _build_ui(
-        self,
-        *,
-        obj_name: tuple[str, ...] = (),
-    ) -> None:
+    def _build_ui(self) -> None:
+        obj_name = self.objectName()
+        
         self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        self._drop_zone = MTDropZone(tr_key='UPLD_OR_DRG_AND_DRP_TXT_OR_FLS_HERE', obj_name=obj_name)
+        self._drop_zone = MTDropZone(tr_key='UPLD_OR_DRG_AND_DRP_TXT_OR_FLS_HERE', obj_name=(obj_name,))
         self._main_layout.addWidget(self._drop_zone)
         
-        self._label = MTLabel(tr_key='CK_SRTR_STATUS', obj_name=(*obj_name, 'Status'))
+        self._label = MTLabel(tr_key='CK_SRTR_STATUS', obj_name=(obj_name, 'Status'))
         self._main_layout.addWidget(self._label)
         
-        self._button = MTButton(tr_key='CK_SRTR_STRT', obj_name=(*obj_name, 'Start'))
+        self._button = MTButton(tr_key='CK_SRTR_STRT', obj_name=(obj_name, 'Start'))
         self._main_layout.addWidget(self._button)
 
     def _connect_signals(self) -> None:

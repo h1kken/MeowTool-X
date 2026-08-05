@@ -38,25 +38,26 @@ class MTPathSetting(MTBaseSetting[str]):
         self._file_filter = file_filter
         self._caption = caption.strip() if isinstance(caption, str) and caption.strip() else None
 
-        self._build_ui(tr_key=tr_key, obj_name=(*obj_name, self._OBJECT_NAME))
+        self._build_ui(tr_key=tr_key)
         self._connect_signals()
 
     def _build_ui(
         self,
         *,
         tr_key: str,
-        obj_name: tuple[str, ...] = (),
     ) -> None:
+        obj_name = self.objectName()
+        
         self._main_layout = create_layout(LayoutType.HBOX, self)
 
-        self._label = MTLabel(tr_key=tr_key, obj_name=obj_name)
+        self._label = MTLabel(tr_key=tr_key, obj_name=(obj_name,))
         self._main_layout.addWidget(self._label)
 
-        self._line_edit = MTLineEdit(obj_name=obj_name)
+        self._line_edit = MTLineEdit(obj_name=(obj_name,))
         self._line_edit.setText(str(self.value).strip())
         self._main_layout.addWidget(self._line_edit, stretch=1)
 
-        self._browse_button = MTButton(obj_name=(*obj_name, 'Browse'))
+        self._browse_button = MTButton(obj_name=(obj_name, 'Browse'))
         self._browse_button.set_icon(
             source=str(PATH_FOLDER_ICON),
             align='center',

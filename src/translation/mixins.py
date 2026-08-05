@@ -9,7 +9,6 @@ import src.app.context as ctx
 translator = ctx.services.translator
 
 
-# TODO: check it work, because MRO can make me mad
 class TranslatableMixin:
     def __init__(
         self,

@@ -5,12 +5,8 @@ from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 
 from .button import MTButton
-from .label import MTPlainLabel
 from .scroll_area import MTScrollArea
 from .widget import MTWidget
-
-
-_GROUP_SECTION_SPACER_HEIGHT = 8
 
 
 class _MTListItem(MTButton):
@@ -86,19 +82,6 @@ class MTList(MTScrollArea):
 
         item.pressed.connect(_emit_pressed)
         item.clicked.connect(_handle_clicked)
-        self._items.append(item)
-        self._content_layout.addWidget(item)
-        return item
-
-    def add_header(self, text: str, *, obj_name: tuple[str, ...] = ()) -> MTPlainLabel:
-        item = MTPlainLabel(self._content, text=text, obj_name=(*obj_name, 'Header'))
-        self._items.append(item)
-        self._content_layout.addWidget(item)
-        return item
-
-    def add_spacer(self, height: int = _GROUP_SECTION_SPACER_HEIGHT) -> MTWidget:
-        item = MTWidget(self._content)
-        item.setFixedHeight(max(0, int(height)))
         self._items.append(item)
         self._content_layout.addWidget(item)
         return item

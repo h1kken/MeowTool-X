@@ -8,6 +8,8 @@ from src.utils.qt import build_object_name
 
 
 class MTPlainLabel(QLabel):
+    _OBJECT_NAME = 'PlainLabel'
+
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -16,11 +18,13 @@ class MTPlainLabel(QLabel):
         obj_name: tuple[str, ...] = ()
     ) -> None:
         super().__init__(text, parent)
+        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setObjectName(build_object_name((*obj_name, 'PlainLabel')))
 
 
 class MTLabel(TranslatableMixin, QLabel):
+    _OBJECT_NAME = 'Label'
+
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -29,5 +33,5 @@ class MTLabel(TranslatableMixin, QLabel):
         obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent, tr_key=tr_key)
+        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setObjectName(build_object_name((*obj_name, 'Label')))

@@ -44,16 +44,14 @@ class SettingsRobloxPage(BasePage):
         
         self._tab_names_by_key: dict[str, str] = {}
         
-        self._build_ui(obj_name=obj_name)
+        self._build_ui()
 
-    def _build_ui(
-        self,
-        *,
-        obj_name: tuple[str, ...] = (),
-    ) -> None:
+    def _build_ui(self) -> None:
+        obj_name = self.objectName()
+        
         self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        self._tabs_widget = MTWidget(obj_name=(*obj_name, 'Tabs'))
+        self._tabs_widget = MTWidget(obj_name=(obj_name, 'Tabs'))
         self._tabs_layout = create_layout(LayoutType.HBOX, self._tabs_widget)
         self._main_layout.addWidget(self._tabs_widget)
 
@@ -71,15 +69,15 @@ class SettingsRobloxPage(BasePage):
                 page = spec.page_class(
                     config=self._config,
                     parent_page_controller=self._page_controller, # type: ignore[call-arg]
-                    obj_name=obj_name,
+                    obj_name=(obj_name,),
                 )
             else:
                 page = spec.page_class(
                     config=self._config,
-                    obj_name=obj_name,
+                    obj_name=(obj_name,),
                 )
                 
-            button = MTButton(tr_key=spec.tr_key, obj_name=(*obj_name, spec.obj_name, 'Tab'))
+            button = MTButton(tr_key=spec.tr_key, obj_name=(obj_name, spec.obj_name, 'Tab'))
             self._tabs_layout.addWidget(button)
             
             self._page_controller.add_page(

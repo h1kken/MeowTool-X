@@ -34,31 +34,32 @@ class MTSliderSetting(MTBaseSetting[int]):
         self._min_value = min_value
         self._max_value = max_value
         
-        self._build_ui(tr_key=tr_key, obj_name=(*obj_name, self._OBJECT_NAME))
+        self._build_ui(tr_key=tr_key)
         self._connect_signals()
         
     def _build_ui(
         self,
         *,
         tr_key: str,
-        obj_name: tuple[str, ...] = (),
     ) -> None:
+        obj_name = self.objectName()
+        
         self._main_layout = create_layout(LayoutType.VBOX, self)
+        
         self._info_layout = create_layout(LayoutType.HBOX)
         self._main_layout.addLayout(self._info_layout)
-
-        self._label = MTLabel(tr_key=tr_key, obj_name=obj_name)
+        
+        self._label = MTLabel(tr_key=tr_key, obj_name=(obj_name,))
         self._info_layout.addWidget(self._label)
 
         self._info_layout.addStretch()
         
-        self._spin_box = MTSpinBox(obj_name=obj_name)
+        self._spin_box = MTSpinBox(obj_name=(obj_name,))
         self._spin_box.setRange(self._min_value, self._max_value)
         self._spin_box.setValue(self._prev_value)
-            
         self._info_layout.addWidget(self._spin_box)
 
-        self._slider = MTSlider(obj_name=obj_name)
+        self._slider = MTSlider(obj_name=(obj_name,))
         self._slider.setRange(self._min_value, self._max_value)
         self._slider.setValue(self._prev_value)
         self._main_layout.addWidget(self._slider)

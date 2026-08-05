@@ -38,22 +38,23 @@ class MTColumnsSetting(MTScrollArea):
         self._column_heights: list[int] = [0 for _ in range(self._columns)]
         self._column_assignments: tuple[tuple[int, ...], ...] = tuple(tuple() for _ in range(self._columns))
 
-        self._build_ui(tabs=tabs, obj_name=(*obj_name, self._OBJECT_NAME))
+        self._build_ui(tabs=tabs)
         self._connect_signals()
 
     def _build_ui(
         self,
         *,
-        obj_name: tuple[str, ...] = (),
         tabs: t.Sequence[QWidget] | None = None,
     ) -> None:
+        obj_name = self.objectName()
+        
         self._main_layout = create_layout(LayoutType.HBOX, parent=self._scroll_area_content)
             
-        self._scroll_area_content = MTWidget(obj_name=(*obj_name, 'Content'))
+        self._scroll_area_content = MTWidget(obj_name=(obj_name, 'Content'))
         self.setWidget(self._scroll_area_content)
 
         for index in range(self._columns):
-            column_widget = MTWidget(obj_name=(*obj_name, str(index), 'Column'))
+            column_widget = MTWidget(obj_name=(obj_name, str(index), 'Column'))
             column_layout = create_layout(LayoutType.VBOX, column_widget)
             self._main_layout.addWidget(column_widget, stretch=1)
             self._layouts.append(column_layout)

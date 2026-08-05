@@ -47,18 +47,16 @@ class SettingsThemePage(BasePage): # REWRITE THIS PAGE
 
         self._refresh(preferred=self._loaded_name)
 
-    def _build_ui(
-        self,
-        *,
-        obj_name: tuple[str, ...] = (),
-    ) -> None:
+    def _build_ui(self) -> None:
+        obj_name = self.objectName()
+        
         self._main_layout = create_layout(LayoutType.VBOX, self)
         
         self._main_content = MTWidget(obj_name=(*obj_name, 'Content'))
         self._main_content_layout = create_layout(LayoutType.HBOX, self._main_content)
         self._main_layout.addWidget(self._main_content)
 
-        self._list_column = MTLabeledList(obj_name=obj_name)
+        self._list_column = MTLabeledList(obj_name=(obj_name,))
         self._main_content_layout.addWidget(self._list_column)
         
         self._themes_list = self._list_column.list_widget
@@ -66,31 +64,29 @@ class SettingsThemePage(BasePage): # REWRITE THIS PAGE
         self._actions_column = MTWidget(obj_name=(*obj_name, 'Actions_Column'))
         self._main_content_layout.addWidget(self._actions_column)
 
-        self._build_actions_column(obj_name=obj_name)
+        self._build_actions_column()
 
-    def _build_actions_column(
-        self,
-        *,
-        obj_name: tuple[str, ...] = (),
-    ) -> None:
+    def _build_actions_column(self) -> None:
+        obj_name = self.objectName()
+        
         self._actions_column_layout = create_layout(LayoutType.VBOX, self._actions_column)
         
-        self._selected_value = self._add_info_row(tr_key='SLCTD', obj_name=(*obj_name, 'Selected'))
-        self._loaded_value = self._add_info_row(tr_key='LDD', obj_name=(*obj_name, 'Loaded'))
+        self._selected_value = self._add_info_row(tr_key='SLCTD', obj_name=(obj_name, 'Selected'))
+        self._loaded_value = self._add_info_row(tr_key='LDD', obj_name=(obj_name, 'Loaded'))
 
-        self._auto_load_row = MTSwitchSetting(config=self._config, tr_key='ATLD_SLCTD_CFG', obj_name=(*obj_name, 'Autoload'))
+        self._auto_load_row = MTSwitchSetting(config=self._config, tr_key='ATLD_SLCTD_CFG', obj_name=(obj_name, 'Autoload'))
         self._actions_column_layout.addWidget(self._auto_load_row)
         
         self._load_button = MTButton(tr_key='LOAD', obj_name=(*obj_name, 'Apply'))
         self._actions_column_layout.addWidget(self._load_button)
         
-        self._create_stack = self._build_inline_editor('Create', tr_key='CREATE', obj_name=obj_name)
+        self._create_stack = self._build_inline_editor('Create', tr_key='CREATE')
         self._actions_column_layout.addWidget(self._create_stack)
         
-        self._rename_stack = self._build_inline_editor('Rename', tr_key='RENAME', obj_name=obj_name)
+        self._rename_stack = self._build_inline_editor('Rename', tr_key='RENAME')
         self._actions_column_layout.addWidget(self._rename_stack)
 
-        self._delete_stack = self._delete_stack_widget()
+        self._delete_stack = self._build_delete_stack()
         self._actions_column_layout.addWidget(self._delete_stack)
 
         self._open_location_button = MTButton(tr_key='OPN_FL_LCTN', obj_name=(*obj_name, 'Open_Location'))
@@ -145,21 +141,22 @@ class SettingsThemePage(BasePage): # REWRITE THIS PAGE
         mode: str,
         *,
         tr_key: str = '',
-        obj_name: tuple[str, ...] = (),
-    ) -> MTInlineEditorStack:        
-        stack = MTInlineEditorStack(obj_name=(*obj_name, mode))
+    ) -> MTInlineEditorStack:
+        obj_name = self.objectName()
         
-        button = MTButton(tr_key=tr_key, obj_name=(*obj_name, mode))
+        stack = MTInlineEditorStack(obj_name=(obj_name, mode))
+        
+        button = MTButton(tr_key=tr_key, obj_name=(obj_name, mode))
         stack.addWidget(button)
 
-        row = MTWidget(obj_name=(*obj_name, mode, 'Editor_Row'))
+        row = MTWidget(obj_name=(obj_name, mode, 'Editor_Row'))
         row_layout = create_layout(LayoutType.HBOX, row)
         stack.addWidget(row)
         
-        line_edit = MTLineEdit(obj_name=(*obj_name, mode, 'Editor'))
+        line_edit = MTLineEdit(obj_name=(obj_name, mode, 'Editor'))
         row_layout.addWidget(line_edit, 1)
         
-        cancel_button = MTButton(obj_name=(*obj_name, mode, 'Editor_Cancel'))
+        cancel_button = MTButton(obj_name=(obj_name, mode, 'Editor_Cancel'))
         # cancel.set_icon()
         row_layout.addWidget(cancel_button)
 
@@ -177,25 +174,22 @@ class SettingsThemePage(BasePage): # REWRITE THIS PAGE
         
         return stack
 
-    def _delete_stack_widget(
-        self,
-        *,
-        obj_name: tuple[str, ...] = (),
-    ) -> MTInlineEditorStack:
-        stack = MTInlineEditorStack()
-        stack.setObjectName('Theme_Delete_Stack')
+    def _build_delete_stack(self) -> MTInlineEditorStack:
+        obj_name = self.objectName()
         
-        self._delete_button = MTButton(tr_key='DELETE', obj_name=(*obj_name, 'Delete'))
+        stack = MTInlineEditorStack(obj_name=(obj_name, 'Delete',))
+        
+        self._delete_button = MTButton(tr_key='DELETE', obj_name=(obj_name, 'Delete'))
         stack.addWidget(self._delete_button)
         
-        row = MTWidget(obj_name=(*obj_name, 'Delete_Confirm_Row'))
+        row = MTWidget(obj_name=(obj_name, 'Delete_Confirm_Row'))
         row_layout = create_layout(LayoutType.HBOX, row)
         stack.addWidget(row)
         
-        self._delete_confirm = MTButton(tr_key='CONFIRM', obj_name=(*obj_name, 'Delete_Confirm'))
+        self._delete_confirm = MTButton(tr_key='CONFIRM', obj_name=(obj_name, 'Delete_Confirm'))
         row_layout.addWidget(self._delete_confirm, 1)
         
-        self._delete_cancel = MTButton(tr_key='✕', obj_name=(*obj_name, 'Delete_Cancel'))
+        self._delete_cancel = MTButton(tr_key='✕', obj_name=(obj_name, 'Delete_Cancel'))
         row_layout.addWidget(self._delete_cancel)
         
         return stack

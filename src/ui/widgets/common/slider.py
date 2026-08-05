@@ -12,11 +12,16 @@ from src.utils.qt import build_object_name
 class MTSlider(QSlider):
     _OBJECT_NAME = 'Slider'
     
-    def __init__(self, parent: QWidget | None = None, *, obj_name: tuple[str, ...] = ()) -> None:
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        obj_name: tuple[str, ...] = (),
+    ) -> None:
         super().__init__(Qt.Orientation.Horizontal, parent)
+        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setMouseTracking(True)
-        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
         
         self._dragging_anywhere = False
         self._drag_offset = 0

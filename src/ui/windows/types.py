@@ -11,8 +11,8 @@ if t.TYPE_CHECKING:
 @dataclass(frozen=True)
 class PageSpec:
     page_class: type[BasePage]
-    tr_key: str
-    obj_name: str
+    tr_key: str = ''
+    obj_name: str = ''
     icon: str | None = None
     has_page_controller: bool = False
 

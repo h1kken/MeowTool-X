@@ -39,18 +39,19 @@ class MTDropZone(MTWidget):
         self._accept_text = accept_text
         self._browse_on_click = browse_on_click
 
-        self._build_ui(tr_key=tr_key, obj_name=(*obj_name, self._OBJECT_NAME))
+        self._build_ui(tr_key=tr_key)
         self._connect_signals()
 
     def _build_ui(
         self,
         *,
         tr_key: str = '',
-        obj_name: tuple[str, ...] = (),
     ) -> None:
+        obj_name = self.objectName()
+        
         self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        self._label = MTLabel(tr_key=tr_key, obj_name=obj_name)
+        self._label = MTLabel(tr_key=tr_key, obj_name=(obj_name,))
         self._label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._main_layout.addWidget(self._label)
 

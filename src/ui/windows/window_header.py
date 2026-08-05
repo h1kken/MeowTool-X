@@ -77,36 +77,34 @@ class MTWindowHeader(MTWidget):
         self._manual_resize_start_geometry = QRect()
         self._buttons: MTWidget | None = None
 
-        self._build_ui(obj_name=(window.objectName(), self._OBJECT_NAME))
+        self._build_ui()
         self._connect_signals()
 
-    def _build_ui(
-        self,
-        *,
-        obj_name: tuple[str, ...] = (),
-    ) -> None:
+    def _build_ui(self) -> None:
+        obj_name = self.objectName()
+        
         self._main_layout = create_layout(LayoutType.HBOX, self)
 
-        self._title_label = MTPlainLabel(self, text=self._window.windowTitle(), obj_name=(*obj_name, 'Title'))
+        self._title_label = MTPlainLabel(self, text=self._window.windowTitle(), obj_name=(obj_name, 'Title'))
         self._title_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
         self._main_layout.addStretch()
 
-        self._buttons = MTWidget(self, obj_name=(*obj_name, 'Buttons'))
+        self._buttons = MTWidget(self, obj_name=(obj_name, 'Buttons'))
         self._buttons_layout = create_layout(LayoutType.HBOX, self._buttons)
         self._main_layout.addWidget(self._buttons)
 
         icon_size = QSize(18, 18)
 
-        self._minimize_button = MTButton(obj_name=(*obj_name, 'Minimize'))
+        self._minimize_button = MTButton(obj_name=(obj_name, 'Minimize'))
         self._minimize_button.set_icon(source=str(PATH_HEADER_ICONS_SRC / 'minimize.svg'), size=icon_size)
         self._buttons_layout.addWidget(self._minimize_button)
 
-        self._maximize_button = MTButton(obj_name=(*obj_name, 'Maximize'))
+        self._maximize_button = MTButton(obj_name=(obj_name, 'Maximize'))
         self._maximize_button.set_icon(source=str(PATH_HEADER_ICONS_SRC / 'maximize.svg'), size=icon_size)
         self._buttons_layout.addWidget(self._maximize_button)
 
-        self._close_button = MTButton(obj_name=(*obj_name, 'Close'))
+        self._close_button = MTButton(obj_name=(obj_name, 'Close'))
         self._close_button.set_icon(source=str(PATH_HEADER_ICONS_SRC / 'close.svg'), size=icon_size)
         self._buttons_layout.addWidget(self._close_button)
 
@@ -327,11 +325,8 @@ class MTWindowHeader(MTWidget):
         child = self.childAt(local_pos)
         return not isinstance(child, MTButton)
 
-    def _create_resize_grips(
-        self,
-        *,
-        obj_name: tuple[str, ...] = (),
-    ) -> list[_HeaderResizeGrip]:
+    def _create_resize_grips(self) -> list[_HeaderResizeGrip]:
+        obj_name = self.objectName()
         grips = [
             _HeaderResizeGrip(
                 self,

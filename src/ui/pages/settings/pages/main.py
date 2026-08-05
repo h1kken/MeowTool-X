@@ -31,21 +31,16 @@ class SettingsMainPage(BasePage):
 
         self._build_ui()
 
-    def _build_ui(
-        self,
-        *,
-        obj_name: tuple[str, ...] = (),
-    )-> None:
+    def _build_ui(self)-> None:
+        obj_name = self.objectName()
+        
         self._main_layout = create_layout(LayoutType.VBOX, self)
         
-        self._columns_widget = MTColumnsSetting(obj_name=(*obj_name, 'Columns'), tabs=self._create_settings(obj_name=obj_name))
+        self._columns_widget = MTColumnsSetting(obj_name=(obj_name,), tabs=self._create_settings())
         self._main_layout.addWidget(self._columns_widget)
 
-    def _create_settings(
-        self,
-        *,
-        obj_name: tuple[str, ...] = (),
-    ) -> list[MTCollapsibleContainer]:
+    def _create_settings(self) -> list[MTCollapsibleContainer]:
+        obj_name = self.objectName()
         return [
             MTCollapsibleContainer(
                 tr_key='GNRL',

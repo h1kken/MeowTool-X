@@ -23,8 +23,8 @@ class MTIcon(MTWidget):
         size: int = 16,
     ) -> None:
         super().__init__(parent)
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
         self._source = source
         self._color = color

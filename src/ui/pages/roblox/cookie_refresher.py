@@ -24,17 +24,15 @@ class RobloxCookieRefresherPage(BasePage):
     ):
         super().__init__(parent, config=config, obj_name=(*obj_name, self._OBJECT_NAME))
 
-        self._build_ui(obj_name=(*obj_name, self._OBJECT_NAME))
+        self._build_ui()
 
-    def _build_ui(
-        self,
-        *,
-        obj_name: tuple[str, ...] = (),
-    ) -> None:
+    def _build_ui(self) -> None:
+        obj_name = self.objectName()
+        
         self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        self._label = MTLabel(tr_key='CK_RFRSHR', obj_name=(*obj_name, 'Title'))
+        self._label = MTLabel(tr_key='CK_RFRSHR', obj_name=(obj_name, 'Title'))
         self._main_layout.addWidget(self._label)
 
-        self._button = MTButton(tr_key='RFRSH', obj_name=(*obj_name, 'Start'))
+        self._button = MTButton(tr_key='RFRSH', obj_name=(obj_name, 'Start'))
         self._main_layout.addWidget(self._button)

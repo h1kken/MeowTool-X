@@ -28,21 +28,22 @@ class MTLineEditSetting(MTBaseSetting[str]):
     ) -> None:
         super().__init__(parent, config=config, cfg_key=cfg_key, obj_name=obj_name)
 
-        self._build_ui(tr_key=tr_key, obj_name=obj_name)
+        self._build_ui(tr_key=tr_key)
         self._connect_signals()
 
     def _build_ui(
         self,
         *,
         tr_key: str = '',
-        obj_name: tuple[str, ...] = (),
     ) -> None:
+        obj_name = self.objectName()
+        
         self._main_layout = create_layout(LayoutType.HBOX, self)
 
-        self._label = MTLabel(tr_key=tr_key, obj_name=(*obj_name, self._OBJECT_NAME, 'Label'))
+        self._label = MTLabel(tr_key=tr_key, obj_name=(obj_name,))
         self._main_layout.addWidget(self._label)
 
-        self._line_edit = MTLineEdit(obj_name=(*obj_name, self._OBJECT_NAME))
+        self._line_edit = MTLineEdit(obj_name=(obj_name,))
         self._line_edit.setText(self.value)
         self._main_layout.addWidget(self._line_edit, stretch=1)
 

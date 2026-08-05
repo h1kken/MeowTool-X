@@ -42,11 +42,9 @@ class SettingsProxyPage(BasePage):
 
         self._build_ui()
 
-    def _build_ui(
-        self,
-        *,
-        obj_name: tuple[str, ...] = (),
-    ) -> None:
+    def _build_ui(self) -> None:
+        obj_name = self.objectName()
+        
         self._main_layout = create_layout(LayoutType.VBOX, self)
         
         self._main_content = MTWidget(obj_name=(self._OBJECT_NAME, 'Tabs'))
@@ -67,12 +65,12 @@ class SettingsProxyPage(BasePage):
                 page = spec.page_class(
                     config=self._config,
                     parent_page_controller=self._page_controller, # type: ignore[call-arg]
-                    obj_name=obj_name,
+                    obj_name=(obj_name,),
                 )
             else:
                 page = spec.page_class(
                     config=self._config,
-                    obj_name=obj_name,
+                    obj_name=(obj_name,),
                 )
 
             button = MTButton(tr_key=spec.tr_key, obj_name=(self._OBJECT_NAME, spec.obj_name, 'Tab'))

@@ -34,21 +34,22 @@ class MTComboBoxSetting(MTBaseSetting[str]):
         self._items = items
         self._on_changed = on_changed
         
-        self._build_ui(tr_key=tr_key, obj_name=(*obj_name, self._OBJECT_NAME))
+        self._build_ui(tr_key=tr_key)
         self._connect_signals()
 
     def _build_ui(
         self,
         *,
         tr_key: str = '',
-        obj_name: tuple[str, ...] = (),
     ) -> None:
+        obj_name = self.objectName()
+        
         self._main_layout = create_layout(LayoutType.HBOX, self)
 
-        self._label = MTLabel(tr_key=tr_key, obj_name=obj_name)
+        self._label = MTLabel(tr_key=tr_key, obj_name=(obj_name,))
         self._main_layout.addWidget(self._label)
 
-        self._combo_box = MTComboBox(obj_name=obj_name)
+        self._combo_box = MTComboBox(obj_name=(obj_name,))
         self._combo_box.set_content_width_mode('longest')
         self.set_items(self._items)
         self._main_layout.addWidget(self._combo_box, stretch=1)

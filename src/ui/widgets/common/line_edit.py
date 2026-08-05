@@ -7,6 +7,8 @@ from src.utils.qt import build_object_name
 
 
 class MTLineEdit(QLineEdit):
+    _OBJECT_NAME = 'LineEdit'
+    
     def __init__(
         self,
         text: str = '',
@@ -15,5 +17,5 @@ class MTLineEdit(QLineEdit):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(text, parent)
+        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setObjectName(build_object_name(obj_name))
