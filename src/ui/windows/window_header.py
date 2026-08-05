@@ -1,59 +1,38 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QSize, Qt
-from PySide6.QtGui import QIcon, QMouseEvent, QResizeEvent
-from PySide6.QtWidgets import QApplication, QSizePolicy, QWidget
+from PySide6.QtGui import QMouseEvent, QResizeEvent
+from PySide6.QtWidgets import QApplication, QWidget
 
 from src.app.paths import PATH_HEADER_ICONS_SRC
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import MTButton, MTPlainLabel, MTWidget
+from src.utils.qt import build_object_name
 
 
-_HEADER_RESIZE_MARGIN = 8
-_HEADER_OBJECT_NAME = 'Main_Window_Header'
 _QT_MAX_SIZE = 16_777_215
 
 
-class _HeaderIconButton(MTButton): # TODO: remove
-    def __init__(self, icon_name: str) -> None:
-        button_name = '_'.join(part.capitalize() for part in icon_name.split('_'))
-        
-        super().__init__(obj_name=f'{_HEADER_OBJECT_NAME}_{button_name}_Button')
-        
-        self.setText('')
-        self.setCursor(Qt.CursorShape.ArrowCursor)
-        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.setMinimumSize(18, 18)
-        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        self.set_icon_by_name(icon_name)
-
-    def set_icon_by_name(self, icon_name: str) -> None:
-        icon_path = PATH_HEADER_ICONS_SRC / f'{icon_name}.svg'
-        icon = QIcon(str(icon_path))
-        if icon.isNull():
-            self.setIcon(QIcon())
-            return
-        self.setIcon(icon)
-        self.setIconSize(QSize(14, 14))
-
-
 class _HeaderResizeGrip(QWidget):
+    _OBJECT_NAME = 'Grip'
+    
     def __init__(
         self,
-        header: 'MTWindowHeader',
+        header: MTWindowHeader,
         edges: Qt.Edge,
         *,
-        obj_name: str,
+        obj_name: tuple[str, ...] = (),
         cursor: Qt.CursorShape,
     ) -> None:
         super().__init__(header.window())
-        self._header = header
-        self._edges = edges
-        self.setObjectName(obj_name)
+        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
         self.setMouseTracking(True)
         self.setCursor(cursor)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+        
+        self._header = header
+        self._edges = edges
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
@@ -64,25 +43,30 @@ class _HeaderResizeGrip(QWidget):
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if event.buttons() & Qt.MouseButton.LeftButton:
-            self._header.update_manual_resize(event.globalPosition().toPoint())
+            self._header.update_resize(event.globalPosition().toPoint())
             event.accept()
             return
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
-            self._header.finish_manual_resize()
+            self._header.finish_resize()
             event.accept()
             return
         super().mouseReleaseEvent(event)
 
 
 class MTWindowHeader(MTWidget):
+    _OBJECT_NAME = 'Header'
+    
     def __init__(self, window: QWidget) -> None:
-        super().__init__(parent=window, obj_name=_HEADER_OBJECT_NAME)
+        super().__init__(parent=window, obj_name=(window.objectName(), self._OBJECT_NAME))
+        self.setMouseTracking(True)
+        self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+
         self._window = window
         
-        self._resize_margin = _HEADER_RESIZE_MARGIN
+        self._resize_margin = 4
         self._drag_press_pos = QPoint()
         self._maximized_drag_pending = False
         self._manual_move_active = False
@@ -93,35 +77,37 @@ class MTWindowHeader(MTWidget):
         self._manual_resize_start_geometry = QRect()
         self._buttons: MTWidget | None = None
 
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.setMouseTracking(True)
-        self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
-
-        self._build_ui()
+        self._build_ui(obj_name=(window.objectName(), self._OBJECT_NAME))
         self._connect_signals()
 
-    def _build_ui(self) -> None:
+    def _build_ui(
+        self,
+        *,
+        obj_name: tuple[str, ...] = (),
+    ) -> None:
         self._main_layout = create_layout(LayoutType.HBOX, self)
 
-        self._title_label = MTPlainLabel(self, text=self._window.windowTitle(), obj_name=f'{_HEADER_OBJECT_NAME}_Title')
+        self._title_label = MTPlainLabel(self, text=self._window.windowTitle(), obj_name=(*obj_name, 'Title'))
         self._title_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
-        self._main_layout.addStretch(1)
+        self._main_layout.addStretch()
 
-        self._buttons = MTWidget(self, obj_name=f'{_HEADER_OBJECT_NAME}_Buttons')
-        self._buttons.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
-        self._buttons.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
-        self._main_layout.addWidget(self._buttons)
-        
+        self._buttons = MTWidget(self, obj_name=(*obj_name, 'Buttons'))
         self._buttons_layout = create_layout(LayoutType.HBOX, self._buttons)
+        self._main_layout.addWidget(self._buttons)
 
-        self._minimize_button = _HeaderIconButton('minimize')
+        icon_size = QSize(18, 18)
+
+        self._minimize_button = MTButton(obj_name=(*obj_name, 'Minimize'))
+        self._minimize_button.set_icon(source=str(PATH_HEADER_ICONS_SRC / 'minimize.svg'), size=icon_size)
         self._buttons_layout.addWidget(self._minimize_button)
 
-        self._maximize_button = _HeaderIconButton('maximize')
+        self._maximize_button = MTButton(obj_name=(*obj_name, 'Maximize'))
+        self._maximize_button.set_icon(source=str(PATH_HEADER_ICONS_SRC / 'maximize.svg'), size=icon_size)
         self._buttons_layout.addWidget(self._maximize_button)
 
-        self._close_button = _HeaderIconButton('close')
+        self._close_button = MTButton(obj_name=(*obj_name, 'Close'))
+        self._close_button.set_icon(source=str(PATH_HEADER_ICONS_SRC / 'close.svg'), size=icon_size)
         self._buttons_layout.addWidget(self._close_button)
 
         self._window.installEventFilter(self)
@@ -144,10 +130,10 @@ class MTWindowHeader(MTWidget):
                     self.sync_window_meta()
                     self._manual_move_active = False
                     self._maximized_drag_pending = False
-                    self.finish_manual_resize()
+                    self.finish_resize()
                     self._sync_resize_grips()
                 case QEvent.Type.Close:
-                    self.finish_manual_resize()
+                    self.finish_resize()
                 case _:
                     pass
         return super().eventFilter(obj, event)
@@ -211,14 +197,9 @@ class MTWindowHeader(MTWidget):
             return
         super().mouseDoubleClickEvent(event)
 
-    def set_header_title(self, title: str) -> None:
-        self._title_label.setText(str(title or ''))
-
     def sync_window_meta(self) -> None:
         self._title_label.setText(self._window.windowTitle())
-        self._maximize_button.set_icon_by_name(
-            'restore' if self._window.isMaximized() else 'maximize'
-        )
+        self._maximize_button.set_icon(source=str(PATH_HEADER_ICONS_SRC / f'{'restore' if self._window.isMaximized() else 'maximize'}.svg'), size=QSize(18, 18))
         self.sync_title_geometry()
 
     def begin_resize(self, edges: Qt.Edge, global_pos: QPoint) -> None:
@@ -231,7 +212,7 @@ class MTWindowHeader(MTWidget):
         self._manual_resize_start_global = QPoint(global_pos)
         self._manual_resize_start_geometry = QRect(self._window.geometry())
 
-    def update_manual_resize(self, global_pos: QPoint) -> None:
+    def update_resize(self, global_pos: QPoint) -> None:
         if not self._manual_resize_active or self._manual_resize_edges is None:
             return
 
@@ -281,7 +262,7 @@ class MTWindowHeader(MTWidget):
 
         self._window.setGeometry(x, y, width, height)
 
-    def finish_manual_resize(self) -> None:
+    def finish_resize(self) -> None:
         self._manual_resize_active = False
         self._manual_resize_edges = None
 
@@ -301,9 +282,7 @@ class MTWindowHeader(MTWidget):
         restored_width = max(1, normal_geometry.width() or self._window.width())
         restored_height = max(1, normal_geometry.height() or self._window.height())
         target_x = global_pos.x() - int(round(restored_width * press_ratio))
-        target_y = global_pos.y() - min(
-            self._drag_press_pos.y(), max(0, restored_height - 1)
-        )
+        target_y = global_pos.y() - min(self._drag_press_pos.y(), max(0, restored_height - 1))
 
         screen = QApplication.screenAt(global_pos)
         if screen is not None:
@@ -348,55 +327,58 @@ class MTWindowHeader(MTWidget):
         child = self.childAt(local_pos)
         return not isinstance(child, MTButton)
 
-    def _create_resize_grips(self) -> list[_HeaderResizeGrip]:
-        obj_name = _HEADER_OBJECT_NAME
+    def _create_resize_grips(
+        self,
+        *,
+        obj_name: tuple[str, ...] = (),
+    ) -> list[_HeaderResizeGrip]:
         grips = [
             _HeaderResizeGrip(
                 self,
                 Qt.Edge.LeftEdge,
-                obj_name=f'{obj_name}_Resize_Left_Grip',
+                obj_name=(*obj_name, 'Resize_Left_Grip'),
                 cursor=Qt.CursorShape.SizeHorCursor,
             ),
             _HeaderResizeGrip(
                 self,
                 Qt.Edge.RightEdge,
-                obj_name=f'{obj_name}_Resize_Right_Grip',
+                obj_name=(*obj_name, 'Resize_Right_Grip'),
                 cursor=Qt.CursorShape.SizeHorCursor,
             ),
             _HeaderResizeGrip(
                 self,
                 Qt.Edge.TopEdge,
-                obj_name=f'{obj_name}_Resize_Top_Grip',
+                obj_name=(*obj_name, 'Resize_Top_Grip'),
                 cursor=Qt.CursorShape.SizeVerCursor,
             ),
             _HeaderResizeGrip(
                 self,
                 Qt.Edge.BottomEdge,
-                obj_name=f'{obj_name}_Resize_Bottom_Grip',
+                obj_name=(*obj_name, 'Resize_Bottom_Grip'),
                 cursor=Qt.CursorShape.SizeVerCursor,
             ),
             _HeaderResizeGrip(
                 self,
                 Qt.Edge.TopEdge | Qt.Edge.LeftEdge,
-                obj_name=f'{obj_name}_Resize_Top_Left_Grip',
+                obj_name=(*obj_name, 'Resize_Top_Left_Grip'),
                 cursor=Qt.CursorShape.SizeFDiagCursor,
             ),
             _HeaderResizeGrip(
                 self,
                 Qt.Edge.TopEdge | Qt.Edge.RightEdge,
-                obj_name=f'{obj_name}_Resize_Top_Right_Grip',
+                obj_name=(*obj_name, 'Resize_Top_Right_Grip'),
                 cursor=Qt.CursorShape.SizeBDiagCursor,
             ),
             _HeaderResizeGrip(
                 self,
                 Qt.Edge.BottomEdge | Qt.Edge.LeftEdge,
-                obj_name=f'{obj_name}_Resize_Bottom_Left_Grip',
+                obj_name=(*obj_name, 'Resize_Bottom_Left_Grip'),
                 cursor=Qt.CursorShape.SizeBDiagCursor,
             ),
             _HeaderResizeGrip(
                 self,
                 Qt.Edge.BottomEdge | Qt.Edge.RightEdge,
-                obj_name=f'{obj_name}_Resize_Bottom_Right_Grip',
+                obj_name=(*obj_name, 'Resize_Bottom_Right_Grip'),
                 cursor=Qt.CursorShape.SizeFDiagCursor,
             ),
         ]
@@ -425,7 +407,7 @@ class MTWindowHeader(MTWidget):
             QRect(max(0, width - margin), max(0, height - margin), margin, margin),
         ]
 
-        for grip, geometry in zip(self._resize_grips, geometries, strict=False):
+        for grip, geometry in zip(self._resize_grips, geometries, strict=True):
             grip.setGeometry(geometry)
             if enabled:
                 grip.show()

@@ -16,64 +16,81 @@ if t.TYPE_CHECKING:
 
 
 class SettingsMiscPage(BasePage):
+    _OBJECT_NAME = 'Settings_Misc'
+    
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
         config: Config,
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
     ):
-        super().__init__(parent, config=config, obj_name=obj_name)
+        super().__init__(parent, config=config, obj_name=(*obj_name, self._OBJECT_NAME))
 
-        self._build_ui()
+        self._build_ui(obj_name=(*obj_name, self._OBJECT_NAME))
 
-    def _build_ui(self) -> None:
+    def _build_ui(
+        self,
+        *,
+        obj_name:tuple[str, ...] = (),
+    ) -> None:
         self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        self._settings = [
+        self._columns_widget = MTColumnsSetting(obj_name=obj_name, tabs=self._create_settings(obj_name=obj_name))
+        self._main_layout.addWidget(self._columns_widget)
+
+    def _create_settings(
+        self,
+        *,
+        obj_name: tuple[str, ...] = (),
+    ) -> list[MTCollapsibleContainer]:
+        return [
             MTCollapsibleContainer(
                 tr_key='DBGR',
-                obj_name='Settings_Misc_Debugger',
+                obj_name=(*obj_name, 'Debugger'),
                 widgets=[
                     MTSwitchSetting(
                         config=self._config.loader,
                         cfg_key=CLKey.MISC_DEBUGGER_DEBUG,
                         tr_key='DEBUG',
+                        obj_name=(*obj_name, 'Debug')
                     ),
                     MTSwitchSetting(
                         config=self._config.loader,
                         cfg_key=CLKey.MISC_DEBUGGER_INFO,
                         tr_key='INFO',
+                        obj_name=(*obj_name, 'Info')
                     ),
                     MTSwitchSetting(
                         config=self._config.loader,
                         cfg_key=CLKey.MISC_DEBUGGER_WARNING,
                         tr_key='WARNING',
+                        obj_name=(*obj_name, 'Warning')
                     ),
                     MTSwitchSetting(
                         config=self._config.loader,
                         cfg_key=CLKey.MISC_DEBUGGER_ERROR,
                         tr_key='ERROR',
+                        obj_name=(*obj_name, 'Error')
                     ),
                     MTSwitchSetting(
                         config=self._config.loader,
                         cfg_key=CLKey.MISC_DEBUGGER_EXCEPTION,
                         tr_key='EXCEPTION',
+                        obj_name=(*obj_name, 'Exception')
                     ),
                 ],
             ),
             MTCollapsibleContainer(
                 tr_key='DS_RPC',
-                obj_name='Settings_Misc_Discord_RPC',
+                obj_name=(*obj_name, 'Discord_RPC'),
                 widgets=[
                     MTSwitchSetting(
                         config=self._config.loader,
                         cfg_key=ConfigKey.OUTPUTS_DISCORD_RICH_PRESENCE,
-                        tr_key='ENBL_DS_RPC',
+                        tr_key='ENBL',
+                        obj_name=(*obj_name, 'Enabled'),
                     ),
                 ],
             ),
         ]
-
-        self._columns_widget = MTColumnsSetting(obj_name='Settings_Misc', tabs=self._settings)
-        self._main_layout.addWidget(self._columns_widget)

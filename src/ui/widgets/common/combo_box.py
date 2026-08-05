@@ -10,7 +10,7 @@ from PySide6.QtGui import (
     QPaintEvent, QPen, QPixmap,
     QRegion, QResizeEvent,
 )
-from PySide6.QtWidgets import QFrame, QSizePolicy, QWidget
+from PySide6.QtWidgets import QFrame, QWidget
 
 from src.app.paths import PATH_SRC
 from src.theme.colors import to_qcolor
@@ -43,13 +43,18 @@ def _draw_aligned_text(
 
 
 class _MTComboItem(MTButton):
-    def __init__(self, combo_box: MTComboBox, index: int, parent: QWidget | None = None) -> None:
-        super().__init__(parent, checkable=True, obj_name=combo_box.popup_item_object_name(index))
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        combo_box: MTComboBox,
+        index: int,
+    ) -> None:
+        super().__init__(parent, checkable=True, obj_name=(combo_box.popup_item_object_name(index),))
         self._combo_box = combo_box
         self._index = index
         self.setText(combo_box.itemText(index))
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.clicked.connect(self._on_clicked)
 
     def _on_clicked(self, _checked: bool = False) -> None:
@@ -85,7 +90,10 @@ class _MTComboItem(MTButton):
 
 
 class _MTComboPopup(QFrame):
-    def __init__(self, combo_box: 'MTComboBox') -> None:
+    def __init__(
+        self,
+        combo_box: 'MTComboBox',
+    ) -> None:
         super().__init__(
             combo_box,
             Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint,
@@ -108,7 +116,7 @@ class _MTComboPopup(QFrame):
         self._items.clear()
 
         for index in range(self._combo_box.count()):
-            item = _MTComboItem(self._combo_box, index, parent=self)
+            item = _MTComboItem(self, combo_box=self._combo_box, index=index)
             self._items.append(item)
             self._layout.addWidget(item)
         self.sync_items()
@@ -168,20 +176,21 @@ class MTComboBox(TranslatableComboBoxMixin, MTWidget):
     activated = Signal(int)
     popupOpened = Signal()
     popupClosed = Signal()
+    
+    _OBJECT_NAME = 'ComboBox'
 
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
     ) -> None:
         self._items: list[dict[str, t.Any]] = []
         
-        super().__init__(parent, obj_name=obj_name)
+        super().__init__(parent, obj_name=(*obj_name, self._OBJECT_NAME))
         
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         
         self._current_index = -1
         self._parts: dict[str, WidgetThemeMap] = self._build_default_parts()

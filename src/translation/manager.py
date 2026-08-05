@@ -29,13 +29,16 @@ class TranslationManager(QObject):
         self._config.configLoaded.connect(self.load)
 
     @property
-    def name(self) -> str: return self._path.name
+    def name(self) -> str:
+        return self._path.name
     
     @property
-    def path(self) -> Path: return self._path
+    def path(self) -> Path:
+        return self._path
     
     @property
-    def translations(self) -> MappingProxyType[str, str]: return MappingProxyType(self._translations)
+    def translations(self) -> MappingProxyType[str, str]:
+        return MappingProxyType(self._translations)
     
     def load(self, name: str | None = None) -> None:        
         if name is None:

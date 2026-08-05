@@ -2,17 +2,21 @@ from functools import lru_cache
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap, QTransform, QPaintEvent
-from PySide6.QtWidgets import QWidget, QSizePolicy
+from PySide6.QtWidgets import QWidget
+
+from src.utils.qt import build_object_name
 
 from .widget import MTWidget
 
 
 class MTIcon(MTWidget):
+    _OBJECT_NAME = 'Icon'
+    
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
         source: str = '',
         color: str | None = None,
         rotation: float = 0.0,
@@ -20,10 +24,7 @@ class MTIcon(MTWidget):
     ) -> None:
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-
-        if obj_name:
-            self.setObjectName(obj_name)
+        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
 
         self._source = source
         self._color = color
@@ -35,13 +36,16 @@ class MTIcon(MTWidget):
         self._update_pixmap()
 
     @property
-    def source(self) -> str: return self._source
+    def source(self) -> str:
+        return self._source
 
     @property
-    def color(self) -> str | None: return self._color
+    def color(self) -> str | None:
+        return self._color
 
     @property
-    def rotation(self) -> float: return self._rotation
+    def rotation(self) -> float:
+        return self._rotation
 
     def setSource(self, source: str) -> None:
         if self._source == source:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing as t
 
 from PySide6.QtCore import QEvent, QObject, QTimer
-from PySide6.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -18,17 +18,18 @@ _COLUMN_REBALANCE_EVENT_TYPES = {
 
 
 class MTColumnsSetting(MTScrollArea):
+    _OBJECT_NAME = 'Columns'
+    
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
         tabs: t.Sequence[QWidget] | None = None,
         columns: int = 2,
     ) -> None:
         self._tabs: list[QWidget] = []
-        
-        super().__init__(parent)
+        super().__init__(parent, obj_name=(*obj_name, self._OBJECT_NAME))
         
         self._rebalancing = False
 
@@ -36,23 +37,23 @@ class MTColumnsSetting(MTScrollArea):
         self._layouts: list[QVBoxLayout] = []
         self._column_heights: list[int] = [0 for _ in range(self._columns)]
         self._column_assignments: tuple[tuple[int, ...], ...] = tuple(tuple() for _ in range(self._columns))
-        
-        self._rebalance_timer = QTimer(self, singleShot=True, interval=0)
-        self._rebalance_timer.timeout.connect(self._rebalance_columns)
-        
-        if obj_name:
-            self.setObjectName(f'{obj_name}_Columns_Widget')
+
+        self._build_ui(tabs=tabs, obj_name=(*obj_name, self._OBJECT_NAME))
+        self._connect_signals()
+
+    def _build_ui(
+        self,
+        *,
+        obj_name: tuple[str, ...] = (),
+        tabs: t.Sequence[QWidget] | None = None,
+    ) -> None:
+        self._main_layout = create_layout(LayoutType.HBOX, parent=self._scroll_area_content)
             
-        self._scroll_area_content = MTWidget(obj_name=f'{obj_name}_Columns_Content_Widget')
+        self._scroll_area_content = MTWidget(obj_name=(*obj_name, 'Content'))
         self.setWidget(self._scroll_area_content)
 
-        self._main_layout = create_layout(
-            LayoutType.HBOX, parent=self._scroll_area_content
-        )
-
         for index in range(self._columns):
-            column_widget = MTWidget(obj_name=f'{obj_name}_Columns_{index}_Column_Widget' if obj_name else '')
-            column_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+            column_widget = MTWidget(obj_name=(*obj_name, str(index), 'Column'))
             column_layout = create_layout(LayoutType.VBOX, column_widget)
             self._main_layout.addWidget(column_widget, stretch=1)
             self._layouts.append(column_layout)
@@ -65,6 +66,10 @@ class MTColumnsSetting(MTScrollArea):
                 self.add_tab(tab)
 
         self._rebalance_columns()
+
+    def _connect_signals(self) -> None:
+        self._rebalance_timer = QTimer(self, singleShot=True, interval=0)
+        self._rebalance_timer.timeout.connect(self._rebalance_columns)
 
     def add_tab(self, tab: QWidget) -> None:
         self._tabs.append(tab)
@@ -156,7 +161,7 @@ class MTColumnsSetting(MTScrollArea):
     def _estimated_tab_height(self, tab: QWidget) -> int:
         if isinstance(tab, MTCollapsibleContainer):
             try:
-                return max(1, int(tab.effective_height_hint()))
+                return max(1, int(tab.effective_height_hint())) # TODO: fix
             except Exception:
                 pass
 

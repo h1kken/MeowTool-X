@@ -8,14 +8,14 @@ from pathlib import Path
 
 from PySide6.QtCore import QFileSystemWatcher, QSignalBlocker, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import QLayout, QWidget, QSizePolicy, QStackedWidget
+from PySide6.QtWidgets import QWidget, QStackedWidget
 
 from src.app.paths import PATH_CONFIGS, PATH_DEFAULT_CONFIG
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import MTButton, MTInlineEditorStack, MTLabel, MTLabeledList, MTLineEdit, MTPlainLabel, MTWidget
-from src.ui.widgets.settings import MTSwitchRowSetting
+from src.ui.widgets.settings import MTSwitchSetting
 from src.config import ConfigLoaderKey as CLKey
 from src.config.constants import CONFIGS_REFRESH_DEBOUNCE_MS
 from src.utils.filesystem import FS
@@ -25,41 +25,46 @@ if t.TYPE_CHECKING:
     from src.config import Config
 
 
-class SettingsConfigPage(BasePage):
+class SettingsConfigPage(BasePage): # REWRITE THIS PAGE
+    _OBJECT_NAME = 'Settings_Config'
+    
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
         config: Config,
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
     ):
-        super().__init__(parent, config=config, obj_name=obj_name)
+        super().__init__(parent, config=config, obj_name=(*obj_name, self._OBJECT_NAME))
 
         FS.ensure_dir(PATH_CONFIGS)
+        self._autoload_name = self._read_autoload_name()
         
-        self._build_ui()
+        self._build_ui(obj_name=(*obj_name, self._OBJECT_NAME))
         self._connect_signals()
         
         self._refresh_configs(preferred=self._config.name)
 
-    def _build_ui(self) -> None:
+    def _build_ui(
+        self,
+        *,
+        obj_name: tuple[str, ...] = (),
+    ) -> None:
         self._main_layout = create_layout(LayoutType.VBOX, self)
-        
-        self._autoload_name = self._read_autoload_name()
 
-        self._main_content = MTWidget(obj_name='Config_Page_Widget')
+        self._main_content = MTWidget(obj_name=(*obj_name, 'Content'))
+        self._main_content_layout = create_layout(LayoutType.HBOX, self._main_content)
         self._main_layout.addWidget(self._main_content)
 
-        self._body_layout = create_layout(LayoutType.HBOX, self._main_content)
-
-        self._list_column = MTLabeledList(obj_name='Config_List_Column')
-        self._configs_list = self._list_column.list_widget
-        self._actions_column = MTWidget(obj_name='Config_Actions_Column')
-
-        self._build_actions_column()
+        self._list_column = MTLabeledList(obj_name=(*obj_name, 'List_Column'))
+        self._main_content_layout.addWidget(self._list_column)
         
-        self._body_layout.addWidget(self._list_column, stretch=1)
-        self._body_layout.addWidget(self._actions_column, stretch=1)
+        self._configs_list = self._list_column.list_widget
+        
+        self._actions_column = MTWidget(obj_name=(*obj_name, 'Actions_Column'))
+        self._main_content_layout.addWidget(self._actions_column)
+
+        self._build_actions_column(obj_name=obj_name)
 
     def _connect_signals(self) -> None:
         self._refresh_timer = QTimer(self, singleShot=True, interval=CONFIGS_REFRESH_DEBOUNCE_MS)
@@ -78,12 +83,12 @@ class SettingsConfigPage(BasePage):
         self._open_location_button.clicked.connect(self._open_selected_location)
         
         self._create_button.clicked.connect(self._start_create_edit)
-        self._create_edit_line.returnPressed.connect(self._submit_create_edit)
-        self._create_edit_cancel_button.clicked.connect(self._cancel_create_edit)
+        self._create_line_edit.returnPressed.connect(self._submit_create_edit)
+        self._create_cancel_button.clicked.connect(self._cancel_create_edit)
         
         self._rename_button.clicked.connect(self._start_rename_edit)
-        self._rename_edit_line.returnPressed.connect(self._submit_rename_edit)
-        self._rename_edit_cancel_button.clicked.connect(self._cancel_rename_edit)
+        self._rename_line_edit.returnPressed.connect(self._submit_rename_edit)
+        self._rename_cancel_button.clicked.connect(self._cancel_rename_edit)
         
         self._delete_button.clicked.connect(self._start_delete_confirm)
         self._delete_confirm_button.clicked.connect(self._delete_selected_config)
@@ -91,99 +96,95 @@ class SettingsConfigPage(BasePage):
 
         self._config.configLoaded.connect(self._on_config_loaded)
 
-    def _build_actions_column(self) -> None:
-        layout = create_layout(LayoutType.VBOX, self._actions_column)
+    def _build_actions_column(
+        self,
+        *,
+        obj_name: tuple[str, ...] = (),
+    ) -> None:
+        self._actions_column_layout = create_layout(LayoutType.VBOX, self._actions_column)
 
-        self._selected_value = self._add_info_row(layout, tr_key='SLCTD', obj_name='Config_Selected')
-        self._loaded_value = self._add_info_row(layout, tr_key='LDD', obj_name='Config_Loaded')
+        self._selected_value = self._add_info_row(tr_key='SLCTD', obj_name='Selected')
+        self._loaded_value = self._add_info_row(tr_key='LDD', obj_name='Loaded')
 
-        self._auto_load_row = MTSwitchRowSetting(tr_key='ATLD_SLCTD_CFG', obj_name='Config_Autoload')
-        self._auto_save_row = MTSwitchRowSetting(tr_key='AT_SV_CFG_CHNGS', obj_name='Config_Auto_Save')
-
-        self._load_button = MTButton(tr_key='LOAD', obj_name='Config_Load_Button')
-        self._save_button = MTButton(tr_key='SAVE', obj_name='Config_Save_Button')
-        self._rename_stack = self._build_inline_editor(mode='rename', tr_key='RENAME', obj_name='Config_Rename')
-        self._create_stack = self._build_inline_editor(mode='create', tr_key='CREATE', obj_name='Config_Create')
-        self._delete_stack = self._build_delete_confirm_stack(obj_name='Config_Delete')
-        self._open_location_button = MTButton(tr_key='OPN_FL_LCTN', obj_name='Config_Open_Location_Button')
+        self._auto_load_row = MTSwitchSetting(config=self._config, tr_key='ATLD_SLCTD_CFG', obj_name=(*obj_name, 'Autoload'))
+        self._actions_column_layout.addWidget(self._auto_load_row)
         
-        layout.addWidget(self._auto_load_row)
-        layout.addWidget(self._auto_save_row)
-        layout.addWidget(self._load_button)
-        layout.addWidget(self._save_button)
-        layout.addWidget(self._rename_stack)
-        layout.addWidget(self._create_stack)
-        layout.addWidget(self._delete_stack)
-        layout.addWidget(self._open_location_button)
-        layout.addStretch()
+        self._auto_save_row = MTSwitchSetting(config=self._config, tr_key='AT_SV_CFG_CHNGS', obj_name=(*obj_name, 'Auto_Save'))
+        self._actions_column_layout.addWidget(self._auto_save_row)
+
+        self._load_button = MTButton(tr_key='LOAD', obj_name=(*obj_name, 'Load'))
+        self._actions_column_layout.addWidget(self._load_button)
+        
+        self._save_button = MTButton(tr_key='SAVE', obj_name=(*obj_name, 'Save'))
+        self._actions_column_layout.addWidget(self._save_button)
+
+        self._create_stack = self._build_inline_editor(mode='Create', tr_key='CREATE', obj_name=obj_name)
+        self._actions_column_layout.addWidget(self._create_stack)
+        
+        self._rename_stack = self._build_inline_editor(mode='Rename', tr_key='RENAME', obj_name=obj_name)
+        self._actions_column_layout.addWidget(self._rename_stack)
+
+        self._delete_stack = self._build_delete_confirm_stack(obj_name=(*obj_name, 'Delete'))
+        self._actions_column_layout.addWidget(self._delete_stack)
+
+        self._open_location_button = MTButton(tr_key='OPN_FL_LCTN', obj_name=(*obj_name, 'Open_Location'))
+        self._actions_column_layout.addWidget(self._open_location_button)
+        
+        self._actions_column_layout.addStretch()
 
     def _build_inline_editor(
         self,
-        *,
         mode: str,
-        tr_key: str,
-        obj_name: str,
-    ) -> QStackedWidget:
-        stack = MTInlineEditorStack()
-        stack.setObjectName(f'{obj_name}_Stack')
-        stack.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-
-        button = MTButton(tr_key=tr_key, obj_name=f'{obj_name}_Button')
-        button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-
-        editor_row = MTWidget(obj_name=f'{obj_name}_Editor_Row')
-        editor_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        *,
+        tr_key: str = '',
+        obj_name: tuple[str, ...] = (),
+    ) -> MTInlineEditorStack:        
+        stack = MTInlineEditorStack(obj_name=(*obj_name, mode))
         
-        editor_layout = create_layout(LayoutType.HBOX, editor_row)
-        
-        line_edit = MTLineEdit(obj_name=f'{obj_name}_Editor_LineEdit')
-        line_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        
-        cancel_btn = MTButton(tr_key='✕', obj_name=f'{obj_name}_Editor_Cancel_Button')
-        cancel_btn.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
-        
-        editor_layout.addWidget(line_edit, 1)
-        editor_layout.addWidget(cancel_btn)
+        button = MTButton(tr_key=tr_key, obj_name=(*obj_name, mode))
         stack.addWidget(button)
-        stack.addWidget(editor_row)
+
+        row = MTWidget(obj_name=(*obj_name, mode, 'Editor_Row'))
+        row_layout = create_layout(LayoutType.HBOX, row)
+        stack.addWidget(row)
+        
+        line_edit = MTLineEdit(obj_name=(*obj_name, mode, 'Editor'))
+        row_layout.addWidget(line_edit, 1)
+        
+        cancel_button = MTButton(obj_name=(*obj_name, mode, 'Editor_Cancel'))
+        # cancel.set_icon()
+        row_layout.addWidget(cancel_button)
 
         match mode:
-            case 'create':
+            case 'Create':
                 self._create_button = button
-                self._create_edit_line = line_edit
-                self._create_edit_cancel_button = cancel_btn
-            case 'rename':
+                self._create_line_edit = line_edit
+                self._create_cancel_button = cancel_button
+            case 'Rename':
                 self._rename_button = button
-                self._rename_edit_line = line_edit
-                self._rename_edit_cancel_button = cancel_btn
+                self._rename_line_edit = line_edit
+                self._rename_cancel_button = cancel_button
             case _:
-                raise ValueError(f'Unsupported inline editor mode: {mode}')
-
-        stack.setCurrentIndex(0)
+                    raise ValueError(f'Unsupported inline editor mode: {mode}')
+        
         return stack
 
     def _build_delete_confirm_stack(
         self,
         *,
-        obj_name: str,
+        obj_name: tuple[str, ...] = (),
     ) -> QStackedWidget:
-        stack = MTInlineEditorStack()
-        stack.setObjectName(f'{obj_name}_Stack')
-        stack.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        stack = MTInlineEditorStack(obj_name=obj_name)
 
-        self._delete_button = MTButton(tr_key='DELETE', obj_name=f'{obj_name}_Button')
-        self._delete_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self._delete_button = MTButton(tr_key='DELETE', obj_name=obj_name)
         stack.addWidget(self._delete_button)
 
-        confirm_row = MTWidget(obj_name=f'{obj_name}_Confirm_Row')
-        confirm_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        confirm_row = MTWidget(obj_name=(*obj_name, 'Confirm_Row'))
         confirm_layout = create_layout(LayoutType.HBOX, confirm_row)
         
-        self._delete_confirm_button = MTButton(tr_key='Confirm', obj_name=f'{obj_name}_Confirm_Button')
-        self._delete_confirm_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self._delete_confirm_button = MTButton(tr_key='Confirm', obj_name=(*obj_name, 'Confirm'))
         
-        self._delete_cancel_button = MTButton(tr_key='✕', obj_name=f'{obj_name}_Cancel_Button')
-        self._delete_cancel_button.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
+        self._delete_cancel_button = MTButton(tr_key='✕', obj_name=(*obj_name, 'Cancel'))
         
         confirm_layout.addWidget(self._delete_confirm_button, 1)
         confirm_layout.addWidget(self._delete_cancel_button)
@@ -193,23 +194,20 @@ class SettingsConfigPage(BasePage):
 
     def _add_info_row(
         self,
-        layout: QLayout,
         *,
-        tr_key: str,
-        obj_name: str,
+        tr_key: str = '',
+        obj_name: tuple[str, ...] = (),
     ) -> MTPlainLabel:
-        row = MTWidget(obj_name=f'{obj_name}_Row')
+        row = MTWidget(obj_name=(*obj_name, 'Row'))
         row_layout = create_layout(LayoutType.HBOX, row)
         
-        label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Label')
-        label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
-        
-        value_label = MTPlainLabel(text='-', obj_name=f'{obj_name}_Value')
-        value_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
-        
+        label = MTLabel(tr_key=tr_key, obj_name=obj_name)
         row_layout.addWidget(label)
+        
+        value_label = MTPlainLabel(text='-', obj_name=(*obj_name, 'Value'))
         row_layout.addWidget(value_label, stretch=1)
-        layout.addWidget(row)
+        
+        self._actions_column_layout.addWidget(row)
         
         return value_label
 
@@ -345,16 +343,16 @@ class SettingsConfigPage(BasePage):
         return name
 
     def _start_create_edit(self) -> None:
-        self._create_edit_line.clear()
+        self._create_line_edit.clear()
         self._create_stack.setCurrentIndex(1)
-        self._create_edit_line.setFocus()
+        self._create_line_edit.setFocus()
 
     def _cancel_create_edit(self) -> None:
-        self._create_edit_line.clear()
+        self._create_line_edit.clear()
         self._create_stack.setCurrentIndex(0)
 
     def _submit_create_edit(self) -> None:
-        name = self._normalize_new_name(self._create_edit_line.text())
+        name = self._normalize_new_name(self._create_line_edit.text())
         if not name:
             return
 
@@ -366,13 +364,13 @@ class SettingsConfigPage(BasePage):
         selected = self._current_selected_name()
         if not selected:
             return
-        self._rename_edit_line.setText(selected)
+        self._rename_line_edit.setText(selected)
         self._rename_stack.setCurrentIndex(1)
-        self._rename_edit_line.setFocus()
-        self._rename_edit_line.selectAll()
+        self._rename_line_edit.setFocus()
+        self._rename_line_edit.selectAll()
 
     def _cancel_rename_edit(self) -> None:
-        self._rename_edit_line.clear()
+        self._rename_line_edit.clear()
         self._rename_stack.setCurrentIndex(0)
 
     def _start_delete_confirm(self) -> None:
@@ -388,7 +386,7 @@ class SettingsConfigPage(BasePage):
         if not selected:
             self._cancel_rename_edit()
             return
-        new_name = self._normalize_new_name(self._rename_edit_line.text())
+        new_name = self._normalize_new_name(self._rename_line_edit.text())
         if not new_name or not self._config.rename(selected, new_name):
             return
 

@@ -16,7 +16,7 @@ class BasePage(MTWidget):
         parent: QWidget | None = None,
         *,
         config: Config,
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent, obj_name=obj_name)
         self._config = config

@@ -39,6 +39,8 @@ _PAGES: tuple[PageSpec | None, ...] = (
 class MainWindow(QMainWindow):
     pageChanged = Signal(tuple[str, ...])
     
+    _OBJECT_NAME = 'Main_Window'
+    
     def __init__(
         self,
         config: Config
@@ -57,24 +59,24 @@ class MainWindow(QMainWindow):
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
         self.setObjectName('Main_Window')
 
-        self._central_widget = MTWidget(obj_name='Main_Window_Central_Widget')
+        self._central_widget = MTWidget(obj_name=(self._OBJECT_NAME, 'Central_Widget'))
+        self._central_layout = create_layout(LayoutType.VBOX, self._central_widget)
         self.setCentralWidget(self._central_widget)
         
-        self._central_layout = create_layout(LayoutType.VBOX, self._central_widget)
-        self._header = MTWindowHeader(self)
-        self._central_layout.addWidget(self._header)
+        self._main_window_header = MTWindowHeader(self)
+        self._central_layout.addWidget(self._main_window_header)
 
-        self._body_widget = MTWidget(obj_name='Main_Window_Body_Widget')
+        self._body_widget = MTWidget(obj_name=(self._OBJECT_NAME, 'Body'))
         self._central_layout.addWidget(self._body_widget, stretch=1)
         
         self._body_layout = create_layout(LayoutType.HBOX, self._body_widget)
-        self._sidebar_widget = MTWidget(obj_name='Sidebar_Widget')
+        self._sidebar_widget = MTWidget(obj_name=(self._OBJECT_NAME, 'Sidebar'))
         self._body_layout.addWidget(self._sidebar_widget)
         
         self._sidebar_layout = create_layout(LayoutType.VBOX, self._sidebar_widget)
         self._sidebar_layout.addWidget(MTImage(self._sidebar_widget)) # TODO: is it correct?
         
-        self._main_content = MTWidget(obj_name='Main_Content_Widget')
+        self._main_content = MTWidget(obj_name=(self._OBJECT_NAME, 'Main_Content'))
         self._body_layout.addWidget(self._main_content, stretch=1)
 
         self._pages_layout = create_layout(LayoutType.VBOX, self._main_content)
@@ -88,21 +90,17 @@ class MainWindow(QMainWindow):
             name = str(spec.obj_name).replace('_', ' ')
             self._tab_names_by_key[spec.tr_key] = name
             
-            obj_name = f'Main_{spec.obj_name}_Page'
-            
             if spec.has_page_controller:
                 page = spec.page_class(
                     config=self._config,
                     parent_page_controller=self._page_controller, # type: ignore[call-arg]
-                    obj_name=obj_name,
                 )
             else:
                 page = spec.page_class(
                     config=self._config,
-                    obj_name=obj_name,
                 )
                 
-            button = MTButton(tr_key=spec.tr_key, obj_name=f'Sidebar_{spec.obj_name}_Button')
+            button = MTButton(tr_key=spec.tr_key, obj_name=('Sidebar', spec.obj_name, 'Tab'))
             button.set_icon(source=str(PATH_SIDEBAR_ICONS_SRC / spec.icon) if spec.icon else None)
             self._sidebar_layout.addWidget(button)
             
@@ -120,7 +118,6 @@ class MainWindow(QMainWindow):
         state = ()
         
         page_controller = self._page_controller
-        
         while page_controller is not None:
             state += (self._page_controller.current.name,)
             page_controller = self._page_controller.parent_controller

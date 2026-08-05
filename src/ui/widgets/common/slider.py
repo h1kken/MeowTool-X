@@ -6,27 +6,32 @@ from src.theme.colors import to_qcolor
 from src.utils.conversion import coerce_box_sides, coerce_number
 from src.ui.painting import new_widget_painter
 from src.ui.widgets.paint_primitives import parse_pen_style, resolve_fill_brush
+from src.utils.qt import build_object_name
 
 
 class MTSlider(QSlider):
-    def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
+    _OBJECT_NAME = 'Slider'
+    
+    def __init__(self, parent: QWidget | None = None, *, obj_name: tuple[str, ...] = ()) -> None:
         super().__init__(Qt.Orientation.Horizontal, parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setMouseTracking(True)
+        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
+        
         self._dragging_anywhere = False
         self._drag_offset = 0
         self._animated_handle_color: QColor | None = None
         self._parts = self._build_default_parts()
-        self.valueChanged.connect(self.update)
+
+        self._connect_signals()
+
+    def _connect_signals(self) -> None:
         def _update_range(_: int, __: int) -> None:
             self.update()
-
         self.rangeChanged.connect(_update_range)
+        self.valueChanged.connect(self.update)
         self.sliderPressed.connect(self.update)
         self.sliderReleased.connect(self.update)
-
-        if obj_name:
-            self.setObjectName(obj_name)
 
     def sizeHint(self) -> QSize:
         return self._expanded_slider_size(super().sizeHint())

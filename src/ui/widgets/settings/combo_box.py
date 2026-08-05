@@ -2,16 +2,13 @@ from __future__ import annotations
 
 import typing as t
 
-import re
-
 from PySide6.QtCore import QSignalBlocker
-from PySide6.QtWidgets import QSizePolicy, QWidget
+from PySide6.QtWidgets import QWidget
 
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import  MTLabel, MTComboBox
 from src.ui.widgets.settings import MTBaseSetting
-from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 
 if t.TYPE_CHECKING:
     from src.config import Config, ConfigLoader
@@ -19,6 +16,8 @@ if t.TYPE_CHECKING:
 
 
 class MTComboBoxSetting(MTBaseSetting[str]):
+    _OBJECT_NAME = 'ComboBox'
+    
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -26,34 +25,30 @@ class MTComboBoxSetting(MTBaseSetting[str]):
         config: Config | ConfigLoader,
         cfg_key: str,
         tr_key: str = '',
+        obj_name: tuple[str, ...] = (),
         items: t.Sequence[ComboItem],
         on_changed: t.Callable[[str], None] | None = None,
     ) -> None:
-        super().__init__(parent, config=config, cfg_key=cfg_key)
+        super().__init__(parent, config=config, cfg_key=cfg_key, obj_name=(*obj_name, self._OBJECT_NAME))
         
-        obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, '_', self._cfg_key)
-        self.setObjectName(f'{obj_name}_ComboBox_Setting')
-
         self._items = items
         self._on_changed = on_changed
         
-        self._build_ui(tr_key=tr_key, obj_name=obj_name)
+        self._build_ui(tr_key=tr_key, obj_name=(*obj_name, self._OBJECT_NAME))
         self._connect_signals()
 
     def _build_ui(
         self,
         *,
-        tr_key: str,
-        obj_name: str,
+        tr_key: str = '',
+        obj_name: tuple[str, ...] = (),
     ) -> None:
         self._main_layout = create_layout(LayoutType.HBOX, self)
 
-        self._label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Label')
-        self._label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
+        self._label = MTLabel(tr_key=tr_key, obj_name=obj_name)
         self._main_layout.addWidget(self._label)
 
-        self._combo_box = MTComboBox(obj_name=f'{obj_name}_ComboBox')
-        self._combo_box.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._combo_box = MTComboBox(obj_name=obj_name)
         self._combo_box.set_content_width_mode('longest')
         self.set_items(self._items)
         self._main_layout.addWidget(self._combo_box, stretch=1)

@@ -14,19 +14,20 @@ from .widget import MTWidget
 class MTDropZone(MTWidget):
     pathsDropped = Signal(list[Path])
     textDropped = Signal(str)
+    
+    _OBJECT_NAME = 'DropZone'
 
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
         tr_key: str = '',
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
         accept_files: bool = True,
         accept_text: bool = True,
         browse_on_click: bool = True,
     ) -> None:
-        super().__init__(parent)
-        self.setObjectName(f'{obj_name}_Drop_Zone_Widget')
+        super().__init__(parent, obj_name=(*obj_name, self._OBJECT_NAME))
 
         self.setAcceptDrops(accept_files or accept_text)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -38,20 +39,19 @@ class MTDropZone(MTWidget):
         self._accept_text = accept_text
         self._browse_on_click = browse_on_click
 
-        self._build_ui(tr_key=tr_key, obj_name=obj_name)
+        self._build_ui(tr_key=tr_key, obj_name=(*obj_name, self._OBJECT_NAME))
         self._connect_signals()
 
     def _build_ui(
         self,
         *,
-        tr_key: str,
-        obj_name: str,
+        tr_key: str = '',
+        obj_name: tuple[str, ...] = (),
     ) -> None:
         self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        self._label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Drop_Zone_Label')
+        self._label = MTLabel(tr_key=tr_key, obj_name=obj_name)
         self._label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-        
         self._main_layout.addWidget(self._label)
 
     def _connect_signals(self) -> None:

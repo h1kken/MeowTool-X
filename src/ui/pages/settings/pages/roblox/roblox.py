@@ -29,27 +29,33 @@ _PAGES: tuple[PageSpec | None, ...] = (
 
 
 class SettingsRobloxPage(BasePage):
+    _OBJECT_NAME = 'Settings_Roblox'
+    
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
         config: Config,
         parent_page_controller: PageController,
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
     ):
         super().__init__(parent, config=config, obj_name=obj_name)
         self._parent_page_controller = parent_page_controller
         
         self._tab_names_by_key: dict[str, str] = {}
         
-        self._build_ui()
+        self._build_ui(obj_name=obj_name)
 
-    def _build_ui(self) -> None:
+    def _build_ui(
+        self,
+        *,
+        obj_name: tuple[str, ...] = (),
+    ) -> None:
         self._main_layout = create_layout(LayoutType.VBOX, self)
-        self._main_content = MTWidget(obj_name='Settings_Roblox_Tabs_Widget')
-        self._main_layout.addWidget(self._main_content)
 
-        self._tabs_layout = create_layout(LayoutType.HBOX, self._main_content)
+        self._tabs_widget = MTWidget(obj_name=(*obj_name, 'Tabs'))
+        self._tabs_layout = create_layout(LayoutType.HBOX, self._tabs_widget)
+        self._main_layout.addWidget(self._tabs_widget)
 
         self._page_controller = PageController(self._main_layout, parent_page_controller=self._parent_page_controller)
 
@@ -60,8 +66,6 @@ class SettingsRobloxPage(BasePage):
             
             name = spec.obj_name.replace('_', ' ')
             self._tab_names_by_key[spec.tr_key] = name
-
-            obj_name = f'Settings_Roblox_{spec.obj_name}_Page'
 
             if spec.has_page_controller:
                 page = spec.page_class(
@@ -75,7 +79,7 @@ class SettingsRobloxPage(BasePage):
                     obj_name=obj_name,
                 )
                 
-            button = MTButton(tr_key=spec.tr_key, obj_name=f'Settings_Roblox_{spec.obj_name}_Tab_Button')
+            button = MTButton(tr_key=spec.tr_key, obj_name=(*obj_name, spec.obj_name, 'Tab'))
             self._tabs_layout.addWidget(button)
             
             self._page_controller.add_page(

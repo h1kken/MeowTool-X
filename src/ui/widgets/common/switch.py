@@ -1,10 +1,11 @@
 from PySide6.QtCore import QEvent, QPoint, QRectF, Qt, QTimer
 from PySide6.QtGui import QColor, QPaintEvent, QPainter, QPen, QResizeEvent
-from PySide6.QtWidgets import QCheckBox, QSizePolicy, QWidget
+from PySide6.QtWidgets import QCheckBox, QWidget
 
 from src.theme.colors import to_qcolor
 from src.ui.painting import new_widget_painter
 from src.ui.widgets.paint_primitives import parse_non_negative_float, parse_pen_style, resolve_fill_brush, resolve_uniform_radius, rounded_rect_path
+from src.utils.qt import build_object_name
 
 from .widget import MTWidget
 
@@ -12,19 +13,21 @@ from .widget import MTWidget
 class MTSwitch(QCheckBox):
     _track: MTWidget | None = None
     _handle: MTWidget | None = None
+    
+    _OBJECT_NAME = 'Switch'
 
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
         text: str = '',
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
         checked: bool = False,
     ) -> None:
         super().__init__(text, parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setContentsMargins(0, 0, 0, 0)
-        self.setText('')
+        self.setChecked(checked)
+        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
 
         self._margin = 3
         self._syncing_visuals = False
@@ -55,14 +58,9 @@ class MTSwitch(QCheckBox):
         self._handle.hide()
 
         self.toggled.connect(self._on_toggled)
-
-        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        
         self.setFixedSize(*self._default_size)
-
-        if obj_name:
-            self.setObjectName(obj_name)
-
-        self.setChecked(checked)
+        
         self._sync_visuals()
 
     def sync_size(self, *, bounds_width: int | None = None, bounds_height: int | None = None) -> None:

@@ -19,9 +19,9 @@ class MTBaseSetting(MTWidget, t.Generic[T]):
         *,
         config: Config | ConfigLoader,
         cfg_key: str,
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
     ) -> None:
-        super().__init__(parent, obj_name=obj_name)
+        super().__init__(parent, obj_name=(*obj_name, 'Setting'))
         self._config = config
         self._cfg_key = cfg_key
 

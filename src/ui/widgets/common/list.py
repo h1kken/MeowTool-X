@@ -1,5 +1,5 @@
 from PySide6.QtCore import Qt, QSize, Signal
-from PySide6.QtWidgets import QFrame, QSizePolicy, QWidget
+from PySide6.QtWidgets import QWidget
 
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -20,13 +20,12 @@ class _MTListItem(MTButton):
         *,
         text: str,
         value: str,
-        obj_name: str,
+        obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent, checkable=True, obj_name=obj_name)
         self._value = value
         
         self.setText(text)
-        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
 
     def minimumSizeHint(self) -> QSize:
         hint = super().minimumSizeHint()
@@ -45,13 +44,20 @@ class MTList(MTScrollArea):
     itemPressed = Signal(object)
     itemClicked = Signal(object)
 
-    def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
+    _OBJECT_NAME = 'List'
+
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        obj_name: tuple[str, ...] = (),
+    ) -> None:
         super().__init__(parent, obj_name=obj_name)
-        self._content = MTWidget(obj_name=f'{obj_name}_Content')
+
+        self._content = MTWidget(obj_name=(*obj_name, 'Content'))
         self._content_layout = create_layout(LayoutType.VBOX, self._content)
         self.setWidget(self._content)
-        self.setFrameShape(QFrame.Shape.NoFrame)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        
         self._items: list[QWidget] = []
         self._current_item: _MTListItem | None = None
 
@@ -65,28 +71,27 @@ class MTList(MTScrollArea):
         if previous is not None:
             self.currentItemChanged.emit(None, previous)
 
-    def add_item(self, text: str, value: str, *, obj_name: str = '') -> _MTListItem:
+    def add_item(self, text: str, value: str, *, obj_name: tuple[str, ...] = ()) -> _MTListItem:
         item = _MTListItem(
             text=text,
             value=value,
-            obj_name=obj_name or self._item_object_name(value),
+            obj_name=(*obj_name, 'List_Item'),
             parent=self._content,
         )
-        def emit_pressed() -> None:
+        def _emit_pressed() -> None:
             self.itemPressed.emit(item)
 
-        def handle_clicked(_checked: bool = False) -> None:
+        def _handle_clicked(_checked: bool = False) -> None:
             self._activate_item(item)
 
-        item.pressed.connect(emit_pressed)
-        item.clicked.connect(handle_clicked)
+        item.pressed.connect(_emit_pressed)
+        item.clicked.connect(_handle_clicked)
         self._items.append(item)
         self._content_layout.addWidget(item)
         return item
 
-    def add_header(self, text: str, *, obj_name: str = '') -> MTPlainLabel:
-        item = MTPlainLabel(self._content, text=text, obj_name=obj_name or self._item_object_name(text, suffix='Header'))
-        item.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+    def add_header(self, text: str, *, obj_name: tuple[str, ...] = ()) -> MTPlainLabel:
+        item = MTPlainLabel(self._content, text=text, obj_name=(*obj_name, 'Header'))
         self._items.append(item)
         self._content_layout.addWidget(item)
         return item
@@ -94,7 +99,6 @@ class MTList(MTScrollArea):
     def add_spacer(self, height: int = _GROUP_SECTION_SPACER_HEIGHT) -> MTWidget:
         item = MTWidget(self._content)
         item.setFixedHeight(max(0, int(height)))
-        item.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._items.append(item)
         self._content_layout.addWidget(item)
         return item
@@ -167,9 +171,3 @@ class MTList(MTScrollArea):
     def _activate_item(self, item: _MTListItem) -> None:
         self.setCurrentItem(item)
         self.itemClicked.emit(item)
-
-    def _item_object_name(self, value: str, *, suffix: str = 'Item') -> str:
-        base = self.objectName().strip() or type(self).__name__
-        token = ''.join(char if char.isalnum() else '_' for char in str(value).strip())
-        token = '_'.join(part for part in token.split('_') if part) or 'Empty'
-        return f'{base}_{suffix}_{token}'

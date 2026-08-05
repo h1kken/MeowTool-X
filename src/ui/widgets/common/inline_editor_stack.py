@@ -1,14 +1,20 @@
 from PySide6.QtCore import QSize
-from PySide6.QtWidgets import QSizePolicy, QStackedWidget, QWidget
+from PySide6.QtWidgets import QStackedWidget, QWidget
+
+from src.utils.qt import build_object_name
 
 
 class MTInlineEditorStack(QStackedWidget):
+    _OBJECT_NAME = 'Stack'
+    
     def __init__(
         self,
         parent: QWidget | None = None,
+        *,
+        obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent)
-        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
         
         self._connect_signals()
 

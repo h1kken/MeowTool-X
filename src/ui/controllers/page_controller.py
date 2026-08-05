@@ -30,7 +30,6 @@ class PageController(QObject):
 
         self._pages: dict[str, _PageEntry] = {}
         self._button_group = MTButtonGroup()
-        self._current: _PageEntry
     
         self._connect_signals()
     
@@ -48,7 +47,6 @@ class PageController(QObject):
 
     def add_page(self, key: str, name: str, page: MTWidget, button: MTButton) -> None:
         button.setCheckable(True)
-        button.setProperty('pageTab', True)
         button.clicked.connect(lambda _checked: self.show(key)) # type: ignore
         self._button_group.addButton(button)
         

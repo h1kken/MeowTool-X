@@ -9,15 +9,12 @@ from .list import MTList
 from .widget import MTWidget
 
 
-_GROUP_ITEM_INDENT = '   '
-
-
-class MTLabeledList(MTWidget):
+class MTLabeledList(MTWidget): # remove this shit later
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent, obj_name=obj_name)
 
@@ -26,12 +23,14 @@ class MTLabeledList(MTWidget):
     def _build_ui(
         self,
         *,
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
     ) -> None:
         self._main_layout = create_layout(LayoutType.VBOX, self)
 
         self.list_widget = MTList(self, obj_name=obj_name)
         self._main_layout.addWidget(self.list_widget)
+        
+        self._main_layout.addStretch()
 
     def set_items(self, items: t.Sequence[str], *, preferred: str | None = None) -> bool:
         target = preferred if preferred in items else items[0] if items else None
@@ -44,29 +43,6 @@ class MTLabeledList(MTWidget):
             self.list_widget.add_item(name, name)
         self.list_widget.setCurrentValue(target)
         return True
-
-    def set_grouped_items(self, groups: t.Sequence[tuple[str, t.Sequence[tuple[str, str]]]], *, preferred: str | None = None) -> None:
-        available_values = [
-            value
-            for _, items in groups
-            for _, value in items
-        ]
-        target = preferred if preferred in available_values else (available_values[0] if available_values else None)
-
-        self.list_widget.clear()
-        is_first_group = True
-        for group_label, group_items in groups:
-            if group_label.strip():
-                if not is_first_group and self.list_widget.count() > 0:
-                    self.list_widget.add_spacer()
-                self.list_widget.add_header(group_label)
-
-            for display_text, value in group_items:
-                self.list_widget.add_item(f'{_GROUP_ITEM_INDENT}{display_text}', value)
-
-            is_first_group = False
-
-        self.list_widget.setCurrentValue(target)
 
     def current_value(self) -> str | None:
         return self.list_widget.currentValue()

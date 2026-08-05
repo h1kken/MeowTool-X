@@ -15,36 +15,52 @@ if t.TYPE_CHECKING:
 
 
 class SettingsProxyCheckerPage(BasePage):
+    _OBJECT_NAME = 'Checker'
+    
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
         config: Config,
-        obj_name: str = '',
-    ):
-        super().__init__(parent, config=config, obj_name=obj_name)
+        obj_name: tuple[str, ...] = (),
+    ) -> None:
+        super().__init__(parent, config=config, obj_name=(*obj_name, self._OBJECT_NAME))
 
-        self._build_ui()
+        self._build_ui(obj_name=(*obj_name, self._OBJECT_NAME))
 
-    def _build_ui(self) -> None:
+    def _build_ui(
+        self,
+        *,
+        obj_name: tuple[str, ...] = (),
+    ) -> None:
         self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        self._settings = [
+        self._columns_widget = MTColumnsSetting(obj_name=obj_name, tabs=self._create_settings(obj_name=obj_name))
+        self._main_layout.addWidget(self._columns_widget)
+
+    def _create_settings(
+        self,
+        *,
+        obj_name: tuple[str, ...] = (),
+    ) -> list[MTCollapsibleContainer]:
+        return [
             MTCollapsibleContainer(
                 tr_key='GNRL',
-                obj_name='Settings_Proxy_Checker_General',
+                obj_name=(*obj_name, 'General'),
                 widgets=[
                     MTSliderSetting(
                         config=self._config,
                         cfg_key='Proxy>Checker>Main Threads',
-                        tr_key='MAIN_THRDS',
+                        tr_key='MN_THRDS',
+                        obj_name=(*obj_name, 'Main_Threads'),
                         min_value=1,
                         max_value=1000,
                     ),
                     MTSliderSetting(
                         config=self._config,
                         cfg_key='Proxy>Checker>Maximum Wait Response',
-                        tr_key='MAX_WT_RESP',
+                        tr_key='MX_WT_RESP',
+                        obj_name=(*obj_name, 'Maximum_Wait_Response'),
                         min_value=1,
                         max_value=60,
                     ),
@@ -52,15 +68,14 @@ class SettingsProxyCheckerPage(BasePage):
                         config=self._config,
                         cfg_key='Proxy>Checker>Save Good In Custom File',
                         tr_key='SV_GD_IN_CSTM_FL',
+                        obj_name=(*obj_name, 'Save_Good_In_Custom_File'),
                     ),
                     MTSwitchSetting(
                         config=self._config,
                         cfg_key='Proxy>Checker>Save Without Protocol',
                         tr_key='SV_WTOUT_PRTCL',
+                        obj_name=(*obj_name, 'Save_Without_Protocol'),
                     ),
                 ],
             ),
         ]
-
-        self._columns_widget = MTColumnsSetting(obj_name='Settings_Proxy_Checker', tabs=self._settings)
-        self._main_layout.addWidget(self._columns_widget)

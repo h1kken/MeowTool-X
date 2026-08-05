@@ -16,55 +16,70 @@ if t.TYPE_CHECKING:
 
 
 class SettingsRobloxGeneralPage(BasePage):
+    _OBJECT_NAME = 'General'
+    
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
         config: Config,
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
     ):
-        super().__init__(parent, config=config, obj_name=obj_name)
+        super().__init__(parent, config=config, obj_name=(*obj_name, self._OBJECT_NAME))
         
-        self._build_ui()
+        self._build_ui(obj_name=(*obj_name, self._OBJECT_NAME))
 
-    def _build_ui(self) -> None:
+    def _build_ui(
+        self,
+        *,
+        obj_name: tuple[str, ...] = (),
+    ) -> None:
         self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        self._settings = [
+        self._columns_widget = MTColumnsSetting(obj_name=obj_name, tabs=self._create_settings(obj_name=obj_name))
+        self._main_layout.addWidget(self._columns_widget)
+
+    def _create_settings(
+        self,
+        *,
+        obj_name: tuple[str, ...] = (),
+    ) -> list[MTCollapsibleContainer]:
+        return [
             MTCollapsibleContainer(
                 tr_key='Cookie parse',
-                obj_name='Settings_Roblox_General_Cookie_Parse',
+                obj_name=(*obj_name, 'Main'),
                 widgets=[
                     MTSwitchSetting(
                         config=self._config,
                         cfg_key='Roblox>General>Add Symbols Between Warning And Cookie',
-                        tr_key='Add symbols between warning and cookie',
+                        tr_key='ADD_SMBLS_BTWN_WRNG_CCK',
+                        obj_name=(*obj_name, 'Add_Symbols_Between_Warning_And_Cookie'),
                     ),
                     MTLineEditSetting(
                         config=self._config,
                         cfg_key='Roblox>General>Symbols Between Warning And Cookie',
-                        tr_key='Symbols between warning and cookie',
+                        tr_key='SMBLS_BTWN_WRNG_AND_CCK',
+                        obj_name=(*obj_name, 'Symbols_Between_Warning_And_Cookie'),
                     ),
                 ],
             ),
             MTCollapsibleContainer(
                 tr_key='Proxy',
-                obj_name='Settings_Roblox_General_Proxy',
+                obj_name=(*obj_name, 'Proxy'),
                 widgets=[
                     MTSwitchSetting(
                         config=self._config,
                         cfg_key='Roblox>General>Proxy>Use Proxy',
-                        tr_key='Use proxy',
+                        tr_key='USE_PRXY',
+                        obj_name=(*obj_name, 'Use_Proxy'),
                     ),
                     MTComboBoxSetting(
                         config=self._config,
                         cfg_key='Roblox>General>Proxy>Auto Protocol If Not Specified',
-                        tr_key='Auto protocol if not specified',
+                        tr_key='AT_PRTCL_IF_NT_SPCFD',
+                        obj_name=(*obj_name, 'Auto_Protocol_If_Not_Specified'),
                         items=[ComboItem(item) for item in ('http', 'https', 'socks4', 'socks5')],
                     ),
                 ],
             ),
         ]
-
-        self._columns_widget = MTColumnsSetting(obj_name='Settings_Roblox_General_Columns', tabs=self._settings)
-        self._main_layout.addWidget(self._columns_widget)

@@ -2,6 +2,8 @@ from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QWheelEvent
 from PySide6.QtWidgets import QDoubleSpinBox, QLineEdit, QSpinBox, QStyle, QStyleOptionSpinBox, QWidget
 
+from src.utils.qt import build_object_name
+
 
 def _text_render_width(widget: QWidget, values: tuple[str, ...]) -> int:
     metrics = widget.fontMetrics()
@@ -41,16 +43,18 @@ def _spin_box_content_size_hint(spin_box: QSpinBox | QDoubleSpinBox, values: tup
 
 
 class MTSpinBox(QSpinBox):
-    def __init__(self, parent: QWidget | None = None, *, obj_name: str = '') -> None:
+    _OBJECT_NAME = 'SpinBox'
+    
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        obj_name: tuple[str, ...] = (),
+    ) -> None:
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
-        self.setFrame(False)
-        self.lineEdit().setTextMargins(0, 0, 0, 0)
-        
-        if obj_name:
-            self.setObjectName(obj_name)
-
+        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
 
     def sizeHint(self) -> QSize:
         return _spin_box_content_size_hint(

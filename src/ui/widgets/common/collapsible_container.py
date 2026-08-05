@@ -4,7 +4,7 @@ import typing as t
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QMouseEvent
-from PySide6.QtWidgets import QSizePolicy, QWidget
+from PySide6.QtWidgets import QWidget
 
 from src.app.paths import PATH_CONTAINER_ARROW_ICON
 from src.ui.layouts.enums import LayoutType
@@ -18,18 +18,19 @@ from .widget import MTWidget
 class _CollapsibleHeader(MTWidget):
     clicked = Signal()
     
+    _OBJECT_NAME = 'Header'
+    
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
         tr_key: str = '',
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
     ) -> None:
-        super().__init__(parent)
-        self.setObjectName(f'{obj_name}_Container_Header_Widget')
+        super().__init__(parent, obj_name=(*obj_name, self._OBJECT_NAME))
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         
-        self._build_ui(tr_key=tr_key, obj_name=obj_name)
+        self._build_ui(tr_key=tr_key, obj_name=(*obj_name, self._OBJECT_NAME))
     
         self.setExpanded(True)
     
@@ -37,17 +38,17 @@ class _CollapsibleHeader(MTWidget):
         self,
         *,
         tr_key: str,
-        obj_name: str,
+        obj_name: tuple[str, ...] = (),
     ) -> None:
         self._main_layout = create_layout(LayoutType.HBOX, self)
         
-        self._label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Container_Header_Title')
+        self._label = MTLabel(tr_key=tr_key, obj_name=(*obj_name, self._OBJECT_NAME, 'Title'))
         self._label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._main_layout.addWidget(self._label)
         
         self._main_layout.addStretch()
         
-        self._icon = MTIcon(obj_name=f'{obj_name}_Container_Header_Arrow', source=str(PATH_CONTAINER_ARROW_ICON))
+        self._icon = MTIcon(obj_name=(*obj_name, self._OBJECT_NAME, 'Icon'), source=str(PATH_CONTAINER_ARROW_ICON))
         self._icon.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._main_layout.addWidget(self._icon)
     
@@ -69,29 +70,30 @@ class _CollapsibleHeader(MTWidget):
 
 class MTCollapsibleContainer(MTWidget):
     toggled = Signal(bool)
+    
+    _OBJECT_NAME = 'Container'
 
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
         tr_key: str = '',
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
         expanded: bool = True,
         widgets: t.Sequence[QWidget] | None = None,
     ) -> None:
-        super().__init__(parent)
-        self.setObjectName(f'{obj_name}_Container_Widget')
-        
+        super().__init__(parent, obj_name=(*obj_name, self._OBJECT_NAME))
+
         self._expanded = expanded
         
-        self._build_ui(tr_key=tr_key, obj_name=obj_name, widgets=widgets)
+        self._build_ui(tr_key=tr_key, obj_name=(*obj_name, self._OBJECT_NAME), widgets=widgets)
         self._connect_signals()
         
     def _build_ui(
         self,
         *,
         tr_key: str,
-        obj_name: str,
+        obj_name: tuple[str, ...] = (),
         widgets: t.Sequence[QWidget] | None
     ) -> None:
         self._main_layout = create_layout(LayoutType.VBOX, self)
@@ -100,13 +102,12 @@ class MTCollapsibleContainer(MTWidget):
         self._header.setCursor(Qt.CursorShape.PointingHandCursor)
         self._main_layout.addWidget(self._header)
         
-        self._separator = MTWidget(obj_name=f'{obj_name}_Container_Separator')
+        self._separator = MTWidget(obj_name=(*obj_name, self._OBJECT_NAME, 'Separator'))
         self._separator.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._separator.setFixedHeight(1)
-        self._separator.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._main_layout.addWidget(self._separator)
 
-        self._content_widget = MTWidget(obj_name=f'{obj_name}_Container_Content_Widget')
+        self._content_widget = MTWidget(obj_name=(*obj_name, self._OBJECT_NAME, 'Content'))
         self._content_layout = create_layout(LayoutType.VBOX, self._content_widget)
         self._main_layout.addWidget(self._content_widget)
 

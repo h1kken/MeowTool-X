@@ -36,19 +36,24 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         self._save_lock = threading.Lock()
 
     @property
-    def name(self) -> str: return self.path.name
+    def name(self) -> str:
+        return self.path.name
 
     @property
-    def path(self) -> Path: return self._path
+    def path(self) -> Path:
+        return self._path
 
     @property
-    def data(self) -> ConfigMap: return self._data
+    def data(self) -> ConfigMap:
+        return self._data
 
     @property
-    def defaults(self) -> ConfigMap: return self._defaults
+    def defaults(self) -> ConfigMap:
+        return self._defaults
 
     @property
-    def save_lock(self) -> threading.Lock: return self._save_lock
+    def save_lock(self) -> threading.Lock:
+        return self._save_lock
 
     def create_config(self, name: str) -> None:
         path = PATH_CONFIGS / f'{name}.txt'

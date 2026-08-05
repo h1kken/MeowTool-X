@@ -65,6 +65,8 @@ _COOKIE_CHECKER_SORT_TEXT_FLAGS: dict[str, dict[str, str]] = {
 class _BoundSwitchRow(MTBaseSetting[bool]):
     checked = Signal(bool)
 
+    _OBJECT_NAME = 'Switch'
+
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -72,9 +74,9 @@ class _BoundSwitchRow(MTBaseSetting[bool]):
         config: Config | ConfigLoader,
         cfg_key: str,
         text: str = '',
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
     ) -> None:
-        super().__init__(parent, config=config, cfg_key=cfg_key)
+        super().__init__(parent, config=config, cfg_key=cfg_key, obj_name=(*obj_name, self._OBJECT_NAME))
         self.setObjectName(f'{obj_name}_Row')
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -87,17 +89,17 @@ class _BoundSwitchRow(MTBaseSetting[bool]):
         self,
         *,
         text: str,
-        obj_name: str,
+        obj_name: tuple[str, ...] = (),
     ) -> None:
         self._main_layout = create_layout(LayoutType.HBOX, self)
 
-        self._label = MTLabel(tr_key='', obj_name=f'{obj_name}_Label')
+        self._label = MTLabel(tr_key='', obj_name=obj_name)
         self._label.setText(str(text))
         self._main_layout.addWidget(self._label)
 
         self._main_layout.addStretch()
 
-        self._switch = MTSwitch(obj_name=f'{obj_name}_Switch')
+        self._switch = MTSwitch(obj_name=obj_name)
         self._switch.setChecked(bool(self._config.get(self._cfg_key)))
         self._main_layout.addWidget(self._switch)
 
@@ -157,7 +159,7 @@ class _BoundSwitchRow(MTBaseSetting[bool]):
         super().mouseReleaseEvent(event)
 
 
-class _SortActionButton(MTButton):
+class _SortActionButton(MTButton): # TODO: remove this later
     rightClicked = Signal(bool)
     _DEFAULT_ICON_SOURCE = 'src/assets/icons/sort.svg'
 
@@ -165,7 +167,7 @@ class _SortActionButton(MTButton):
         self,
         parent: QWidget | None = None,
         *,
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent, checkable=True, obj_name=obj_name)
         self.set_icon(
@@ -199,7 +201,7 @@ class _SortListEntryRow(MTWidget):
         self,
         parent: QWidget | None = None,
         *,
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
         range_mode: bool,
         start_value: str = '',
         end_value: str = '',
@@ -211,19 +213,19 @@ class _SortListEntryRow(MTWidget):
 
         self._main_layout = create_layout(LayoutType.HBOX, self)
 
-        self._start_edit = MTLineEdit(obj_name=f'{obj_name}_Start_LineEdit')
+        self._start_edit = MTLineEdit(obj_name=(*obj_name, 'Start'))
         self._start_edit.setPlaceholderText('From')
         self._start_edit.setText(str(start_value).strip())
         self._main_layout.addWidget(self._start_edit, 1)
 
         self._end_edit: MTLineEdit | None = None
         if self._range_mode:
-            self._end_edit = MTLineEdit(obj_name=f'{obj_name}_End_LineEdit')
+            self._end_edit = MTLineEdit(obj_name=(*obj_name, 'End'))
             self._end_edit.setPlaceholderText('To')
             self._end_edit.setText(str(end_value).strip())
             self._main_layout.addWidget(self._end_edit, 1)
 
-        self._remove_button = MTButton(tr_key='', obj_name=f'{obj_name}_Remove_Button')
+        self._remove_button = MTButton(tr_key='', obj_name=(*obj_name, 'Remove'))
         self._remove_button.setText('X')
         self._main_layout.addWidget(self._remove_button)
 
@@ -257,50 +259,56 @@ class _SortListEntryRow(MTWidget):
 class _SortListEditor(MTWidget):
     changed = Signal()
 
+    _OBJECT_NAME = 'Sort_List_Editor'
+
     def __init__(
         self,
         *,
         config: Config | ConfigLoader,
-        label_text: str,
+        text: str,
         cfg_key_enabled: str,
         cfg_key_items: str,
-        obj_name: str,
+        obj_name: tuple[str, ...] = (),
         range_mode: bool,
         parent: QWidget | None = None,
     ) -> None:
-        super().__init__(parent)
+        super().__init__(parent, obj_name=(*obj_name, self._OBJECT_NAME))
+        
         self._config = config
         self._cfg_key_enabled = cfg_key_enabled
         self._cfg_key_items = cfg_key_items
-        self._range_mode = bool(range_mode)
+        self._range_mode = range_mode
         self._entry_rows: list[_SortListEntryRow] = []
         self._suspend_save = False
 
-        self.setObjectName(f'{obj_name}_Editor')
+        self._build_ui(text=text, obj_name=(*obj_name, self._OBJECT_NAME))
+
+        self.reload_from_config()
+
+    def _build_ui(
+        self,
+        *,
+        text: str = '',
+        obj_name: tuple[str, ...] = (),
+    ) -> None:
         self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        self._enabled_row = _BoundSwitchRow(
-            config=self._config,
-            text=label_text,
-            cfg_key=self._cfg_key_enabled,
-            obj_name=f'{obj_name}_Enabled',
-        )
+        self._enabled_row = _BoundSwitchRow(config=self._config, text=text, cfg_key=self._cfg_key_enabled, obj_name=(*obj_name, 'Enabled'))
         self._main_layout.addWidget(self._enabled_row)
 
-        self._entries_widget = MTWidget(obj_name=f'{obj_name}_Entries_Widget')
+        self._entries_widget = MTWidget(obj_name=(*obj_name, 'Entries'))
         self._entries_layout = create_layout(LayoutType.VBOX, self._entries_widget)
         self._main_layout.addWidget(self._entries_widget)
 
-        self._add_button = MTButton(tr_key='', obj_name=f'{obj_name}_Add_Button')
-        self._add_button.setText('ADD')
+        self._add_button = MTButton(obj_name=(*obj_name, 'Add'))
+        # self._add_button.set_icon()
         self._main_layout.addWidget(self._add_button)
 
+    def _connect_signals(self) -> None:
         self._enabled_row.checked.connect(self._sync_enabled_state)
         self._enabled_row.checked.connect(self._on_enabled_row_toggled)
         self._add_button.clicked.connect(self._add_empty_entry)
         self._config.configLoaded.connect(self.reload_from_config)
-
-        self.reload_from_config()
 
     def reload_from_config(self) -> None:
         enabled = bool(self._config.get(self._cfg_key_enabled))
@@ -396,7 +404,7 @@ class _CookieCheckerSortPopup(MTPopup):
         *,
         config: Config | ConfigLoader,
         tr_key: str = '',
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
         field_name: str,
         sort_kind: SortCategoryKind,
     ) -> None:
@@ -406,14 +414,14 @@ class _CookieCheckerSortPopup(MTPopup):
         self._sort_kind = sort_kind
         self._category_defaults = deepcopy(as_dict(_COOKIE_CHECKER_SORT_DEFAULTS.get(field_name)) or {})
 
-        self._header = MTWidget(obj_name=f'{obj_name}_Header_Widget')
+        self._header = MTWidget(obj_name=(*obj_name, 'Header'))
         self._header_layout = create_layout(LayoutType.HBOX, self._header)
 
-        self._title = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Title')
+        self._title = MTLabel(tr_key=tr_key, obj_name=(*obj_name, 'Title'))
 
         self._close_button = MTButton(
             tr_key='',
-            obj_name=f'{obj_name}_Close_Button',
+            obj_name=(*obj_name, 'Close_Button'),
             parent=self._header,
         )
         self._close_button.setText('X')
@@ -427,7 +435,7 @@ class _CookieCheckerSortPopup(MTPopup):
             config=self._config,
             text='Sort',
             cfg_key=self._category_key('Enabled'),
-            obj_name=f'{obj_name}_Enabled',
+            obj_name=(*obj_name, 'Enabled'),
         )
         self.add_widget(self._enabled_row)
 
@@ -461,7 +469,7 @@ class _CookieCheckerSortPopup(MTPopup):
     def _category_key(self, suffix: str) -> str:
         return f'Roblox>Cookie Checker>Sorting>Categories>{self._field_name}>{suffix}'
 
-    def _build_detail_widgets(self, obj_name: str) -> None:
+    def _build_detail_widgets(self, obj_name: tuple[str, ...] = ()) -> None:
         if self._sort_kind != 'number':
             return
 
@@ -469,17 +477,17 @@ class _CookieCheckerSortPopup(MTPopup):
             config=self._config,
             text='Zero',
             cfg_key=self._category_key('Options>Zero'),
-            obj_name=f'{obj_name}_Zero',
+            obj_name=(*obj_name, 'Zero'),
         )
         self.add_widget(self._zero_row)
         self._detail_widgets.append(self._zero_row)
 
         self._from_editor = _SortListEditor(
             config=self._config,
-            label_text='From',
+            text='From',
             cfg_key_enabled=self._category_key('Options>From>Enabled'),
             cfg_key_items=self._category_key('Options>From>Items'),
-            obj_name=f'{obj_name}_From',
+            obj_name=(*obj_name, 'From'),
             range_mode=False,
         )
         self.add_widget(self._from_editor)
@@ -487,10 +495,10 @@ class _CookieCheckerSortPopup(MTPopup):
 
         self._from_to_editor = _SortListEditor(
             config=self._config,
-            label_text='From To',
+            text='From To',
             cfg_key_enabled=self._category_key('Options>From To>Enabled'),
             cfg_key_items=self._category_key('Options>From To>Items'),
-            obj_name=f'{obj_name}_From_To',
+            obj_name=(*obj_name, 'From_To'),
             range_mode=True,
         )
         self.add_widget(self._from_to_editor)
@@ -503,7 +511,7 @@ class _CookieCheckerSortPopup(MTPopup):
                 config=self._config,
                 text=label_text,
                 cfg_key=self._category_key(option_key),
-                obj_name=f'{obj_name}_{option_key}',
+                obj_name=(*obj_name, option_key),
             )
             self.add_widget(row)
             self._detail_widgets.append(row)
@@ -530,7 +538,7 @@ class MTCookieCheckerFieldSetting(MTSwitchSetting):
         config: Config | ConfigLoader,
         cfg_key: str,
         tr_key: str = '',
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
         field_name: str,
     ) -> None:
         super().__init__(parent, config=config, cfg_key=cfg_key, tr_key=tr_key, obj_name=obj_name)

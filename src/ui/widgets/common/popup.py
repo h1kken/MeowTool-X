@@ -4,7 +4,7 @@ import typing as t
 
 from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import QCursor, QHideEvent, QMouseEvent, QRegion, QResizeEvent, QShowEvent, QWheelEvent
-from PySide6.QtWidgets import QApplication, QBoxLayout, QLayout, QSizePolicy, QWidget
+from PySide6.QtWidgets import QApplication, QBoxLayout, QLayout, QWidget
 
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -21,12 +21,8 @@ class _PopupBackdrop(MTWidget):
         *,
         popup: MTPopup,
     ) -> None:
-        super().__init__(parent, obj_name=f'{popup.objectName()}_Backdrop_Widget')
+        super().__init__(parent, obj_name=(popup.objectName(), 'Backdrop'))
         self._popup = popup
-        self.setProperty('popupBackdrop', True)
-        self.setProperty('popup', True)
-        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, False)
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
         self.setAutoFillBackground(False)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.hide()
@@ -36,12 +32,15 @@ class _PopupBackdrop(MTWidget):
             self._popup.hide()
         event.accept()
 
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None: event.accept()
-    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None: event.accept()
-    def wheelEvent(self, event: QWheelEvent) -> None: event.accept()
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        event.accept()
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
+        event.accept()
+    def wheelEvent(self, event: QWheelEvent) -> None:
+        event.accept()
 
 
-class MTPopup(MTWidget):
+class MTPopup(MTWidget): # TODO: fix this shit later
     opened = Signal()
     closed = Signal()
 
@@ -49,43 +48,38 @@ class MTPopup(MTWidget):
         self,
         parent: QWidget | None = None,
         *,
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
         layout_type: LayoutType = LayoutType.VBOX,
         close_on_outside_click: bool = True,
     ) -> None:
         super().__init__(parent, obj_name=obj_name)
-        self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint
-            | Qt.WindowType.NoDropShadowWindowHint
-            | Qt.WindowType.Tool
-        )
-        self._close_on_outside_click = bool(close_on_outside_click)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        
+        self._close_on_outside_click = close_on_outside_click
         self._backdrop: _PopupBackdrop | None = None
         self._backdrop_parent: QWidget | None = None
         self._modal_host: QWidget | None = None
         self._last_show_mode: str | None = None
         self._last_offset = QPoint(0, 0)
-        self.setProperty('popup', True)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
-        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, False)
-        self.setAutoFillBackground(False)
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
 
         self._root_layout = create_layout(LayoutType.VBOX, self)
-        self._content = MTWidget(parent=self, obj_name=f'{obj_name}_Content')
+        self._content = MTWidget(parent=self, obj_name=(*obj_name, 'Content'))
         self._content.setProperty('popupContent', True)
         self._content_layout = create_layout(layout_type, parent=self._content)
         self._root_layout.addWidget(self._content)
 
     @property
-    def close_on_outside_click(self) -> bool: return self._close_on_outside_click
+    def close_on_outside_click(self) -> bool:
+        return self._close_on_outside_click
 
     @property
-    def content_widget(self) -> MTWidget: return self._content
+    def content_widget(self) -> MTWidget:
+        return self._content
 
     @property
-    def content_layout(self) -> QLayout: return self._content_layout
+    def content_layout(self) -> QLayout:
+        return self._content_layout
 
     def add_widget(self, widget: QWidget, stretch: int = 0) -> None:
         if isinstance(self._content_layout, QBoxLayout):

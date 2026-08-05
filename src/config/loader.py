@@ -31,19 +31,24 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         self._load()
 
     @property
-    def name(self) -> str: return self.path.name
+    def name(self) -> str:
+        return self.path.name
 
     @property
-    def path(self) -> Path: return self._path
+    def path(self) -> Path:
+        return self._path
 
     @property
-    def data(self) -> ConfigMap: return self._data
+    def data(self) -> ConfigMap:
+        return self._data
 
     @property
-    def defaults(self) -> ConfigMap: return self._defaults
+    def defaults(self) -> ConfigMap:
+        return self._defaults
 
     @property
-    def save_lock(self) -> threading.Lock: return self._save_lock
+    def save_lock(self) -> threading.Lock:
+        return self._save_lock
 
     def set(self, key: str, value: object, *, sep: str = '>') -> None:
         super().set(key, value, sep=sep)

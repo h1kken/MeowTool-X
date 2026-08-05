@@ -18,14 +18,16 @@ if t.TYPE_CHECKING:
 
 
 class RobloxCookieSorterPage(BasePage):
+    _OBJECT_NAME = 'Roblox_Cookie_Sorter'
+    
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
         config: Config,
-        obj_name: str = '',
+        obj_name: tuple[str, ...] = (),
     ):
-        super().__init__(parent, config=config, obj_name=obj_name)
+        super().__init__(parent, config=config, obj_name=(*obj_name, self._OBJECT_NAME))
         
         self._thread: QThread | None = None
         self._sorter: RobloxCookieSorter | None = None
@@ -35,19 +37,23 @@ class RobloxCookieSorterPage(BasePage):
         self._source_text_blocks: list[str] = []
         self._use_default_folder = True
 
-        self._build_ui()
+        self._build_ui(obj_name=(*obj_name, self._OBJECT_NAME))
         self._connect_signals()
         
-    def _build_ui(self) -> None:
+    def _build_ui(
+        self,
+        *,
+        obj_name: tuple[str, ...] = (),
+    ) -> None:
         self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        self._drop_zone = MTDropZone(tr_key='Upload or Drag & Drop text/files here', obj_name='Roblox_Cookie_Sorter')
+        self._drop_zone = MTDropZone(tr_key='UPLD_OR_DRG_AND_DRP_TXT_OR_FLS_HERE', obj_name=obj_name)
         self._main_layout.addWidget(self._drop_zone)
         
-        self._label = MTLabel(tr_key='CK_SRTR_STATUS', obj_name='Roblox_Cookie_Sorter_Status')
+        self._label = MTLabel(tr_key='CK_SRTR_STATUS', obj_name=(*obj_name, 'Status'))
         self._main_layout.addWidget(self._label)
         
-        self._button = MTButton(tr_key='CK_SRTR_STRT', obj_name='Roblox_Cookie_Sorter_Start_Button')
+        self._button = MTButton(tr_key='CK_SRTR_STRT', obj_name=(*obj_name, 'Start'))
         self._main_layout.addWidget(self._button)
 
     def _connect_signals(self) -> None:

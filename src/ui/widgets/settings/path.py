@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import typing as t
 
-import re
 from pathlib import Path
 
 from PySide6.QtCore import QSize, QSignalBlocker
@@ -13,13 +12,14 @@ from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import MTButton, MTLabel, MTLineEdit
 from src.ui.widgets.settings import MTBaseSetting
-from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 
 if t.TYPE_CHECKING:
     from src.config import Config, ConfigLoader
 
 
 class MTPathSetting(MTBaseSetting[str]):
+    _OBJECT_NAME = 'Path'
+    
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -27,38 +27,36 @@ class MTPathSetting(MTBaseSetting[str]):
         config: Config | ConfigLoader,
         cfg_key: str,
         tr_key: str = '',
+        obj_name: tuple[str, ...]= (),
         mode: str = 'directory',
         file_filter: str = '',
         caption: str | None = None,
     ) -> None:
-        super().__init__(parent, config=config, cfg_key=cfg_key)
+        super().__init__(parent, config=config, cfg_key=cfg_key, obj_name=(*obj_name, self._OBJECT_NAME))
         
-        obj_name = re.sub(NORMALIZE_QT_KEY_PATTERN, '_', self._cfg_key)
-        self.setObjectName(f'{obj_name}_Path_Setting')
-
         self._mode = mode
         self._file_filter = file_filter
         self._caption = caption.strip() if isinstance(caption, str) and caption.strip() else None
 
-        self._build_ui(tr_key=tr_key, obj_name=obj_name)
+        self._build_ui(tr_key=tr_key, obj_name=(*obj_name, self._OBJECT_NAME))
         self._connect_signals()
 
     def _build_ui(
         self,
         *,
         tr_key: str,
-        obj_name: str,
+        obj_name: tuple[str, ...] = (),
     ) -> None:
         self._main_layout = create_layout(LayoutType.HBOX, self)
 
-        self._label = MTLabel(tr_key=tr_key, obj_name=f'{obj_name}_Label')
+        self._label = MTLabel(tr_key=tr_key, obj_name=obj_name)
         self._main_layout.addWidget(self._label)
 
-        self._line_edit = MTLineEdit(obj_name=f'{obj_name}_LineEdit')
+        self._line_edit = MTLineEdit(obj_name=obj_name)
         self._line_edit.setText(str(self.value).strip())
         self._main_layout.addWidget(self._line_edit, stretch=1)
 
-        self._browse_button = MTButton(obj_name=f'{obj_name}_Browse_Button')
+        self._browse_button = MTButton(obj_name=(*obj_name, 'Browse'))
         self._browse_button.set_icon(
             source=str(PATH_FOLDER_ICON),
             align='center',
