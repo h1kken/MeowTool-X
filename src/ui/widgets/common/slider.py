@@ -2,7 +2,7 @@ from PySide6.QtCore import QPoint, QPointF, QRect, QRectF, QSize, Qt
 from PySide6.QtGui import QColor, QMouseEvent, QPaintEvent, QPainter, QPainterPath, QPen, QWheelEvent
 from PySide6.QtWidgets import QSlider, QStyle, QStyleOptionSlider, QWidget
 
-from src.theme.colors import to_qcolor
+from src.ui.theme.colors import to_qcolor
 from src.utils.conversion import coerce_box_sides, coerce_number
 from src.ui.painting import new_widget_painter
 from src.ui.widgets.paint_primitives import parse_pen_style, resolve_fill_brush
@@ -31,7 +31,7 @@ class MTSlider(QSlider):
         self._connect_signals()
 
     def _connect_signals(self) -> None:
-        def _update_range(_: int, __: int) -> None:
+        def _update_range(_minimum: int, _maximum: int) -> None:
             self.update()
         self.rangeChanged.connect(_update_range)
         self.valueChanged.connect(self.update)

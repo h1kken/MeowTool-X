@@ -34,15 +34,19 @@ def bootstrap(app: QApplication) -> AppServices:
     from src.ui.windows import MainWindow
     services.window = MainWindow(services.config)
     
+    # Popup
+    from src.ui.popup.manager import PopupManager
+    services.popup = PopupManager(services.window.overlay)
+    
     # Theme
-    from src.theme.manager import ThemeManager
-    services.theme_manager = ThemeManager(services.window, services.config) # TODO: refactor lighter | do strict format, no many variants of one parameter
+    from src.ui.theme.manager import ThemeManager
+    services.theme = ThemeManager(services.window, services.config) # TODO: refactor lighter | do strict format, no many variants of one parameter
     
-    from src.theme.animation.manager import AnimationManager
+    from src.ui.theme.animation.manager import AnimationManager
     animation_manager = AnimationManager(services.window, services.config) # TODO: refactor lighter (pls)
-    services.theme_manager.themeLoaded.connect(animation_manager.load)
+    services.theme.themeLoaded.connect(animation_manager.load)
     
-    services.theme_manager.load()
+    services.theme.load()
     
     # Other
     # from src.services.discord import DiscordRPC # TODO: fix | broken after remove PageState

@@ -82,7 +82,6 @@ def normalize_config(
                 validated[key] = normalize_config(
                     user_value,
                     {},
-                    keep_unknown=True,
                     recovery_missing=recovery_missing,
                 )
             else:

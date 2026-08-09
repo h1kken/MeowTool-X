@@ -23,7 +23,7 @@ from src.services.roblox.constants import DATE_ROBLOX_COOKIE_SORTER_FORMAT, ROBL
 from src.services.roblox.regexes import ROBLOX_COOKIE_PATTERN_BYTES, STRING_100_PLUS_SYMBOLS_PATTERN_BYTES
 from src.services.roblox.types import ReadableBinaryStream
 from src.utils.datetime import current_date
-from src.utils.filesystem import FS, validate_filename
+from src.utils.filesystem import FS
 from src.utils.logging import logger
 
 if t.TYPE_CHECKING:
@@ -73,7 +73,7 @@ class RobloxCookieSorter(QObject):
 
         # Settings
         output_filename = str(self._config.get('Roblox>Cookie Sorter>Output Filename')).strip()
-        self._filename = validate_filename(output_filename if output_filename else 'output')
+        self._filename = FS.normalize_filename(output_filename if output_filename else 'output')
         
         self._search_no_roblox_cookie_pattern = bool(self._config.get('Roblox>Cookie Sorter>Search For 100 Plus Symbols Strings'))
         self._symbols_between_warning_and_cookie = str(self._config.get('Roblox>General>Symbols Between Warning And Cookie')).strip() if self._config.get('Roblox>General>Add Symbols Between Warning And Cookie') else ''

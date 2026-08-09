@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QMainWindow
 from src.app.constants import PROGRAM_TITLE
 from src.app.paths import PATH_SIDEBAR_ICONS_SRC
 from src.ui.constants import WINDOW_X, WINDOW_Y
+from src.ui.widgets.common.overlay import MTPopupOverlay
 from src.ui.windows.types import PageSpec
 from src.ui.controllers import PageController
 from src.ui.layouts.enums import LayoutType
@@ -54,32 +55,44 @@ class MainWindow(QMainWindow):
         self._connect_signals()
 
     def _build_ui(self) -> None:
+        self.setObjectName('Main_Window')
         self.setWindowTitle(PROGRAM_TITLE)
         self.resize(WINDOW_X, WINDOW_Y)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
-        self.setObjectName('Main_Window')
 
-        self._central_widget = MTWidget(obj_name=(self._OBJECT_NAME, 'Central_Widget'))
-        self._central_layout = create_layout(LayoutType.VBOX, self._central_widget)
-        self.setCentralWidget(self._central_widget)
+        self._main_widget = MTWidget(obj_name=(self._OBJECT_NAME, 'Central_Widget'))
+        self._main_layout = create_layout(LayoutType.VBOX, self._main_widget)
+        self.setCentralWidget(self._main_widget)
         
-        self._main_window_header = MTWindowHeader(self)
-        self._central_layout.addWidget(self._main_window_header)
+        # header
+        self._window_header_widget = MTWindowHeader(self)
+        self._main_layout.addWidget(self._window_header_widget)
+        
+        # overlay
+        self._body_container_widget = MTWidget(obj_name=(self._OBJECT_NAME, 'Body_Container'))
+        self._body_container_layout = create_layout(LayoutType.GRID, self._body_container_widget)
+        self._main_layout.addWidget(self._body_container_widget, stretch=1)
 
-        self._body_widget = MTWidget(obj_name=(self._OBJECT_NAME, 'Body'))
-        self._central_layout.addWidget(self._body_widget, stretch=1)
+        self._body_content_widget = MTWidget(obj_name=(self._OBJECT_NAME, 'Body_Content'))
+        self._body_content_layout = create_layout(LayoutType.HBOX, self._body_content_widget)
+        self._body_container_layout.addWidget(self._body_content_widget, 0, 0)
         
-        self._body_layout = create_layout(LayoutType.HBOX, self._body_widget)
+        self._overlay_widget = MTPopupOverlay()
+        self._body_container_layout.addWidget(self._overlay_widget, 0, 0)
+        
+        # sidebar
         self._sidebar_widget = MTWidget(obj_name=(self._OBJECT_NAME, 'Sidebar'))
-        self._body_layout.addWidget(self._sidebar_widget)
-        
         self._sidebar_layout = create_layout(LayoutType.VBOX, self._sidebar_widget)
-        self._sidebar_layout.addWidget(MTImage(self._sidebar_widget)) # TODO: is it correct?
+        self._body_content_layout.addWidget(self._sidebar_widget)
         
-        self._main_content = MTWidget(obj_name=(self._OBJECT_NAME, 'Main_Content'))
-        self._body_layout.addWidget(self._main_content, stretch=1)
+        self._sidebar_image_widget = MTImage(self._sidebar_widget, obj_name=(self._OBJECT_NAME,))
+        self._sidebar_layout.addWidget(self._sidebar_image_widget)
+        
+        # pages
+        self._pages_widget = MTWidget(obj_name=(self._OBJECT_NAME, 'Pages'))
+        self._pages_layout = create_layout(LayoutType.VBOX, self._pages_widget)
+        self._body_content_layout.addWidget(self._pages_widget, stretch=1)
 
-        self._pages_layout = create_layout(LayoutType.VBOX, self._main_content)
         self._page_controller = PageController(self._pages_layout)
 
         for spec in _PAGES:
@@ -113,6 +126,10 @@ class MainWindow(QMainWindow):
             
     def _connect_signals(self) -> None:
         self._page_controller.pageChanged.connect(self.pageChanged.emit)
+
+    @property
+    def overlay(self) -> MTPopupOverlay:
+        return self._overlay_widget
 
     def page_state(self) -> tuple[str, ...]:
         state = ()

@@ -8,52 +8,9 @@ from src.app.paths import PATH_HEADER_ICONS_SRC
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import MTButton, MTPlainLabel, MTWidget
-from src.utils.qt import build_object_name
 
 
 _QT_MAX_SIZE = 16_777_215
-
-
-class _HeaderResizeGrip(QWidget):
-    _OBJECT_NAME = 'Grip'
-    
-    def __init__(
-        self,
-        header: MTWindowHeader,
-        edges: Qt.Edge,
-        *,
-        obj_name: tuple[str, ...] = (),
-        cursor: Qt.CursorShape,
-    ) -> None:
-        super().__init__(header.window())
-        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
-        self.setMouseTracking(True)
-        self.setCursor(cursor)
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
-        
-        self._header = header
-        self._edges = edges
-
-    def mousePressEvent(self, event: QMouseEvent) -> None:
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._header.begin_resize(self._edges, event.globalPosition().toPoint())
-            event.accept()
-            return
-        super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if event.buttons() & Qt.MouseButton.LeftButton:
-            self._header.update_resize(event.globalPosition().toPoint())
-            event.accept()
-            return
-        super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._header.finish_resize()
-            event.accept()
-            return
-        super().mouseReleaseEvent(event)
 
 
 class MTWindowHeader(MTWidget):
@@ -109,10 +66,7 @@ class MTWindowHeader(MTWidget):
         self._buttons_layout.addWidget(self._close_button)
 
         self._window.installEventFilter(self)
-        self._resize_grips = self._create_resize_grips()
         self.sync_window_meta()
-        self.sync_title_geometry()
-        self._sync_resize_grips()
 
     def _connect_signals(self) -> None:
         self._minimize_button.clicked.connect(self._window.showMinimized)
@@ -122,14 +76,11 @@ class MTWindowHeader(MTWidget):
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         if obj is self._window:
             match event.type():
-                case QEvent.Type.Show | QEvent.Type.Resize:
-                    self._sync_resize_grips()
                 case QEvent.Type.WindowTitleChange | QEvent.Type.WindowStateChange:
                     self.sync_window_meta()
                     self._manual_move_active = False
                     self._maximized_drag_pending = False
                     self.finish_resize()
-                    self._sync_resize_grips()
                 case QEvent.Type.Close:
                     self.finish_resize()
                 case _:
@@ -138,7 +89,6 @@ class MTWindowHeader(MTWidget):
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
-        self.sync_title_geometry()
         if self._buttons is not None:
             self._buttons.raise_()
 
@@ -198,7 +148,6 @@ class MTWindowHeader(MTWidget):
     def sync_window_meta(self) -> None:
         self._title_label.setText(self._window.windowTitle())
         self._maximize_button.set_icon(source=str(PATH_HEADER_ICONS_SRC / f'{'restore' if self._window.isMaximized() else 'maximize'}.svg'), size=QSize(18, 18))
-        self.sync_title_geometry()
 
     def begin_resize(self, edges: Qt.Edge, global_pos: QPoint) -> None:
         if self._window.isMaximized() or self._window.isFullScreen():
@@ -270,7 +219,6 @@ class MTWindowHeader(MTWidget):
         else:
             self._window.showMaximized()
         self.sync_window_meta()
-        self._sync_resize_grips()
 
     def _restore_from_maximized_drag(self, global_pos: QPoint) -> None:
         old_width = max(1, self._window.width())
@@ -324,101 +272,3 @@ class MTWindowHeader(MTWidget):
     def _should_handle_header_drag(self, local_pos: QPoint) -> bool:
         child = self.childAt(local_pos)
         return not isinstance(child, MTButton)
-
-    def _create_resize_grips(self) -> list[_HeaderResizeGrip]:
-        obj_name = self.objectName()
-        grips = [
-            _HeaderResizeGrip(
-                self,
-                Qt.Edge.LeftEdge,
-                obj_name=(*obj_name, 'Resize_Left_Grip'),
-                cursor=Qt.CursorShape.SizeHorCursor,
-            ),
-            _HeaderResizeGrip(
-                self,
-                Qt.Edge.RightEdge,
-                obj_name=(*obj_name, 'Resize_Right_Grip'),
-                cursor=Qt.CursorShape.SizeHorCursor,
-            ),
-            _HeaderResizeGrip(
-                self,
-                Qt.Edge.TopEdge,
-                obj_name=(*obj_name, 'Resize_Top_Grip'),
-                cursor=Qt.CursorShape.SizeVerCursor,
-            ),
-            _HeaderResizeGrip(
-                self,
-                Qt.Edge.BottomEdge,
-                obj_name=(*obj_name, 'Resize_Bottom_Grip'),
-                cursor=Qt.CursorShape.SizeVerCursor,
-            ),
-            _HeaderResizeGrip(
-                self,
-                Qt.Edge.TopEdge | Qt.Edge.LeftEdge,
-                obj_name=(*obj_name, 'Resize_Top_Left_Grip'),
-                cursor=Qt.CursorShape.SizeFDiagCursor,
-            ),
-            _HeaderResizeGrip(
-                self,
-                Qt.Edge.TopEdge | Qt.Edge.RightEdge,
-                obj_name=(*obj_name, 'Resize_Top_Right_Grip'),
-                cursor=Qt.CursorShape.SizeBDiagCursor,
-            ),
-            _HeaderResizeGrip(
-                self,
-                Qt.Edge.BottomEdge | Qt.Edge.LeftEdge,
-                obj_name=(*obj_name, 'Resize_Bottom_Left_Grip'),
-                cursor=Qt.CursorShape.SizeBDiagCursor,
-            ),
-            _HeaderResizeGrip(
-                self,
-                Qt.Edge.BottomEdge | Qt.Edge.RightEdge,
-                obj_name=(*obj_name, 'Resize_Bottom_Right_Grip'),
-                cursor=Qt.CursorShape.SizeFDiagCursor,
-            ),
-        ]
-        for grip in grips:
-            grip.hide()
-        return grips
-
-    def _sync_resize_grips(self) -> None:
-        if not self._window.isVisible():
-            return
-
-        margin = max(1, int(self._resize_margin))
-        rect = self._window.rect()
-        width = max(0, rect.width())
-        height = max(0, rect.height())
-        enabled = not (self._window.isMaximized() or self._window.isFullScreen())
-
-        geometries = [
-            QRect(0, margin, margin, max(0, height - (margin * 2))),
-            QRect(max(0, width - margin), margin, margin, max(0, height - (margin * 2))),
-            QRect(margin, 0, max(0, width - (margin * 2)), margin),
-            QRect(margin, max(0, height - margin), max(0, width - (margin * 2)), margin),
-            QRect(0, 0, margin, margin),
-            QRect(max(0, width - margin), 0, margin, margin),
-            QRect(0, max(0, height - margin), margin, margin),
-            QRect(max(0, width - margin), max(0, height - margin), margin, margin),
-        ]
-
-        for grip, geometry in zip(self._resize_grips, geometries, strict=True):
-            grip.setGeometry(geometry)
-            if enabled:
-                grip.show()
-                grip.raise_()
-            else:
-                grip.hide()
-
-    def sync_title_geometry(self) -> None:
-        if self._buttons is None:
-            return
-        right_reserved = max(0, self._buttons.width())
-        alignment = self._title_label.alignment()
-        if alignment & Qt.AlignmentFlag.AlignHCenter:
-            x = right_reserved
-            width = max(0, self.width() - (right_reserved * 2))
-        else:
-            x = 0
-            width = max(0, self.width() - right_reserved)
-        self._title_label.setGeometry(QRect(x, 0, width, self.height()))

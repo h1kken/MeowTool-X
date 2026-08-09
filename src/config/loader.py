@@ -1,20 +1,21 @@
 from __future__ import annotations
 
-import threading
 import typing as t
+
+import threading
+from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 
 from src.utils.logging import logger
-from src.app.paths import PATH_DEFAULT_CONFIG_LOADER
+from src.app.paths import PATH_DEFAULT_LOADER
 from src.config.defaults import default_config_loader
 from src.config.mixin import GetConfigMixin, SetConfigMixin, SaveConfigMixin
 from src.config.utils import normalize_config, parse_config
-from src.utils.filesystem import FS, get_safe
+from src.utils.filesystem import FS
 from src.config.enums import ConfigLoaderKey as CLKey
 
 if t.TYPE_CHECKING:
-    from pathlib import Path
     from src.config.types import ConfigMap
     
 
@@ -24,7 +25,8 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
 
     def __init__(self) -> None:
         super().__init__()
-        self._path = PATH_DEFAULT_CONFIG_LOADER
+        
+        self._path = PATH_DEFAULT_LOADER
         self._data: ConfigMap = {}
         self._defaults: ConfigMap = default_config_loader()
         self._save_lock = threading.Lock()
@@ -62,21 +64,11 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
 
     def _apply_logger_settings(self) -> None:
         logger.apply_debug_settings(
-            debug=bool(
-                get_safe(self._data, CLKey.MISC_DEBUGGER_DEBUG, sep='>')
-            ),
-            info=bool(
-                get_safe(self._data, CLKey.MISC_DEBUGGER_INFO, sep='>')
-            ),
-            warning=bool(
-                get_safe(self._data, CLKey.MISC_DEBUGGER_WARNING, sep='>')
-            ),
-            error=bool(
-                get_safe(self._data, CLKey.MISC_DEBUGGER_ERROR, sep='>')
-            ),
-            exception=bool(
-                get_safe(self._data, CLKey.MISC_DEBUGGER_EXCEPTION, sep='>')
-            ),
+            debug=bool(self.get(CLKey.MISC_DEBUGGER_DEBUG)),
+            info=bool(self.get(CLKey.MISC_DEBUGGER_INFO)),
+            warning=bool(self.get(CLKey.MISC_DEBUGGER_WARNING)),
+            error=bool(self.get(CLKey.MISC_DEBUGGER_ERROR)),
+            exception=bool(self.get(CLKey.MISC_DEBUGGER_EXCEPTION)),
         )
 
     def _load(self) -> None:

@@ -13,7 +13,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QFrame, QWidget
 
 from src.app.paths import PATH_SRC
-from src.theme.colors import to_qcolor
+from src.ui.theme.colors import to_qcolor
 from src.utils.conversion import as_dict, as_object_dict, coerce_number
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout

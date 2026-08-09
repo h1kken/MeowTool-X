@@ -2,7 +2,7 @@ from PySide6.QtCore import QEvent, QPoint, QRectF, Qt, QTimer
 from PySide6.QtGui import QColor, QPaintEvent, QPainter, QPen, QResizeEvent
 from PySide6.QtWidgets import QCheckBox, QWidget
 
-from src.theme.colors import to_qcolor
+from src.ui.theme.colors import to_qcolor
 from src.ui.painting import new_widget_painter
 from src.ui.widgets.paint_primitives import parse_non_negative_float, parse_pen_style, resolve_fill_brush, resolve_uniform_radius, rounded_rect_path
 from src.utils.qt import build_object_name

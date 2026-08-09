@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+from PySide6.QtCore import QStandardPaths
 from pathlib import Path
 
 from .constants import PROGRAM_NAME
@@ -31,13 +32,16 @@ PATH_APP_ROOT = _find_app_root(PATH_ROOT)
 
 PATH_SYSTEM_DRIVE = Path(os.environ['SystemDrive'])
 
-PATH_APPDATA = Path(os.environ['APPDATA'])
+PATH_APPDATA = Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppDataLocation))
 PATH_APPDATA_APP_DIR = PATH_APPDATA / PROGRAM_NAME
 
-PATH_LOCALAPPDATA = Path(os.environ['LOCALAPPDATA'])
+PATH_LOCALAPPDATA = Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppLocalDataLocation))
 
 ### src
 PATH_SRC = PATH_ROOT / 'src'
+
+## loader
+PATH_DEFAULT_LOADER = PATH_APPDATA_APP_DIR / 'loader.txt'
 
 ## data
 PATH_DATA_SRC = PATH_SRC / 'data'
@@ -60,10 +64,8 @@ PATH_APP_ICON = PATH_APP_ICONS_SRC / 'meowtool-x-icon.png'
 PATH_APP_LABEL = PATH_APP_ICONS_SRC / 'meowtool-x-label.png'
 
 ## themes
-PATH_THEMES_SRC = PATH_SRC / 'theme' / 'themes'
-PATH_DEFAULT_THEME = PATH_THEMES_SRC / 'pink.json5'
-
-PATH_THEMES_USER = PATH_APPDATA_APP_DIR / 'Themes'
+PATH_THEMES = PATH_APPDATA_APP_DIR / 'Themes'
+PATH_DEFAULT_THEME = PATH_THEMES / 'default.json5'
 
 ## translations
 PATH_TRANSLATIONS_SRC = PATH_SRC / 'translation' / 'translations'
@@ -71,10 +73,9 @@ PATH_DEFAULT_TRANSLATION = PATH_TRANSLATIONS_SRC / 'en_US.axis'
 
 PATH_TRANSLATIONS_USER = PATH_APPDATA_APP_DIR / 'Translations'
 
-### other user data
+## configs
 PATH_CONFIGS = PATH_APPDATA_APP_DIR / 'Configs'
 PATH_DEFAULT_CONFIG = PATH_CONFIGS / 'default.txt'
-PATH_DEFAULT_CONFIG_LOADER = PATH_CONFIGS / '.loader.txt'
 
 ### work data
 PATH_LOGS = PATH_APPDATA_APP_DIR / 'Logs'

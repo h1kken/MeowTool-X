@@ -47,9 +47,9 @@ class SettingsProxyPage(BasePage):
         
         self._main_layout = create_layout(LayoutType.VBOX, self)
         
-        self._main_content = MTWidget(obj_name=(self._OBJECT_NAME, 'Tabs'))
-        self._tabs_layout = create_layout(LayoutType.HBOX, self._main_content)
-        self._main_layout.addWidget(self._main_content)
+        self._tabs_widget = MTWidget(obj_name=(obj_name, 'Tabs'))
+        self._tabs_layout = create_layout(LayoutType.HBOX, self._tabs_widget)
+        self._main_layout.addWidget(self._tabs_widget)
 
         self._page_controller = PageController(self._main_layout, parent_page_controller=self._parent_page_controller)
 
@@ -73,7 +73,7 @@ class SettingsProxyPage(BasePage):
                     obj_name=(obj_name,),
                 )
 
-            button = MTButton(tr_key=spec.tr_key, obj_name=(self._OBJECT_NAME, spec.obj_name, 'Tab'))
+            button = MTButton(tr_key=spec.tr_key, obj_name=(obj_name, spec.obj_name, 'Tab'))
             self._tabs_layout.addWidget(button)
             
             self._page_controller.add_page(

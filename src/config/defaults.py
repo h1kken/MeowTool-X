@@ -6,29 +6,29 @@ from src.config.utils import normalize_config
 
 
 DEFAULT_CONFIG_LOADER: t.Final[ConfigMap] = {
-  "Loader": {
-    "Config On Load": "default",
-    "Developer Mode": False
+  'Loader': {
+    'Config On Load': 'default',
+    'Developer Mode': False
   },
-  "Saver": {
-    "Auto Save Config Changes": False
+  'Saver': {
+    'Auto Save Config Changes': False
   },
-  "Updater": {
-    "Check Updates": True,
-    "Save Old Versions": True
+  'Updater': {
+    'Check Updates': True,
+    'Save Old Versions': True
   },
-  "Misc": {
-    "Debugger": {
-      "Debug": False,
-      "Info": False,
-      "Warning": False,
-      "Error": False,
-      "Exception": False,
+  'Misc': {
+    'Debugger': {
+      'Debug': False,
+      'Info': False,
+      'Warning': False,
+      'Error': False,
+      'Exception': False,
     },
   },
-  "MeowTool": {
-    "First Launch": True,
-    "Username": ""
+  'MeowTool': {
+    'First Launch': True,
+    'Username': ''
   },
 }
 
@@ -38,144 +38,141 @@ def default_config_loader() -> ConfigMap:
 
 
 DEFAULT_CONFIG: t.Final[ConfigMap] = {
-  "General": {
-    "Language": PATH_DEFAULT_TRANSLATION.stem,
-    "Theme": PATH_DEFAULT_THEME.stem,
+  'General': {
+    'Language': PATH_DEFAULT_TRANSLATION.stem,
+    'Theme': PATH_DEFAULT_THEME.stem,
   },
-  "Outputs": {
-    "Telegram Bot": {
-      "Token": "",
-      "Chat ID": "",
-      "Send Results To Telegram Bot": False,
+  'Outputs': {
+    'Telegram Bot': {
+      'Token': '',
+      'Chat ID': '',
+      'Send Results To Telegram Bot': False,
     },
-    "Discord Webhook": {
-      "URL": "",
-      "Send Results To Discord Webhook": False
+    'Discord Webhook': {
+      'URL': '',
+      'Send Results To Discord Webhook': False
     },
-    "Discord Rich Presence": False
   },
-  "Proxy": {
-    "Checker": {
-      "Main Threads": (50, 1, 1000),
-      "Maximum Wait Response": (10, 1, 60),
-      "Save Good In Custom File": False,
-      "Save Without Protocol": False,
+  'Proxy': {
+    'Checker': {
+      'Main Threads': (50, 1, 1000),
+      'Maximum Wait Response': (10, 1, 60),
+      'Save Good In Custom File': False,
+      'Save Without Protocol': False,
     }
   },
-  "Roblox": {
-    "General": {
-      "Add Symbols Between Warning And Cookie": False,
-      "Symbols Between Warning And Cookie": "CAEaAhAB.",
-      "Proxy": {
-        "Use Proxy": False,
-        "Auto Protocol If Not Specified": "http"
+  'Roblox': {
+    'General': {
+      'Proxy': {
+        'Use Proxy': False,
+        'Auto Protocol If Not Specified': 'http'
       },
     },
-    "Cookie Sorter": {"Output Filename": "output"},
-    "Cookie Checker": {
-      "Firstly Check For Valid": False,
-      "Valid Threads": (50, 1, 1000),
-      "Main Threads": (25, 1, 100),
-      "Output Filename Like Input": False,
-      "Output Filename": "output",
-      "Move Cookie To The Next Line": False,
-      "Main": {
-        "Link": {"Enabled": False},
-        "ID": {"Enabled": False},
-        "Name": {"Enabled": False},
-        "Display Name": {"Enabled": False},
-        "Country Registration": {"Enabled": False},
-        "Registration Date (DMY)": {"Enabled": False},
-        "Registration Date (In Days)": {"Enabled": False},
-        "Robux": {"Enabled": False},
-        "Billing": {"Enabled": False},
-        "Pending": {"Enabled": False},
-        "Donate (1 Period)": {"Enabled": False},
-        "Donate (All Time)": {
-          "Enabled": False,
-          "Max Page": -1
+    'Cookie Sorter': {'Output Filename': 'output'},
+    'Cookie Checker': {
+      'Firstly Check For Valid': False,
+      'Valid Threads': (50, 1, 1000),
+      'Main Threads': (25, 1, 100),
+      'Output Filename Like Input': False,
+      'Output Filename': 'output',
+      'Move Cookie To The Next Line': False,
+      'Main': {
+        'Link': {'Enabled': False},
+        'ID': {'Enabled': False},
+        'Name': {'Enabled': False},
+        'Display Name': {'Enabled': False},
+        'Country Registration': {'Enabled': False},
+        'Registration Date (DMY)': {'Enabled': False},
+        'Registration Date (In Days)': {'Enabled': False},
+        'Robux': {'Enabled': False},
+        'Billing': {'Enabled': False},
+        'Pending': {'Enabled': False},
+        'Donate (1 Period)': {'Enabled': False},
+        'Donate (All Time)': {
+          'Enabled': False,
+          'Max Page': -1
         },
-        "Rap": {
-          "Enabled": False,
-          "Max Page": -1
+        'Rap': {
+          'Enabled': False,
+          'Max Page': -1
         },
-        "Card": {"Enabled": False},
-        "Premium": {"Enabled": False},
-        "Gamepasses": {
-          "Enabled": False,
-          "Max Page": -1,
-          "Output Mode": "Place (Names)",
+        'Card': {'Enabled': False},
+        'Premium': {'Enabled': False},
+        'Gamepasses': {
+          'Enabled': False,
+          'Max Page': -1,
+          'Output Mode': 'Place (Names)',
         },
-        "Custom Gamepasses": {
-          "Enabled": False,
-          "Max Page": -1,
-          "Output Mode": "Name (Number)",
-          "Items": {
-            "Fly A Pet Potion": {"Enabled": False},
-            "Ride-A-Pet Potion": {"Enabled": False},
+        'Custom Gamepasses': {
+          'Enabled': False,
+          'Max Page': -1,
+          'Output Mode': 'Name (Number)',
+          'Items': {
+            'Fly A Pet Potion': {'Enabled': False},
+            'Ride-A-Pet Potion': {'Enabled': False},
           },
         },
-        "Badges": {
-          "Enabled": False,
-          "Max Page": -1,
-          "Output Mode": "Place (Names)",
+        'Badges': {
+          'Enabled': False,
+          'Max Page': -1,
+          'Output Mode': 'Place (Names)',
         },
-        "Favorite Places": {
-          "Enabled": False,
-          "Max Page": -1,
-          "Output Mode": "Names",
-          "Items": {},
+        'Favorite Places': {
+          'Enabled': False,
+          'Max Page': -1,
+          'Output Mode': 'Names',
+          'Items': {},
         },
-        "Bundles": {
-          "Enabled": False,
-          "Max Page": -1,
-          "Output Mode": "Names",
-          "Items": {},
+        'Bundles': {
+          'Enabled': False,
+          'Max Page': -1,
+          'Output Mode': 'Names',
+          'Items': {},
         },
-        "Inventory Privacy": {"Enabled": False},
-        "Trade Privacy": {"Enabled": False},
-        "Can Trade": {"Enabled": False},
-        "Sessions": {
-          "Enabled": False,
-          "Max Page": 1
+        'Inventory Privacy': {'Enabled': False},
+        'Trade Privacy': {'Enabled': False},
+        'Can Trade': {'Enabled': False},
+        'Sessions': {
+          'Enabled': False,
+          'Max Page': 1
         },
-        "Email": {"Enabled": False},
-        "Phone": {"Enabled": False},
-        "2FA": {"Enabled": False},
-        "Pin": {"Enabled": False},
-        "Groups Owned": {
-          "Enabled": False,
-          "Output Mode": "Names"
+        'Email': {'Enabled': False},
+        'Phone': {'Enabled': False},
+        '2FA': {'Enabled': False},
+        'Pin': {'Enabled': False},
+        'Groups Owned': {
+          'Enabled': False,
+          'Output Mode': 'Names'
         },
-        "Groups Members": {"Enabled": False},
-        "Groups Pending": {"Enabled": False},
-        "Groups Funds": {"Enabled": False},
-        "Age Group": {"Enabled": False},
-        "Verified Age": {"Enabled": False},
-        "Verified Voice": {"Enabled": False},
-        "Friends": {"Enabled": False},
-        "Followers": {"Enabled": False},
-        "Followings": {"Enabled": False},
-        "Roblox Badges": {
-          "Enabled": False,
-          "Output Mode": "Names"
+        'Groups Members': {'Enabled': False},
+        'Groups Pending': {'Enabled': False},
+        'Groups Funds': {'Enabled': False},
+        'Age Group': {'Enabled': False},
+        'Verified Age': {'Enabled': False},
+        'Verified Voice': {'Enabled': False},
+        'Friends': {'Enabled': False},
+        'Followers': {'Enabled': False},
+        'Followings': {'Enabled': False},
+        'Roblox Badges': {
+          'Enabled': False,
+          'Output Mode': 'Names'
         },
       },
-      "Sorting": {
-        "Enabled": False,
-        "Categories": {}
+      'Sorting': {
+        'Enabled': False,
+        'Categories': {}
       },
-      "Places": {},
+      'Places': {},
     },
-    "Cookie Refresher": {
-      "Break Old Cookies": False,
-      "Cookie Save Mode": [1]
+    'Cookie Refresher': {
+      'Break Old Cookies': False,
+      'Cookie Save Mode': [1]
     },
-    "Transaction Analysis": {
-      "Firstly Check For Valid": False,
-      "Valid Threads": (50, 1, 1000),
-      "Main Threads": (25, 1, 250),
-      "Indent By The Longest Name": False,
+    'Transaction Analysis': {
+      'Firstly Check For Valid': False,
+      'Valid Threads': (50, 1, 1000),
+      'Main Threads': (25, 1, 250),
+      'Indent By The Longest Name': False,
     },
   },
 }
@@ -183,100 +180,100 @@ DEFAULT_CONFIG: t.Final[ConfigMap] = {
 
 # Generating [Roblox > Cookie Checker > Sorting > Categories]
 SORT_KEYS: t.Final[dict[str, SortCategoryKind]] = {
-  "Link": "none",
-  "ID": "text",
-  "Name": "text",
-  "Display Name": "text",
-  "Country Registration": "text",
-  "Registration Date (DMY)": "text",
-  "Registration Date (In Days)": "number",
-  "Robux": "number",
-  "Billing": "number",
-  "Pending": "number",
-  "Donate (1 Year)": "number",
-  "Donate (All Time)": "number",
-  "Rap": "number",
-  "Card": "number",
-  "Premium": "text",
-  "Gamepasses": "number",
-  "Custom Gamepasses": "number",
-  "Badges": "number",
-  "Favorite Places": "number",
-  "Bundles": "number",
-  "Inventory Privacy": "text",
-  "Trade Privacy": "text",
-  "Can Trade": "text",
-  "Sessions": "number",
-  "Email": "text",
-  "Phone": "text",
-  "2FA": "text",
-  "Pin": "text",
-  "Groups Owned": "number",
-  "Groups Members": "number",
-  "Groups Pending": "number",
-  "Groups Funds": "number",
-  "Age Group": "text",
-  "Verified Age": "text",
-  "Verified Voice": "text",
-  "Friends": "number",
-  "Followers": "number",
-  "Followings": "number",
-  "Roblox Badges": "number",
+  'Link': 'none',
+  'ID': 'text',
+  'Name': 'text',
+  'Display Name': 'text',
+  'Country Registration': 'text',
+  'Registration Date (DMY)': 'text',
+  'Registration Date (In Days)': 'number',
+  'Robux': 'number',
+  'Billing': 'number',
+  'Pending': 'number',
+  'Donate (1 Year)': 'number',
+  'Donate (All Time)': 'number',
+  'Rap': 'number',
+  'Card': 'number',
+  'Premium': 'text',
+  'Gamepasses': 'number',
+  'Custom Gamepasses': 'number',
+  'Badges': 'number',
+  'Favorite Places': 'number',
+  'Bundles': 'number',
+  'Inventory Privacy': 'text',
+  'Trade Privacy': 'text',
+  'Can Trade': 'text',
+  'Sessions': 'number',
+  'Email': 'text',
+  'Phone': 'text',
+  '2FA': 'text',
+  'Pin': 'text',
+  'Groups Owned': 'number',
+  'Groups Members': 'number',
+  'Groups Pending': 'number',
+  'Groups Funds': 'number',
+  'Age Group': 'text',
+  'Verified Age': 'text',
+  'Verified Voice': 'text',
+  'Friends': 'number',
+  'Followers': 'number',
+  'Followings': 'number',
+  'Roblox Badges': 'number',
 }
 
-_roblox_config = t.cast(ConfigMap, DEFAULT_CONFIG["Roblox"])
-_cookie_checker_config = t.cast(ConfigMap, _roblox_config["Cookie Checker"])
-_sorting_config = t.cast(ConfigMap, _cookie_checker_config["Sorting"])
-_sorting_categories = t.cast(ConfigMap, _sorting_config["Categories"])
+_roblox_config = t.cast(ConfigMap, DEFAULT_CONFIG['Roblox'])
+_cookie_checker_config = t.cast(ConfigMap, _roblox_config['Cookie Checker'])
+_sorting_config = t.cast(ConfigMap, _cookie_checker_config['Sorting'])
+_sorting_categories = t.cast(ConfigMap, _sorting_config['Categories'])
 
 SORT_KEYS_NAMES: t.Final[tuple[str, ...]] = (
-  "Gamepasses",
-  "Badges",
-  "Custom Gamepasses",
-  "Favorite Places",
-  "Bundles",
-  "Groups Owned",
-  "Roblox Badges",
+  'Gamepasses',
+  'Badges',
+  'Custom Gamepasses',
+  'Favorite Places',
+  'Bundles',
+  'Groups Owned',
+  'Roblox Badges',
 )
 
 SORT_KEYS_PLACES: t.Final[tuple[str, ...]] = (
-  "Gamepasses",
-  "Badges"
+  'Gamepasses',
+  'Badges'
 )
 
 for key_name, key_type in SORT_KEYS.items():
-    if key_type == "text":
+    if key_type == 'text':
         _sorting_categories[key_name] = {
-          "Enabled": False,
-          "Options": {
-            "Yes": True,
-            "No": False
+          'Enabled': False,
+          'Options': {
+            'Yes': True,
+            'No': False
           },
         }
     
-    if key_type == "number":
+    if key_type == 'number':
         _sorting_categories[key_name] = {
-          "Enabled": False,
-          "Options": {
-            "Zero": False,
-            "From": {
-              "Enabled": False,
-              "Items": {}
+          'Enabled': False,
+          'Options': {
+            'Zero': False,
+            'From': {
+              'Enabled': False,
+              'Items': {}
             },
-            "From To": {
-              "Enabled": False,
-              "Items": {}
+            'From To': {
+              'Enabled': False,
+              'Items': {}
             },
           },
         }
 
 for key_name in SORT_KEYS_NAMES:
     category = t.cast(ConfigMap, _sorting_categories[key_name])
-    category["Names"] = False
+    category['Names'] = False
 
 for key_name in SORT_KEYS_PLACES:
     category = t.cast(ConfigMap, _sorting_categories[key_name])
-    category["Places"] = False
+    category['Places'] = False
 
 
 def default_config() -> ConfigMap:

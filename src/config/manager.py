@@ -54,21 +54,7 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
     @property
     def save_lock(self) -> threading.Lock:
         return self._save_lock
-
-    def create_config(self, name: str) -> None:
-        path = PATH_CONFIGS / f'{name}.txt'
-        if path.exists():
-            return
-
-        FS.ensure_dir(PATH_CONFIGS)
-        try:
-            snapshot = deepcopy(self._data)
-            text = '\n'.join(self.dump_dict(snapshot, self._defaults))
-            path.write_text(text, encoding='utf-8')
-            self.load(name)
-        except OSError as e:
-            logger.exception(f'Can\'t create config \'{name}\'. Error: {e}')
-        
+    
     def load(self, name: str | None = None) -> None:
         if name is None:
             name = str(self.loader.get(CLKey.LOADER_CONFIG_ON_LOAD)).strip()
@@ -88,6 +74,19 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         except (OSError, UnicodeError, ValueError, TypeError) as e:
             logger.exception(f'Can\'t load config \'{name}\'. Error: {e}')
 
+    def create(self, name: str, *, overwrite: bool = False) -> None:
+        path = PATH_CONFIGS / f'{name}.txt'
+        if path.is_file() and not overwrite:
+            return
+
+        FS.ensure_dir(PATH_CONFIGS)
+        try:
+            snapshot = deepcopy(self._data)
+            text = '\n'.join(self.dump_dict(snapshot, self._defaults))
+            path.write_text(text, encoding='utf-8')
+        except OSError as e:
+            logger.exception(f'Can\'t create config \'{name}\'. Error: {e}')
+
     def set(self, key: str, value: object, *, sep: str = '>', force_save: bool = False) -> None:
         super().set(key, value, sep=sep)
         self.valueChanged.emit(key.replace(sep, '>'), value)
@@ -104,19 +103,20 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES) or force_save:
             self.save()
 
-    def rename(self, old_name: str, new_name: str) -> None:
+    def rename(self, old_name: str, new_name: str) -> bool:
         old_path = PATH_CONFIGS / f'{old_name}.txt'
         new_path = PATH_CONFIGS / f'{new_name}.txt'
-        if old_path == new_path:
-            return
-        if old_path.is_file():
-            return
-        if new_path.exists():
-            return
+        if (
+            old_path == new_path
+            or old_path.is_file()
+            or new_path.is_file()
+        ):
+            return False
 
         try:
             old_path.rename(new_path)
             self._path = new_path
+            return True
         except OSError as e:
             logger.exception(f'Can\'t rename config \'{old_name}.txt\' to \'{new_name}.txt\'. Error: {e}')
-            return
+            return False

@@ -7,7 +7,6 @@ from PySide6.QtWidgets import QWidget
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets.common import MTButton, MTLabel
 
 if t.TYPE_CHECKING:
     from src.config import Config
@@ -28,12 +27,6 @@ class RobloxCookieCheckerPage(BasePage):
         self._build_ui()
 
     def _build_ui(self) -> None:
-        obj_name = self.objectName()
+        # obj_name = self.objectName()
         
         self._main_layout = create_layout(LayoutType.VBOX, self)
-        
-        self._label = MTLabel(tr_key='CK_CHCKR', obj_name=(obj_name, 'Title'))
-        self._main_layout.addWidget(self._label)
-        
-        self._button = MTButton(tr_key='CHCK', obj_name=(obj_name, 'Start'))
-        self._main_layout.addWidget(self._button)

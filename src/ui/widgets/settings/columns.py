@@ -40,6 +40,8 @@ class MTColumnsSetting(MTScrollArea):
 
         self._build_ui(tabs=tabs)
         self._connect_signals()
+        
+        self._rebalance_columns()
 
     def _build_ui(
         self,
@@ -48,9 +50,8 @@ class MTColumnsSetting(MTScrollArea):
     ) -> None:
         obj_name = self.objectName()
         
-        self._main_layout = create_layout(LayoutType.HBOX, parent=self._scroll_area_content)
-            
         self._scroll_area_content = MTWidget(obj_name=(obj_name, 'Content'))
+        self._main_layout = create_layout(LayoutType.HBOX, parent=self._scroll_area_content)
         self.setWidget(self._scroll_area_content)
 
         for index in range(self._columns):
@@ -65,8 +66,6 @@ class MTColumnsSetting(MTScrollArea):
         if tabs is not None:
             for tab in tabs:
                 self.add_tab(tab)
-
-        self._rebalance_columns()
 
     def _connect_signals(self) -> None:
         self._rebalance_timer = QTimer(self, singleShot=True, interval=0)
@@ -162,7 +161,7 @@ class MTColumnsSetting(MTScrollArea):
     def _estimated_tab_height(self, tab: QWidget) -> int:
         if isinstance(tab, MTCollapsibleContainer):
             try:
-                return max(1, int(tab.effective_height_hint())) # TODO: fix
+                return 1 # TODO: fix # max(1, int(tab.effective_height_hint()))
             except Exception:
                 pass
 

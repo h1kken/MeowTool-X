@@ -10,11 +10,7 @@ from pathlib import Path
 from src.exceptions.json import NotADictionaryError
 from src.app.paths import PATH_APP_ROOT
 from src.utils.logging.decorators import log_action
-from src.utils.filesystem.constants import (
-    FILENAME_SPECIAL_CHARS,
-    START_DIR_PATHS,
-    START_FILE_PATHS,
-)
+from src.utils.filesystem.constants import FILENAME_SPECIAL_CHARS, START_DIR_PATHS, START_FILE_PATHS
 from src.utils.filesystem.types import JsonObject
 from src.utils.logging import logger
 
@@ -22,6 +18,29 @@ TDefault = t.TypeVar('TDefault')
 
 
 class FS:
+    @staticmethod
+    def iter_paths(path: Path, *, file_extension: str) -> list[tuple[str, str]]:
+        names: list[tuple[str, str]] = []
+        for p in path.glob(f'*.{file_extension}'):
+            if not p.is_file():
+                continue
+            if not p.stem:
+                continue
+            names.append((p.stem, p.name))
+        names.sort(key=lambda item: item[0].casefold())
+        return names
+    
+    @staticmethod
+    def normalize_filename(name: str, *, blacklist: cabc.Collection[str] = (), default: str | None = None) -> str | None:
+        name = str(name).strip()
+        if (
+            not name
+            or name.casefold() in blacklist
+            or any(char in name for char in FILENAME_SPECIAL_CHARS)
+        ):
+            return default
+        return name
+    
     @staticmethod
     @log_action('delete folder')
     def delete_folder(path: Path, *, ignore_errors: bool = True) -> None:
@@ -179,15 +198,6 @@ def del_safe(data: cabc.MutableMapping[str, t.Any], key: str, *, sep: str = '>')
     return True
 
 
-def get_files_from_folder(path: Path, *, only_files: bool = True) -> list[str]:
-    if not path.exists():
-        raise FileNotFoundError
-    if not path.is_dir():
-        raise NotADirectoryError
-
-    return [entry.name for entry in path.iterdir() if entry.is_file() or not only_files]
-
-
 def count_lines_in_file(path: Path) -> int:
     with path.open('rb') as f:
         if f.seek(0, 2) == 0:
@@ -211,15 +221,3 @@ def count_lines_in_file(path: Path) -> int:
                 count += 1
 
     return count
-
-
-def validate_filename(name: str, *, black_list: cabc.Collection[str] = (), default: str | None = None) -> str | None:
-    name = str(name).strip()
-    if (
-        not name
-        or name in black_list
-        or any(char in name for char in FILENAME_SPECIAL_CHARS)
-    ):
-        return default
-    return name
-

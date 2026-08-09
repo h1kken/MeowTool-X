@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QWidget, QLabel
 
@@ -19,6 +20,8 @@ class MTImage(QLabel):
     ) -> None:
         super().__init__(parent)
         self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
         if fixed_height is not None:
             self.setFixedHeight(fixed_height)

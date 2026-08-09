@@ -3,8 +3,8 @@ from __future__ import annotations
 import typing as t
 
 
-def as_dict(value: object) -> dict[str, t.Any] | None:
-    return t.cast(dict[str, t.Any], value) if isinstance(value, dict) else None
+def as_dict(value: object) -> dict[str, t.Any]:
+    return t.cast(dict[str, t.Any], value) if isinstance(value, dict) else {}
 
 
 def as_object_dict(value: object) -> dict[object, object] | None:

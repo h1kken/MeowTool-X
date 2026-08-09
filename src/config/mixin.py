@@ -88,12 +88,12 @@ class SaveConfigMixin:
             temp_file_path: Path | None = None
             try:
                 with tempfile.NamedTemporaryFile(
-                    mode='w',
-                    encoding='utf-8',
-                    delete=False,
                     dir=self.path.parent,
                     prefix=f'{self.path.stem}.',
                     suffix='.tmp',
+                    mode='w',
+                    encoding='utf-8',
+                    delete=False,
                 ) as temp_file:
                     temp_file.write(text)
                     temp_file.flush()
@@ -107,7 +107,7 @@ class SaveConfigMixin:
                     except PermissionError:
                         tries = attempt + 1
                         logger.warning(f'Can\'t replace {temp_file_path} with {self.path}. Try: #{tries}')
-                        if attempt == CONFIG_SAVE_RETRY_COUNT - 1:
+                        if attempt >= CONFIG_SAVE_RETRY_COUNT - 1:
                             raise
                         time.sleep(CONFIG_SAVE_RETRY_DELAY_SEC * tries)
             finally:

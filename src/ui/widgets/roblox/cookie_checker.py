@@ -4,7 +4,7 @@ import typing as t
 
 from copy import deepcopy
 
-from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QMouseEvent, QResizeEvent
 from PySide6.QtWidgets import QWidget
 
@@ -171,12 +171,6 @@ class _SortActionButton(MTButton): # TODO: remove this later
         obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent, checkable=True, obj_name=obj_name)
-        self.set_icon(
-            source=self._DEFAULT_ICON_SOURCE,
-            align='left',
-            size=QSize(14, 14),
-            spacing=0.0,
-        )
 
     def nextCheckState(self) -> None:
         # Left click should open the popup, not mutate the persisted enabled state.
@@ -549,7 +543,7 @@ class MTCookieCheckerFieldSetting(MTSwitchSetting):
         self._sort_button: _SortActionButton | None = None
 
         if self._sort_kind != 'none':
-            self._sort_button = _SortActionButton(self, obj_name=f'{obj_name}_Sort_Button')
+            self._sort_button = _SortActionButton(self, obj_name=(*obj_name, 'Sort'))
             switch_index = self._main_layout.indexOf(self._switch)
             self._main_layout.insertWidget(max(0, switch_index), self._sort_button)
 
@@ -557,7 +551,7 @@ class MTCookieCheckerFieldSetting(MTSwitchSetting):
                 self.window(),
                 config=self._config,
                 tr_key=tr_key,
-                obj_name=f'{self.objectName()}_Sort_Popup',
+                obj_name=(self.objectName(), 'Sort'),
                 field_name=field_name,
                 sort_kind=self._sort_kind,
             )
