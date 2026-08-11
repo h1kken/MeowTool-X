@@ -13,8 +13,8 @@ from PySide6.QtGui import QColor, QCursor, QMouseEvent, QPalette, QWheelEvent
 from PySide6.QtWidgets import QApplication, QAbstractButton, QAbstractScrollArea, QAbstractSlider, QLayout, QSlider, QWidget
 
 from src.ui.theme.files import LoadedTheme
-from src.ui.theme.colors import normalize_color, to_qcolor
-from src.ui.theme.parser import normalize_theme_payload
+from src.utils.qt import normalize_color, to_qcolor
+from src.ui.theme.parsers import normalize_theme_payload
 from src.ui.theme.targets import resolve_target_widgets
 from src.ui.widgets.common import MTSwitch, MTComboBox, MTSlider, MTCollapsibleContainer
 from src.utils.conversion import as_dict, coerce_float

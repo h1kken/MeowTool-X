@@ -10,7 +10,7 @@ from PySide6.QtCore import QFileSystemWatcher, QSignalBlocker, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QWidget, QStackedWidget
 
-from src.app.paths import PATH_CONFIGS, PATH_DEFAULT_CONFIG
+from src.app.paths import PATH_DEFAULT_CONFIG, PATH_CONFIGS_SRC, PATH_CONFIGS_USER
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -173,7 +173,7 @@ class SettingsConfigPage(BasePage):
         self._refresh_timer.timeout.connect(self._refresh_configs)
         
         self._watcher = QFileSystemWatcher(self)
-        self._watcher.addPath(str(PATH_CONFIGS))
+        self._watcher.addPath(str(PATH_CONFIGS_USER))
         self._watcher.directoryChanged.connect(self._on_configs_dir_changed)
 
         self._configs_list_widget.currentItemChanged.connect(self._on_selection_changed)
@@ -229,7 +229,7 @@ class SettingsConfigPage(BasePage):
         if selected is None:
             return
         
-        if selected != self._config.name:
+        if selected != self._config.path.stem:
             self._config.create(selected, overwrite=True)
         else:
             self._config.save()
@@ -296,7 +296,7 @@ class SettingsConfigPage(BasePage):
         if selected == self._autoload_name:
             self._set_autoload_name(PATH_DEFAULT_CONFIG.stem)
 
-        FS.delete_file(PATH_CONFIGS / f'{selected}.txt')
+        FS.delete_file(PATH_CONFIGS_USER / f'{selected}.txt')
         self._cancel_delete()
         self._refresh_configs()
 
@@ -306,7 +306,7 @@ class SettingsConfigPage(BasePage):
         if selected is None:
             return
         
-        path = PATH_CONFIGS / f'{selected}.txt'
+        path = PATH_CONFIGS_USER / f'{selected}.txt'
         if not path.is_file():
             self._refresh_configs()
             return
@@ -326,7 +326,7 @@ class SettingsConfigPage(BasePage):
         self._autoload_name = name
 
     def _refresh_configs(self) -> None:
-        names = FS.iter_paths(PATH_CONFIGS, file_extension='txt')
+        names = FS.iter_paths(PATH_CONFIGS_USER, PATH_CONFIGS_SRC, file_extension='txt')
         
         with QSignalBlocker(self._configs_list_widget):
             self._configs_list_widget.setItems(names)
@@ -338,7 +338,7 @@ class SettingsConfigPage(BasePage):
         selected = self._selected_name
 
         self._selected_value.setText(selected or '-')
-        self._loaded_value.setText(self._config.name)
+        self._loaded_value.setText(self._config.path.stem)
 
         has_selection = bool(self._selected_name)
         self._autoload_row.switch.setEnabled(has_selection and not (selected == autoload == PATH_DEFAULT_CONFIG.stem))

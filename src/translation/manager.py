@@ -51,7 +51,7 @@ class TranslationManager(QObject):
             if not translations:
                 logger.warning('Translation file is empty. Using keys...')
         except (OSError, UnicodeError, ValueError, TypeError) as e:
-            logger.warning(f'Translations can\'t be loaded. Error: {e}')
+            logger.warning(f'Translations can\'t be loaded: {e}')
             return
 
         self._path = path

@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 
 from src.utils.logging import logger
-from src.app.paths import PATH_CONFIGS
+from src.app.paths import PATH_CONFIGS_USER
 from src.config.constants import CONFIG_INDENT, CONFIG_MISSING_DEFAULT, CONFIG_SAVE_RETRY_COUNT, CONFIG_SAVE_RETRY_DELAY_SEC
 from src.config.types import ConfigMap, ConfigMixinHost, ConfigValue
 from src.config.utils import convert_value
@@ -81,7 +81,7 @@ class SaveConfigMixin:
         return new_data
 
     def save(self: ConfigMixinHost) -> None:
-        FS.ensure_dir(PATH_CONFIGS)
+        FS.ensure_dir(PATH_CONFIGS_USER)
         text = '\n'.join(self.dump_dict(self.data, self.defaults))
 
         with self.save_lock:

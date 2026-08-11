@@ -298,7 +298,6 @@ class _SortListEditor(MTWidget):
         self._main_layout.addWidget(self._entries_widget)
 
         self._add_button = MTButton(obj_name=(obj_name, 'Add'))
-        # self._add_button.set_icon()
         self._main_layout.addWidget(self._add_button)
 
     def _connect_signals(self) -> None:

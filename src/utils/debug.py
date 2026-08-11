@@ -65,46 +65,21 @@ def _count_object_tree_nodes(obj: QObject) -> int:
     return total
 
 
-def _dump_object_tree_recursive(
-    obj: QObject,
-    *,
-    indent: int,
-    total_nodes: int,
-    state: dict[str, int],
-    progress_callback: t.Callable[[int, int, QObject], None] | None = None,
-) -> None:
-    state['visited'] += 1
-    if progress_callback is not None:
-        progress_callback(state['visited'], total_nodes, obj)
+def _dump_object_tree_recursive(obj: QObject, *, indent: int) -> None:
     prefix = '  ' * indent
-    obj_name = obj.objectName() or '<no name>'
-    logger.debug(prefix + f'{obj.__class__.__name__}: {obj_name}')
+    logger.debug(f'{prefix}{obj.__class__.__name__}: {obj.objectName()}')
 
     for name, value in _iter_custom_properties(obj):
-        logger.debug(prefix + f'  {name}={value}')
+        logger.debug(f'{prefix}  {name}={value}')
 
     for child in obj.children():
-        _dump_object_tree_recursive(
-            child,
-            indent=indent + 1,
-            total_nodes=total_nodes,
-            state=state,
-            progress_callback=progress_callback,
-        )
+        _dump_object_tree_recursive(child, indent=indent + 1)
 
 
 def dump_object_tree(
     obj: QObject,
     indent: int = 0,
-    *,
-    progress_callback: t.Callable[[int, int, QObject], None] | None = None,
 ) -> None:
     total_nodes = _count_object_tree_nodes(obj)
     logger.debug(f'Object tree nodes: {total_nodes}')
-    _dump_object_tree_recursive(
-        obj,
-        indent=indent,
-        total_nodes=total_nodes,
-        state={'visited': 0},
-        progress_callback=progress_callback,
-    )
+    _dump_object_tree_recursive(obj, indent=indent)

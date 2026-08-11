@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QSize, Qt
+from PySide6.QtCore import QEvent, QObject, QPoint, QRect, Qt
 from PySide6.QtGui import QMouseEvent, QResizeEvent
 from PySide6.QtWidgets import QApplication, QWidget
 
-from src.app.paths import PATH_HEADER_ICONS_SRC
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import MTButton, MTPlainLabel, MTWidget
@@ -51,18 +50,13 @@ class MTWindowHeader(MTWidget):
         self._buttons_layout = create_layout(LayoutType.HBOX, self._buttons)
         self._main_layout.addWidget(self._buttons)
 
-        icon_size = QSize(18, 18)
-
         self._minimize_button = MTButton(obj_name=(obj_name, 'Minimize'))
-        self._minimize_button.set_icon(source=str(PATH_HEADER_ICONS_SRC / 'minimize.svg'), size=icon_size)
         self._buttons_layout.addWidget(self._minimize_button)
 
         self._maximize_button = MTButton(obj_name=(obj_name, 'Maximize'))
-        self._maximize_button.set_icon(source=str(PATH_HEADER_ICONS_SRC / 'maximize.svg'), size=icon_size)
         self._buttons_layout.addWidget(self._maximize_button)
 
         self._close_button = MTButton(obj_name=(obj_name, 'Close'))
-        self._close_button.set_icon(source=str(PATH_HEADER_ICONS_SRC / 'close.svg'), size=icon_size)
         self._buttons_layout.addWidget(self._close_button)
 
         self._window.installEventFilter(self)
@@ -147,7 +141,6 @@ class MTWindowHeader(MTWidget):
 
     def sync_window_meta(self) -> None:
         self._title_label.setText(self._window.windowTitle())
-        self._maximize_button.set_icon(source=str(PATH_HEADER_ICONS_SRC / f'{'restore' if self._window.isMaximized() else 'maximize'}.svg'), size=QSize(18, 18))
 
     def begin_resize(self, edges: Qt.Edge, global_pos: QPoint) -> None:
         if self._window.isMaximized() or self._window.isFullScreen():

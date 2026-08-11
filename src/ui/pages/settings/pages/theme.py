@@ -11,7 +11,7 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QWidget
 
 import src.app.context as ctx
-from src.app.paths import PATH_DEFAULT_THEME, PATH_THEMES
+from src.app.paths import PATH_DEFAULT_THEME, PATH_THEMES_SRC, PATH_THEMES_USER
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -23,7 +23,6 @@ from src.utils.filesystem import FS
 
 if t.TYPE_CHECKING:
     from src.config import Config
-    from src.ui.theme.manager import ThemeManager
     from src.ui.widgets.common.list import MTListItem
 
 
@@ -35,11 +34,9 @@ class SettingsThemePage(BasePage):
         parent: QWidget | None = None,
         *,
         config: Config,
-        theme: ThemeManager,
         obj_name: tuple[str, ...] = (),
     ):
         super().__init__(parent, config=config, obj_name=obj_name)
-        self._theme = theme
         
         self._autoload_name = str(self._config.get(CKey.GENERAL_THEME)).strip()
         self._selected_name = self._autoload_name
@@ -47,7 +44,7 @@ class SettingsThemePage(BasePage):
         self._build_ui()
         self._connect_signals()
 
-        self._refresh_themes(preferred=self._loaded_name)
+        self._refresh_themes()
 
     def _build_ui(self) -> None:
         obj_name = self.objectName()
@@ -166,7 +163,7 @@ class SettingsThemePage(BasePage):
         self._refresh_timer.timeout.connect(self._refresh_themes)
         
         self._watcher = QFileSystemWatcher(self)
-        self._watcher.addPath(str(PATH_THEMES))
+        self._watcher.addPath(str(PATH_THEMES_USER))
         self._watcher.directoryChanged.connect(self._on_themes_dir_changed)
 
         self._themes_list_widget.currentItemChanged.connect(self._on_selection_changed)
@@ -280,13 +277,13 @@ class SettingsThemePage(BasePage):
         if self._autoload_name == selected:
             self._set_autoload_name(PATH_DEFAULT_THEME.stem)
 
-        FS.delete_file(PATH_THEMES / f'{selected}.txt')
+        FS.delete_file(PATH_THEMES_USER / f'{selected}.txt')
         self._cancel_delete()
         self._refresh_themes()
 
     # open location
     def _open_location(self) -> None:
-        path = PATH_THEMES / f'{self._selected_name}.txt'
+        path = PATH_THEMES_USER / f'{self._selected_name}.txt'
         if not path.is_file():
             self._refresh_themes()
             return
@@ -302,11 +299,11 @@ class SettingsThemePage(BasePage):
         if normalized == self._autoload_name:
             return
         
-        self._config.loader.set(CKey.GENERAL_THEME, normalized)
+        self._config.set(CKey.GENERAL_THEME, normalized)
         self._autoload_name = normalized
 
-    def _refresh_themes(self, *, preferred: str | None = None) -> None: # TODO
-        names = FS.iter_paths(PATH_THEMES, file_extension='txt')
+    def _refresh_themes(self) -> None:
+        names = FS.iter_paths(PATH_THEMES_USER, PATH_THEMES_SRC, file_extension='txt')
         
         if self._selected_name not in {name for name, _ in names}:
             # self._config.load()
@@ -323,7 +320,7 @@ class SettingsThemePage(BasePage):
         selected = self._selected_name
 
         self._selected_value.setText(selected)
-        self._loaded_value.setText(self._config.name)
+        self._loaded_value.setText(ctx.services.theme.path.stem)
 
         has_selection = True
         self._autoload_row.switch.setEnabled(has_selection and not (selected == autoload == PATH_DEFAULT_THEME.stem))
@@ -338,12 +335,3 @@ class SettingsThemePage(BasePage):
 
         with QSignalBlocker(self._autoload_row.switch):
             self._autoload_row.switch.setChecked(has_selection and selected == autoload)
-
-    def _is_user_theme(self, path: Path | None) -> bool:
-        if path is None:
-            return False
-        try:
-            path.resolve().relative_to(PATH_THEMES.resolve())
-            return True
-        except ValueError:
-            return False

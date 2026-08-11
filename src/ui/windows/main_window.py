@@ -6,7 +6,6 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QMainWindow
 
 from src.app.constants import PROGRAM_TITLE
-from src.app.paths import PATH_SIDEBAR_ICONS_SRC
 from src.ui.constants import WINDOW_X, WINDOW_Y
 from src.ui.widgets.common.overlay import MTPopupOverlay
 from src.ui.windows.types import PageSpec
@@ -114,7 +113,6 @@ class MainWindow(QMainWindow):
                 )
                 
             button = MTButton(tr_key=spec.tr_key, obj_name=('Sidebar', spec.obj_name, 'Tab'))
-            button.set_icon(source=str(PATH_SIDEBAR_ICONS_SRC / spec.icon) if spec.icon else None)
             self._sidebar_layout.addWidget(button)
             
             self._page_controller.add_page(

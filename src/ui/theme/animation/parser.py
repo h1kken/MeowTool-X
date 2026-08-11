@@ -12,7 +12,7 @@ from .helpers import (
     parse_loop_count,
 )
 from .types import AnimationSpec
-from src.ui.theme.colors import to_qcolor
+from src.utils.qt import to_qcolor
 
 _NUMBER_VALUE_PATTERN = re.compile(r'^\s*([-+]?\d+(?:[.,]\d+)?)\s*(?:px)?\s*$', re.IGNORECASE)
 

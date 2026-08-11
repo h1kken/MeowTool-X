@@ -52,20 +52,12 @@ PATH_ASSETS_SRC = PATH_SRC / 'assets'
 
 # icons
 PATH_ICONS_SRC = PATH_ASSETS_SRC / 'icons'
-PATH_CONTAINER_ARROW_ICON = PATH_ICONS_SRC / 'container_arrow.svg'
-PATH_FOLDER_ICON = PATH_ICONS_SRC / 'folder.svg'
-
-PATH_HEADER_ICONS_SRC = PATH_ICONS_SRC / 'header'
-
-PATH_SIDEBAR_ICONS_SRC = PATH_ICONS_SRC / 'sidebar-buttons'
-
-PATH_APP_ICONS_SRC = PATH_ICONS_SRC / 'app'
-PATH_APP_ICON = PATH_APP_ICONS_SRC / 'meowtool-x-icon.png'
-PATH_APP_LABEL = PATH_APP_ICONS_SRC / 'meowtool-x-label.png'
 
 ## themes
-PATH_THEMES = PATH_APPDATA_APP_DIR / 'Themes'
-PATH_DEFAULT_THEME = PATH_THEMES / 'default.json5'
+PATH_THEMES_SRC = PATH_SRC / 'ui' / 'theme' / 'themes'
+PATH_DEFAULT_THEME = PATH_THEMES_SRC / 'default.json5'
+
+PATH_THEMES_USER = PATH_APPDATA_APP_DIR / 'Themes'
 
 ## translations
 PATH_TRANSLATIONS_SRC = PATH_SRC / 'translation' / 'translations'
@@ -74,8 +66,10 @@ PATH_DEFAULT_TRANSLATION = PATH_TRANSLATIONS_SRC / 'en_US.axis'
 PATH_TRANSLATIONS_USER = PATH_APPDATA_APP_DIR / 'Translations'
 
 ## configs
-PATH_CONFIGS = PATH_APPDATA_APP_DIR / 'Configs'
-PATH_DEFAULT_CONFIG = PATH_CONFIGS / 'default.txt'
+PATH_CONFIGS_SRC = PATH_SRC / 'config' / 'configs'
+PATH_DEFAULT_CONFIG = PATH_CONFIGS_SRC / 'default.txt'
+
+PATH_CONFIGS_USER = PATH_APPDATA_APP_DIR / 'Configs'
 
 ### work data
 PATH_LOGS = PATH_APPDATA_APP_DIR / 'Logs'

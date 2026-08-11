@@ -56,28 +56,30 @@ def normalize_config(
 
         user_value = user_config[key]
 
-        if isinstance(default_value, dict):
-            if isinstance(user_value, dict):
-                validated[key] = normalize_config(
-                    user_value,
-                    default_value,
-                    keep_unknown=keep_unknown,
-                    recovery_missing=recovery_missing,
-                )
-            else:
-                validated[key] = normalize_config(
-                    {},
-                    default_value,
-                    keep_unknown=keep_unknown,
-                    recovery_missing=recovery_missing,
-                )
-        else:
+        if not isinstance(default_value, dict):
             validated[key] = t.cast(ConfigValue, convert_value(user_value, default_value))
+            continue
+            
+        if isinstance(user_value, dict):
+            validated[key] = normalize_config(
+                user_value,
+                default_value,
+                keep_unknown=keep_unknown,
+                recovery_missing=recovery_missing,
+            )
+        else:
+            validated[key] = normalize_config(
+                {},
+                default_value,
+                keep_unknown=keep_unknown,
+                recovery_missing=recovery_missing,
+            )
 
     if keep_unknown:
         for key, user_value in user_config.items():
             if key in default_config:
                 continue
+            
             if isinstance(user_value, dict):
                 validated[key] = normalize_config(
                     user_value,

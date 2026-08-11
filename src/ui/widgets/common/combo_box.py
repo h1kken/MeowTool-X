@@ -12,8 +12,8 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QFrame, QWidget
 
-from src.app.paths import PATH_SRC
-from src.ui.theme.colors import to_qcolor
+from src.app.paths import PATH_ICONS_SRC
+from src.utils.qt import to_qcolor
 from src.utils.conversion import as_dict, as_object_dict, coerce_number
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -24,9 +24,6 @@ from src.translation.mixins import TranslatableComboBoxMixin
 
 from .button import MTButton
 from .widget import MTWidget
-
-
-_DEFAULT_COMBOBOX_ARROW_SOURCE = str(PATH_SRC / 'assets/icons/MTComboBox/arrow_right.svg')
 
 
 def _draw_aligned_text(
@@ -387,7 +384,7 @@ class MTComboBox(TranslatableComboBoxMixin, MTWidget):
                 'color': QColor('#000'),
                 'size': 18.0,
                 'rotation': 0.0,
-                'source': _DEFAULT_COMBOBOX_ARROW_SOURCE,
+                'source': str(PATH_ICONS_SRC / 'arrow-right-solid.svg'),
             },
             'popup': {
                 'background_color': QColor(Qt.GlobalColor.white),

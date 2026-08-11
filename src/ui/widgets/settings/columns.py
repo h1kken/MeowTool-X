@@ -38,8 +38,10 @@ class MTColumnsSetting(MTScrollArea):
         self._column_heights: list[int] = [0 for _ in range(self._columns)]
         self._column_assignments: tuple[tuple[int, ...], ...] = tuple(tuple() for _ in range(self._columns))
 
+        self._rebalance_timer = QTimer(self, singleShot=True, interval=0)
+        self._rebalance_timer.timeout.connect(self._rebalance_columns)
+        
         self._build_ui(tabs=tabs)
-        self._connect_signals()
         
         self._rebalance_columns()
 
@@ -66,10 +68,6 @@ class MTColumnsSetting(MTScrollArea):
         if tabs is not None:
             for tab in tabs:
                 self.add_tab(tab)
-
-    def _connect_signals(self) -> None:
-        self._rebalance_timer = QTimer(self, singleShot=True, interval=0)
-        self._rebalance_timer.timeout.connect(self._rebalance_columns)
 
     def add_tab(self, tab: QWidget) -> None:
         self._tabs.append(tab)

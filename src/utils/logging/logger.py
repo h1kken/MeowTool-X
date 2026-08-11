@@ -122,7 +122,7 @@ class Logger:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         
         self._logger = loguru.logger
-        self._stream = bool(stream)
+        self._stream = stream
         self._console_level = console_level
         self._file_level = file_level
         self._debug_settings: dict[str, bool] = {}

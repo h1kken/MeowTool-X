@@ -9,7 +9,10 @@ from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import MTCollapsibleContainer
 from src.ui.widgets.settings import MTColumnsSetting, MTSwitchSetting
-from src.config.enums import ConfigKey, ConfigLoaderKey as CLKey
+from src.config.enums import (
+    ConfigKey as CKey,
+    ConfigLoaderKey as CLKey
+)
 
 if t.TYPE_CHECKING:
     from src.config import Config
@@ -82,7 +85,7 @@ class SettingsMiscPage(BasePage):
                 widgets=[
                     MTSwitchSetting(
                         config=self._config.loader,
-                        cfg_key=ConfigKey.OUTPUTS_DISCORD_RICH_PRESENCE,
+                        cfg_key=CKey.MISC_DISCORD_RPC,
                         tr_key='ENBL',
                         obj_name=(*obj_name, 'Enabled'),
                     ),

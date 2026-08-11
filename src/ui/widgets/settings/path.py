@@ -4,10 +4,10 @@ import typing as t
 
 from pathlib import Path
 
-from PySide6.QtCore import QSize, QSignalBlocker
+from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QFileDialog, QWidget
 
-from src.app.paths import PATH_FOLDER_ICON, PATH_ROOT
+from src.app.paths import PATH_ROOT
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import MTButton, MTLabel, MTLineEdit
@@ -58,12 +58,6 @@ class MTPathSetting(MTBaseSetting[str]):
         self._main_layout.addWidget(self._line_edit, stretch=1)
 
         self._browse_button = MTButton(obj_name=(obj_name, 'Browse'))
-        self._browse_button.set_icon(
-            source=str(PATH_FOLDER_ICON),
-            align='center',
-            size=QSize(18, 18),
-            spacing=0.0,
-        )
         self._main_layout.addWidget(self._browse_button)
         
     def _connect_signals(self) -> None:

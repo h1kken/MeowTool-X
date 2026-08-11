@@ -29,10 +29,10 @@ def log_action(action: str, *, re_raise: bool = False) -> t.Callable[[t.Callable
                     try:
                         return func(path, *args, **kwargs)
                     except FileExistsError:
-                        logger.debug(f'Can\'t {action}: {path}. Error: File already exists')
+                        logger.debug(f'Can\'t {action}: {path}: File already exists')
                         raise
                     except Exception as e:
-                        logger.exception(f'Can\'t {action}: {path}. Error: {type(e).__name__}')
+                        logger.exception(f'Can\'t {action}: {path}: {type(e).__name__}')
                         raise
 
             return log_action_wrapper_reraise
@@ -43,11 +43,11 @@ def log_action(action: str, *, re_raise: bool = False) -> t.Callable[[t.Callable
                 try:
                     return func(path, *args, **kwargs)
                 except FileExistsError as e:
-                    logger.debug(f'Can\'t {action}: {path}. Error: File already exists')
+                    logger.debug(f'Can\'t {action}: {path}: File already exists')
                     if re_raise:
                         raise
                 except Exception as e:
-                    logger.exception(f'Can\'t {action}: {path}. Error: {type(e).__name__}')
+                    logger.exception(f'Can\'t {action}: {path}: {type(e).__name__}')
                     if re_raise:
                         raise
         return log_action_wrapper

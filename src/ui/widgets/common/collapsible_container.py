@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import QWidget
 
-from src.app.paths import PATH_CONTAINER_ARROW_ICON
+from src.app.paths import PATH_ICONS_SRC
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.helpers import repolish
@@ -49,7 +49,7 @@ class _CollapsibleHeader(MTWidget):
         
         self._main_layout.addStretch()
         
-        self._icon = MTIcon(obj_name=(obj_name, self._OBJECT_NAME, 'Icon'), source=str(PATH_CONTAINER_ARROW_ICON))
+        self._icon = MTIcon(obj_name=(obj_name, self._OBJECT_NAME, 'Icon'), source=str(PATH_ICONS_SRC / 'arrow-right.svg'))
         self._icon.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._main_layout.addWidget(self._icon)
     

@@ -33,10 +33,6 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         self._load()
 
     @property
-    def name(self) -> str:
-        return self.path.name
-
-    @property
     def path(self) -> Path:
         return self._path
 
@@ -78,7 +74,7 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             with self._path.open('r', encoding='utf-8', errors='ignore') as f:
                 parsed = parse_config(f.read())
 
-            self._data = normalize_config(parsed, self._defaults)
+            self._data = normalize_config(parsed, self._defaults, recovery_missing=True)
             self._apply_logger_settings()
             self.save()
             self.configLoaded.emit()

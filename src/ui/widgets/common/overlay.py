@@ -44,10 +44,7 @@ class MTPopupOverlay(MTWidget):
         self.hide()
 
     def togglePopup(self, popup: MTWidget) -> None:
-        if self._popup is None:
-            self.showPopup(popup)
-        else:
-            self.closePopup()
+        self.showPopup(popup) if self._popup is None else self.closePopup()
 
     def mousePressEvent(self, event: QMouseEvent):
         self.closePopup()

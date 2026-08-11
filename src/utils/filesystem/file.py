@@ -8,7 +8,7 @@ import zipfile
 from pathlib import Path
 
 from src.exceptions.json import NotADictionaryError
-from src.app.paths import PATH_APP_ROOT
+from src.app.paths import PATH_ROOT, PATH_APP_ROOT
 from src.utils.logging.decorators import log_action
 from src.utils.filesystem.constants import FILENAME_SPECIAL_CHARS, START_DIR_PATHS, START_FILE_PATHS
 from src.utils.filesystem.types import JsonObject
@@ -19,14 +19,19 @@ TDefault = t.TypeVar('TDefault')
 
 class FS:
     @staticmethod
-    def iter_paths(path: Path, *, file_extension: str) -> list[tuple[str, str]]:
+    def iter_paths(*paths: Path, file_extension: str) -> list[tuple[str, str]]:
         names: list[tuple[str, str]] = []
-        for p in path.glob(f'*.{file_extension}'):
-            if not p.is_file():
-                continue
-            if not p.stem:
-                continue
-            names.append((p.stem, p.name))
+        
+        for folder_path in paths:
+            for file_path in folder_path.glob(f'*.{file_extension}'):
+                if (
+                    not file_path.is_file()
+                    or not file_path.stem
+                ):
+                    continue
+                
+                names.append((file_path.stem, file_path.name))
+
         names.sort(key=lambda item: item[0].casefold())
         return names
     
@@ -221,3 +226,14 @@ def count_lines_in_file(path: Path) -> int:
                 count += 1
 
     return count
+
+
+def is_user_path(path: Path | None) -> bool:
+    if path is None:
+        return False
+    
+    try:
+        path.resolve().relative_to(PATH_ROOT.resolve())
+        return True
+    except ValueError:
+        return False

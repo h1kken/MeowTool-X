@@ -10,7 +10,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal
 
 from src.utils.logging import logger
-from src.app.paths import PATH_CONFIGS, PATH_DEFAULT_CONFIG
+from src.app.paths import PATH_CONFIGS_USER, PATH_DEFAULT_CONFIG
 from src.config.defaults import default_config
 from src.config.mixin import GetConfigMixin, SaveConfigMixin, SetConfigMixin
 from src.config.types import ConfigMap, ConfigValue
@@ -36,10 +36,6 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         self._save_lock = threading.Lock()
 
     @property
-    def name(self) -> str:
-        return self.path.name
-
-    @property
     def path(self) -> Path:
         return self._path
 
@@ -59,12 +55,12 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         if name is None:
             name = str(self.loader.get(CLKey.LOADER_CONFIG_ON_LOAD)).strip()
         
-        path = PATH_CONFIGS / f'{name}.txt'
+        path = PATH_CONFIGS_USER / f'{name}.txt'
         if not path.is_file():
             return
         
         try:
-            with path.open('r', encoding='utf-8', errors='ignore') as f:
+            with path.open('r', encoding='utf-8') as f:
                 parsed = parse_config(f.read())
 
             self._data = normalize_config(parsed, self._defaults)
@@ -72,20 +68,20 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             self.save()
             self.configLoaded.emit()
         except (OSError, UnicodeError, ValueError, TypeError) as e:
-            logger.exception(f'Can\'t load config \'{name}\'. Error: {e}')
+            logger.exception(f'Can\'t load config \'{name}\': {e}')
 
     def create(self, name: str, *, overwrite: bool = False) -> None:
-        path = PATH_CONFIGS / f'{name}.txt'
+        path = PATH_CONFIGS_USER / f'{name}.txt'
         if path.is_file() and not overwrite:
             return
 
-        FS.ensure_dir(PATH_CONFIGS)
+        FS.ensure_dir(PATH_CONFIGS_USER)
         try:
             snapshot = deepcopy(self._data)
             text = '\n'.join(self.dump_dict(snapshot, self._defaults))
             path.write_text(text, encoding='utf-8')
         except OSError as e:
-            logger.exception(f'Can\'t create config \'{name}\'. Error: {e}')
+            logger.exception(f'Can\'t create config \'{name}\': {e}')
 
     def set(self, key: str, value: object, *, sep: str = '>', force_save: bool = False) -> None:
         super().set(key, value, sep=sep)
@@ -104,8 +100,8 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             self.save()
 
     def rename(self, old_name: str, new_name: str) -> bool:
-        old_path = PATH_CONFIGS / f'{old_name}.txt'
-        new_path = PATH_CONFIGS / f'{new_name}.txt'
+        old_path = PATH_CONFIGS_USER / f'{old_name}.txt'
+        new_path = PATH_CONFIGS_USER / f'{new_name}.txt'
         if (
             old_path == new_path
             or old_path.is_file()
@@ -118,5 +114,5 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             self._path = new_path
             return True
         except OSError as e:
-            logger.exception(f'Can\'t rename config \'{old_name}.txt\' to \'{new_name}.txt\'. Error: {e}')
+            logger.exception(f'Can\'t rename config \'{old_name}.txt\' to \'{new_name}.txt\': {e}')
             return False

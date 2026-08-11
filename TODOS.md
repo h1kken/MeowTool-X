@@ -3,10 +3,6 @@
 1.1. Recreate theme page
 1.2. Create default config/theme if not any found
 
-# 2. Theme manager
-
-2.1. Clean up
-
 # 3. Roblox Cookie Sorter
 
 3.1. Rebuild

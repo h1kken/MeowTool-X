@@ -11,7 +11,7 @@ type ThemeValue = (
 )
 ThemeMap: t.TypeAlias = dict[str, ThemeValue]
 
-QSSHandler = cabc.Callable[[ThemeMap], list[str]]
+QSSParser = cabc.Callable[[ThemeMap], list[str]]
 QTHandler = cabc.Callable[..., None]
 
 
@@ -19,6 +19,6 @@ __all__ = (
     'ThemeMap',
     'ThemeScalar',
     'ThemeValue',
-    'QSSHandler',
+    'QSSParser',
     'QTHandler',
 )

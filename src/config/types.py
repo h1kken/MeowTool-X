@@ -17,9 +17,6 @@ type SortCategoryKind = t.Literal['none', 'text', 'number']
 
 class ConfigMixinHost(t.Protocol):
     @property
-    def name(self) -> str: ...
-    
-    @property
     def path(self) -> Path: ...
     
     @property

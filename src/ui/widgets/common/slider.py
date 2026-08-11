@@ -2,7 +2,7 @@ from PySide6.QtCore import QPoint, QPointF, QRect, QRectF, QSize, Qt
 from PySide6.QtGui import QColor, QMouseEvent, QPaintEvent, QPainter, QPainterPath, QPen, QWheelEvent
 from PySide6.QtWidgets import QSlider, QStyle, QStyleOptionSlider, QWidget
 
-from src.ui.theme.colors import to_qcolor
+from src.utils.qt import to_qcolor
 from src.utils.conversion import coerce_box_sides, coerce_number
 from src.ui.painting import new_widget_painter
 from src.ui.widgets.paint_primitives import parse_pen_style, resolve_fill_brush
