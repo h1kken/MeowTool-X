@@ -47,7 +47,7 @@ class SettingsPage(BasePage):
         parent_page_controller: PageController,
         obj_name: tuple[str, ...] = (),
     ):
-        super().__init__(parent, config=config, obj_name=(*obj_name, self._OBJECT_NAME))
+        super().__init__(parent, config=config, obj_name=(*obj_name, SettingsPage._OBJECT_NAME))
         self._parent_page_controller = parent_page_controller
 
         self._tab_names_by_key: dict[str, str] = {}
@@ -77,15 +77,15 @@ class SettingsPage(BasePage):
                 page = spec.page_class(
                     config=self._config,
                     parent_page_controller=self._page_controller, # type: ignore[call-arg]
-                    obj_name=(obj_name,),
+                    obj_name=(SettingsPage._OBJECT_NAME,),
                 )
             else:
                 page = spec.page_class(
                     config=self._config,
-                    obj_name=(obj_name,),
+                    obj_name=(SettingsPage._OBJECT_NAME,),
                 )
-            
-            button = MTButton(tr_key=spec.tr_key, obj_name=(obj_name, spec.obj_name, 'Tab'))
+                        
+            button = MTButton(tr_key=spec.tr_key, obj_name=(SettingsPage._OBJECT_NAME, spec.obj_name, 'Tab'))
             self._tabs_layout.addWidget(button)
             
             self._page_controller.add_page(

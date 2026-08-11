@@ -26,7 +26,7 @@ if t.TYPE_CHECKING:
 
 
 class SettingsConfigPage(BasePage):
-    _OBJECT_NAME = 'Settings_Config'
+    _OBJECT_NAME = 'Config'
     
     def __init__(
         self,
@@ -35,7 +35,7 @@ class SettingsConfigPage(BasePage):
         config: Config,
         obj_name: tuple[str, ...] = (),
     ) -> None:
-        super().__init__(parent, config=config, obj_name=(*obj_name, self._OBJECT_NAME))
+        super().__init__(parent, config=config, obj_name=(*obj_name, SettingsConfigPage._OBJECT_NAME))
 
         self._auto_save = bool(self._config.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES))
         self._autoload_name = str(self._config.loader.get(CLKey.LOADER_CONFIG_ON_LOAD)).strip()

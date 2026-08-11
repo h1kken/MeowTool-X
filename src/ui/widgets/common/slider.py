@@ -19,7 +19,7 @@ class MTSlider(QSlider):
         obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(Qt.Orientation.Horizontal, parent)
-        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
+        self.setObjectName(build_object_name((*obj_name, MTSlider._OBJECT_NAME)))
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setMouseTracking(True)
         

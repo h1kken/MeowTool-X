@@ -27,7 +27,7 @@ class RobloxCookieSorterPage(BasePage):
         config: Config,
         obj_name: tuple[str, ...] = (),
     ):
-        super().__init__(parent, config=config, obj_name=(*obj_name, self._OBJECT_NAME))
+        super().__init__(parent, config=config, obj_name=(*obj_name, RobloxCookieSorterPage._OBJECT_NAME))
         
         self._thread: QThread | None = None
         self._sorter: RobloxCookieSorter | None = None

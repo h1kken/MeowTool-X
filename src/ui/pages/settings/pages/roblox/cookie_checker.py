@@ -27,7 +27,9 @@ class SettingsRobloxCookieCheckerPage(BasePage):
         config: Config,
         obj_name: tuple[str, ...] = (),
     ):
-        super().__init__(parent, config=config, obj_name=(*obj_name, self._OBJECT_NAME))
+        super().__init__(parent, config=config, obj_name=(*obj_name, SettingsRobloxCookieCheckerPage._OBJECT_NAME))
+
+        self._main_field_switches: list[MTCookieCheckerFieldSetting] = []
 
         self._build_ui()
 
@@ -35,8 +37,6 @@ class SettingsRobloxCookieCheckerPage(BasePage):
         obj_name = self.objectName()
         
         self._main_layout = create_layout(LayoutType.VBOX, self)
-        
-        self._main_field_switches: list[MTCookieCheckerFieldSetting] = []
 
         self._columns_widget = MTColumnsSetting(obj_name=(obj_name,), tabs=self._create_settings())
         self._main_layout.addWidget(self._columns_widget)
@@ -46,19 +46,19 @@ class SettingsRobloxCookieCheckerPage(BasePage):
         return [
             MTCollapsibleContainer(
                 tr_key='GNRL',
-                obj_name=(*obj_name, 'Main'),
+                obj_name=(obj_name, 'Main'),
                 widgets=[
                     MTSwitchSetting(
                         config=self._config,
                         cfg_key='Roblox>Cookie Checker>Firstly Check For Valid',
                         tr_key='FRST_CHCK_FR_VLD',
-                        obj_name=(*obj_name, 'Firstly_Check_For_Valid'),
+                        obj_name=(obj_name, 'Firstly_Check_For_Valid'),
                     ),
                     MTSliderSetting(
                         config=self._config,
                         cfg_key='Roblox>Cookie Checker>Valid Threads',
                         tr_key='VLD_THRDS',
-                        obj_name=(*obj_name, 'Valid_Threads'),
+                        obj_name=(obj_name, 'Valid_Threads'),
                         min_value=1,
                         max_value=1000,
                     ),
@@ -66,7 +66,7 @@ class SettingsRobloxCookieCheckerPage(BasePage):
                         config=self._config,
                         cfg_key='Roblox>Cookie Checker>Main Threads',
                         tr_key='MAIN_THRDS',
-                        obj_name=(*obj_name, 'Main_Threads'),
+                        obj_name=(obj_name, 'Main_Threads'),
                         min_value=1,
                         max_value=250,
                     ),
@@ -74,25 +74,25 @@ class SettingsRobloxCookieCheckerPage(BasePage):
                         config=self._config,
                         cfg_key='Roblox>Cookie Checker>Output Filename Like Input',
                         tr_key='OTPT_FLNM_LK_INPT',
-                        obj_name=(*obj_name, 'Output_Filename_Like_Input'),
+                        obj_name=(obj_name, 'Output_Filename_Like_Input'),
                     ),
                     MTLineEditSetting(
                         config=self._config,
                         cfg_key='Roblox>Cookie Checker>Output Filename',
                         tr_key='OTPT_FLNM',
-                        obj_name=(*obj_name, 'Output_Filename'),
+                        obj_name=(obj_name, 'Output_Filename'),
                     ),
                     MTSwitchSetting(
                         config=self._config,
                         cfg_key='Roblox>Cookie Checker>Move Cookie To The Next Line',
                         tr_key='MV_C_TO_THE_NXT_LN',
-                        obj_name=(*obj_name, 'Move_Cookie_To_The_Next_Line'),
+                        obj_name=(obj_name, 'Move_Cookie_To_The_Next_Line'),
                     ),
                 ],
             ),
             MTCollapsibleContainer(
                 tr_key='CHCKS',
-                obj_name=(*obj_name, 'Checks'),
+                obj_name=(obj_name, 'Checks'),
                 widgets=self._build_main_fields_widgets(),
             ),
         ]
@@ -103,7 +103,7 @@ class SettingsRobloxCookieCheckerPage(BasePage):
         widgets: list[QWidget] = [
             MTButton(
                 tr_key='ENBL_ALL_DSBL_ALL',
-                obj_name=(obj_name, 'Change_All'),
+                obj_name=(obj_name, 'Checks', 'Change_All'),
                 action=self._change_main_fields_state,
             )
         ]
@@ -115,7 +115,7 @@ class SettingsRobloxCookieCheckerPage(BasePage):
                 config=self._config,
                 cfg_key=f'Roblox>Cookie Checker>Main>{field}>Enabled',
                 tr_key=f'FLD_{normalized_field_name.upper()}',
-                obj_name=(obj_name, normalized_field_name),
+                obj_name=(obj_name, 'Checks', normalized_field_name),
                 field_name=field,
             )
             self._main_field_switches.append(switch)

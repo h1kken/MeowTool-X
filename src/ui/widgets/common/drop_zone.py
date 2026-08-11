@@ -27,7 +27,7 @@ class MTDropZone(MTWidget):
         accept_text: bool = True,
         browse_on_click: bool = True,
     ) -> None:
-        super().__init__(parent, obj_name=(*obj_name, self._OBJECT_NAME))
+        super().__init__(parent, obj_name=(*obj_name, MTDropZone._OBJECT_NAME))
 
         self.setAcceptDrops(accept_files or accept_text)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)

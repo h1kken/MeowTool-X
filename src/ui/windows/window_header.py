@@ -16,7 +16,7 @@ class MTWindowHeader(MTWidget):
     _OBJECT_NAME = 'Header'
     
     def __init__(self, window: QWidget) -> None:
-        super().__init__(parent=window, obj_name=(window.objectName(), self._OBJECT_NAME))
+        super().__init__(parent=window, obj_name=(window.objectName(), MTWindowHeader._OBJECT_NAME))
         self.setMouseTracking(True)
         self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
 

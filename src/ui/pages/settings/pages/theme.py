@@ -27,7 +27,7 @@ if t.TYPE_CHECKING:
 
 
 class SettingsThemePage(BasePage):
-    _OBJECT_NAME = 'Settings_Theme'
+    _OBJECT_NAME = 'Theme'
     
     def __init__(
         self,
@@ -36,7 +36,7 @@ class SettingsThemePage(BasePage):
         config: Config,
         obj_name: tuple[str, ...] = (),
     ):
-        super().__init__(parent, config=config, obj_name=obj_name)
+        super().__init__(parent, config=config, obj_name=(*obj_name, SettingsThemePage._OBJECT_NAME))
         
         self._autoload_name = str(self._config.get(CKey.GENERAL_THEME)).strip()
         self._selected_name = self._autoload_name
@@ -58,7 +58,7 @@ class SettingsThemePage(BasePage):
         self._themes_list_widget = MTList(obj_name=(obj_name,))
         self._content_layout.addWidget(self._themes_list_widget)
         
-        self._action_columns_widget = MTWidget(obj_name=(*obj_name, 'Actions_Column'))
+        self._action_columns_widget = MTWidget(obj_name=(obj_name, 'Actions_Column'))
         self._actions_column_layout = create_layout(LayoutType.VBOX, self._action_columns_widget)
         self._content_layout.addWidget(self._action_columns_widget)
         
@@ -68,7 +68,7 @@ class SettingsThemePage(BasePage):
         self._autoload_row = MTSwitchSetting(config=self._config, cfg_key=CKey.GENERAL_THEME, tr_key='ATLD_SLCTD_CFG', obj_name=(obj_name, 'Autoload'))
         self._actions_column_layout.addWidget(self._autoload_row)
         
-        self._load_button = MTButton(tr_key='LD', obj_name=(*obj_name, 'Apply'))
+        self._load_button = MTButton(tr_key='LD', obj_name=(obj_name, 'Apply'))
         self._actions_column_layout.addWidget(self._load_button)
         
         self._create_stack = self._build_inline_editor('Create', tr_key='CRT')
@@ -80,7 +80,7 @@ class SettingsThemePage(BasePage):
         self._delete_stack = self._build_delete_stack()
         self._actions_column_layout.addWidget(self._delete_stack)
 
-        self._open_location_button = MTButton(tr_key='OPN_FL_LCTN', obj_name=(*obj_name, 'Open_File_Location'))
+        self._open_location_button = MTButton(tr_key='OPN_FL_LCTN', obj_name=(obj_name, 'Open_File_Location'))
         self._actions_column_layout.addWidget(self._open_location_button)
 
     def _add_info_row(

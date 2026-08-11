@@ -25,7 +25,7 @@ _PAGES: tuple[PageSpec | None, ...] = (
 
 
 class SettingsProxyPage(BasePage):
-    _OBJECT_NAME = 'Settings_Proxy'
+    _OBJECT_NAME = 'Proxy'
     
     def __init__(
         self,
@@ -35,7 +35,7 @@ class SettingsProxyPage(BasePage):
         parent_page_controller: PageController,
         obj_name: tuple[str, ...] = (),
     ):
-        super().__init__(parent, config=config, obj_name=obj_name)
+        super().__init__(parent, config=config, obj_name=(*obj_name, SettingsProxyPage._OBJECT_NAME))
         self._parent_page_controller = parent_page_controller
 
         self._tab_names_by_key: dict[str, str] = {}

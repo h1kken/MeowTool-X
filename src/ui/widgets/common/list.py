@@ -27,7 +27,7 @@ class MTListItem(MTButton):
         value: str,
         obj_name: tuple[str, ...] = (),
     ) -> None:
-        super().__init__(parent, checkable=True, obj_name=(*obj_name, self._OBJECT_NAME))
+        super().__init__(parent, checkable=True, obj_name=(*obj_name, MTListItem._OBJECT_NAME))
         self.setText(text)
         self.setProperty('name', text)
 
@@ -54,7 +54,7 @@ class MTList(MTScrollArea):
         *,
         obj_name: tuple[str, ...] = (),
     ) -> None:
-        super().__init__(parent, obj_name=(*obj_name, self._OBJECT_NAME))
+        super().__init__(parent, obj_name=(*obj_name, MTList._OBJECT_NAME))
 
         self._items: list[MTListItem] = []
         self._current_item: MTListItem | None = None

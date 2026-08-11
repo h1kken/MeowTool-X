@@ -14,8 +14,8 @@ class MTScrollArea(QScrollArea):
         obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent, widgetResizable=True)
-        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
-        self.viewport().setObjectName(build_object_name((*obj_name, self._OBJECT_NAME, 'Viewport')))
+        self.setObjectName(build_object_name((*obj_name, MTScrollArea._OBJECT_NAME)))
+        self.viewport().setObjectName(build_object_name((*obj_name, MTScrollArea._OBJECT_NAME, 'Viewport')))
         self.viewport().setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)

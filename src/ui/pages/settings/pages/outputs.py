@@ -15,7 +15,7 @@ if t.TYPE_CHECKING:
 
 
 class SettingsOutputsPage(BasePage):
-    _OBJECT_NAME = 'Settings_Outputs'
+    _OBJECT_NAME = 'Outputs'
     
     def __init__(
         self,
@@ -24,7 +24,7 @@ class SettingsOutputsPage(BasePage):
         config: Config,
         obj_name: tuple[str, ...] = (),
     ) -> None:
-        super().__init__(parent, config=config, obj_name=(*obj_name, self._OBJECT_NAME))
+        super().__init__(parent, config=config, obj_name=(*obj_name, SettingsOutputsPage._OBJECT_NAME))
 
         self._build_ui()
 
@@ -33,7 +33,7 @@ class SettingsOutputsPage(BasePage):
         
         self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        self._columns_widget = MTColumnsSetting(obj_name=(obj_name, self._OBJECT_NAME,), tabs=self._create_settings())
+        self._columns_widget = MTColumnsSetting(obj_name=(obj_name,), tabs=self._create_settings())
         self._main_layout.addWidget(self._columns_widget)
 
     def _create_settings(self) -> list[MTCollapsibleContainer]:
@@ -41,43 +41,43 @@ class SettingsOutputsPage(BasePage):
         return [
             MTCollapsibleContainer(
                 tr_key='TG_BOT',
-                obj_name=(self._OBJECT_NAME, 'Telegram_Bot'),
+                obj_name=(SettingsOutputsPage._OBJECT_NAME, 'Telegram_Bot'),
                 widgets=[
                     MTLineEditSetting(
                         config=self._config,
                         cfg_key='Outputs>Telegram Bot>Token',
                         tr_key='TKN',
-                        obj_name=(*obj_name, 'Token')
+                        obj_name=(obj_name, 'Token')
                     ),
                     MTLineEditSetting(
                         config=self._config,
                         cfg_key='Outputs>Telegram Bot>Chat ID',
                         tr_key='CHT_ID',
-                        obj_name=(*obj_name, 'Chat_ID')
+                        obj_name=(obj_name, 'Chat_ID')
                     ),
                     MTSwitchSetting(
                         config=self._config,
                         cfg_key='Outputs>Telegram Bot>Send Results To Telegram Bot',
                         tr_key='SND_RSLTS_TO_TG_BOT',
-                        obj_name=(*obj_name, 'Send_Results_To_Telegram_Bot')
+                        obj_name=(obj_name, 'Send_Results_To_Telegram_Bot')
                     ),
                 ],
             ),
             MTCollapsibleContainer(
                 tr_key='DS_WBHK',
-                obj_name=(self._OBJECT_NAME, 'Discord_Webhook'),
+                obj_name=(SettingsOutputsPage._OBJECT_NAME, 'Discord_Webhook'),
                 widgets=[
                     MTLineEditSetting(
                         config=self._config,
                         cfg_key='Outputs>Discord Webhook>URL',
                         tr_key='URL',
-                        obj_name=(*obj_name, 'URL')
+                        obj_name=(obj_name, 'URL')
                     ),
                     MTSwitchSetting(
                         config=self._config,
                         cfg_key='Outputs>Discord Webhook>Send Results To Discord Webhook',
                         tr_key='SND_RSLTS_TO_DS_WBHK',
-                        obj_name=(*obj_name, 'Send_Results_To_Discord_Webhook')
+                        obj_name=(obj_name, 'Send_Results_To_Discord_Webhook')
                     ),
                 ],
             ),

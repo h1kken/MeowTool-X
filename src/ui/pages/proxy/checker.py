@@ -22,7 +22,7 @@ class ProxyCheckerPage(BasePage):
         config: Config,
         obj_name: tuple[str, ...] = (),
     ):
-        super().__init__(parent, config=config, obj_name=(*obj_name, self._OBJECT_NAME))
+        super().__init__(parent, config=config, obj_name=(*obj_name, ProxyCheckerPage._OBJECT_NAME))
 
         self._build_ui()
 

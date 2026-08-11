@@ -29,7 +29,7 @@ class MTColumnsSetting(MTScrollArea):
         columns: int = 2,
     ) -> None:
         self._tabs: list[QWidget] = []
-        super().__init__(parent, obj_name=(*obj_name, self._OBJECT_NAME))
+        super().__init__(parent, obj_name=(*obj_name, MTColumnsSetting._OBJECT_NAME))
         
         self._rebalancing = False
 

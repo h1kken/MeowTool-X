@@ -76,8 +76,7 @@ class _BoundSwitchRow(MTBaseSetting[bool]):
         text: str = '',
         obj_name: tuple[str, ...] = (),
     ) -> None:
-        super().__init__(parent, config=config, cfg_key=cfg_key, obj_name=(*obj_name, self._OBJECT_NAME))
-        self.setObjectName(f'{obj_name}_Row')
+        super().__init__(parent, config=config, cfg_key=cfg_key, obj_name=(*obj_name, _BoundSwitchRow._OBJECT_NAME))
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
         self._suspend_config_write = False
@@ -203,7 +202,7 @@ class _SortListEntryRow(MTWidget):
         start_value: str = '',
         end_value: str = '',
     ) -> None:
-        super().__init__(parent, obj_name=(*obj_name, self._OBJECT_NAME))
+        super().__init__(parent, obj_name=(*obj_name, _SortListEntryRow._OBJECT_NAME))
         
         self._range_mode = bool(range_mode)
 
@@ -268,7 +267,7 @@ class _SortListEditor(MTWidget):
         range_mode: bool,
         parent: QWidget | None = None,
     ) -> None:
-        super().__init__(parent, obj_name=(*obj_name, self._OBJECT_NAME))
+        super().__init__(parent, obj_name=(*obj_name, _SortListEditor._OBJECT_NAME))
         
         self._config = config
         self._cfg_key_enabled = cfg_key_enabled

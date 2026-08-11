@@ -18,7 +18,7 @@ if t.TYPE_CHECKING:
 
 
 class SettingsMainPage(BasePage):
-    _OBJECT_NAME = 'Settings_Main'
+    _OBJECT_NAME = 'Main'
     
     def __init__(
         self,
@@ -27,7 +27,7 @@ class SettingsMainPage(BasePage):
         config: Config,
         obj_name: tuple[str, ...] = (),
     ):
-        super().__init__(parent, config=config, obj_name=obj_name)
+        super().__init__(parent, config=config, obj_name=(*obj_name, SettingsMainPage._OBJECT_NAME))
 
         self._build_ui()
 
@@ -44,13 +44,13 @@ class SettingsMainPage(BasePage):
         return [
             MTCollapsibleContainer(
                 tr_key='GNRL',
-                obj_name=(*obj_name, 'General'),
+                obj_name=(obj_name, 'General'),
                 widgets=[
                     MTComboBoxSetting(
                         config=self._config,
                         cfg_key='General>Language',
                         tr_key='LANG',
-                        obj_name=(*obj_name, 'Language'),
+                        obj_name=(obj_name, 'Language'),
                         items=self._get_all_languages(),
                         on_changed=ctx.services.translator.load,
                     ),

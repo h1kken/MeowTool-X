@@ -161,7 +161,6 @@ class RobloxAccount:
             f'Donate (1 {time_frame})': abs(outgoing_total) if isinstance(outgoing_total, (int, float)) else 0,
         }
         
-    # TODO
     # async def get_transactions_all_time(
     #     self,
     #     check_list_custom_gamepasses: Collection[str],
@@ -492,7 +491,6 @@ class RobloxAccount:
     async def get_pin(self) -> dict[str, bool]:
         return {'Pin': bool(self._account_information.get('IsAccountPinEnabled'))}
     
-    # TODO
     # async def get_groups_information(self) -> list:
     #     groups_owned: dict = {}
     #     groups_members: int = 0
@@ -518,7 +516,6 @@ class RobloxAccount:
     #         'funds': groups_funds
     #     }
     
-    # TODO
     # async def get_groups_pending(self, groups_ids: set[int]) -> int:
     #     groups_pending = 0
     #     if groups_ids:
@@ -527,7 +524,6 @@ class RobloxAccount:
     #             groups_pending += response.get('pendingRobux')
     #     return groups_pending
     
-    # TODO
     # async def get_groups_funds(self, groups_ids: set[int]) -> int:
     #     groups_funds = 0
     #     if groups_ids:

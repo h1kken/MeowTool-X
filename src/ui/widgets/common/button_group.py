@@ -13,4 +13,4 @@ class MTButtonGroup(QButtonGroup):
         exclusive: bool = True,
     ) -> None:
         super().__init__(exclusive=exclusive)
-        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
+        self.setObjectName(build_object_name((*obj_name, MTButtonGroup._OBJECT_NAME)))

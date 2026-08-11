@@ -11,6 +11,8 @@ if t.TYPE_CHECKING:
 
 
 class BasePage(MTWidget):
+    _OBJECT_NAME = 'Page'
+    
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -18,5 +20,5 @@ class BasePage(MTWidget):
         config: Config,
         obj_name: tuple[str, ...] = (),
     ) -> None:
-        super().__init__(parent, obj_name=obj_name)
+        super().__init__(parent, obj_name=(*obj_name, BasePage._OBJECT_NAME))
         self._config = config

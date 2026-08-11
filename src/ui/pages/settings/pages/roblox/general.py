@@ -25,7 +25,7 @@ class SettingsRobloxGeneralPage(BasePage):
         config: Config,
         obj_name: tuple[str, ...] = (),
     ):
-        super().__init__(parent, config=config, obj_name=(*obj_name, self._OBJECT_NAME))
+        super().__init__(parent, config=config, obj_name=(*obj_name, SettingsRobloxGeneralPage._OBJECT_NAME))
         
         self._build_ui()
 
@@ -42,37 +42,37 @@ class SettingsRobloxGeneralPage(BasePage):
         return [
             MTCollapsibleContainer(
                 tr_key='Cookie parse',
-                obj_name=(*obj_name, 'Main'),
+                obj_name=(obj_name, 'Main'),
                 widgets=[
                     MTSwitchSetting(
                         config=self._config,
                         cfg_key='Roblox>General>Add Symbols Between Warning And Cookie',
                         tr_key='ADD_SMBLS_BTWN_WRNG_CCK',
-                        obj_name=(*obj_name, 'Add_Symbols_Between_Warning_And_Cookie'),
+                        obj_name=(obj_name, 'Add_Symbols_Between_Warning_And_Cookie'),
                     ),
                     MTLineEditSetting(
                         config=self._config,
                         cfg_key='Roblox>General>Symbols Between Warning And Cookie',
                         tr_key='SMBLS_BTWN_WRNG_AND_CCK',
-                        obj_name=(*obj_name, 'Symbols_Between_Warning_And_Cookie'),
+                        obj_name=(obj_name, 'Symbols_Between_Warning_And_Cookie'),
                     ),
                 ],
             ),
             MTCollapsibleContainer(
                 tr_key='Proxy',
-                obj_name=(*obj_name, 'Proxy'),
+                obj_name=(obj_name, 'Proxy'),
                 widgets=[
                     MTSwitchSetting(
                         config=self._config,
                         cfg_key='Roblox>General>Proxy>Use Proxy',
                         tr_key='USE_PRXY',
-                        obj_name=(*obj_name, 'Use_Proxy'),
+                        obj_name=(obj_name, 'Use_Proxy'),
                     ),
                     MTComboBoxSetting(
                         config=self._config,
                         cfg_key='Roblox>General>Proxy>Auto Protocol If Not Specified',
                         tr_key='AT_PRTCL_IF_NT_SPCFD',
-                        obj_name=(*obj_name, 'Auto_Protocol_If_Not_Specified'),
+                        obj_name=(obj_name, 'Auto_Protocol_If_Not_Specified'),
                         items=[ComboItem(item) for item in ('http', 'https', 'socks4', 'socks5')],
                     ),
                 ],

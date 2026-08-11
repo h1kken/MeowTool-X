@@ -18,7 +18,7 @@ class MTPopupOverlay(MTWidget):
         *,
         obj_name: tuple[str, ...] = (),
     ) -> None:
-        super().__init__(parent, obj_name=(*obj_name, self._OBJECT_NAME))
+        super().__init__(parent, obj_name=(*obj_name, MTPopupOverlay._OBJECT_NAME))
 
         self._popup: MTWidget | None = None
         self._build_ui()

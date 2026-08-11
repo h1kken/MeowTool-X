@@ -18,7 +18,7 @@ class MTPlainLabel(QLabel):
         obj_name: tuple[str, ...] = ()
     ) -> None:
         super().__init__(text, parent)
-        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
+        self.setObjectName(build_object_name((*obj_name, MTPlainLabel._OBJECT_NAME)))
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
@@ -34,6 +34,6 @@ class MTLabel(TranslatableMixin, QLabel):
         obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent, tr_key=tr_key)
-        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
+        self.setObjectName(build_object_name((*obj_name, MTLabel._OBJECT_NAME)))
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)

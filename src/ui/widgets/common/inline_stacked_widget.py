@@ -14,7 +14,7 @@ class MTInlineStackedWidget(QStackedWidget):
         obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent)
-        self.setObjectName(build_object_name((*obj_name, self._OBJECT_NAME)))
+        self.setObjectName(build_object_name((*obj_name, MTInlineStackedWidget._OBJECT_NAME)))
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         
         self._connect_signals()

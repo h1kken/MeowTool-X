@@ -118,7 +118,7 @@ class Logger:
         console_level: LogLevel = LogLevel.INFO,
         file_level: LogLevel = LogLevel.DEBUG,
     ):
-        self._path = PATH_LOGS / f'{name} ({datetime.now().strftime(DATE_LOGGER_FORMAT)}).log'
+        self._path = PATH_LOGS / f'{datetime.now().strftime(DATE_LOGGER_FORMAT)}.log'
         self._path.parent.mkdir(parents=True, exist_ok=True)
         
         self._logger = loguru.logger
@@ -178,8 +178,8 @@ class Logger:
         self.info(f'Python: {platform.python_version()}')
             
     def _resolve_record_kind(self, record: t.Any) -> str:
-        extra = t.cast(dict[str, t.Any], record.get('extra') or {})
-        kind = str(extra.get('meow_kind') or record['level'].name).strip().lower()
+        kind = record['level'].name.lower()
+        
         match kind:
             case 'trace':
                 return 'debug'

@@ -184,7 +184,7 @@ class MTComboBox(TranslatableComboBoxMixin, MTWidget):
     ) -> None:
         self._items: list[dict[str, t.Any]] = []
         
-        super().__init__(parent, obj_name=(*obj_name, self._OBJECT_NAME))
+        super().__init__(parent, obj_name=(*obj_name, MTComboBox._OBJECT_NAME))
         
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setCursor(Qt.CursorShape.PointingHandCursor)

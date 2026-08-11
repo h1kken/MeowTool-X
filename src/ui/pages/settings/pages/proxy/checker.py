@@ -24,7 +24,7 @@ class SettingsProxyCheckerPage(BasePage):
         config: Config,
         obj_name: tuple[str, ...] = (),
     ) -> None:
-        super().__init__(parent, config=config, obj_name=(*obj_name, self._OBJECT_NAME))
+        super().__init__(parent, config=config, obj_name=(*obj_name, SettingsProxyCheckerPage._OBJECT_NAME))
 
         self._build_ui()
 
@@ -41,13 +41,13 @@ class SettingsProxyCheckerPage(BasePage):
         return [
             MTCollapsibleContainer(
                 tr_key='GNRL',
-                obj_name=(*obj_name, 'General'),
+                obj_name=(obj_name, 'General'),
                 widgets=[
                     MTSliderSetting(
                         config=self._config,
                         cfg_key='Proxy>Checker>Main Threads',
                         tr_key='MN_THRDS',
-                        obj_name=(*obj_name, 'Main_Threads'),
+                        obj_name=(obj_name, 'Main_Threads'),
                         min_value=1,
                         max_value=1000,
                     ),
@@ -55,7 +55,7 @@ class SettingsProxyCheckerPage(BasePage):
                         config=self._config,
                         cfg_key='Proxy>Checker>Maximum Wait Response',
                         tr_key='MX_WT_RESP',
-                        obj_name=(*obj_name, 'Maximum_Wait_Response'),
+                        obj_name=(obj_name, 'Maximum_Wait_Response'),
                         min_value=1,
                         max_value=60,
                     ),
@@ -63,13 +63,13 @@ class SettingsProxyCheckerPage(BasePage):
                         config=self._config,
                         cfg_key='Proxy>Checker>Save Good In Custom File',
                         tr_key='SV_GD_IN_CSTM_FL',
-                        obj_name=(*obj_name, 'Save_Good_In_Custom_File'),
+                        obj_name=(obj_name, 'Save_Good_In_Custom_File'),
                     ),
                     MTSwitchSetting(
                         config=self._config,
                         cfg_key='Proxy>Checker>Save Without Protocol',
                         tr_key='SV_WTOUT_PRTCL',
-                        obj_name=(*obj_name, 'Save_Without_Protocol'),
+                        obj_name=(obj_name, 'Save_Without_Protocol'),
                     ),
                 ],
             ),

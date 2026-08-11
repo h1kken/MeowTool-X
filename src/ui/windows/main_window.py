@@ -59,7 +59,7 @@ class MainWindow(QMainWindow):
         self.resize(WINDOW_X, WINDOW_Y)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
 
-        self._main_widget = MTWidget(obj_name=(self._OBJECT_NAME, 'Central_Widget'))
+        self._main_widget = MTWidget(obj_name=(MainWindow._OBJECT_NAME, 'Central_Widget'))
         self._main_layout = create_layout(LayoutType.VBOX, self._main_widget)
         self.setCentralWidget(self._main_widget)
         
@@ -68,11 +68,11 @@ class MainWindow(QMainWindow):
         self._main_layout.addWidget(self._window_header_widget)
         
         # overlay
-        self._body_container_widget = MTWidget(obj_name=(self._OBJECT_NAME, 'Body_Container'))
+        self._body_container_widget = MTWidget(obj_name=(MainWindow._OBJECT_NAME, 'Body_Container'))
         self._body_container_layout = create_layout(LayoutType.GRID, self._body_container_widget)
         self._main_layout.addWidget(self._body_container_widget, stretch=1)
 
-        self._body_content_widget = MTWidget(obj_name=(self._OBJECT_NAME, 'Body_Content'))
+        self._body_content_widget = MTWidget(obj_name=(MainWindow._OBJECT_NAME, 'Body_Content'))
         self._body_content_layout = create_layout(LayoutType.HBOX, self._body_content_widget)
         self._body_container_layout.addWidget(self._body_content_widget, 0, 0)
         
@@ -80,15 +80,15 @@ class MainWindow(QMainWindow):
         self._body_container_layout.addWidget(self._overlay_widget, 0, 0)
         
         # sidebar
-        self._sidebar_widget = MTWidget(obj_name=(self._OBJECT_NAME, 'Sidebar'))
+        self._sidebar_widget = MTWidget(obj_name=(MainWindow._OBJECT_NAME, 'Sidebar'))
         self._sidebar_layout = create_layout(LayoutType.VBOX, self._sidebar_widget)
         self._body_content_layout.addWidget(self._sidebar_widget)
         
-        self._sidebar_image_widget = MTImage(self._sidebar_widget, obj_name=(self._OBJECT_NAME,))
+        self._sidebar_image_widget = MTImage(self._sidebar_widget, obj_name=(MainWindow._OBJECT_NAME,))
         self._sidebar_layout.addWidget(self._sidebar_image_widget)
         
         # pages
-        self._pages_widget = MTWidget(obj_name=(self._OBJECT_NAME, 'Pages'))
+        self._pages_widget = MTWidget(obj_name=(MainWindow._OBJECT_NAME, 'Pages'))
         self._pages_layout = create_layout(LayoutType.VBOX, self._pages_widget)
         self._body_content_layout.addWidget(self._pages_widget, stretch=1)
 

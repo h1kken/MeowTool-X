@@ -8,7 +8,7 @@ if t.TYPE_CHECKING:
     from PySide6.QtWidgets import QApplication
 
 
-def bootstrap(app: QApplication) -> AppServices:
+def bootstrap(_app: QApplication) -> AppServices:
     import src.app.context as ctx
     services = ctx.services = AppServices()
     
