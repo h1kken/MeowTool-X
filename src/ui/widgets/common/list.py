@@ -3,6 +3,8 @@ from __future__ import annotations
 import typing as t
 import collections.abc as cabc
 
+from pathlib import Path
+
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget
 
@@ -24,7 +26,7 @@ class MTListItem(MTButton):
         parent: QWidget | None = None,
         *,
         text: str,
-        value: str,
+        value: Path,
         obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent, checkable=True, obj_name=(*obj_name, MTListItem._OBJECT_NAME))
@@ -39,7 +41,7 @@ class MTListItem(MTButton):
         self.clicked.connect(lambda: self.clickedItem.emit(self))
 
     @property
-    def value(self) -> str:
+    def value(self) -> Path:
         return self._value
 
 
@@ -77,13 +79,13 @@ class MTList(MTScrollArea):
         return self._current_item.text() if self._current_item is not None else None
 
     @property
-    def currentValue(self) -> str | None:
+    def currentValue(self) -> Path | None:
         return self._current_item.value if self._current_item is not None else None
 
     def _on_item_clicked(self, item: MTListItem) -> None:
         self.setCurrentItem(item)
 
-    def addItem(self, text: str, value: str, *, sort: bool = False) -> MTListItem:
+    def addItem(self, text: str, value: Path, *, sort: bool = False) -> MTListItem:
         item = MTListItem(self._content, text=text, value=value)
         item.clickedItem.connect(self._on_item_clicked)
         
@@ -106,9 +108,9 @@ class MTList(MTScrollArea):
         self._content_layout.removeWidget(item)
         item.deleteLater()
         
-    def setItems(self, items: t.Sequence[tuple[str, str]]) -> None:
+    def setItems(self, items: t.Sequence[tuple[t.Any, str]]) -> None:
         old_names = {item.value: item for item in self._items}
-        new_names = {value: text for text, value in items}
+        new_names = {value: text for value, text in items}
         
         for value, text in new_names.items():
             item = old_names.pop(value, None)

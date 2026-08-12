@@ -19,7 +19,7 @@ from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.painting import draw_widget_background, new_widget_painter
 from src.ui.widgets.paint_primitives import parse_pen_style, resolve_fill_brush, rounded_rect_path
-from src.ui.widgets.types import WidgetThemeMap
+from src.ui.widgets.types import WidgetDataMap
 from src.translation.mixins import TranslatableComboBoxMixin
 
 from .button import MTButton
@@ -190,7 +190,7 @@ class MTComboBox(TranslatableComboBoxMixin, MTWidget):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         
         self._current_index = -1
-        self._parts: dict[str, WidgetThemeMap] = self._build_default_parts()
+        self._parts: dict[str, WidgetDataMap] = self._build_default_parts()
         self._alignment = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         self._content_width_mode = 'longest'
         self._content_width_floor = 0
@@ -366,10 +366,10 @@ class MTComboBox(TranslatableComboBoxMixin, MTWidget):
         base_name = self.objectName().strip() or type(self).__name__
         return f'{base_name}_Popup_Item_{index}'
 
-    def combo_parts(self) -> dict[str, WidgetThemeMap]:
+    def combo_parts(self) -> dict[str, WidgetDataMap]:
         return self._parts
 
-    def _build_default_parts(self) -> dict[str, WidgetThemeMap]:
+    def _build_default_parts(self) -> dict[str, WidgetDataMap]:
         transparent = QColor(Qt.GlobalColor.transparent)
         return {
             'button': {
@@ -419,10 +419,10 @@ class MTComboBox(TranslatableComboBoxMixin, MTWidget):
             },
         }
 
-    def _part_data(self, part: str) -> WidgetThemeMap:
+    def _part_data(self, part: str) -> WidgetDataMap:
         return self._parts.setdefault(part, {})
 
-    def _existing_part_data(self, part: str) -> WidgetThemeMap | None:
+    def _existing_part_data(self, part: str) -> WidgetDataMap | None:
         return self._parts.get(part)
 
     def current_part_color(self, part: str, css_name: str = 'background-color') -> QColor:

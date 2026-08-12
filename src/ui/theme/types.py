@@ -1,24 +1,17 @@
 import typing as t
 import collections.abc as cabc
 
+if t.TYPE_CHECKING:
+    from src.core.types import DataMap
 
-type ThemeScalar = None | bool | int | float | str
-type ThemeValue = (
-    ThemeScalar
-    | list['ThemeValue']
-    | tuple['ThemeValue', ...]
-    | dict[str, 'ThemeValue']
-)
-ThemeMap: t.TypeAlias = dict[str, ThemeValue]
-
-QSSParser = cabc.Callable[[ThemeMap], list[str]]
+QSSParser = cabc.Callable[[DataMap], list[str]]
 QTHandler = cabc.Callable[..., None]
 
 
 __all__ = (
-    'ThemeMap',
+    'DataMap',
     'ThemeScalar',
-    'ThemeValue',
+    'DataValue',
     'QSSParser',
     'QTHandler',
 )

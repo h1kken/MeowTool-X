@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import typing as t
+import collections.abc as cabc
 
 from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QWidget
@@ -27,7 +28,7 @@ class MTComboBoxSetting(MTBaseSetting[str]):
         tr_key: str = '',
         obj_name: tuple[str, ...] = (),
         items: t.Sequence[ComboItem],
-        on_changed: t.Callable[[str], None] | None = None,
+        on_changed: cabc.Callable[[str], None] | None = None,
     ) -> None:
         super().__init__(parent, config=config, cfg_key=cfg_key, obj_name=(*obj_name, MTComboBoxSetting._OBJECT_NAME))
         

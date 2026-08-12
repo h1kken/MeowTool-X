@@ -6,10 +6,11 @@ from .constants import SIDES
 from .helpers import parse_sides
 
 if t.TYPE_CHECKING:
-    from .types import ThemeMap, ThemeValue, QSSParser
+    from src.core.types import DataValue, DataMap
+    from .types import QSSParser
 
 
-def _parse_gradient_color(styles: ThemeMap) -> str:
+def _parse_gradient_color(styles: DataMap) -> str:
     gradient_type = str(styles.get('type', '')).strip().lower()
 
     match gradient_type:
@@ -27,7 +28,7 @@ def _parse_gradient_color(styles: ThemeMap) -> str:
             return ''
 
 
-def _parse_linear_gradient(styles: ThemeMap) -> str:
+def _parse_linear_gradient(styles: DataMap) -> str:
     start = _parse_gradient_point(styles.get('start'))
     end = _parse_gradient_point(styles.get('end'))
     stops = _parse_gradient_stops(styles.get('stops'))
@@ -45,7 +46,7 @@ def _parse_linear_gradient(styles: ThemeMap) -> str:
     return f'qlineargradient(x1:{x1}, y1:{y1}, x2:{x2}, y2:{y2}, {stops})'
 
 
-def _parse_radial_gradient(styles: ThemeMap) -> str:
+def _parse_radial_gradient(styles: DataMap) -> str:
     center = _parse_gradient_point(styles.get('center'))
     stops = _parse_gradient_stops(styles.get('stops'))
     if center is None or not stops:
@@ -64,7 +65,7 @@ def _parse_radial_gradient(styles: ThemeMap) -> str:
     return f'qradialgradient(cx:{cx}, cy:{cy}, radius:{radius}, {stops})'
 
 
-def _parse_conical_gradient(styles: ThemeMap) -> str:
+def _parse_conical_gradient(styles: DataMap) -> str:
     center = _parse_gradient_point(styles.get('center'))
     stops = _parse_gradient_stops(styles.get('stops'))
     if center is None or not stops:
@@ -80,7 +81,7 @@ def _parse_conical_gradient(styles: ThemeMap) -> str:
     return f'qconicalgradient(cx:{cx}, cy:{cy}, angle:{angle}, {stops})'
 
 
-def _parse_gradient_point(value: ThemeValue) -> tuple[float, float] | None:
+def _parse_gradient_point(value: DataValue) -> tuple[float, float] | None:
     if not isinstance(value, (list, tuple)) or len(value) != 2:
         return None
 
@@ -101,7 +102,7 @@ def _parse_gradient_point(value: ThemeValue) -> tuple[float, float] | None:
     return x, y
 
 
-def _parse_gradient_stops(stops: ThemeValue) -> str:
+def _parse_gradient_stops(stops: DataValue) -> str:
     if not isinstance(stops, list):
         return ''
 
@@ -128,7 +129,7 @@ def _parse_gradient_stops(stops: ThemeValue) -> str:
 
 
 # text
-def _parse_text(styles: ThemeMap) -> list[str]:
+def _parse_text(styles: DataMap) -> list[str]:
     text = styles.get('text')
     rules: list[str] = []
 
@@ -151,7 +152,7 @@ def _parse_text(styles: ThemeMap) -> list[str]:
     return rules
 
 
-def _parse_text_font(styles: ThemeMap) -> list[str]:
+def _parse_text_font(styles: DataMap) -> list[str]:
     font = styles.get('font')
     rules: list[str] = []
     
@@ -170,7 +171,7 @@ def _parse_text_font(styles: ThemeMap) -> list[str]:
 
 
 # background
-def _parse_background(styles: ThemeMap) -> list[str]:
+def _parse_background(styles: DataMap) -> list[str]:
     background = styles.get('background')
     rules: list[str] = []
 
@@ -187,7 +188,7 @@ def _parse_background(styles: ThemeMap) -> list[str]:
     return rules
 
 
-def _parse_background_color(styles: ThemeValue) -> list[str]:
+def _parse_background_color(styles: DataValue) -> list[str]:
     rules: list[str] = []
     
     match styles:
@@ -207,7 +208,7 @@ def _parse_background_color(styles: ThemeValue) -> list[str]:
 
 
 # border | TODO: wrong
-def _parse_border(styles: ThemeMap) -> list[str]:
+def _parse_border(styles: DataMap) -> list[str]:
     border = styles.get('border')
     rules: list[str] = []
 
@@ -234,7 +235,7 @@ def _parse_border(styles: ThemeMap) -> list[str]:
     return rules
 
 
-def _parse_border_sides(styles: ThemeMap) -> list[str]:
+def _parse_border_sides(styles: DataMap) -> list[str]:
     rules: list[str] = []
     
     for side in SIDES:
@@ -266,7 +267,7 @@ def _parse_border_str(styles: str, *, property_name: str = 'border') -> str:
 
 
 # padding
-def _parse_padding(styles: ThemeMap) -> list[str]:
+def _parse_padding(styles: DataMap) -> list[str]:
     padding = styles.get('padding')
     rules: list[str] = []
     
@@ -289,7 +290,7 @@ def _parse_padding(styles: ThemeMap) -> list[str]:
 
 
 # qss
-def _parse_qss(styles: ThemeMap) -> list[str]:
+def _parse_qss(styles: DataMap) -> list[str]:
     raw = styles.get('qss')
     rules: list[str] = []
     

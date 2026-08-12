@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import typing as t
+import collections.abc as cabc
 
 from dataclasses import asdict, is_dataclass
 
@@ -136,7 +137,7 @@ class NativeHttpEngine:
         *,
         chunk_size: int = 1_000,
         flatten: bool = True,
-        on_chunk: t.Callable[[list[JsonObject]], t.Any] | None = None,
+        on_chunk: cabc.Callable[[list[JsonObject]], t.Any] | None = None,
     ) -> list[JsonObject] | list[list[JsonObject]]:
         collected: list[t.Any] = []
         for chunk in self.iter_chunked(requests, chunk_size=chunk_size):
@@ -224,7 +225,7 @@ class NativeHttpBatchRunner:
         requests: t.Sequence[RequestLike] | t.Iterable[RequestLike],
         *,
         flatten: bool = True,
-        on_chunk: t.Callable[[list[JsonObject]], t.Any] | None = None,
+        on_chunk: cabc.Callable[[list[JsonObject]], t.Any] | None = None,
     ) -> list[JsonObject] | list[list[JsonObject]]:
         return self._engine.run_chunked(
             requests,
@@ -323,7 +324,7 @@ def run_chunked(
     config: NativeHttpEngineConfig | JsonObject | None = None,
     chunk_size: int = 1_000,
     flatten: bool = True,
-    on_chunk: t.Callable[[list[JsonObject]], t.Any] | None = None,
+    on_chunk: cabc.Callable[[list[JsonObject]], t.Any] | None = None,
 ) -> list[JsonObject] | list[list[JsonObject]]:
     with create_engine(proxies=proxies, config=config) as engine:
         return engine.run_chunked(

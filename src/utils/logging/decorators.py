@@ -1,7 +1,9 @@
+import typing as t
+import collections.abc as cabc
+
 import functools
 import time
 from pathlib import Path
-import typing as t
 
 from aiohttp import ClientResponse
 
@@ -13,15 +15,15 @@ T = t.TypeVar('T')
 
 
 @t.overload
-def log_action(action: str, *, re_raise: t.Literal[True]) -> t.Callable[[t.Callable[t.Concatenate[Path, P], R]], t.Callable[t.Concatenate[Path, P], R]]: ...
+def log_action(action: str, *, re_raise: t.Literal[True]) -> cabc.Callable[[cabc.Callable[t.Concatenate[Path, P], R]], cabc.Callable[t.Concatenate[Path, P], R]]: ...
 
 
 @t.overload
-def log_action(action: str, *, re_raise: t.Literal[False] = False) -> t.Callable[[t.Callable[t.Concatenate[Path, P], R]], t.Callable[t.Concatenate[Path, P], R | None]]: ...
+def log_action(action: str, *, re_raise: t.Literal[False] = False) -> cabc.Callable[[cabc.Callable[t.Concatenate[Path, P], R]], cabc.Callable[t.Concatenate[Path, P], R | None]]: ...
 
 
-def log_action(action: str, *, re_raise: bool = False) -> t.Callable[[t.Callable[t.Concatenate[Path, P], R]], t.Callable[t.Concatenate[Path, P], R] | t.Callable[t.Concatenate[Path, P], R | None]]:
-    def log_action_decorator(func: t.Callable[t.Concatenate[Path, P], R]) -> t.Callable[t.Concatenate[Path, P], R] | t.Callable[t.Concatenate[Path, P], R | None]:
+def log_action(action: str, *, re_raise: bool = False) -> cabc.Callable[[cabc.Callable[t.Concatenate[Path, P], R]], cabc.Callable[t.Concatenate[Path, P], R] | cabc.Callable[t.Concatenate[Path, P], R | None]]:
+    def log_action_decorator(func: cabc.Callable[t.Concatenate[Path, P], R]) -> cabc.Callable[t.Concatenate[Path, P], R] | cabc.Callable[t.Concatenate[Path, P], R | None]:
         if re_raise:
             @functools.wraps(func)
             def log_action_wrapper_reraise(path: Path, *args: P.args, **kwargs: P.kwargs) -> R:
@@ -54,7 +56,7 @@ def log_action(action: str, *, re_raise: bool = False) -> t.Callable[[t.Callable
     return log_action_decorator
 
 
-def log_network_request(func: t.Callable[P, t.Awaitable[T]]) -> t.Callable[P, t.Awaitable[T]]:
+def log_network_request(func: cabc.Callable[P, cabc.Awaitable[T]]) -> cabc.Callable[P, cabc.Awaitable[T]]:
     @functools.wraps(func)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         with logger.origin_scope(overwrite=False, depth=2):

@@ -9,16 +9,16 @@ from .constants import ALIGNMENT_FLAGS
 from .helpers import parse_box_values, to_int
 
 if t.TYPE_CHECKING:
-    from .types import ThemeMap, QTHandler
+    from src.core.types import DataMap
+    from .types import QTHandler
 
 
 # margin
-def _apply_margin(target: QObject, styles: ThemeMap) -> None:
+def _apply_margin(target: QObject, styles: DataMap, *, store: dict[QObject, set[str]] | None = None) -> None:
     if not isinstance(target, QLayout):
         return
     
     margin = styles.get('margin')
-    
     if isinstance(margin, str):
         margin = margin.split()
 
@@ -27,10 +27,13 @@ def _apply_margin(target: QObject, styles: ThemeMap) -> None:
 
     top, right, bottom, left = parse_box_values(styles, property_name='margin')
     target.setContentsMargins(left, top, right, bottom)
+    
+    if store is not None:
+        store[target].add('margin')
 
 
 # spacing
-def _apply_spacing(target: QObject, styles: ThemeMap) -> None:
+def _apply_spacing(target: QObject, styles: DataMap, *, store: dict[QObject, set[str]] | None = None) -> None:
     if not isinstance(target, QLayout):
         return
     
@@ -40,9 +43,13 @@ def _apply_spacing(target: QObject, styles: ThemeMap) -> None:
         return
     
     target.setSpacing(spacing)
+    
+    if store is not None:
+        store[target].add('spacing')
 
-# alignment
-def _apply_alignment(target: QObject, styles: ThemeMap) -> None:
+
+# align
+def _apply_alignment(target: QObject, styles: DataMap, *, store: dict[QObject, set[str]] | None = None) -> None:
     if not isinstance(target, (QLayout, QWidget)):
         return
     
@@ -52,7 +59,7 @@ def _apply_alignment(target: QObject, styles: ThemeMap) -> None:
     
     result = Qt.AlignmentFlag(0)
     
-    value = styles.get('align') or styles.get('alignment')
+    value = styles.get('alignment')
     
     match value:
         
@@ -78,6 +85,9 @@ def _apply_alignment(target: QObject, styles: ThemeMap) -> None:
             pass
     
     setter(result)
+    
+    if store is not None:
+        store[target].add('alignment')
 
 
 QT_HANDLERS: tuple[QTHandler, ...] = (

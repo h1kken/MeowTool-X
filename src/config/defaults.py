@@ -1,11 +1,15 @@
 import typing as t
 
 from src.app.paths import PATH_DEFAULT_THEME, PATH_DEFAULT_TRANSLATION
-from src.config.types import ConfigMap, SortCategoryKind
 from src.config.utils import normalize_config
 
+if t.TYPE_CHECKING:
+  from src.core.types import DataMap
+  from src.config.types import SortCategoryKind
 
-DEFAULT_CONFIG_LOADER: t.Final[ConfigMap] = {
+
+
+DEFAULT_CONFIG_LOADER: t.Final[DataMap] = {
   'Loader': {
     'Config On Load': 'default',
     'Developer Mode': False
@@ -33,11 +37,11 @@ DEFAULT_CONFIG_LOADER: t.Final[ConfigMap] = {
 }
 
 
-def default_config_loader() -> ConfigMap:
+def default_config_loader() -> DataMap:
     return normalize_config(DEFAULT_CONFIG_LOADER, DEFAULT_CONFIG_LOADER)
 
 
-DEFAULT_CONFIG: t.Final[ConfigMap] = {
+DEFAULT_CONFIG: t.Final[DataMap] = {
   'General': {
     'Language': PATH_DEFAULT_TRANSLATION.stem,
     'Theme': PATH_DEFAULT_THEME.stem,
@@ -221,10 +225,10 @@ SORT_KEYS: t.Final[dict[str, SortCategoryKind]] = {
   'Roblox Badges': 'number',
 }
 
-_roblox_config = t.cast(ConfigMap, DEFAULT_CONFIG['Roblox'])
-_cookie_checker_config = t.cast(ConfigMap, _roblox_config['Cookie Checker'])
-_sorting_config = t.cast(ConfigMap, _cookie_checker_config['Sorting'])
-_sorting_categories = t.cast(ConfigMap, _sorting_config['Categories'])
+_roblox_config = t.cast(DataMap, DEFAULT_CONFIG['Roblox'])
+_cookie_checker_config = t.cast(DataMap, _roblox_config['Cookie Checker'])
+_sorting_config = t.cast(DataMap, _cookie_checker_config['Sorting'])
+_sorting_categories = t.cast(DataMap, _sorting_config['Categories'])
 
 SORT_KEYS_NAMES: t.Final[tuple[str, ...]] = (
   'Gamepasses',
@@ -268,13 +272,13 @@ for key_name, key_type in SORT_KEYS.items():
         }
 
 for key_name in SORT_KEYS_NAMES:
-    category = t.cast(ConfigMap, _sorting_categories[key_name])
+    category = t.cast(DataMap, _sorting_categories[key_name])
     category['Names'] = False
 
 for key_name in SORT_KEYS_PLACES:
-    category = t.cast(ConfigMap, _sorting_categories[key_name])
+    category = t.cast(DataMap, _sorting_categories[key_name])
     category['Places'] = False
 
 
-def default_config() -> ConfigMap:
+def default_config() -> DataMap:
     return normalize_config(DEFAULT_CONFIG, DEFAULT_CONFIG)

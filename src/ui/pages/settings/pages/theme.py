@@ -2,12 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
-import sys
-import subprocess
-from pathlib import Path
-
-from PySide6.QtCore import QFileSystemWatcher, QSignalBlocker, QTimer, QUrl
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtCore import QFileSystemWatcher, QSignalBlocker, QTimer
 from PySide6.QtWidgets import QWidget
 
 import src.app.context as ctx
@@ -39,7 +34,6 @@ class SettingsThemePage(BasePage):
         super().__init__(parent, config=config, obj_name=(*obj_name, SettingsThemePage._OBJECT_NAME))
         
         self._autoload_name = str(self._config.get(CKey.GENERAL_THEME)).strip()
-        self._selected_name = self._autoload_name
         
         self._build_ui()
         self._connect_signals()
@@ -192,32 +186,24 @@ class SettingsThemePage(BasePage):
     def _on_themes_dir_changed(self, _path: str) -> None:
         self._refresh_timer.start()
     
-    def _on_selection_changed(self, new: MTListItem | None, _old: MTListItem | None) -> None:
-        if new is None:
-            return
-        
-        self._selected_name = new.text()
+    def _on_selection_changed(self, _new: MTListItem | None, _old: MTListItem | None) -> None:
         self._sync_actions_state()
 
     def _on_autoload_toggled(self, checked: bool) -> None:
-        selected = self._selected_name
+        selected_text = self._themes_list_widget.currentText
+        if selected_text is None:
+            return
         
         if checked:
-            self._set_autoload_name(selected)
-        elif self._autoload_name == selected:
+            self._set_autoload_name(selected_text)
+        elif selected_text == self._autoload_name:
             self._set_autoload_name(PATH_DEFAULT_THEME.stem)
 
         self._sync_actions_state()
 
     # load
-    def _load(self, name: str | None) -> None:
-        path = ctx.services.theme.load(name)
-        if path is None:
-            return
-        
-        self._loaded_name = path.stem
-        self._config.set(CKey.GENERAL_THEME, path.stem)
-        self._sync_actions_state()
+    def _load(self) -> None:
+        ctx.services.theme.load(self._themes_list_widget.currentText)
 
     # create
     def _start_create(self) -> None:
@@ -226,40 +212,44 @@ class SettingsThemePage(BasePage):
         self._create_line_edit.setFocus()
 
     def _cancel_create(self) -> None:
-        self._create_line_edit.clear()
         self._create_stack.setCurrentIndex(0)
+        self._create_line_edit.clear()
 
-    def _submit_create(self) -> None: # TODO
+    def _submit_create(self) -> None:
         name = FS.normalize_filename(self._create_line_edit.text())
         if name is None:
             return
 
-        # self._config.create(name)
         self._cancel_create()
+        # self._config.create(name) > ctx.services.theme.create(name)
         self._refresh_themes()
 
     # rename
     def _start_rename(self) -> None:
-        selected = self._selected_name
-        if not selected:
+        selected_text = self._themes_list_widget.currentText
+        if not selected_text:
             return
         
-        self._rename_line_edit.setText(selected)
+        self._rename_line_edit.setText(selected_text)
         self._rename_stack.setCurrentIndex(1)
         self._rename_line_edit.setFocus()
         self._rename_line_edit.selectAll()
 
     def _cancel_rename(self) -> None:
-        self._rename_line_edit.clear()
         self._rename_stack.setCurrentIndex(0)
+        self._rename_line_edit.clear()
 
-    def _submit_rename(self) -> None: # TODO
-        selected = self._selected_name
+    def _submit_rename(self) -> None:
+        selected_text = self._themes_list_widget.currentText      
         new_name = FS.normalize_filename(self._rename_line_edit.text())
-        if new_name is None: # or not self._config.rename(selected, new_name):
+        if (
+            selected_text is None
+            or not new_name
+            # or not self._config.rename(selected_text, new_name) > ctx.services.theme.rename(selected_text, new_name)
+        ):
             return
 
-        if selected == self._autoload_name:
+        if selected_text == self._autoload_name:
             self._set_autoload_name(new_name)
 
         self._cancel_rename()
@@ -273,65 +263,64 @@ class SettingsThemePage(BasePage):
         self._delete_stack.setCurrentIndex(0)
 
     def _submit_delete(self) -> None:
-        selected = self._selected_name
-        if self._autoload_name == selected:
+        selected_text = self._themes_list_widget.currentText
+        if selected_text == self._autoload_name:
             self._set_autoload_name(PATH_DEFAULT_THEME.stem)
 
-        FS.delete_file(PATH_THEMES_USER / f'{selected}.txt')
+        FS.delete_file(PATH_THEMES_USER / f'{selected_text}.txt')
         self._cancel_delete()
         self._refresh_themes()
 
     # open location
     def _open_location(self) -> None:
-        path = PATH_THEMES_USER / f'{self._selected_name}.txt'
-        if not path.is_file():
+        selected_path = self._themes_list_widget.currentValue
+        if selected_path is None:
+            return
+        
+        if not selected_path.is_file():
             self._refresh_themes()
             return
 
-        if sys.platform.startswith('win'):
-            subprocess.Popen(['explorer', '/select,', str(path)])
-            return
-
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(path).parent)))
+        FS.open_file_location(selected_path)
     
     def _set_autoload_name(self, value: str) -> None:
-        normalized = str(value).strip() or PATH_DEFAULT_THEME.stem
-        if normalized == self._autoload_name:
+        name = value.strip() or PATH_DEFAULT_THEME.stem
+        if name == self._autoload_name:
             return
         
-        self._config.set(CKey.GENERAL_THEME, normalized)
-        self._autoload_name = normalized
+        self._config.set(CKey.GENERAL_THEME, name)
+        self._autoload_name = name
 
     def _refresh_themes(self) -> None:
-        names = FS.iter_paths(PATH_THEMES_USER, PATH_THEMES_SRC, file_extension='txt')
-        
-        if self._selected_name not in {name for name, _ in names}:
-            # self._config.load()
-            # self._selected_name = self._config.name
-            ...
-        
+        paths = FS.iter_paths(PATH_THEMES_USER, PATH_THEMES_SRC, file_extension='txt', remove_duplicate_filenames=True)
+        items = tuple((path, path.stem) for path in paths)
+
         with QSignalBlocker(self._themes_list_widget):
-            self._themes_list_widget.setItems(names)
+            self._themes_list_widget.setItems(items)
 
         self._sync_actions_state()
 
-    def _sync_actions_state(self, *_args: object) -> None:
-        autoload = self._autoload_name
-        selected = self._selected_name
+    def _sync_actions_state(self) -> None:
+        item = self._themes_list_widget.currentItem
+        path = item.value if item else None
+        stem = path.stem if path else None
 
-        self._selected_value.setText(selected)
+        self._selected_value.setText(stem or '-')
         self._loaded_value.setText(ctx.services.theme.path.stem)
 
-        has_selection = True
-        self._autoload_row.switch.setEnabled(has_selection and not (selected == autoload == PATH_DEFAULT_THEME.stem))
-        self._load_button.setEnabled(has_selection)
-        self._rename_stack.setEnabled(has_selection)
-        self._delete_stack.setEnabled(has_selection)
-        self._open_location_button.setEnabled(has_selection)
-
-        if not has_selection:
-            self._cancel_rename()
-            self._cancel_delete()
+        is_selected = path is not None
+        is_user_path = FS.is_user_path(path)
+        can_modify = is_selected and is_user_path
 
         with QSignalBlocker(self._autoload_row.switch):
-            self._autoload_row.switch.setChecked(has_selection and selected == autoload)
+            self._autoload_row.switch.setChecked(can_modify and stem == self._autoload_name)
+
+        self._autoload_row.switch.setEnabled(not (stem == self._autoload_name == PATH_DEFAULT_THEME.stem))
+        self._load_button.setEnabled(is_selected)
+        self._rename_stack.setEnabled(can_modify)
+        self._delete_stack.setEnabled(can_modify)
+        self._open_location_button.setEnabled(can_modify)
+
+        if not is_selected:
+            self._cancel_rename()
+            self._cancel_delete()

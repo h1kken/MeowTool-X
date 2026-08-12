@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import typing as t
+import collections.abc as cabc
+
 import math
 import re
-import typing as t
 
 from PySide6.QtCore import QEasingCurve, Qt
 from PySide6.QtGui import QColor
@@ -144,7 +146,7 @@ def interpolate_color(start: QColor, end: QColor, t: float) -> QColor:
     )
 
 
-def parse_easing(raw: t.Any) -> t.Callable[[float], float]:
+def parse_easing(raw: t.Any) -> cabc.Callable[[float], float]:
     if isinstance(raw, dict):
         mapping = as_object_dict(t.cast(object, raw)) or {}
         easing_type = normalize_token(mapping.get('type', mapping.get('name', mapping.get('curve', 'linear'))))
@@ -225,7 +227,7 @@ def _linear_easing(value: float) -> float:
     return _clamp01(value)
 
 
-def _qt_easing(name: str) -> t.Callable[[float], float]:
+def _qt_easing(name: str) -> cabc.Callable[[float], float]:
     curve_map = {
         'linear': QEasingCurve.Type.Linear,
         'in_quad': QEasingCurve.Type.InQuad,
@@ -263,7 +265,7 @@ def _qt_easing(name: str) -> t.Callable[[float], float]:
     return lambda value: _clamp01(curve.valueForProgress(_clamp01(value)))
 
 
-def _cubic_bezier_easing(x1: float, y1: float, x2: float, y2: float) -> t.Callable[[float], float]:
+def _cubic_bezier_easing(x1: float, y1: float, x2: float, y2: float) -> cabc.Callable[[float], float]:
     def sample_curve_x(t: float) -> float:
         return ((1.0 - 3.0 * x2 + 3.0 * x1) * t ** 3) + ((3.0 * x2 - 6.0 * x1) * t ** 2) + (3.0 * x1 * t)
 
@@ -303,7 +305,7 @@ def _cubic_bezier_easing(x1: float, y1: float, x2: float, y2: float) -> t.Callab
     return lambda value: _clamp01(sample_curve_y(solve_curve_x(_clamp01(value))))
 
 
-def _steps_easing(count: int, jump: str) -> t.Callable[[float], float]:
+def _steps_easing(count: int, jump: str) -> cabc.Callable[[float], float]:
     count = max(1, int(count))
     jump_mode = jump if jump in {'start', 'end', 'both', 'none'} else 'end'
 

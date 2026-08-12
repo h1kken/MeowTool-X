@@ -1,14 +1,33 @@
 from copy import deepcopy
 import typing as t
 
-from src.config.types import ConfigMap, ConfigValue
 from src.config.constants import CONFIG_COMMENT_SYMBOLS, CONFIG_INDENT
+from src.utils.mappings import clone_value, merge_dicts
 from src.utils.string import safe_literal_eval
 
+if t.TYPE_CHECKING:
+    from src.core.types import DataValue, DataMap
 
-def parse_config(text: str) -> ConfigMap:
-    parsed: ConfigMap = {}
-    stack: list[tuple[ConfigMap, int]] = [(parsed, -1)]
+
+def normalize_config(
+    user_config: DataMap,
+    default_config: DataMap,
+    *,
+    keep_unknown: bool = True,
+    recovery_missing: bool = False,
+) -> DataMap:
+    return merge_dicts(
+        user_config,
+        default_config,
+        converter=convert_value,
+        keep_unknown=keep_unknown,
+        recovery_missing=recovery_missing,
+    )
+
+
+def parse_config(text: str) -> DataMap:
+    parsed: DataMap = {}
+    stack: list[tuple[DataMap, int]] = [(parsed, -1)]
 
     for line in text.splitlines():
         stripped = line.strip()
@@ -20,79 +39,18 @@ def parse_config(text: str) -> ConfigMap:
 
         if ':' in line:
             key, value = map(str.strip, line.split(':', 1))
-            stack[-1][0][key] = t.cast(ConfigValue, safe_literal_eval(value))
+            stack[-1][0][key] = t.cast(DataValue, safe_literal_eval(value))
         else:
             while stack and stack[-1][1] >= indent:
                 stack.pop()
-            new_dict: ConfigMap = {}
+            new_dict: DataMap = {}
             stack[-1][0][line] = new_dict
             stack.append((new_dict, indent))
 
     return parsed
 
 
-def normalize_config(
-    user_config: ConfigMap,
-    default_config: ConfigMap,
-    *,
-    keep_unknown: bool = True,
-    recovery_missing: bool = False,
-) -> ConfigMap:
-    validated: ConfigMap = {}
-    
-    for key, default_value in default_config.items():
-        if key not in user_config:
-            if recovery_missing:
-                if isinstance(default_value, dict):
-                    validated[key] = normalize_config(
-                        {},
-                        default_value,
-                        keep_unknown=keep_unknown,
-                        recovery_missing=recovery_missing,
-                    )
-                else:
-                    validated[key] = _clone_default(default_value)
-            continue
-
-        user_value = user_config[key]
-
-        if not isinstance(default_value, dict):
-            validated[key] = t.cast(ConfigValue, convert_value(user_value, default_value))
-            continue
-            
-        if isinstance(user_value, dict):
-            validated[key] = normalize_config(
-                user_value,
-                default_value,
-                keep_unknown=keep_unknown,
-                recovery_missing=recovery_missing,
-            )
-        else:
-            validated[key] = normalize_config(
-                {},
-                default_value,
-                keep_unknown=keep_unknown,
-                recovery_missing=recovery_missing,
-            )
-
-    if keep_unknown:
-        for key, user_value in user_config.items():
-            if key in default_config:
-                continue
-            
-            if isinstance(user_value, dict):
-                validated[key] = normalize_config(
-                    user_value,
-                    {},
-                    recovery_missing=recovery_missing,
-                )
-            else:
-                validated[key] = t.cast(ConfigValue, convert_value(user_value))
-
-    return validated
-
-
-def convert_value(user_value: object | None = None, default_value: ConfigValue | None = None) -> ConfigValue | object | None:
+def convert_value(user_value: object | None = None, default_value: DataValue | None = None) -> DataValue | object | None:
     if default_value is not None:
         return _convert_user_value(user_value, default_value)
 
@@ -114,12 +72,6 @@ def _count_indent_levels(raw_line: str) -> int:
     return tabs + spaces
 
 
-def _clone_default(default_value: ConfigValue) -> ConfigValue:
-    if isinstance(default_value, tuple):
-        return deepcopy(default_value[0]) if default_value else None
-    return t.cast(ConfigValue, deepcopy(default_value))
-
-
 def _convert_to_bool(user_value: str) -> bool | str:
     low = user_value.strip().lower()
     if low in ('true', 'yes', 'да', 'on', '+'):
@@ -135,11 +87,11 @@ def _parse_numeric(value: object) -> object:
     return value
 
 
-def _is_numeric_bound_tuple(value: tuple[ConfigValue, ...]) -> t.TypeGuard[tuple[int | float, int | float, int | float]]:
+def _is_numeric_bound_tuple(value: tuple[DataValue, ...]) -> t.TypeGuard[tuple[int | float, int | float, int | float]]:
     return (len(value) == 3) and all(type(item) in (int, float) for item in value)
 
 
-def _convert_user_value(user_value: object, default_value: ConfigValue) -> ConfigValue:
+def _convert_user_value(user_value: object, default_value: DataValue) -> DataValue:
     # tuple
     if isinstance(default_value, tuple):
         if _is_numeric_bound_tuple(default_value):
@@ -159,13 +111,13 @@ def _convert_user_value(user_value: object, default_value: ConfigValue) -> Confi
                     return default_scalar
                 parsed = float(parsed)
             else:
-                return _clone_default(default_value)
+                return clone_value(default_value)
 
             if min_value <= parsed <= max_value:
                 return parsed
             return default_scalar
 
-        return _clone_default(default_value)
+        return clone_value(default_value)
 
     # bool
     if isinstance(default_value, bool):
@@ -207,16 +159,16 @@ def _convert_user_value(user_value: object, default_value: ConfigValue) -> Confi
     # list
     if isinstance(default_value, list):
         if isinstance(user_value, list):
-            return t.cast(ConfigValue, deepcopy(t.cast(list[ConfigValue], user_value)))
-        return t.cast(ConfigValue, deepcopy(default_value))
+            return t.cast(DataValue, deepcopy(t.cast(list[DataValue], user_value)))
+        return t.cast(DataValue, deepcopy(default_value))
 
     # dict
     if isinstance(default_value, dict):
         if isinstance(user_value, dict):
-            return t.cast(ConfigValue, deepcopy(t.cast(ConfigMap, user_value)))
-        return t.cast(ConfigValue, deepcopy(default_value))
+            return t.cast(DataValue, deepcopy(t.cast(DataMap, user_value)))
+        return t.cast(DataValue, deepcopy(default_value))
 
     if user_value is None:
-        return _clone_default(default_value)
+        return clone_value(default_value)
 
-    return t.cast(ConfigValue, user_value)
+    return t.cast(DataValue, user_value)

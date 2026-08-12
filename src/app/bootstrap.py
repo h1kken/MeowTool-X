@@ -34,6 +34,10 @@ def bootstrap(_app: QApplication) -> AppServices:
     from src.ui.theme.manager import ThemeManager
     services.theme = ThemeManager(services.config)
     
+    # from src.ui.theme.animation.manager import AnimationManager
+    # animation_manager = AnimationManager(services.window, services.config) # TODO: refactor lighter (pls)
+    # services.theme.themeLoaded.connect(animation_manager.load)
+    
     # UI
     from src.ui.windows import MainWindow
     services.window = MainWindow(services.config)
@@ -41,10 +45,6 @@ def bootstrap(_app: QApplication) -> AppServices:
     # Popup
     from src.ui.popup.manager import PopupManager
     services.popup = PopupManager(services.window.overlay)
-    
-    # from src.ui.theme.animation.manager import AnimationManager
-    # animation_manager = AnimationManager(services.window, services.config) # TODO: refactor lighter (pls)
-    # services.theme.themeLoaded.connect(animation_manager.load)
     
     services.theme.set_window(services.window)
     services.theme.load()

@@ -25,9 +25,9 @@ class MTSwitch(QCheckBox):
         checked: bool = False,
     ) -> None:
         super().__init__(text, parent)
+        self.setObjectName(build_object_name((*obj_name, MTSwitch._OBJECT_NAME)))
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setChecked(checked)
-        self.setObjectName(build_object_name((*obj_name, MTSwitch._OBJECT_NAME)))
 
         self._margin = 3
         self._syncing_visuals = False

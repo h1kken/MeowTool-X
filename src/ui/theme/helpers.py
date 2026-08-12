@@ -5,11 +5,10 @@ import typing as t
 from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QWidget
 
-from .types import ThemeMap
 from .constants import SIDES
 
 if t.TYPE_CHECKING:
-    from .types import ThemeMap
+    from src.core.types import DataMap
 
 
 def resolve_qt_target(root: QWidget, target: str) -> list[QObject]:
@@ -35,7 +34,7 @@ def resolve_qt_target(root: QWidget, target: str) -> list[QObject]:
     return [obj for obj in objects if obj.inherits(class_name)]
 
 
-def parse_sides(styles: ThemeMap, *, property_name: str) -> list[str]:
+def parse_sides(styles: DataMap, *, property_name: str) -> list[str]:
     rules: list[str] = []
     
     for side in SIDES:
@@ -49,7 +48,7 @@ def parse_sides(styles: ThemeMap, *, property_name: str) -> list[str]:
     return rules
 
 
-def parse_box_values(styles: ThemeMap, *, property_name: str) -> tuple[int, int, int, int]:
+def parse_box_values(styles: DataMap, *, property_name: str) -> tuple[int, int, int, int]:
     values: list[int] = [0, 0, 0, 0] # top right bottom left
 
     raw = styles.get(property_name)

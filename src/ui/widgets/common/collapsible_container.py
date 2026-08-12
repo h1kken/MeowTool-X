@@ -63,9 +63,7 @@ class _CollapsibleHeader(MTWidget):
 
     def setExpanded(self, expanded: bool):
         self.setProperty('expanded', expanded)
-        
         self._icon.setRotation(90 if expanded else 0)
-
         repolish(self)
 
 

@@ -9,18 +9,20 @@ from pathlib import Path
 from src.utils.logging import logger
 from src.app.paths import PATH_CONFIGS_USER
 from src.config.constants import CONFIG_INDENT, CONFIG_MISSING_DEFAULT, CONFIG_SAVE_RETRY_COUNT, CONFIG_SAVE_RETRY_DELAY_SEC
-from src.config.types import ConfigMap, ConfigMixinHost, ConfigValue
 from src.config.utils import convert_value
 from src.utils.filesystem import FS, del_safe, get_safe, set_safe
 
+if t.TYPE_CHECKING:
+    from src.core.types import DataValue, DataMap
+    from src.config.types import ConfigMixinHost
 
 class GetConfigMixin:
-    def get(self: ConfigMixinHost, key: str, *, sep: str = '>') -> ConfigValue:
-        value = t.cast(ConfigValue, get_safe(self.data, key, sep=sep, default=CONFIG_MISSING_DEFAULT))
+    def get(self: ConfigMixinHost, key: str, *, sep: str = '>') -> DataValue:
+        value = t.cast(DataValue, get_safe(self.data, key, sep=sep, default=CONFIG_MISSING_DEFAULT))
         if value is not CONFIG_MISSING_DEFAULT:
             return value
 
-        default_value = t.cast(ConfigValue, get_safe(self.defaults, key, sep=sep, default=CONFIG_MISSING_DEFAULT))
+        default_value = t.cast(DataValue, get_safe(self.defaults, key, sep=sep, default=CONFIG_MISSING_DEFAULT))
         if default_value is not CONFIG_MISSING_DEFAULT:
             return default_value
 
@@ -29,7 +31,7 @@ class GetConfigMixin:
 
 class SetConfigMixin:
     def set(self: ConfigMixinHost, key: str, value: object, *, sep: str = '>') -> None:
-        default_value = t.cast(ConfigValue, get_safe(self.defaults, key, sep=sep, default=CONFIG_MISSING_DEFAULT))
+        default_value = t.cast(DataValue, get_safe(self.defaults, key, sep=sep, default=CONFIG_MISSING_DEFAULT))
         value = convert_value(value, default_value)
 
         normalized_default = convert_value(None, default_value)
@@ -38,12 +40,12 @@ class SetConfigMixin:
             logger.debug(f'Resetted default to \'{key.replace(sep, ' > ')}\'')
             return
 
-        set_safe(self.data, key, t.cast(ConfigValue, value), sep=sep)
+        set_safe(self.data, key, t.cast(DataValue, value), sep=sep)
         logger.debug(f'Setted \'{value}\' ({type(value).__name__}) to \'{key.replace(sep, ' > ')}\'')
 
 
 class SaveConfigMixin:
-    def _iter_ordered_items(self, data: ConfigMap, defaults: ConfigMap | None = None) -> cabc.Iterator[tuple[str, ConfigValue]]:
+    def _iter_ordered_items(self, data: DataMap, defaults: DataMap | None = None) -> cabc.Iterator[tuple[str, DataValue]]:
         if defaults is None:
             yield from data.items()
             return
@@ -60,7 +62,7 @@ class SaveConfigMixin:
                 continue
             yield key, value
 
-    def dump_dict(self, old_data: ConfigMap, defaults: ConfigMap | None = None, indent: int = 0) -> list[str]:
+    def dump_dict(self, old_data: DataMap, defaults: DataMap | None = None, indent: int = 0) -> list[str]:
         new_data: list[str] = []
         indent_prefix = CONFIG_INDENT * indent
         for key, value in self._iter_ordered_items(old_data, defaults):

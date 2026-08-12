@@ -11,7 +11,7 @@ class ComboItem:
     text: str | None = None
 
 
-type WidgetThemeMap = dict[str, object]
+type WidgetDataMap = dict[str, object]
 type PopupPlacement = t.Literal[
     'bottom-left',
     'bottom-right',
@@ -28,5 +28,5 @@ type PopupPlacement = t.Literal[
 
 __all__ = (
     'PopupPlacement',
-    'WidgetThemeMap',
+    'WidgetDataMap',
 )

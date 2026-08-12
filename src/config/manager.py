@@ -13,12 +13,12 @@ from src.utils.logging import logger
 from src.app.paths import PATH_CONFIGS_USER, PATH_DEFAULT_CONFIG
 from src.config.defaults import default_config
 from src.config.mixin import GetConfigMixin, SaveConfigMixin, SetConfigMixin
-from src.config.types import ConfigMap, ConfigValue
 from src.config.utils import normalize_config, parse_config
 from src.config.enums import ConfigLoaderKey as CLKey
 from src.utils.filesystem import FS
 
 if t.TYPE_CHECKING:
+    from src.core.types import DataValue, DataMap
     from src.config import ConfigLoader
 
 
@@ -31,8 +31,8 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         self.loader = loader
         
         self._path = PATH_DEFAULT_CONFIG
-        self._data: ConfigMap = {}
-        self._defaults: ConfigMap = default_config()
+        self._data: DataMap = {}
+        self._defaults: DataMap = default_config()
         self._save_lock = threading.Lock()
 
     @property
@@ -40,11 +40,11 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         return self._path
 
     @property
-    def data(self) -> ConfigMap:
+    def data(self) -> DataMap:
         return self._data
 
     @property
-    def defaults(self) -> ConfigMap:
+    def defaults(self) -> DataMap:
         return self._defaults
 
     @property
@@ -90,8 +90,8 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES) or force_save:
             self.save()
 
-    def set_many(self, items: cabc.Mapping[str, ConfigValue] | cabc.Iterable[tuple[str, ConfigValue]], *, sep: str = '>', force_save: bool = False) -> None:
-        lst: list[tuple[str, ConfigValue]] = list(t.cast(cabc.Mapping[str, ConfigValue], items).items()) if isinstance(items, cabc.Mapping) else list(items)
+    def set_many(self, items: cabc.Mapping[str, DataValue] | cabc.Iterable[tuple[str, DataValue]], *, sep: str = '>', force_save: bool = False) -> None:
+        lst: list[tuple[str, DataValue]] = list(t.cast(cabc.Mapping[str, DataValue], items).items()) if isinstance(items, cabc.Mapping) else list(items)
         for key, value in lst:
             super().set(str(key), value, sep=sep)
             self.valueChanged.emit(str(key).replace(sep, '>'), value)

@@ -16,7 +16,7 @@ from src.utils.filesystem import FS
 from src.config.enums import ConfigLoaderKey as CLKey
 
 if t.TYPE_CHECKING:
-    from src.config.types import ConfigMap
+    from src.core.types import DataMap
     
 
 class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
@@ -27,8 +27,8 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         super().__init__()
         
         self._path = PATH_DEFAULT_LOADER
-        self._data: ConfigMap = {}
-        self._defaults: ConfigMap = default_config_loader()
+        self._data: DataMap = {}
+        self._defaults: DataMap = default_config_loader()
         self._save_lock = threading.Lock()
         self._load()
 
@@ -37,11 +37,11 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         return self._path
 
     @property
-    def data(self) -> ConfigMap:
+    def data(self) -> DataMap:
         return self._data
 
     @property
-    def defaults(self) -> ConfigMap:
+    def defaults(self) -> DataMap:
         return self._defaults
 
     @property

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import typing as t
+import collections.abc as cabc
 
 from dataclasses import dataclass, field
 
@@ -18,7 +19,7 @@ class NativeHttpHandleProtocol(t.Protocol):
         proxies: list[JsonObject] | None,
         config: JsonObject | None,
         *,
-        debug_hook: t.Callable[[str, str, str], None] | None = None,
+        debug_hook: cabc.Callable[[str, str, str], None] | None = None,
     ) -> None: ...
 
     def run_batch(self, requests: list[JsonObject]) -> t.Iterable[JsonObject]: ...

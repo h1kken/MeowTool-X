@@ -1,28 +1,56 @@
 import typing as t
 import collections.abc as cabc
 
+import sys
 import json
 import mmap
 import shutil
 import zipfile
+import subprocess
 from pathlib import Path
+
+from PySide6.QtCore import QUrl
+from PySide6.QtGui import QDesktopServices
 
 from src.exceptions.json import NotADictionaryError
 from src.app.paths import PATH_ROOT, PATH_APP_ROOT
 from src.utils.logging.decorators import log_action
-from src.utils.filesystem.constants import FILENAME_SPECIAL_CHARS, START_DIR_PATHS, START_FILE_PATHS
-from src.utils.filesystem.types import JsonObject
 from src.utils.logging import logger
+
+from .constants import FILENAME_SPECIAL_CHARS, START_DIR_PATHS, START_FILE_PATHS
+from .types import JsonObject
 
 TDefault = t.TypeVar('TDefault')
 
 
 class FS:
     @staticmethod
-    def iter_paths(*paths: Path, file_extension: str) -> list[tuple[str, str]]:
-        names: list[tuple[str, str]] = []
+    def open_file_location(path: Path | None) -> None:
+        if path is None:
+            return
         
-        for folder_path in paths:
+        if sys.platform.startswith('win'):
+            subprocess.Popen(['explorer', '/select,', str(path)])
+            return
+
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(path).parent)))
+    
+    @staticmethod
+    def is_user_path(path: Path | None) -> bool:
+        if path is None:
+            return False
+
+        try:
+            path.resolve().relative_to(PATH_ROOT.resolve())
+            return True
+        except ValueError:
+            return False
+
+    @staticmethod
+    def iter_paths(*folder_paths: Path, file_extension: str, remove_duplicate_filenames: bool = False) -> list[Path]:
+        paths: list[Path] = []
+        
+        for folder_path in folder_paths:
             for file_path in folder_path.glob(f'*.{file_extension}'):
                 if (
                     not file_path.is_file()
@@ -30,10 +58,14 @@ class FS:
                 ):
                     continue
                 
-                names.append((file_path.stem, file_path.name))
+                paths.append(file_path)
 
-        names.sort(key=lambda item: item[0].casefold())
-        return names
+        if remove_duplicate_filenames:
+            paths = list({path.stem: path for path in paths}.values())
+
+        paths.sort(key=lambda path: path.name.casefold())
+                    
+        return paths
     
     @staticmethod
     def normalize_filename(name: str, *, blacklist: cabc.Collection[str] = (), default: str | None = None) -> str | None:
@@ -116,7 +148,6 @@ class FS:
                 if archive_dir in file_path.parents:
                     continue
                 zipf.write(file_path, file_path.relative_to(source_path))
-
 
 def create_start_paths() -> None:
     for path in START_DIR_PATHS:
@@ -226,14 +257,3 @@ def count_lines_in_file(path: Path) -> int:
                 count += 1
 
     return count
-
-
-def is_user_path(path: Path | None) -> bool:
-    if path is None:
-        return False
-    
-    try:
-        path.resolve().relative_to(PATH_ROOT.resolve())
-        return True
-    except ValueError:
-        return False

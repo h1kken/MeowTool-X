@@ -7,10 +7,10 @@ from copy import deepcopy
 from src.utils.logging import logger
 
 if t.TYPE_CHECKING:
-    from .types import ThemeValue, ThemeMap
+    from src.core.types import DataValue, DataMap
 
 
-def resolve_theme(theme: ThemeMap) -> ThemeMap:
+def resolve_theme(theme: DataMap) -> DataMap:
     raw_vars = theme.get('vars')
 
     if not isinstance(raw_vars, dict):
@@ -27,10 +27,10 @@ def resolve_theme(theme: ThemeMap) -> ThemeMap:
     return resolved_theme
 
 
-def _resolve_vars_map(vars_map: ThemeMap) -> ThemeMap:
-    resolved: ThemeMap = {}
+def _resolve_vars_map(vars_map: DataMap) -> DataMap:
+    resolved: DataMap = {}
 
-    def resolve_var(name: str, stack: tuple[str, ...]) -> ThemeValue:
+    def resolve_var(name: str, stack: tuple[str, ...]) -> DataValue:
         if name in resolved:
             return resolved[name]
 
@@ -41,7 +41,7 @@ def _resolve_vars_map(vars_map: ThemeMap) -> ThemeMap:
         resolved[name] = value
         return value
 
-    def _resolve_value(value: ThemeValue, stack: tuple[str, ...]) -> ThemeValue:
+    def _resolve_value(value: DataValue, stack: tuple[str, ...]) -> DataValue:
         if isinstance(value, str):
             ref = _normalize_var(value)
 
@@ -85,7 +85,7 @@ def _normalize_var(value: str) -> str | None:
     return value
 
 
-def _resolve_theme_value(value: ThemeValue, vars_map: ThemeMap) -> ThemeValue:
+def _resolve_theme_value(value: DataValue, vars_map: DataMap) -> DataValue:
     if isinstance(value, str):
         ref = _normalize_var(value)
         if ref is None or ref not in vars_map:

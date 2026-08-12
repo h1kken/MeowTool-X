@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QWidget
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.settings.base import MTBaseSetting
-from src.ui.widgets.types import WidgetThemeMap
+from src.ui.widgets.types import WidgetDataMap
 from src.ui.widgets.common import MTSwitch, MTWidget, MTButton, MTLabel, MTLineEdit, MTPopup
 from src.ui.widgets.settings import MTSwitchSetting
 
@@ -24,7 +24,7 @@ if t.TYPE_CHECKING:
     from src.config import Config, ConfigLoader
 
 
-def _sort_defaults() -> WidgetThemeMap:
+def _sort_defaults() -> WidgetDataMap:
     root = as_dict(default_config()) or {}
     roblox = as_dict(root.get('Roblox')) or {}
     cookie_checker = as_dict(roblox.get('Cookie Checker')) or {}
@@ -33,7 +33,7 @@ def _sort_defaults() -> WidgetThemeMap:
     return categories
 
 
-_COOKIE_CHECKER_SORT_DEFAULTS: WidgetThemeMap = _sort_defaults()
+_COOKIE_CHECKER_SORT_DEFAULTS: WidgetDataMap = _sort_defaults()
 _COOKIE_CHECKER_SORT_TEXT_FLAGS: dict[str, dict[str, str]] = {
     'Gamepasses': {
         'Names': 'Gamepass Names',

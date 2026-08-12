@@ -17,9 +17,9 @@ from .handlers import QT_HANDLERS
 from .parsers import QSS_PARSERS
 from .resolvers import resolve_theme
 from .helpers import resolve_qt_target
-from .types import ThemeMap
 
 if t.TYPE_CHECKING:
+    from src.core.types import DataMap
     from src.config import Config
 
 
@@ -30,7 +30,9 @@ class ThemeManager(QObject):
         super().__init__()
         self._window: QWidget | None = None
         self._config = config
-                
+        
+        self._applied_qt: dict[QObject, set[str]] = defaultdict(set)
+        
         self._path = PATH_DEFAULT_THEME
 
     def set_window(self, window: QWidget):
@@ -57,7 +59,7 @@ class ThemeManager(QObject):
         
         try:
             with path.open('r', encoding='utf-8') as f:
-                resolved = resolve_theme(t.cast(ThemeMap, json5.loads(f.read())))
+                resolved = resolve_theme(t.cast(DataMap, json5.loads(f.read())))
 
             self._path = path
             self._apply(resolved)
@@ -65,12 +67,12 @@ class ThemeManager(QObject):
         except (OSError, ValueError) as e:
             logger.error(f'Can\'t load theme {path}: {e}')
         
-    def _apply(self, theme: ThemeMap) -> None:
+    def _apply(self, theme: DataMap) -> None:
         self.window.setStyleSheet(self._build_qss(theme))
         self._reset_qt()
         self._apply_qt(theme)
 
-    def _build_qss(self, theme: ThemeMap) -> str:
+    def _build_qss(self, theme: DataMap) -> str:
         widgets = theme.get('widgets')
         if not isinstance(widgets, list):
             return ''
@@ -105,20 +107,7 @@ class ThemeManager(QObject):
             for declarations, targets in groups.items()
         )
 
-
-    def _reset_qt(self) -> None:
-        for layout in self.window.findChildren(QLayout):
-            layout.setContentsMargins(0, 0, 0, 0)
-            layout.setSpacing(0)
-            layout.setAlignment(Qt.AlignmentFlag(0))
-
-        for widget in self.window.findChildren(QWidget):
-            setter = getattr(widget, 'setAlignment', None)
-            if callable(setter):
-                setter(Qt.AlignmentFlag(0))
-
-
-    def _apply_qt(self, theme: ThemeMap) -> None:
+    def _apply_qt(self, theme: DataMap) -> None:
         widgets = theme.get('widgets')
         if not isinstance(widgets, list):
             return
@@ -141,4 +130,24 @@ class ThemeManager(QObject):
 
                 for obj in resolve_qt_target(self.window, target):
                     for handler in QT_HANDLERS:
-                        handler(obj, styles)
+                        handler(obj, styles, store=self._applied_qt)
+
+    def _reset_qt(self) -> None:
+        for obj, props in self._applied_qt.items():
+            if isinstance(obj, QLayout):
+                if 'margin' in props:
+                    obj.setContentsMargins(0, 0, 0, 0)
+                    
+                if 'spacing' in props:
+                    obj.setSpacing(0)
+                    
+                if 'alignment' in props:
+                    obj.setAlignment(Qt.AlignmentFlag(0))
+
+            elif isinstance(obj, QWidget):
+                if 'alignment' in props:
+                    setter = getattr(obj, 'setAlignment', None)
+                    if callable(setter):
+                        setter(Qt.AlignmentFlag(0))
+
+        self._applied_qt.clear()

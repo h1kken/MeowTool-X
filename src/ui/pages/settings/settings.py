@@ -77,12 +77,12 @@ class SettingsPage(BasePage):
                 page = spec.page_class(
                     config=self._config,
                     parent_page_controller=self._page_controller, # type: ignore[call-arg]
-                    obj_name=(SettingsPage._OBJECT_NAME,),
+                    obj_name=(obj_name, SettingsPage._OBJECT_NAME,),
                 )
             else:
                 page = spec.page_class(
                     config=self._config,
-                    obj_name=(SettingsPage._OBJECT_NAME,),
+                    obj_name=(obj_name, SettingsPage._OBJECT_NAME,),
                 )
                         
             button = MTButton(tr_key=spec.tr_key, obj_name=(SettingsPage._OBJECT_NAME, spec.obj_name, 'Tab'))
