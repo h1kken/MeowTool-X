@@ -3,10 +3,11 @@ import typing as t
 import threading
 from pathlib import Path
 
-if t.TYPE_CHECKING:
-    from src.core.types import DataMap
+from src.core.types import DataMap
+
 
 type SortCategoryKind = t.Literal['none', 'text', 'number']
+
 
 class ConfigMixinHost(t.Protocol):
     @property

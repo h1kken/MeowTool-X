@@ -33,7 +33,7 @@ class SettingsThemePage(BasePage):
     ):
         super().__init__(parent, config=config, obj_name=(*obj_name, SettingsThemePage._OBJECT_NAME))
         
-        self._autoload_name = str(self._config.get(CKey.GENERAL_THEME)).strip()
+        self._autoload_name = PATH_DEFAULT_THEME.stem
         
         self._build_ui()
         self._connect_signals()
@@ -181,7 +181,8 @@ class SettingsThemePage(BasePage):
         self._config.configLoaded.connect(self._on_config_loaded)
 
     def _on_config_loaded(self) -> None:
-        self._refresh_themes()
+        self._autoload_name = str(self._config.get(CKey.GENERAL_THEME)).strip()
+        ctx.services.theme.load(self._autoload_name)
 
     def _on_themes_dir_changed(self, _path: str) -> None:
         self._refresh_timer.start()
@@ -204,6 +205,7 @@ class SettingsThemePage(BasePage):
     # load
     def _load(self) -> None:
         ctx.services.theme.load(self._themes_list_widget.currentText)
+        self._sync_actions_state()
 
     # create
     def _start_create(self) -> None:
@@ -220,8 +222,8 @@ class SettingsThemePage(BasePage):
         if name is None:
             return
 
+        ctx.services.theme.create(name)
         self._cancel_create()
-        # self._config.create(name) > ctx.services.theme.create(name)
         self._refresh_themes()
 
     # rename
@@ -245,7 +247,7 @@ class SettingsThemePage(BasePage):
         if (
             selected_text is None
             or not new_name
-            # or not self._config.rename(selected_text, new_name) > ctx.services.theme.rename(selected_text, new_name)
+            or not ctx.services.theme.rename(selected_text, new_name)
         ):
             return
 
@@ -292,7 +294,7 @@ class SettingsThemePage(BasePage):
         self._autoload_name = name
 
     def _refresh_themes(self) -> None:
-        paths = FS.iter_paths(PATH_THEMES_USER, PATH_THEMES_SRC, file_extension='txt', remove_duplicate_filenames=True)
+        paths = FS.iter_paths(PATH_THEMES_USER, PATH_THEMES_SRC, file_extension='json5', remove_duplicate_filenames=True)
         items = tuple((path, path.stem) for path in paths)
 
         with QSignalBlocker(self._themes_list_widget):

@@ -1,11 +1,14 @@
+from __future__ import annotations
+
 import typing as t
 
 from src.app.paths import PATH_DEFAULT_THEME, PATH_DEFAULT_TRANSLATION
-from src.config.utils import normalize_config
+from src.core.types import DataMap
+
+from .utils import normalize_config
 
 if t.TYPE_CHECKING:
-  from src.core.types import DataMap
-  from src.config.types import SortCategoryKind
+  from .types import SortCategoryKind
 
 
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import typing as t
 import collections.abc as cabc
 
@@ -11,10 +13,10 @@ from src.app.paths import PATH_CONFIGS_USER
 from src.config.constants import CONFIG_INDENT, CONFIG_MISSING_DEFAULT, CONFIG_SAVE_RETRY_COUNT, CONFIG_SAVE_RETRY_DELAY_SEC
 from src.config.utils import convert_value
 from src.utils.filesystem import FS, del_safe, get_safe, set_safe
+from src.core.types import DataValue, DataMap
 
 if t.TYPE_CHECKING:
-    from src.core.types import DataValue, DataMap
-    from src.config.types import ConfigMixinHost
+    from .types import ConfigMixinHost
 
 class GetConfigMixin:
     def get(self: ConfigMixinHost, key: str, *, sep: str = '>') -> DataValue:

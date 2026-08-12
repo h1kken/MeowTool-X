@@ -32,10 +32,10 @@ PATH_APP_ROOT = _find_app_root(PATH_ROOT)
 
 PATH_SYSTEM_DRIVE = Path(os.environ['SystemDrive'])
 
-PATH_APPDATA = Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppDataLocation))
+PATH_APPDATA = Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppDataLocation)).parent
 PATH_APPDATA_APP_DIR = PATH_APPDATA / PROGRAM_NAME
 
-PATH_LOCALAPPDATA = Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppLocalDataLocation))
+PATH_LOCALAPPDATA = Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppLocalDataLocation)).parent
 
 ### src
 PATH_SRC = PATH_ROOT / 'src'

@@ -57,7 +57,8 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         
         path = PATH_CONFIGS_USER / f'{name}.txt'
         if not path.is_file():
-            return
+            logger.warning(f'Can\'t load config: {path}: file not found, fallback to default')
+            path = PATH_DEFAULT_CONFIG
         
         try:
             with path.open('r', encoding='utf-8') as f:
@@ -83,22 +84,6 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         except OSError as e:
             logger.exception(f'Can\'t create config \'{name}\': {e}')
 
-    def set(self, key: str, value: object, *, sep: str = '>', force_save: bool = False) -> None:
-        super().set(key, value, sep=sep)
-        self.valueChanged.emit(key.replace(sep, '>'), value)
-
-        if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES) or force_save:
-            self.save()
-
-    def set_many(self, items: cabc.Mapping[str, DataValue] | cabc.Iterable[tuple[str, DataValue]], *, sep: str = '>', force_save: bool = False) -> None:
-        lst: list[tuple[str, DataValue]] = list(t.cast(cabc.Mapping[str, DataValue], items).items()) if isinstance(items, cabc.Mapping) else list(items)
-        for key, value in lst:
-            super().set(str(key), value, sep=sep)
-            self.valueChanged.emit(str(key).replace(sep, '>'), value)
-
-        if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES) or force_save:
-            self.save()
-
     def rename(self, old_name: str, new_name: str) -> bool:
         old_path = PATH_CONFIGS_USER / f'{old_name}.txt'
         new_path = PATH_CONFIGS_USER / f'{new_name}.txt'
@@ -114,5 +99,21 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             self._path = new_path
             return True
         except OSError as e:
-            logger.exception(f'Can\'t rename config \'{old_name}.txt\' to \'{new_name}.txt\': {e}')
+            logger.exception(f'Can\'t rename config \'{old_name}\' to \'{new_name}\': {e}')
             return False
+
+    def set(self, key: str, value: object, *, sep: str = '>', force_save: bool = False) -> None:
+        super().set(key, value, sep=sep)
+        self.valueChanged.emit(key.replace(sep, '>'), value)
+
+        if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES) or force_save:
+            self.save()
+
+    def set_many(self, items: cabc.Mapping[str, DataValue] | cabc.Iterable[tuple[str, DataValue]], *, sep: str = '>', force_save: bool = False) -> None:
+        lst: list[tuple[str, DataValue]] = list(t.cast(cabc.Mapping[str, DataValue], items).items()) if isinstance(items, cabc.Mapping) else list(items)
+        for key, value in lst:
+            super().set(str(key), value, sep=sep)
+            self.valueChanged.emit(str(key).replace(sep, '>'), value)
+
+        if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES) or force_save:
+            self.save()

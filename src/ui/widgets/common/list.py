@@ -5,18 +5,18 @@ import collections.abc as cabc
 
 from pathlib import Path
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QWidget
 
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common.widget import MTWidget
 
-from .button import MTButton
+from .button import MTPlainButton
 from .scroll_area import MTScrollArea
 
 
-class MTListItem(MTButton):
+class MTListItem(MTPlainButton):
     clickedItem = Signal(object)
 
     _OBJECT_NAME = 'Item'
@@ -69,7 +69,8 @@ class MTList(MTScrollArea):
         self._content = MTWidget(obj_name=(obj_name, 'Content'))
         self._content_layout = create_layout(LayoutType.VBOX, self._content)
         self.setWidget(self._content)
-        
+
+
     @property
     def currentItem(self) -> MTListItem | None:
         return self._current_item
@@ -82,18 +83,18 @@ class MTList(MTScrollArea):
     def currentValue(self) -> Path | None:
         return self._current_item.value if self._current_item is not None else None
 
-    def _on_item_clicked(self, item: MTListItem) -> None:
-        self.setCurrentItem(item)
-
     def addItem(self, text: str, value: Path, *, sort: bool = False) -> MTListItem:
         item = MTListItem(self._content, text=text, value=value)
-        item.clickedItem.connect(self._on_item_clicked)
+        item.clickedItem.connect(self.setCurrentItem)
         
         self._items.append(item)
         self._content_layout.addWidget(item)
         
         if sort:
             self.sortItems(key=lambda item: item.text().casefold())
+        
+        if self._current_item is None:
+            self.setCurrentItem(self._items[0])
         
         return item
     

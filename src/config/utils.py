@@ -1,24 +1,26 @@
-from copy import deepcopy
+from __future__ import annotations
+
 import typing as t
 
-from src.config.constants import CONFIG_COMMENT_SYMBOLS, CONFIG_INDENT
+from copy import deepcopy
+
 from src.utils.mappings import clone_value, merge_dicts
 from src.utils.string import safe_literal_eval
+from src.core.types import DataValue, DataMap
 
-if t.TYPE_CHECKING:
-    from src.core.types import DataValue, DataMap
+from .constants import CONFIG_COMMENT_SYMBOLS, CONFIG_INDENT
 
 
 def normalize_config(
-    user_config: DataMap,
-    default_config: DataMap,
+    user_map: DataMap,
+    default_map: DataMap,
     *,
     keep_unknown: bool = True,
     recovery_missing: bool = False,
 ) -> DataMap:
     return merge_dicts(
-        user_config,
-        default_config,
+        user_map,
+        default_map,
         converter=convert_value,
         keep_unknown=keep_unknown,
         recovery_missing=recovery_missing,

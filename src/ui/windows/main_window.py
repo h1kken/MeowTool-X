@@ -51,9 +51,7 @@ class MainWindow(QMainWindow):
         self._tab_names_by_key: dict[str, str] = {}
         
         self._build_ui()
-        
-        self.pageChanged.connect(lambda: print(self.page_state()))
-        
+                
         self._connect_signals()
 
     def _build_ui(self) -> None:

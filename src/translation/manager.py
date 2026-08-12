@@ -29,10 +29,6 @@ class TranslationManager(QObject):
         self._config.configLoaded.connect(self.load)
 
     @property
-    def name(self) -> str:
-        return self._path.name
-    
-    @property
     def path(self) -> Path:
         return self._path
     

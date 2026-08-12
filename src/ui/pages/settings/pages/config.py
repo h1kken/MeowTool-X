@@ -215,6 +215,7 @@ class SettingsConfigPage(BasePage):
     # load
     def _load(self) -> None:
         self._config.load(self._configs_list_widget.currentText)
+        self._sync_actions_state()
     
     # save
     def _save(self) -> None:
@@ -242,8 +243,8 @@ class SettingsConfigPage(BasePage):
         if name is None:
             return
 
-        self._cancel_create()
         self._config.create(name)
+        self._cancel_create()
         self._refresh_configs()
 
     # rename

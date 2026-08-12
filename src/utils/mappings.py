@@ -1,15 +1,16 @@
+from __future__ import annotations
+
 import typing as t
 import collections.abc as cabc
 
 from copy import deepcopy
 
-if t.TYPE_CHECKING:
-    from src.core.types import DataValue, DataMap
+from src.core.types import DataValue, DataMap
 
 
 def merge_dicts(
-    user_config: DataMap,
-    default_config: DataMap,
+    user_map: DataMap,
+    default_map: DataMap,
     *,
     converter: cabc.Callable[[object | None, DataValue | None], t.Any] | None = None,
     keep_unknown: bool = True,
@@ -17,8 +18,8 @@ def merge_dicts(
 ) -> DataMap:
     validated: DataMap = {}
     
-    for key, default_value in default_config.items():
-        if key not in user_config:
+    for key, default_value in default_map.items():
+        if key not in user_map:
             if recovery_missing:
                 if isinstance(default_value, dict):
                     validated[key] = merge_dicts(
@@ -32,7 +33,7 @@ def merge_dicts(
                     validated[key] = clone_value(default_value)
             continue
 
-        user_value = user_config[key]
+        user_value = user_map[key]
 
         if not isinstance(default_value, dict):
             validated[key] = t.cast(DataValue, converter(user_value, default_value)) if converter else user_value
@@ -47,8 +48,8 @@ def merge_dicts(
         )
 
     if keep_unknown:
-        for key, user_value in user_config.items():
-            if key in default_config:
+        for key, user_value in user_map.items():
+            if key in default_map:
                 continue
             
             if isinstance(user_value, dict):

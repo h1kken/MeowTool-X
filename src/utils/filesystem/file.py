@@ -13,7 +13,7 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 
 from src.exceptions.json import NotADictionaryError
-from src.app.paths import PATH_ROOT, PATH_APP_ROOT
+from src.app.paths import PATH_APPDATA, PATH_APP_ROOT
 from src.utils.logging.decorators import log_action
 from src.utils.logging import logger
 
@@ -41,7 +41,7 @@ class FS:
             return False
 
         try:
-            path.resolve().relative_to(PATH_ROOT.resolve())
+            path.resolve().relative_to(PATH_APPDATA.resolve())
             return True
         except ValueError:
             return False

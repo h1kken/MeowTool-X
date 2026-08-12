@@ -11,7 +11,9 @@ from PySide6.QtWidgets import QLayout, QWidget
 
 from src.app.paths import PATH_DEFAULT_THEME, PATH_THEMES_USER
 from src.config import ConfigKey as CKey
+from src.utils.filesystem.file import FS
 from src.utils.logging import logger
+from src.core.types import DataMap
 
 from .handlers import QT_HANDLERS
 from .parsers import QSS_PARSERS
@@ -19,7 +21,6 @@ from .resolvers import resolve_theme
 from .helpers import resolve_qt_target
 
 if t.TYPE_CHECKING:
-    from src.core.types import DataMap
     from src.config import Config
 
 
@@ -45,7 +46,7 @@ class ThemeManager(QObject):
     @property
     def window(self) -> QWidget:
         if self._window is None:
-            raise RuntimeError('Window is not initialized')
+            raise RuntimeError('Window is not linked')
         return self._window
 
     def load(self, name: str | None = None) -> None:
@@ -66,6 +67,35 @@ class ThemeManager(QObject):
             self.themeLoaded.emit()
         except (OSError, ValueError) as e:
             logger.error(f'Can\'t load theme {path}: {e}')
+        
+    def create(self, name: str, *, overwrite: bool = False) -> None:
+        path = PATH_THEMES_USER / f'{name}.json5'
+        if path.is_file() and not overwrite:
+            return
+
+        FS.ensure_dir(PATH_THEMES_USER)
+        try:
+            FS.copy_file(self._path, path, overwrite=overwrite)
+        except OSError as e:
+            logger.exception(f'Can\'t create theme \'{name}\': {e}')
+        
+    def rename(self, old_name: str, new_name: str) -> bool:
+        old_path = PATH_THEMES_USER / f'{old_name}.json5'
+        new_path = PATH_THEMES_USER / f'{new_name}.json5'
+        if (
+            old_path == new_path
+            or old_path.is_file()
+            or new_path.is_file()
+        ):
+            return False
+
+        try:
+            old_path.rename(new_path)
+            self._path = new_path
+            return True
+        except OSError as e:
+            logger.exception(f'Can\'t rename theme \'{old_name}\' to \'{new_name}\': {e}')
+            return False
         
     def _apply(self, theme: DataMap) -> None:
         self.window.setStyleSheet(self._build_qss(theme))
@@ -130,7 +160,7 @@ class ThemeManager(QObject):
 
                 for obj in resolve_qt_target(self.window, target):
                     for handler in QT_HANDLERS:
-                        handler(obj, styles, store=self._applied_qt)
+                        handler(obj, styles, storage=self._applied_qt)
 
     def _reset_qt(self) -> None:
         for obj, props in self._applied_qt.items():

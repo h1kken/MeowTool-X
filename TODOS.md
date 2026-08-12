@@ -1,7 +1,4 @@
-# 1. Settings
-
-1.1. Recreate theme page
-1.2. Create default config/theme if not any found
+# 1. Do something with object names...
 
 # 3. Roblox Cookie Sorter
 

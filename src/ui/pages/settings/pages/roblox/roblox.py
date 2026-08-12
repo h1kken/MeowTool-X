@@ -69,12 +69,12 @@ class SettingsRobloxPage(BasePage):
                 page = spec.page_class(
                     config=self._config,
                     parent_page_controller=self._page_controller, # type: ignore[call-arg]
-                    obj_name=(obj_name, SettingsRobloxPage._OBJECT_NAME,),
+                    obj_name=(obj_name,),
                 )
             else:
                 page = spec.page_class(
                     config=self._config,
-                    obj_name=(obj_name, SettingsRobloxPage._OBJECT_NAME,),
+                    obj_name=(obj_name,),
                 )
                 
             button = MTButton(tr_key=spec.tr_key, obj_name=(obj_name, spec.obj_name, 'Tab'))

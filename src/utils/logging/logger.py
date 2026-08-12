@@ -1,17 +1,20 @@
-import inspect
+import typing as t
+
 import sys
+import inspect
 import platform
 from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
-import typing as t
 
 import loguru
 
 from src.app.paths import PATH_ROOT, PATH_LOGS
 from src.app.constants import PROGRAM_NAME, IS_LAUNCHED_WITH_CONSOLE, PROGRAM_VERSION
-from src.utils.logging.constants import (
+from src.utils.ansi import YELLOW, LIGHTGREEN, LIGHTYELLOW, LIGHTCYAN, CLEAR
+
+from .constants import (
     DATE_LOGGER_FORMAT,
     LOGGER_INDENT_FUNCTION,
     LOGGER_INDENT_LEVEL,
@@ -21,11 +24,7 @@ from src.utils.logging.constants import (
     LOGGER_ROTATION,
     LOGGER_RETENTION,
 )
-from src.utils.ansi import (
-    YELLOW, LIGHTGREEN, LIGHTYELLOW,
-    LIGHTCYAN, CLEAR
-)
-from src.utils.logging.enums import LogLevel
+from .enums import LogLevel
 
 _LOG_ORIGIN: ContextVar[str] = ContextVar('log_origin', default=LOG_ORIGIN_DEFAULT)
 

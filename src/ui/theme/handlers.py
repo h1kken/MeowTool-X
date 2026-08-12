@@ -14,7 +14,7 @@ if t.TYPE_CHECKING:
 
 
 # margin
-def _apply_margin(target: QObject, styles: DataMap, *, store: dict[QObject, set[str]] | None = None) -> None:
+def _apply_margin(target: QObject, styles: DataMap, *, storage: dict[QObject, set[str]] | None = None) -> None:
     if not isinstance(target, QLayout):
         return
     
@@ -28,12 +28,12 @@ def _apply_margin(target: QObject, styles: DataMap, *, store: dict[QObject, set[
     top, right, bottom, left = parse_box_values(styles, property_name='margin')
     target.setContentsMargins(left, top, right, bottom)
     
-    if store is not None:
-        store[target].add('margin')
+    if storage is not None:
+        storage[target].add('margin')
 
 
 # spacing
-def _apply_spacing(target: QObject, styles: DataMap, *, store: dict[QObject, set[str]] | None = None) -> None:
+def _apply_spacing(target: QObject, styles: DataMap, *, storage: dict[QObject, set[str]] | None = None) -> None:
     if not isinstance(target, QLayout):
         return
     
@@ -44,12 +44,12 @@ def _apply_spacing(target: QObject, styles: DataMap, *, store: dict[QObject, set
     
     target.setSpacing(spacing)
     
-    if store is not None:
-        store[target].add('spacing')
+    if storage is not None:
+        storage[target].add('spacing')
 
 
 # align
-def _apply_alignment(target: QObject, styles: DataMap, *, store: dict[QObject, set[str]] | None = None) -> None:
+def _apply_alignment(target: QObject, styles: DataMap, *, storage: dict[QObject, set[str]] | None = None) -> None:
     if not isinstance(target, (QLayout, QWidget)):
         return
     
@@ -86,8 +86,8 @@ def _apply_alignment(target: QObject, styles: DataMap, *, store: dict[QObject, s
     
     setter(result)
     
-    if store is not None:
-        store[target].add('alignment')
+    if storage is not None:
+        storage[target].add('alignment')
 
 
 QT_HANDLERS: tuple[QTHandler, ...] = (

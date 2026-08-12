@@ -29,6 +29,9 @@ def create_layout(
         case _:
             raise ValueError(f'Unknown layout type: {layout_type}')
 
+    if parent:
+        layout.setObjectName(f'{parent.objectName()}_Layout')
+        
     layout.setContentsMargins(*(margins, margins, margins, margins) if isinstance(margins, int) else margins)
     layout.setSpacing(spacing)
 
