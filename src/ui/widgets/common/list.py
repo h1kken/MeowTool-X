@@ -5,7 +5,7 @@ import collections.abc as cabc
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget
 
 from src.ui.layouts.enums import LayoutType
@@ -109,7 +109,7 @@ class MTList(MTScrollArea):
         self._content_layout.removeWidget(item)
         item.deleteLater()
         
-    def setItems(self, items: t.Sequence[tuple[t.Any, str]]) -> None:
+    def setItems(self, items: cabc.Sequence[tuple[t.Any, str]]) -> None:
         old_names = {item.value: item for item in self._items}
         new_names = {value: text for value, text in items}
         

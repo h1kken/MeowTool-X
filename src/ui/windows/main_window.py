@@ -7,7 +7,6 @@ from PySide6.QtWidgets import QMainWindow
 
 from src.app.constants import PROGRAM_TITLE
 from src.ui.constants import WINDOW_X, WINDOW_Y
-from src.ui.widgets.common.overlay import MTPopupOverlay
 from src.ui.windows.types import PageSpec
 from src.ui.controllers import PageController
 from src.ui.layouts.enums import LayoutType
@@ -19,7 +18,7 @@ from src.ui.pages import (
     RobloxCookieSorterPage,
     SettingsPage,
 )
-from src.ui.widgets.common import MTButton, MTWidget, MTImage
+from src.ui.widgets.common import MTButton, MTWidget, MTImage, MTPopupOverlay
 from src.ui.windows.window_header import MTWindowHeader
 
 if t.TYPE_CHECKING:

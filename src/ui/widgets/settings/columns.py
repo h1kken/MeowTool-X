@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-import typing as t
+import collections.abc as cabc
 
 from PySide6.QtCore import QEvent, QObject, QTimer
 from PySide6.QtWidgets import QVBoxLayout, QWidget
@@ -25,7 +23,7 @@ class MTColumnsSetting(MTScrollArea):
         parent: QWidget | None = None,
         *,
         obj_name: tuple[str, ...] = (),
-        tabs: t.Sequence[QWidget] | None = None,
+        tabs: cabc.Sequence[QWidget] | None = None,
         columns: int = 2,
     ) -> None:
         self._tabs: list[QWidget] = []
@@ -48,7 +46,7 @@ class MTColumnsSetting(MTScrollArea):
     def _build_ui(
         self,
         *,
-        tabs: t.Sequence[QWidget] | None = None,
+        tabs: cabc.Sequence[QWidget] | None = None,
     ) -> None:
         obj_name = self.objectName()
         

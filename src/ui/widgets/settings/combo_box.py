@@ -27,7 +27,7 @@ class MTComboBoxSetting(MTBaseSetting[str]):
         cfg_key: str,
         tr_key: str = '',
         obj_name: tuple[str, ...] = (),
-        items: t.Sequence[ComboItem],
+        items: cabc.Sequence[ComboItem],
         on_changed: cabc.Callable[[str], None] | None = None,
     ) -> None:
         super().__init__(parent, config=config, cfg_key=cfg_key, obj_name=(*obj_name, MTComboBoxSetting._OBJECT_NAME))
@@ -59,13 +59,13 @@ class MTComboBoxSetting(MTBaseSetting[str]):
         self._combo_box.currentIndexChanged.connect(self._on_index_changed)
         self._config.configLoaded.connect(self._on_config_loaded)
 
-    def set_items(self, items: t.Sequence[ComboItem]) -> None:
+    def set_items(self, items: cabc.Sequence[ComboItem]) -> None:
         with QSignalBlocker(self._combo_box):
             self._combo_box.clear()
 
             for item in items:
                 if item.text is None:
-                    self._combo_box.add_item(item.tr_key)
+                    self._combo_box.add_item(item)
                 else:
                     self._combo_box.addItem(item.text, item.tr_key)
 

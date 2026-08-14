@@ -4,13 +4,14 @@ import typing as t
 
 from pathlib import Path
 
-from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import QThread
+from PySide6.QtWidgets import QWidget, QHeaderView
 
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets.common import MTButton, MTDropZone, MTLabel
+from src.ui.widgets.common import MTButton, MTDropZone, MTTable, MTWidget
+from src.ui.models.prepare import PrepareTableItem, PrepareTableModel
 from src.services.roblox.cookie_sorter import RobloxCookieSorter
 
 if t.TYPE_CHECKING:
@@ -32,10 +33,7 @@ class RobloxCookieSorterPage(BasePage):
         self._thread: QThread | None = None
         self._sorter: RobloxCookieSorter | None = None
 
-        self._source_files: list[Path] = []
-        self._source_file_keys: set[str] = set()
-        self._source_text_blocks: list[str] = []
-        self._use_default_folder = True
+        self._dropped_files_keys: set[str] = set()
 
         self._build_ui()
         self._connect_signals()
@@ -44,86 +42,86 @@ class RobloxCookieSorterPage(BasePage):
         obj_name = self.objectName()
         
         self._main_layout = create_layout(LayoutType.VBOX, self)
+        
+        self._content_widget = MTWidget(obj_name=(obj_name, 'Content'))
+        self._content_layout = create_layout(LayoutType.VBOX, self._content_widget)
+        self._main_layout.addWidget(self._content_widget)
 
         self._drop_zone = MTDropZone(tr_key='UPLD_OR_DRG_AND_DRP_TXT_OR_FLS_HERE', obj_name=(obj_name,))
-        self._main_layout.addWidget(self._drop_zone)
+        self._content_layout.addWidget(self._drop_zone, stretch=1)
         
-        self._label = MTLabel(tr_key='CK_SRTR_STATUS', obj_name=(obj_name, 'Status'))
-        self._main_layout.addWidget(self._label)
+        self._table = MTTable(obj_name=(obj_name,))
         
-        self._button = MTButton(tr_key='CK_SRTR_STRT', obj_name=(obj_name, 'Start'))
-        self._main_layout.addWidget(self._button)
+        self._model = PrepareTableModel(self)
+        self._table.setModel(self._model)
+        
+        header = self._table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        header.setSectionsMovable(False)
+        
+        self._content_layout.addWidget(self._table, stretch=1)
+        
+        self._buttons_widget = MTWidget(obj_name=(obj_name, 'Buttons'))
+        self._buttons_layout = create_layout(LayoutType.HBOX, self._buttons_widget)
+        self._main_layout.addWidget(self._buttons_widget)
+        
+        self._clear_button = MTButton(tr_key='CLR_DT', obj_name=(obj_name, 'Clear'))
+        self._clear_button.hide()
+        self._buttons_layout.addWidget(self._clear_button)
+        
+        self._buttons_layout.addStretch()
+        
+        self._start_button = MTButton(tr_key='CK_SRTR_STRT', obj_name=(obj_name, 'Start'))
+        self._buttons_layout.addWidget(self._start_button)
 
     def _connect_signals(self) -> None:
-        self._drop_zone.pathsDropped.connect(self._add_source_files)
-        self._drop_zone.textDropped.connect(self._add_source_text)
-        self._button.clicked.connect(self._start_sorting)
+        self._drop_zone.pathsDropped.connect(self._add_files)
+        self._drop_zone.textDropped.connect(self._add_text)
+        self._start_button.clicked.connect(self._start)
 
-    def _add_source_files(self, paths: list[Path]) -> None:
-        changed = False
+    def _add_files(self, paths: list[Path]) -> None:
         for path in paths:
             key = self._path_key(path)
-            if key in self._source_file_keys:
+            if key in self._dropped_files_keys:
                 continue
-            self._source_file_keys.add(key)
-            self._source_files.append(path)
-            changed = True
+            
+            self._dropped_files_keys.add(key)
+            self._model.add_item(PrepareTableItem.create(value=path, lines=0))
 
-        if changed:
-            self._label.setText(f'Added files/folders: +{len(paths)}')
-
-    def _add_source_text(self, text: str) -> None:
+    def _add_text(self, text: str) -> None:
         if not text.strip():
             return
-        self._source_text_blocks.append(text)
-        self._label.setText('Added text block')
+        
+        self._model.add_item(PrepareTableItem.create(value=text, lines=0))
 
-    def _set_default_folder_mode(self, checked: bool) -> None:
-        self._use_default_folder = bool(checked)
+    def _clear_drops(self) -> None:
+        self._model.clear()
 
-    def _clear_sources(self) -> None:
-        self._source_files.clear()
-        self._source_file_keys.clear()
-        self._source_text_blocks.clear()
-
-    def _start_sorting(self) -> None:
-        if self._thread is not None and self._thread.isRunning():
+    def _start(self) -> None:
+        if self._thread and self._thread.isRunning():
             return
-
-        if not any((self._use_default_folder, self._source_files, self._source_text_blocks)):
+        if not self._model.items:
             return
 
         self._thread = QThread(self)
-        self._sorter = RobloxCookieSorter(
-            self._config,
-            input_paths=list(self._source_files),
-            text_chunks=list(self._source_text_blocks),
-            use_default_folder=self._use_default_folder,
-        )
+        self._sorter = RobloxCookieSorter(self._config)
         self._sorter.moveToThread(self._thread)
 
         self._thread.started.connect(self._sorter.run)
         self._sorter.finished.connect(self._thread.quit)
-        self._sorter.finished.connect(self._on_finished)
         self._thread.finished.connect(self._cleanup_worker)
 
-        self._button.setEnabled(False)
         self._thread.start()
 
-    def _on_finished(self) -> None:
-        self._button.setEnabled(True)
-
     def _cleanup_worker(self) -> None:
-        self._button.setEnabled(True)
-        if self._sorter is not None:
-            self._sorter.deleteLater()
-            self._sorter = None
-        if self._thread is not None:
-            self._thread.deleteLater()
-            self._thread = None
+        for obj in (self._sorter, self._thread):
+            if obj is not None:
+                obj.deleteLater()
+                obj = None
 
     def _path_key(self, path: Path) -> str:
         try:
-            return str(path.resolve()).lower()
+            return str(path.resolve()).casefold()
         except OSError:
-            return str(path.absolute()).lower()
+            return str(path.absolute()).casefold()

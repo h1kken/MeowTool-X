@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import typing as t
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QObject, QAbstractItemModel
 from PySide6.QtWidgets import QWidget
 
 import src.app.context as ctx
 translator = ctx.services.translator
+
+if t.TYPE_CHECKING:
+    from src.ui.widgets.types import ComboItem
 
 
 class TranslatableMixin:
@@ -48,20 +51,48 @@ class TranslatableComboBoxMixin:
 
         translator.languageChanged.connect(self._update_text)
 
-    def add_item(self, item: str) -> None:
+    def add_item(self, item: ComboItem) -> None:
         combo = t.cast(_ComboBoxProtocol, self)
-        combo.addItem(translator.tr(item), item)
-        index = combo.count() - 1
-        combo.setItemData(index, item, Qt.ItemDataRole.UserRole + 1)
+        combo.addItem(translator.tr(item.tr_key), item.tr_key)
 
-    def add_items(self, items: list[str]) -> None:
+    def add_items(self, items: list[ComboItem]) -> None:
         for item in items:
             self.add_item(item)
 
     def _update_text(self) -> None:
         combo = t.cast(_ComboBoxProtocol, self)
+        
         for i in range(combo.count()):
-            tr_key = combo.itemData(i, Qt.ItemDataRole.UserRole + 1)
+            tr_key = combo.itemData(i, Qt.ItemDataRole.UserRole)
             if not isinstance(tr_key, str):
                 continue
+            
             combo.setItemText(i, translator.tr(tr_key))
+
+
+class TranslatableHeaderTableModelMixin:
+    def __init__(
+        self,
+        parent: QObject | None = None,
+        *args: object,
+        tr_keys: tuple[str, ...] = (),
+        **kwargs: object,
+    ) -> None:
+        super().__init__(parent, *args, **kwargs)  # type: ignore
+        self._tr_keys = tr_keys
+
+        translator.languageChanged.connect(self._update_headers)
+
+    def _update_headers(self) -> None:
+        model = t.cast(QAbstractItemModel, self)
+        model.headerDataChanged.emit(Qt.Orientation.Horizontal, 0, len(self._tr_keys) - 1)
+    
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> object | None:
+        if role != Qt.ItemDataRole.DisplayRole:
+            return
+        if orientation != Qt.Orientation.Horizontal:
+            return
+        if not 0 <= section < len(self._tr_keys):
+            return
+        
+        return translator.tr(self._tr_keys[section])

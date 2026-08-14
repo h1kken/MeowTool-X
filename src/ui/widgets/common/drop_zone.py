@@ -12,7 +12,7 @@ from .widget import MTWidget
 
 
 class MTDropZone(MTWidget):
-    pathsDropped = Signal(list[Path])
+    pathsDropped = Signal(list)
     textDropped = Signal(str)
     
     _OBJECT_NAME = 'DropZone'
@@ -28,9 +28,8 @@ class MTDropZone(MTWidget):
         browse_on_click: bool = True,
     ) -> None:
         super().__init__(parent, obj_name=(*obj_name, MTDropZone._OBJECT_NAME))
-
-        self.setAcceptDrops(accept_files or accept_text)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setAcceptDrops(accept_files or accept_text)
         
         if browse_on_click:
             self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -113,14 +112,12 @@ class MTDropZone(MTWidget):
     def _process_mime(self, mime: QMimeData) -> None:
         if self._accept_files and mime.hasUrls():
             dropped_paths = self._extract_paths(mime)
-            
             if dropped_paths:
                 self.pathsDropped.emit(dropped_paths)
                 return
 
         if self._accept_text and mime.hasText():
             dropped_text = mime.text()
-            
             if dropped_text.strip():
                 self.textDropped.emit(dropped_text)
 
@@ -132,12 +129,9 @@ class MTDropZone(MTWidget):
                 continue
             
             path = Path(url.toLocalFile())
-    
             if path.is_file():
                 files.append(path)
-                continue
-            
-            if path.is_dir():
+            elif path.is_dir():
                 files.extend(item for item in path.rglob('*') if item.is_file())
     
         return files

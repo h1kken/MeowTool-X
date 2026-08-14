@@ -3,10 +3,8 @@
 ! # Lines starting with "# LABEL=" need to be translated except for the "LABEL=" part and to indicate that it has been translated, you need to remove the "# ", which might be a bit annoying at first, but this will become practical for updating the translation.
 ! There are some things that you shouldn't translate:
 ! - The name "MeowTool X"
-! - Pairs of curly brackets, e.g. {} or {player}
+! - Pairs of curly brackets, e.g. {} or {path}
 ! - Folders or files like "%appdata%/MeowTool X/Theme"
 ! - Emojis (unless there's a culturally different meaning)
 ! - Technical Terms, i.e. anything that would make less sense if translated
 ! Alright, I think you're ready to unleash your powers now! ;D
-
-CK_CHCKR=Cookie Checker

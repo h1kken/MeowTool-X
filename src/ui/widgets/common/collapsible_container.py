@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-import typing as t
+import collections.abc as cabc
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QMouseEvent
@@ -79,7 +77,7 @@ class MTCollapsibleContainer(MTWidget):
         tr_key: str = '',
         obj_name: tuple[str, ...] = (),
         expanded: bool = True,
-        widgets: t.Sequence[QWidget] | None = None,
+        widgets: cabc.Sequence[QWidget] | None = None,
     ) -> None:
         super().__init__(parent, obj_name=(*obj_name, MTCollapsibleContainer._OBJECT_NAME))
 
@@ -92,7 +90,7 @@ class MTCollapsibleContainer(MTWidget):
         self,
         *,
         tr_key: str,
-        widgets: t.Sequence[QWidget] | None
+        widgets: cabc.Sequence[QWidget] | None
     ) -> None:
         obj_name = self.objectName()
         

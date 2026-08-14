@@ -1,5 +1,7 @@
 # 1. Do something with object names...
 
+# 2. Do something with translation keys...
+
 # 3. Roblox Cookie Sorter
 
 3.1. Rebuild

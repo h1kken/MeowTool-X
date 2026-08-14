@@ -3,6 +3,7 @@ import typing as t
 from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLayout, QVBoxLayout, QWidget
 
 from src.ui.layouts.enums import LayoutType
+from src.utils.qt import build_object_name
 
 
 @t.overload
@@ -21,16 +22,15 @@ def create_layout(
 ) -> QLayout:
     match layout_type:
         case LayoutType.HBOX:
-            layout = QHBoxLayout(parent) if parent is not None else QHBoxLayout()
+            layout = QHBoxLayout()
         case LayoutType.VBOX:
-            layout = QVBoxLayout(parent) if parent is not None else QVBoxLayout()
+            layout = QVBoxLayout()
         case LayoutType.GRID:
-            layout = QGridLayout(parent) if parent is not None else QGridLayout()
-        case _:
-            raise ValueError(f'Unknown layout type: {layout_type}')
+            layout = QGridLayout()
 
-    if parent:
-        layout.setObjectName(f'{parent.objectName()}_Layout')
+    if parent is not None:
+        parent.setLayout(layout)
+        layout.setObjectName(build_object_name((parent.objectName(), 'Layout')))
         
     layout.setContentsMargins(*(margins, margins, margins, margins) if isinstance(margins, int) else margins)
     layout.setSpacing(spacing)

@@ -90,7 +90,7 @@ class NativeHttpEngine:
     def __init__(
         self,
         *,
-        proxies: t.Sequence[ProxyLike] | None = None,
+        proxies: cabc.Sequence[ProxyLike] | None = None,
         config: NativeHttpEngineConfig | JsonObject | None = None,
     ) -> None:
         native = _import_native_module()
@@ -105,19 +105,19 @@ class NativeHttpEngine:
             payload_proxies, payload_config, debug_hook=debug_hook
         )
 
-    def run_batch(self, requests: t.Sequence[RequestLike]) -> list[JsonObject]:
+    def run_batch(self, requests: cabc.Sequence[RequestLike]) -> list[JsonObject]:
         return list(self._native.run_batch(_normalize_requests(requests)))
 
-    def submit_batch(self, requests: t.Sequence[RequestLike]) -> NativeHttpSubmission:
+    def submit_batch(self, requests: cabc.Sequence[RequestLike]) -> NativeHttpSubmission:
         batch_id = int(self._native.submit_batch(_normalize_requests(requests)))
         return NativeHttpSubmission(self, batch_id)
 
     def iter_chunked(
         self,
-        requests: t.Sequence[RequestLike] | t.Iterable[RequestLike],
+        requests: cabc.Sequence[RequestLike] | cabc.Iterable[RequestLike],
         *,
         chunk_size: int = 1_000,
-    ) -> t.Iterator[list[JsonObject]]:
+    ) -> cabc.Iterator[list[JsonObject]]:
         if chunk_size <= 0:
             raise ValueError('chunk_size must be > 0')
 
@@ -133,7 +133,7 @@ class NativeHttpEngine:
 
     def run_chunked(
         self,
-        requests: t.Sequence[RequestLike] | t.Iterable[RequestLike],
+        requests: cabc.Sequence[RequestLike] | cabc.Iterable[RequestLike],
         *,
         chunk_size: int = 1_000,
         flatten: bool = True,
@@ -156,7 +156,7 @@ class NativeHttpEngine:
         self._native.reset_stats()
 
     def update_proxies(
-        self, proxies: t.Sequence[ProxyLike]
+        self, proxies: cabc.Sequence[ProxyLike]
     ) -> None:
         self._native.update_proxies(_normalize_proxies(proxies))
 
@@ -222,7 +222,7 @@ class NativeHttpBatchRunner:
 
     def run(
         self,
-        requests: t.Sequence[RequestLike] | t.Iterable[RequestLike],
+        requests: cabc.Sequence[RequestLike] | cabc.Iterable[RequestLike],
         *,
         flatten: bool = True,
         on_chunk: cabc.Callable[[list[JsonObject]], t.Any] | None = None,
@@ -236,14 +236,14 @@ class NativeHttpBatchRunner:
 
     def iter_chunks(
         self,
-        requests: t.Sequence[RequestLike] | t.Iterable[RequestLike],
-    ) -> t.Iterator[list[JsonObject]]:
+        requests: cabc.Sequence[RequestLike] | cabc.Iterable[RequestLike],
+    ) -> cabc.Iterator[list[JsonObject]]:
         return self._engine.iter_chunked(requests, chunk_size=self._chunk_size)
 
 
 def create_engine(
     *,
-    proxies: t.Sequence[ProxyLike] | None = None,
+    proxies: cabc.Sequence[ProxyLike] | None = None,
     config: NativeHttpEngineConfig | JsonObject | None = None,
 ) -> NativeHttpEngine:
     return NativeHttpEngine(proxies=proxies, config=config)
@@ -308,9 +308,9 @@ def is_available() -> bool:
 
 
 def run_batch(
-    requests: t.Sequence[RequestLike],
+    requests: cabc.Sequence[RequestLike],
     *,
-    proxies: t.Sequence[ProxyLike] | None = None,
+    proxies: cabc.Sequence[ProxyLike] | None = None,
     config: NativeHttpEngineConfig | JsonObject | None = None,
 ) -> list[JsonObject]:
     with create_engine(proxies=proxies, config=config) as engine:
@@ -318,9 +318,9 @@ def run_batch(
 
 
 def run_chunked(
-    requests: t.Sequence[RequestLike] | t.Iterable[RequestLike],
+    requests: cabc.Sequence[RequestLike] | cabc.Iterable[RequestLike],
     *,
-    proxies: t.Sequence[ProxyLike] | None = None,
+    proxies: cabc.Sequence[ProxyLike] | None = None,
     config: NativeHttpEngineConfig | JsonObject | None = None,
     chunk_size: int = 1_000,
     flatten: bool = True,
@@ -399,7 +399,7 @@ def _apply_concurrency_profile(normalized: JsonObject) -> None:
 
 
 def _normalize_proxies(
-    proxies: t.Sequence[ProxyLike],
+    proxies: cabc.Sequence[ProxyLike],
 ) -> list[JsonObject]:
     normalized: list[JsonObject] = []
     for proxy in proxies:
@@ -419,7 +419,7 @@ def _normalize_request(request: RequestLike) -> JsonObject:
 
 
 def _normalize_requests(
-    requests: t.Sequence[RequestLike],
+    requests: cabc.Sequence[RequestLike],
 ) -> list[JsonObject]:
     return [_normalize_request(request) for request in requests]
 
