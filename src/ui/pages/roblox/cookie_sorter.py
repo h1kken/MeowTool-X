@@ -11,7 +11,7 @@ from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import MTButton, MTDropZone, MTTable, MTWidget
-from src.ui.models.prepare import PrepareTableItem, PrepareTableModel
+from src.ui.models.prepare import DeleteButtonDelegate, PrepareTableItem, PrepareTableModel
 from src.services.roblox.cookie_sorter import RobloxCookieSorter
 
 if t.TYPE_CHECKING:
@@ -60,6 +60,9 @@ class RobloxCookieSorterPage(BasePage):
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         header.setSectionsMovable(False)
         
+        self._delete_button_delegate = DeleteButtonDelegate(self._table)
+        self._table.setItemDelegateForColumn(3, self._delete_button_delegate)
+        
         self._content_layout.addWidget(self._table, stretch=1)
         
         self._buttons_widget = MTWidget(obj_name=(obj_name, 'Buttons'))
@@ -78,6 +81,7 @@ class RobloxCookieSorterPage(BasePage):
     def _connect_signals(self) -> None:
         self._drop_zone.pathsDropped.connect(self._add_files)
         self._drop_zone.textDropped.connect(self._add_text)
+        self._delete_button_delegate.clicked.connect(self._model.remove_item)
         self._start_button.clicked.connect(self._start)
 
     def _add_files(self, paths: list[Path]) -> None:

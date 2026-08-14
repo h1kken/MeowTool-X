@@ -6,9 +6,42 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from PySide6.QtCore import Qt, QObject, QModelIndex, QAbstractTableModel
+from PySide6.QtCore import Qt, QObject, QRect, QEvent, QModelIndex, QAbstractTableModel, Signal
+from PySide6.QtGui import QPainter
+from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem
 
 from src.translation.mixins import TranslatableHeaderTableModelMixin
+
+
+class DeleteButtonDelegate(QStyledItemDelegate):
+    clicked = Signal(UUID)
+    
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex) -> None: # type: ignore[override]
+        super().paint(painter, option, index)
+        rect = option.rect
+        size = 20
+
+        button_rect = QRect(
+            rect.center().x() - size // 2,
+            rect.center().y() - size // 2,
+            size,
+            size,
+        )
+
+        painter.drawRect(button_rect)
+
+    def editorEvent(self, event: QEvent, model: PrepareTableModel, _option: QStyleOptionViewItem, index: QModelIndex) -> bool: # type: ignore[override]
+        if event.type() != QEvent.Type.MouseButtonRelease:
+            return False
+        if index.column() != 3:
+            return False
+
+        item = model.item_at(index.row())
+        if item is None:
+            return False
+
+        self.clicked.emit(item.id)
+        return True
 
 
 @dataclass(slots=True)
@@ -61,6 +94,12 @@ class PrepareTableModel(TranslatableHeaderTableModelMixin, QAbstractTableModel):
             case 1: return str(item.value)
             case 2: return item.lines
             case _: pass
+
+    def item_at(self, row: int) -> PrepareTableItem | None:
+        if not 0 <= row < len(self._items):
+            return
+
+        return self._items[row]
     
     def add_item(self, item: PrepareTableItem):
         row = len(self._items)
