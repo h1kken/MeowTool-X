@@ -113,12 +113,6 @@ class RobloxCookieSorter(QObject):
         with self._lock:
             self._counter_incorrect += count
 
-    def _path_key(self, path: Path) -> str:
-        try:
-            return str(path.resolve()).lower()
-        except OSError:
-            return str(path.absolute()).lower()
-
     def _read_file_head(self, path: Path, size: int = 8) -> bytes:
         try:
             with open(path, 'rb') as f:
@@ -183,7 +177,7 @@ class RobloxCookieSorter(QObject):
         deduped: list[Path] = []
         seen: set[str] = set()
         for path in files:
-            key = self._path_key(path)
+            key = FS.path_key(path)
             if key in seen:
                 continue
             seen.add(key)

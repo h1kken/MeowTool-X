@@ -25,10 +25,14 @@ TDefault = t.TypeVar('TDefault')
 
 class FS:
     @staticmethod
-    def open_file_location(path: Path | None) -> None:
-        if path is None:
-            return
-        
+    def path_key(path: Path) -> str:
+        try:
+            return str(path.resolve()).casefold()
+        except OSError:
+            return str(path.absolute()).casefold()
+    
+    @staticmethod
+    def open_file_location(path: Path) -> None:
         if sys.platform.startswith('win'):
             subprocess.Popen(['explorer', '/select,', str(path)])
             return

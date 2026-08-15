@@ -1,9 +1,8 @@
-from functools import lru_cache
-
 from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap, QTransform, QPaintEvent
+from PySide6.QtGui import QColor,  QPainter, QPixmap, QPaintEvent
 from PySide6.QtWidgets import QWidget
 
+from src.ui.icons import build_icon_pixmap
 from src.utils.qt import build_object_name
 
 from .widget import MTWidget
@@ -103,46 +102,7 @@ class MTIcon(MTWidget):
             else self.palette().windowText().color().name(QColor.NameFormat.HexArgb)
         )
 
-        self._pixmap = self._build_pixmap(self._source, color, self._rotation, self._size,)
+        self._pixmap = build_icon_pixmap(self._source, color, self._rotation, self._size,)
 
         self.setFixedSize(self._size, self._size)
         self.update()
-
-    @staticmethod
-    @lru_cache(maxsize=128)
-    def _load_pixmap(
-        source: str,
-        w: int = 16,
-        h: int = 16
-    ) -> QPixmap:
-        return QIcon(source).pixmap(QSize(w, h))
-
-    @staticmethod
-    @lru_cache(maxsize=256)
-    def _build_pixmap(
-        source: str,
-        color_name: str,
-        rotation: float,
-        w: int = 16,
-        h: int = 16,
-    ) -> QPixmap:
-        base = MTIcon._load_pixmap(source, w, h)
-        if base.isNull():
-            return QPixmap()
-
-        pixmap = QPixmap(base.size())
-        pixmap.fill(Qt.GlobalColor.transparent)
-
-        painter = QPainter(pixmap)
-        painter.drawPixmap(0, 0, base)
-        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-        painter.fillRect(pixmap.rect(), QColor(color_name))
-        painter.end()
-
-        if rotation:
-            pixmap = pixmap.transformed(
-                QTransform().rotate(rotation),
-                Qt.TransformationMode.SmoothTransformation,
-            )
-
-        return pixmap

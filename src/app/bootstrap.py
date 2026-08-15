@@ -12,6 +12,10 @@ def bootstrap(_app: QApplication) -> AppServices:
     import src.app.context as ctx
     services = ctx.services = AppServices()
     
+    # Tasker
+    from src.tasks.runner import TaskRunner
+    services.tasker = TaskRunner()
+    
     # Filesystem
     from src.utils.filesystem.file import create_start_paths
     create_start_paths()

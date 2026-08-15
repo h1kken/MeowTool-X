@@ -5,6 +5,7 @@ import typing as t
 from dataclasses import dataclass, field
 
 if t.TYPE_CHECKING:
+    from src.tasks.runner import TaskRunner
     from src.config import Config
     from src.db.manager import DatabaseManager
     from src.translation.manager import TranslationManager
@@ -16,10 +17,11 @@ if t.TYPE_CHECKING:
 
 @dataclass(slots=True)
 class AppServices:
-    config: Config = field(init=False)
-    database: DatabaseManager = field(init=False)
-    translator: TranslationManager = field(init=False)
-    window: MainWindow = field(init=False)
-    popup: PopupManager = field(init=False)
-    theme: ThemeManager = field(init=False)
-    discord_rpc: DiscordRPC = field(init=False)
+    tasker      : TaskRunner         = field(init=False)
+    config      : Config             = field(init=False)
+    database    : DatabaseManager    = field(init=False)
+    translator  : TranslationManager = field(init=False)
+    window      : MainWindow         = field(init=False)
+    popup       : PopupManager       = field(init=False)
+    theme       : ThemeManager       = field(init=False)
+    discord_rpc : DiscordRPC         = field(init=False)

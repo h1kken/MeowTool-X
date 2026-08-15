@@ -2,12 +2,6 @@
 
 # 2. Do something with translation keys...
 
-# 3. Roblox Cookie Sorter
-
-3.1. Rebuild
-3.2. Talk with gpt about life
-3.3. Create new widgets
-
 # 4. Widgets
 
 4.1. Recreate Popup
