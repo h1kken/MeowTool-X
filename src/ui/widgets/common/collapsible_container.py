@@ -42,13 +42,11 @@ class _CollapsibleHeader(MTWidget):
         self._main_layout = create_layout(LayoutType.HBOX, self)
         
         self._label = MTLabel(tr_key=tr_key, obj_name=(obj_name, 'Title'))
-        self._label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._main_layout.addWidget(self._label)
         
         self._main_layout.addStretch()
         
         self._icon = MTIcon(obj_name=(obj_name,), source=str(PATH_ICONS_SRC / 'arrow-right.svg'))
-        self._icon.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._main_layout.addWidget(self._icon)
     
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:

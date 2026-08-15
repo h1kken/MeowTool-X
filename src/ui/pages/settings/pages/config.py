@@ -13,7 +13,8 @@ from src.ui.widgets.common import MTButton, MTInlineStackedWidget, MTLabel, MTLi
 from src.ui.widgets.settings import MTSwitchSetting
 from src.config import ConfigLoaderKey as CLKey
 from src.config.constants import CONFIGS_REFRESH_DEBOUNCE_MS
-from src.utils.filesystem.file import FS
+from src.utils.filesystem import FS
+from src.utils.desktop import Desktop
 
 if t.TYPE_CHECKING:
     from src.config import Config
@@ -304,7 +305,7 @@ class SettingsConfigPage(BasePage):
             self._refresh_configs()
             return
 
-        FS.open_file_location(selected_path)
+        Desktop.open_file_location(selected_path)
 
     def _set_autoload_name(self, value: str) -> None:
         name = value.strip() or PATH_DEFAULT_CONFIG.stem

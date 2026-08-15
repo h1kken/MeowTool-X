@@ -51,7 +51,6 @@ class MTDropZone(MTWidget):
         self._main_layout = create_layout(LayoutType.VBOX, self)
 
         self._label = MTLabel(tr_key=tr_key, obj_name=(obj_name,))
-        self._label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._main_layout.addWidget(self._label)
 
     def _connect_signals(self) -> None:

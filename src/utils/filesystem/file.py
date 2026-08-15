@@ -1,16 +1,11 @@
 import typing as t
 import collections.abc as cabc
 
-import sys
 import json
 import mmap
 import shutil
 import zipfile
-import subprocess
 from pathlib import Path
-
-from PySide6.QtCore import QUrl
-from PySide6.QtGui import QDesktopServices
 
 from src.exceptions.json import NotADictionaryError
 from src.app.paths import PATH_APPDATA, PATH_APP_ROOT
@@ -30,14 +25,6 @@ class FS:
             return str(path.resolve()).casefold()
         except OSError:
             return str(path.absolute()).casefold()
-    
-    @staticmethod
-    def open_file_location(path: Path) -> None:
-        if sys.platform.startswith('win'):
-            subprocess.Popen(['explorer', '/select,', str(path)])
-            return
-
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(path).parent)))
     
     @staticmethod
     def is_user_path(path: Path | None) -> bool:
@@ -68,7 +55,7 @@ class FS:
             paths = list({path.stem: path for path in paths}.values())
 
         paths.sort(key=lambda path: path.name.casefold())
-                    
+        
         return paths
     
     @staticmethod

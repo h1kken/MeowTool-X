@@ -15,6 +15,7 @@ from src.ui.widgets.settings import MTSwitchSetting
 from src.config import ConfigKey as CKey
 from src.config.constants import CONFIGS_REFRESH_DEBOUNCE_MS
 from src.utils.filesystem import FS
+from src.utils.desktop import Desktop
 
 if t.TYPE_CHECKING:
     from src.config import Config
@@ -283,7 +284,7 @@ class SettingsThemePage(BasePage):
             self._refresh_themes()
             return
 
-        FS.open_file_location(selected_path)
+        Desktop.open_file_location(selected_path)
     
     def _set_autoload_name(self, value: str) -> None:
         name = value.strip() or PATH_DEFAULT_THEME.stem

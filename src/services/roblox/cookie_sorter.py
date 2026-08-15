@@ -16,8 +16,9 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Lock
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import Signal
 
+from src.services.base_worker import BaseWorker
 from src.services.roblox import archive_support
 from src.services.roblox.constants import DATE_ROBLOX_COOKIE_SORTER_FORMAT, ROBLOX_COOKIE_START
 from src.services.roblox.regexes import ROBLOX_COOKIE_PATTERN_BYTES, STRING_100_PLUS_SYMBOLS_PATTERN_BYTES
@@ -54,7 +55,7 @@ if t.TYPE_CHECKING:
     RarFileType: t.TypeAlias = RarFile
 else:
     RarFileType: t.TypeAlias = t.Any
-class RobloxCookieSorter(QObject):
+class RobloxCookieSorter(BaseWorker):
     statement = Signal(str)
     progress = Signal(int)
     finished = Signal(dict)

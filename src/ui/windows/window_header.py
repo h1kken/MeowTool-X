@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QApplication, QWidget
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import MTButton, MTPlainLabel, MTWidget
+from src.utils.desktop import Desktop
 
 
 _QT_MAX_SIZE = 16_777_215
@@ -31,7 +32,7 @@ class MTWindowHeader(MTWidget):
         self._manual_resize_edges: Qt.Edge | None = None
         self._manual_resize_start_global = QPoint()
         self._manual_resize_start_geometry = QRect()
-        self._buttons: MTWidget | None = None
+        self._action_buttons: MTWidget | None = None
 
         self._build_ui()
         self._connect_signals()
@@ -41,37 +42,54 @@ class MTWindowHeader(MTWidget):
         
         self._main_layout = create_layout(LayoutType.HBOX, self)
 
-        self._title_label = MTPlainLabel(self, text=self._window.windowTitle(), obj_name=(obj_name, 'Title'))
-        self._title_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self._social_buttons = MTWidget(self, obj_name=(obj_name, 'Social_Buttons'))
+        self._social_buttons_layout = create_layout(LayoutType.HBOX, self._social_buttons)
+        self._main_layout.addWidget(self._social_buttons)
+
+        self._github_button = MTButton(obj_name=(obj_name, 'GitHub'))
+        self._social_buttons_layout.addWidget(self._github_button)
+
+        self._discord_button = MTButton(obj_name=(obj_name, 'Discord'))
+        self._social_buttons_layout.addWidget(self._discord_button)
+
+        self._telegram_button = MTButton(obj_name=(obj_name, 'Telegram'))
+        self._social_buttons_layout.addWidget(self._telegram_button)
 
         self._main_layout.addStretch()
 
-        self._buttons = MTWidget(self, obj_name=(obj_name, 'Buttons'))
-        self._buttons_layout = create_layout(LayoutType.HBOX, self._buttons)
-        self._main_layout.addWidget(self._buttons)
+        self._title_label = MTPlainLabel(self, text=self._window.windowTitle(), obj_name=(obj_name, 'Title'))
+        self._main_layout.addWidget(self._title_label)
+
+        self._main_layout.addStretch()
+
+        self._action_buttons = MTWidget(self, obj_name=(obj_name, 'Action_Buttons'))
+        self._action_buttons_layout = create_layout(LayoutType.HBOX, self._action_buttons)
+        self._main_layout.addWidget(self._action_buttons)
 
         self._minimize_button = MTButton(obj_name=(obj_name, 'Minimize'))
-        self._buttons_layout.addWidget(self._minimize_button)
+        self._action_buttons_layout.addWidget(self._minimize_button)
 
         self._maximize_button = MTButton(obj_name=(obj_name, 'Maximize'))
-        self._buttons_layout.addWidget(self._maximize_button)
+        self._action_buttons_layout.addWidget(self._maximize_button)
 
         self._close_button = MTButton(obj_name=(obj_name, 'Close'))
-        self._buttons_layout.addWidget(self._close_button)
+        self._action_buttons_layout.addWidget(self._close_button)
 
         self._window.installEventFilter(self)
-        self.sync_window_meta()
 
     def _connect_signals(self) -> None:
+        self._github_button.clicked.connect(lambda: Desktop.open_url('https://github.com/h1kken/MeowTool-X'))
+        self._discord_button.clicked.connect(lambda: Desktop.open_url('https://discord.gg/XJJUGQpCf6'))
+        self._telegram_button.clicked.connect(lambda: Desktop.open_url('https://t.me/L0nelyBit'))
+        
         self._minimize_button.clicked.connect(self._window.showMinimized)
         self._maximize_button.clicked.connect(self._toggle_maximized)
-        self._close_button.clicked.connect(self._window.close)
+        self._close_button.clicked.connect(self._window.close)        
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         if obj is self._window:
             match event.type():
                 case QEvent.Type.WindowTitleChange | QEvent.Type.WindowStateChange:
-                    self.sync_window_meta()
                     self._manual_move_active = False
                     self._maximized_drag_pending = False
                     self.finish_resize()
@@ -83,8 +101,8 @@ class MTWindowHeader(MTWidget):
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
-        if self._buttons is not None:
-            self._buttons.raise_()
+        if self._action_buttons is not None:
+            self._action_buttons.raise_()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if (
@@ -138,9 +156,6 @@ class MTWindowHeader(MTWidget):
             event.accept()
             return
         super().mouseDoubleClickEvent(event)
-
-    def sync_window_meta(self) -> None:
-        self._title_label.setText(self._window.windowTitle())
 
     def begin_resize(self, edges: Qt.Edge, global_pos: QPoint) -> None:
         if self._window.isMaximized() or self._window.isFullScreen():
@@ -211,7 +226,6 @@ class MTWindowHeader(MTWidget):
             self._window.showNormal()
         else:
             self._window.showMaximized()
-        self.sync_window_meta()
 
     def _restore_from_maximized_drag(self, global_pos: QPoint) -> None:
         old_width = max(1, self._window.width())
@@ -232,7 +246,6 @@ class MTWindowHeader(MTWidget):
             target_y = max(available.top(), min(target_y, max_y))
 
         self._window.showNormal()
-        self.sync_window_meta()
         self._window.move(target_x, target_y)
 
         self._maximized_drag_pending = False

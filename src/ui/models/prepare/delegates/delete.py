@@ -21,7 +21,7 @@ class DelegateButtonStyle:
     
     button_size: QSize = field(default_factory=lambda: QSize(20, 20))
     
-    icon: QPixmap = field(default_factory=lambda: build_icon_pixmap(source='delete.svg', color='#ffffff', rotation=0.0, size=16))
+    icon: QPixmap = field(default_factory=lambda: build_icon_pixmap(source='delete.svg'))
     icon_size: int = 16
 
 
