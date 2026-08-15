@@ -1,12 +1,7 @@
-# 1. Do something with object names...
+- Do something with object names...
+- Think about icon in theme, how i can to get path to file in builded and not apps?
 
-# 2. Do something with translation keys...
+- Recreate Popup
 
-# 4. Widgets
-
-4.1. Recreate Popup
-
-# 5. Fix
-
-5.1. widgets/common/combo_box.py
-5.2. services/discord/rpc.py
+- Fix: widgets/common/combo_box.py
+- Fix: services/discord/rpc.py

@@ -10,7 +10,7 @@ def load_icon_pixmap(source: str, w: int = 16, h: int = 16) -> QPixmap:
 
 
 @lru_cache(maxsize=256)
-def build_icon_pixmap(source: str, color: QColor = QColor('#000000'), rotation: float = 0, w: int = 16, h: int = 16) -> QPixmap:
+def build_icon_pixmap(source: str, color: str = '#000000', rotation: float = 0, w: int = 16, h: int = 16) -> QPixmap:
     base = load_icon_pixmap(source, w, h)
     if base.isNull():
         return QPixmap()
@@ -21,7 +21,7 @@ def build_icon_pixmap(source: str, color: QColor = QColor('#000000'), rotation: 
     painter = QPainter(pixmap)
     painter.drawPixmap(0, 0, base)
     painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-    painter.fillRect(pixmap.rect(), color)
+    painter.fillRect(pixmap.rect(), QColor(color))
     painter.end()
 
     if rotation:
