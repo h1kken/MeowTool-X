@@ -5,6 +5,7 @@ from PySide6.QtCore import Qt, QObject, QSize, QRect, QEvent, QModelIndex, Signa
 from PySide6.QtGui import QColor, QPixmap, QPen, QPainter
 from PySide6.QtWidgets import QStyle, QStyledItemDelegate, QStyleOptionViewItem
 
+from src.app.paths import PATH_ICONS_SRC
 from src.ui.icons import build_icon_pixmap
 
 from ..model import PrepareTableModel
@@ -21,7 +22,7 @@ class DelegateButtonStyle:
     
     button_size: QSize = field(default_factory=lambda: QSize(20, 20))
     
-    icon: QPixmap = field(default_factory=lambda: build_icon_pixmap(source='delete.svg'))
+    icon: QPixmap = field(default_factory=lambda: build_icon_pixmap(source=str(PATH_ICONS_SRC / 'actions' / 'close.svg'))) # delete*
     icon_size: int = 16
 
 

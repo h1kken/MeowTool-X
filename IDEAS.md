@@ -1,0 +1,8 @@
+- Coded default icons for buttons
+- Keybinds
+- Favorite settings
+- Save UI state
+- Theme/Config/Database migrations
+- Smart pick path (like icons, where we firstly search in user path then fallback to src if errors)
+- Progress bar
+- UI Animations
