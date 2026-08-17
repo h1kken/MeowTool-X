@@ -10,7 +10,7 @@ from .widget import MTWidget
 class MTPopupOverlay(MTWidget):
     clickedOutside = Signal()
     
-    _OBJECT_NAME = 'Overlay'
+    _OBJECT_NAME = 'Popup_Overlay'
 
     def __init__(
         self,

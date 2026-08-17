@@ -161,6 +161,7 @@ class _BoundSwitchRow(MTBaseSetting[bool]):
 
 class _SortActionButton(MTButton): # TODO: remove this later
     rightClicked = Signal(bool)
+    
     _DEFAULT_ICON_SOURCE = 'src/assets/icons/sort.svg'
 
     def __init__(
@@ -613,8 +614,3 @@ class MTCookieCheckerFieldSetting(MTSwitchSetting):
                 ):
                     return MTWidget.mouseReleaseEvent(self, event)
         super().mouseReleaseEvent(event)
-
-
-__all__ = (
-    'MTCookieCheckerFieldSetting',
-)

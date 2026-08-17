@@ -1,6 +1,11 @@
 - Do something with object names...
-- Think about icon in theme, how i can to get path to file in builded and not apps?
 
 - Recreate Popup
 
 - Fix: widgets/common/combo_box.py
+
+- Coded default icons for buttons
+- Smart pick path (like icons, where we firstly search in user path then fallback to src if errors)
+
+- Progress bar
+- History block

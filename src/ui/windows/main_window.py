@@ -75,7 +75,7 @@ class MainWindow(QMainWindow):
         self._body_content_layout = create_layout(LayoutType.HBOX, self._body_content_widget)
         self._body_container_layout.addWidget(self._body_content_widget, 0, 0)
         
-        self._overlay_widget = MTPopupOverlay()
+        self._overlay_widget = MTPopupOverlay(obj_name=(MainWindow._OBJECT_NAME,))
         self._body_container_layout.addWidget(self._overlay_widget, 0, 0)
         
         # sidebar

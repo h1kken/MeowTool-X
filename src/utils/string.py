@@ -8,7 +8,7 @@ def remove_brackets_and_in(string: str, *, round: bool = True, square: bool = Tr
     for char in string:
         if (char == '(' and round) or (char == '[' and square):
             skip += 1
-        elif skip > 0 and ((char == ')' and round) or (char == ']' and square)):
+        elif skip and ((char == ')' and round) or (char == ']' and square)):
             skip -= 1
         elif skip == 0:
             new_string += char
