@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QWidget
 
 from src.ui.windows.types import PageSpec
 from src.ui.pages.base import BasePage
-from src.ui.controllers import PageController
+from src.ui.controllers import HasPageController, PageController
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.pages.settings.pages.proxy import (
@@ -37,6 +37,7 @@ class SettingsProxyPage(BasePage):
     ):
         super().__init__(parent, config=config, obj_name=(*obj_name, SettingsProxyPage._OBJECT_NAME))
         self._parent_page_controller = parent_page_controller
+        self._page_controller: PageController | None = None
 
         self._tab_names_by_key: dict[str, str] = {}
 
@@ -67,6 +68,7 @@ class SettingsProxyPage(BasePage):
                     parent_page_controller=self._page_controller, # type: ignore[call-arg]
                     obj_name=(obj_name,),
                 )
+                self._page_controller.set_child_controller(name, t.cast(HasPageController, page).page_controller)
             else:
                 page = spec.page_class(
                     config=self._config,
@@ -82,3 +84,7 @@ class SettingsProxyPage(BasePage):
                 page=page,
                 button=button,
             )
+
+    @property
+    def page_controller(self) -> PageController | None:
+        return self._page_controller

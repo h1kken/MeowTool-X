@@ -8,7 +8,7 @@ if t.TYPE_CHECKING:
     from PySide6.QtWidgets import QApplication
 
 
-def bootstrap(_app: QApplication) -> AppServices:
+def bootstrap(app: QApplication) -> AppServices:
     import src.app.context as ctx
     services = ctx.services = AppServices()
     
@@ -39,7 +39,7 @@ def bootstrap(_app: QApplication) -> AppServices:
     services.theme = ThemeManager(services.config)
     
     # from src.ui.theme.animation.manager import AnimationManager
-    # animation_manager = AnimationManager(services.window, services.config) # TODO: refactor lighter (pls)
+    # animation_manager = AnimationManager(services.window, services.config) # TODO: refactor lighter
     # services.theme.themeLoaded.connect(animation_manager.load)
     
     # UI
@@ -54,9 +54,9 @@ def bootstrap(_app: QApplication) -> AppServices:
     services.theme.load()
     
     # Other
-    # from src.services.discord import DiscordRPC # TODO: fix | broken after remove PageState
-    # services.discord_rpc = DiscordRPC(services.config)
-    # app.aboutToQuit.connect(services.discord_rpc.shutdown)
+    from src.services.discord import DiscordRPC
+    services.discord_rpc = DiscordRPC(services.window, services.config)
+    app.aboutToQuit.connect(services.discord_rpc.shutdown)
 
     # object tree dumper
     from src.utils.debug import dump_object_tree

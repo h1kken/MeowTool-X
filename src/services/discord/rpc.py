@@ -14,13 +14,12 @@ from src.config.enums import ConfigKey as CKey
 from src.utils.logging import logger
 
 if t.TYPE_CHECKING:
+    from src.ui.windows import MainWindow
     from src.config import Config
 
 
 class DiscordRPC:
     APP_ID = '1493918950344626216'
-
-    DEFAULT_PAGE = 'Startup'
     
     RETRY_DELAY_SECONDS = 5.0
 
@@ -31,7 +30,8 @@ class DiscordRPC:
     # SMALL_IMAGE = None
     # SMALL_TEXT = None
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, window: MainWindow, config: Config) -> None:
+        self._window = window
         self._config = config
         
         self._started_at = int(time())
@@ -47,7 +47,8 @@ class DiscordRPC:
 
     def _connect_signals(self) -> None:
         self._config.configLoaded.connect(self._on_config_loaded)
-        self._config.valueChanged.connect(self._on_config_changed)
+        self._config.valueChanged.connect(self._on_config_value_changed)
+        self._window.pageChanged.connect(self._wake.set)
 
     def start(self) -> None:
         with self._lock:
@@ -78,13 +79,13 @@ class DiscordRPC:
             self._worker = None
 
     def _read_enabled(self) -> bool:
-        return bool(self._config.get(CKey.OUTPUTS_DISCORD_RICH_PRESENCE))
+        return bool(self._config.get(CKey.MISC_DISCORD_RPC))
 
     def _on_config_loaded(self) -> None:
         self._set_enabled(self._read_enabled())
 
-    def _on_config_changed(self, key: str, _value: object) -> None:
-        if key == CKey.OUTPUTS_DISCORD_RICH_PRESENCE:
+    def _on_config_value_changed(self, key: str, _value: object) -> None:
+        if key == CKey.MISC_DISCORD_RPC:
             self._on_config_loaded()
 
     def _set_enabled(self, enabled: bool) -> None:
@@ -144,13 +145,12 @@ class DiscordRPC:
         try:
             while not self._stop.is_set():
                 self._wake.clear()
-                enabled, page = self._snapshot()
 
-                if not enabled:
+                if not self._enabled:
                     if rpc is not None:
                         self._disconnect(rpc)
                         rpc = None
-                        logger.debug('Discord Presence disconnected')
+                        logger.info('Discord Presence disconnected')
                     self._wake.wait()
                     continue
 
@@ -161,7 +161,7 @@ class DiscordRPC:
                     continue
 
                 try:
-                    self._update(rpc, page)
+                    self._update(rpc)
                 except (DiscordNotFound, InvalidPipe, PipeClosed, BrokenPipeError, OSError):
                     self._disconnect(rpc, clear=False)
                     rpc = None
@@ -186,7 +186,7 @@ class DiscordRPC:
             
             activity_type=self.ACTIVITY_TYPE,
             name=self.NAME,
-            details=details,
+            details=' > '.join(self._window.page_state()),
             
             # large_image=self.LARGE_IMAGE,
             # large_text=self.LARGE_TEXT,

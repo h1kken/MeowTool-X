@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QMainWindow
 from src.app.constants import PROGRAM_TITLE
 from src.ui.constants import WINDOW_X, WINDOW_Y
 from src.ui.windows.types import PageSpec
-from src.ui.controllers import PageController
+from src.ui.controllers import HasPageController, PageController
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.pages import (
@@ -36,8 +36,8 @@ _PAGES: tuple[PageSpec | None, ...] = (
 
 
 class MainWindow(QMainWindow):
-    pageChanged = Signal(tuple[str, ...])
-    
+    pageChanged = Signal(tuple)
+
     _OBJECT_NAME = 'Main_Window'
     
     def __init__(
@@ -50,9 +50,8 @@ class MainWindow(QMainWindow):
         self._tab_names_by_key: dict[str, str] = {}
         
         self._build_ui()
-                
         self._connect_signals()
-
+                
     def _build_ui(self) -> None:
         self.setObjectName('Main_Window')
         self.setWindowTitle(PROGRAM_TITLE)
@@ -107,6 +106,7 @@ class MainWindow(QMainWindow):
                     config=self._config,
                     parent_page_controller=self._page_controller, # type: ignore[call-arg]
                 )
+                self._page_controller.set_child_controller(name, t.cast(HasPageController, page).page_controller)
             else:
                 page = spec.page_class(
                     config=self._config,
@@ -121,20 +121,22 @@ class MainWindow(QMainWindow):
                 page=page,
                 button=button,
             )
-            
+
     def _connect_signals(self) -> None:
         self._page_controller.pageChanged.connect(self.pageChanged.emit)
+        self.pageChanged.connect(lambda: print(self.page_state()))
 
     @property
     def overlay(self) -> MTPopupOverlay:
         return self._overlay_widget
 
     def page_state(self) -> tuple[str, ...]:
-        state = ()
+        state: tuple[str, ...] = ()
         
         page_controller = self._page_controller
         while page_controller is not None:
-            state += (self._page_controller.current.name,)
-            page_controller = self._page_controller.parent_controller
-
+            name = page_controller.current.name
+            state += (name,)
+            page_controller = page_controller.child_controllers.get(name)
+            
         return state

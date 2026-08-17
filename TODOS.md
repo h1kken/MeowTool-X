@@ -4,4 +4,3 @@
 - Recreate Popup
 
 - Fix: widgets/common/combo_box.py
-- Fix: services/discord/rpc.py

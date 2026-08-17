@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+import typing as t
+
 from dataclasses import dataclass
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QLayout
 
 from src.ui.widgets.common import MTButton, MTButtonGroup, MTWidget
+
+
+class HasPageController(t.Protocol):
+    @property
+    def page_controller(self) -> PageController: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -16,7 +23,7 @@ class _PageEntry:
 
 
 class PageController(QObject):
-    pageChanged = Signal(tuple[str, ...])
+    pageChanged = Signal(tuple)
     
     def __init__(
         self,
@@ -27,10 +34,13 @@ class PageController(QObject):
         super().__init__()
         self._layout = layout
         self._parent_controller = parent_page_controller
+        self._child_controllers: dict[str, PageController] = {}
+        
+        self.set_child_controller
 
         self._pages: dict[str, _PageEntry] = {}
         self._button_group = MTButtonGroup()
-    
+        
         self._connect_signals()
     
     def _connect_signals(self) -> None:
@@ -44,6 +54,13 @@ class PageController(QObject):
     @property
     def parent_controller(self) -> PageController | None:
         return self._parent_controller
+
+    @property
+    def child_controllers(self) -> dict[str, PageController]:
+        return self._child_controllers
+
+    def set_child_controller(self, key: str, controller: PageController) -> None:
+        self._child_controllers[key] = controller
 
     def add_page(self, key: str, name: str, page: MTWidget, button: MTButton) -> None:
         button.setCheckable(True)
@@ -72,10 +89,10 @@ class PageController(QObject):
             return
 
         self._current.page.hide()
-        
         req.page.show()
         req.button.setChecked(True)
         self._current = req
+        self.pageChanged.emit((req.name,))
 
     def _on_child_page_changed(self, child_paths: tuple[str, ...]) -> None:
         self.pageChanged.emit((self.current.name, *child_paths))
