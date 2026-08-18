@@ -51,7 +51,7 @@ class MTColumnsSetting(MTScrollArea):
         obj_name = self.objectName()
         
         self._scroll_area_content = MTWidget(obj_name=(obj_name, 'Content'))
-        self._main_layout = create_layout(LayoutType.HBOX, parent=self._scroll_area_content)
+        self._main_layout = create_layout(LayoutType.HBOX, self._scroll_area_content)
         self.setWidget(self._scroll_area_content)
 
         for index in range(self._columns):

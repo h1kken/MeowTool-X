@@ -19,7 +19,7 @@ if t.TYPE_CHECKING:
 
 
 _PAGES: tuple[PageSpec | None, ...] = (
-    PageSpec(SettingsProxyCheckerPage, 'CHCKR', 'Checker'),
+    PageSpec(page_class=SettingsProxyCheckerPage, tr_key='CHCKR', obj_name='Checker'),
     None,
 )
 

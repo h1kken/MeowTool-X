@@ -22,19 +22,21 @@ if t.TYPE_CHECKING:
 
 class BasePreparePage(BasePage):
     _OBJECT_NAME = 'Prepare'
-    _WORKER_CLASS: type[BaseWorker]
     
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
+        worker_class: type[BaseWorker],
         config: Config,
         obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent, config=config, obj_name=(*obj_name, BasePreparePage._OBJECT_NAME))
         
         self._thread: QThread | None = None
-        self._worker: BaseWorker | None = None
+        
+        self._workers: dict[str, BaseWorker] = {}
+        self._worker_class: type[BaseWorker] = worker_class
 
         self._dropped_files_keys: set[str] = set()
 
@@ -125,14 +127,14 @@ class BasePreparePage(BasePage):
         self._dropped_files_keys.clear()
         self._clear_button.hide()
 
-    def _start(self) -> None:
+    def _start(self) -> None: # TODO: self._workers, not self._worker
         if self._thread and self._thread.isRunning():
             return
         if not self._model.items:
             return
 
         self._thread = QThread(self)
-        self._worker = self._WORKER_CLASS(self._config)
+        self._worker = self._worker_class(self._config)
         self._worker.moveToThread(self._thread)
 
         self._thread.started.connect(self._worker.run)

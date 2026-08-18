@@ -16,7 +16,7 @@ class DatabaseWriter:
     def __init__(self, handler: DatabaseHandler):
         self._handler = handler
         
-        self._queue: Queue[CookieCheckerResult] = Queue(maxsize=500)
+        self._queue: Queue[CookieCheckerResult] = Queue()
         self._running = False
 
     def put(self, obj: CookieCheckerResult) -> None:

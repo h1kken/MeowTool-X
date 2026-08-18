@@ -25,13 +25,13 @@ if t.TYPE_CHECKING:
 
 
 _PAGES: tuple[PageSpec | None, ...] = (
-    PageSpec(SettingsMainPage,    'MAIN',    'Main'),
-    PageSpec(SettingsOutputsPage, 'OUTPUTS', 'Outputs'),
-    PageSpec(SettingsProxyPage,   'PROXY',   'Proxy', has_page_controller=True),
-    PageSpec(SettingsRobloxPage,  'ROBLOX',  'Roblox', has_page_controller=True),
-    PageSpec(SettingsMiscPage,    'MISC',    'Misc'),
-    PageSpec(SettingsConfigPage,  'CONFIG',  'Config'),
-    PageSpec(SettingsThemePage,   'THEME',   'Theme'),
+    PageSpec(page_class=SettingsMainPage,    tr_key='MAIN',    obj_name='Main'),
+    PageSpec(page_class=SettingsOutputsPage, tr_key='OUTPUTS', obj_name='Outputs'),
+    PageSpec(page_class=SettingsProxyPage,   tr_key='PROXY',   obj_name='Proxy', has_page_controller=True),
+    PageSpec(page_class=SettingsRobloxPage,  tr_key='ROBLOX',  obj_name='Roblox', has_page_controller=True),
+    PageSpec(page_class=SettingsMiscPage,    tr_key='MISC',    obj_name='Misc'),
+    PageSpec(page_class=SettingsConfigPage,  tr_key='CONFIG',  obj_name='Config'),
+    PageSpec(page_class=SettingsThemePage,   tr_key='THEME',   obj_name='Theme'),
     None,
 )
 

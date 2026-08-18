@@ -10,8 +10,8 @@ from PySide6.QtWidgets import QWidget
 
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.widgets.common.widget import MTWidget
 
+from .widget import MTWidget
 from .button import MTPlainButton
 from .scroll_area import MTScrollArea
 

@@ -13,9 +13,9 @@ if t.TYPE_CHECKING:
 
 
 class Account(CookieCheckerBase, BaseMixin, AccountMixin):
-    __tablename__ = "accounts"
+    __tablename__ = 'accounts'
 
-    cookie_ref_id: Mapped[int | None] = mapped_column(ForeignKey("cookies.id"), index=True)
-    cookie: Mapped["Cookie | None"] = relationship(back_populates="accounts")
+    cookie_ref_id: Mapped[int | None] = mapped_column(ForeignKey('cookies.id'), index=True)
+    cookie: Mapped['Cookie | None'] = relationship(back_populates='accounts')
 
-    results: Mapped[list["CookieCheckerResult"]] = relationship(back_populates="account")
+    results: Mapped[list['CookieCheckerResult']] = relationship(back_populates='account')

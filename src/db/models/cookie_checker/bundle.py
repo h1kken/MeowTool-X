@@ -13,11 +13,11 @@ if t.TYPE_CHECKING:
 
 
 class Bundle(CookieCheckerBase, BaseMixin, BundleMixin):
-    __tablename__ = "bundles"
+    __tablename__ = 'bundles'
 
 
 class BundleOwned(CookieCheckerBase, BaseMixin, ResultBundleMixin):
-    __tablename__ = "bundles_owned"
+    __tablename__ = 'bundles_owned'
 
-    bundle: Mapped["Bundle"] = relationship()
-    result: Mapped["CookieCheckerResult"] = relationship(back_populates="bundles")
+    bundle: Mapped['Bundle'] = relationship()
+    result: Mapped['CookieCheckerResult'] = relationship(back_populates='bundles')

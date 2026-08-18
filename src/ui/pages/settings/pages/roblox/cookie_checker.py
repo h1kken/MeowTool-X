@@ -9,7 +9,7 @@ from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import MTButton, MTCollapsibleContainer
 from src.ui.widgets.settings import MTColumnsSetting, MTSliderSetting, MTSwitchSetting, MTLineEditSetting
-from src.ui.widgets.roblox.cookie_checker import MTCookieCheckerFieldSetting
+from src.ui.widgets.settings.roblox.cookie_checker.cookie_checker import MTCookieCheckerFieldSetting
 from src.ui.regexes import NORMALIZE_QT_KEY_PATTERN
 from src.services.roblox.constants import ROBLOX_COOKIE_CHECKER_MAIN_FIELDS
 

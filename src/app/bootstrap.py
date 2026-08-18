@@ -1,11 +1,6 @@
-from __future__ import annotations
+from PySide6.QtWidgets import QApplication
 
-import typing as t
-
-from src.app.types import AppServices
-
-if t.TYPE_CHECKING:
-    from PySide6.QtWidgets import QApplication
+from .types import AppServices
 
 
 def bootstrap(app: QApplication) -> AppServices:

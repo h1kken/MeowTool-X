@@ -20,6 +20,7 @@ from .handlers import QT_HANDLERS
 from .parsers import QSS_PARSERS
 from .resolvers import resolve_theme
 from .helpers import resolve_qt_target
+from .constants import DEFAULT_CONTENT_MARGINS, DEFAULT_SPACING, DEFAULT_ALIGNMENT, DEFAULT_SIZE_POLICIES
 
 if t.TYPE_CHECKING:
     from src.config import Config
@@ -169,19 +170,22 @@ class ThemeManager(QObject):
             if 'alignment' in props:
                 setter = getattr(obj, 'setAlignment', None)
                 if callable(setter):
-                    setter(Qt.AlignmentFlag(0))
+                    setter(DEFAULT_ALIGNMENT)
             
             # QLayout || QWidget
             if isinstance(obj, QLayout):
                 if 'margin' in props:
-                    obj.setContentsMargins(0, 0, 0, 0)
+                    obj.setContentsMargins(*DEFAULT_CONTENT_MARGINS)
                     
                 if 'spacing' in props:
-                    obj.setSpacing(0)
+                    obj.setSpacing(DEFAULT_SPACING)
 
             elif isinstance(obj, QWidget):
                 if 'icon' in props:
                     if isinstance(obj, QPushButton):
                         obj.setIcon(QIcon())
+                        
+                if 'size_policy' in props:
+                    obj.setSizePolicy(*DEFAULT_SIZE_POLICIES)
 
         self._applied_qt.clear()

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
 import typing as t
+
+from datetime import datetime
 
 from sqlalchemy import ForeignKey, BigInteger, Boolean, Integer, JSON, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship

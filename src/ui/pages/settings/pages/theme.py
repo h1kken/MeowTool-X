@@ -19,7 +19,7 @@ from src.utils.desktop import Desktop
 
 if t.TYPE_CHECKING:
     from src.config import Config
-    from src.ui.widgets.common.list import MTListItem
+    from src.ui.widgets.common import MTListItem
 
 
 class SettingsThemePage(BasePage):

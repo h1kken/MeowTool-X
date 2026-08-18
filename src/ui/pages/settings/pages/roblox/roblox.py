@@ -21,9 +21,9 @@ if t.TYPE_CHECKING:
 
 
 _PAGES: tuple[PageSpec | None, ...] = (
-    PageSpec(SettingsRobloxCookieSorterPage,    'CK_SRTR',   'Cookie_Sorter'),
-    PageSpec(SettingsRobloxCookieCheckerPage,   'CK_CHCKR',  'Cookie_Checker'),
-    PageSpec(SettingsRobloxCookieRefresherPage, 'CK_RFRSHR', 'Cookie_Refresher'),
+    PageSpec(page_class=SettingsRobloxCookieSorterPage,    tr_key='CK_SRTR',   obj_name='Cookie_Sorter'),
+    PageSpec(page_class=SettingsRobloxCookieCheckerPage,   tr_key='CK_CHCKR',  obj_name='Cookie_Checker'),
+    PageSpec(page_class=SettingsRobloxCookieRefresherPage, tr_key='CK_RFRSHR', obj_name='Cookie_Refresher'),
     None,
 )
 

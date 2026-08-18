@@ -11,4 +11,4 @@ class CookieCheckerBase(DeclarativeBase):
 class CookieCheckerResultBase(CookieCheckerBase, BaseMixin):
     __abstract__ = True
 
-    run_ref_id: Mapped[int] = mapped_column(ForeignKey("runs.id"), index=True)
+    run_ref_id: Mapped[int] = mapped_column(ForeignKey('runs.id'), index=True)

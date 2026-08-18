@@ -2,6 +2,7 @@ from .button_group import MTButtonGroup
 from .button import MTPlainButton, MTButton
 from .collapsible_container import MTCollapsibleContainer
 from .combo_box import MTComboBox
+from .counter import MTCounter
 from .drop_zone import MTDropZone
 from .icon import MTIcon
 from .image import MTImage
@@ -11,6 +12,7 @@ from .line_edit import MTLineEdit
 from .list import MTListItem, MTList
 from .overlay import MTPopupOverlay
 from .popup import MTPopup
+from .progress_bar import MTProgressBar
 from .scroll_area import MTScrollArea
 from .slider import MTSlider
 from .spin_box import MTSpinBox
@@ -26,6 +28,7 @@ __all__ = (
     'MTButton',
     'MTCollapsibleContainer',
     'MTComboBox',
+    'MTCounter',
     'MTDropZone',
     'MTIcon',
     'MTImage',
@@ -37,6 +40,7 @@ __all__ = (
     'MTList',
     'MTPopupOverlay',
     'MTPopup',
+    'MTProgressBar',
     'MTScrollArea',
     'MTSlider',
     'MTSpinBox',

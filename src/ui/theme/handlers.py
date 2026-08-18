@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import typing as t
 
-from PySide6.QtCore import Qt, QObject
+from PySide6.QtCore import QObject
 from PySide6.QtGui import QIcon, QColor
-from PySide6.QtWidgets import QLayout, QWidget, QPushButton
+from PySide6.QtWidgets import QLayout, QWidget, QPushButton, QSizePolicy
 
 from src.ui.icons.renderer import build_icon_pixmap
 
-from .constants import ALIGNMENT_FLAGS
+from .constants import DEFAULT_ALIGNMENT, ALIGNMENT_FLAGS, DEFAULT_SIZE_POLICIES, SIZE_POLICIES
 from .helpers import parse_box_values, to_int
 
 if t.TYPE_CHECKING:
@@ -51,7 +51,7 @@ def _apply_spacing(target: QObject, styles: DataMap, *, storage: dict[QObject, s
         storage[target].add('spacing')
 
 
-# align
+# align | TODO: GridLayout, alignment support for each object
 def _apply_alignment(target: QObject, styles: DataMap, *, storage: dict[QObject, set[str]] | None = None) -> None:
     if not isinstance(target, (QLayout, QWidget)):
         return
@@ -60,7 +60,7 @@ def _apply_alignment(target: QObject, styles: DataMap, *, storage: dict[QObject,
     if not callable(setter):
         return
     
-    result = Qt.AlignmentFlag(0)
+    result = DEFAULT_ALIGNMENT
     
     value = styles.get('alignment')
     
@@ -74,12 +74,12 @@ def _apply_alignment(target: QObject, styles: DataMap, *, storage: dict[QObject,
         case list():
             for item in value:
                 if not isinstance(item, str):
-                    setter(Qt.AlignmentFlag(0))
+                    setter(DEFAULT_ALIGNMENT)
                     return
                     
                 alignment = ALIGNMENT_FLAGS.get(item.strip().lower())
                 if alignment is None:
-                    setter(Qt.AlignmentFlag(0))
+                    setter(DEFAULT_ALIGNMENT)
                     return
                 
                 result |= alignment
@@ -93,9 +93,61 @@ def _apply_alignment(target: QObject, styles: DataMap, *, storage: dict[QObject,
         storage[target].add('alignment')
 
 
+# size policy
+def _apply_size_policy(target: QObject, styles: DataMap, *, storage: dict[QObject, set[str]] | None = None) -> None:
+    if not isinstance(target, QWidget):
+        return
+    
+    result: list[QSizePolicy.Policy] = []
+    
+    value = styles.get('size_policy')
+    
+    match value:
+        
+        case dict():
+            horizontal = value.get('h', value.get('horizontal'))
+            vertical = value.get('v', value.get('vertical'))
+            if not isinstance(horizontal, str) or not isinstance(vertical, str):
+                target.setSizePolicy(*DEFAULT_SIZE_POLICIES)
+                return
+
+            h = SIZE_POLICIES.get(horizontal.strip().lower())
+            v = SIZE_POLICIES.get(vertical.strip().lower())
+            if h is None or v is None:
+                target.setSizePolicy(*DEFAULT_SIZE_POLICIES)
+                return
+            
+            result = [h, v]
+        
+        case list():
+            for item in value:
+                if not isinstance(item, str):
+                    target.setSizePolicy(*DEFAULT_SIZE_POLICIES)
+                    return
+                    
+                size_policy = SIZE_POLICIES.get(item.strip().lower())
+                if size_policy is None:
+                    target.setSizePolicy(*DEFAULT_SIZE_POLICIES)
+                    return
+                
+                result.append(size_policy)
+
+        case _:
+            pass
+
+    if len(result) != 2:
+        target.setSizePolicy(*DEFAULT_SIZE_POLICIES)
+        return
+
+    target.setSizePolicy(*result)
+
+    if storage is not None:
+        storage[target].add('size_policy')
+
+
 # icon
 def _apply_icon(target: QObject, styles: DataMap, *, storage: dict[QObject, set[str]] | None = None) -> None:
-    if not isinstance(target, (QPushButton)):
+    if not isinstance(target, QPushButton):
         return
     
     icon = styles.get('icon')
@@ -132,6 +184,7 @@ def _apply_icon(target: QObject, styles: DataMap, *, storage: dict[QObject, set[
     if storage is not None:
         storage[target].add('icon')
 
+
 def _resolve_icon_size(size: object) -> tuple[int, int]:
     if isinstance(size, dict):
         size = t.cast(dict[str, object], size)
@@ -140,6 +193,7 @@ def _resolve_icon_size(size: object) -> tuple[int, int]:
 
     elif isinstance(size, str):
         values = size.split()
+        
         match len(values):
             
             case 1:
@@ -167,6 +221,7 @@ QT_HANDLERS: tuple[QTHandler, ...] = (
     _apply_margin,
     _apply_spacing,
     _apply_alignment,
+    _apply_size_policy,
     _apply_icon,
 )
 

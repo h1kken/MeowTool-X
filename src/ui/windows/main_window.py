@@ -6,16 +6,17 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QMainWindow
 
 from src.app.constants import PROGRAM_TITLE
+from src.services.roblox.cookie_sorter import RobloxCookieSorter
 from src.ui.constants import WINDOW_X, WINDOW_Y
 from src.ui.windows.types import PageSpec
 from src.ui.controllers import HasPageController, PageController
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.pages import (
-    ProxyCheckerPage,
-    RobloxCookieCheckerPage,
-    RobloxCookieRefresherPage,
+    # ProxyCheckerPage,
     RobloxCookieSorterPage,
+    # RobloxCookieCheckerPage,
+    # RobloxCookieRefresherPage,
     SettingsPage,
 )
 from src.ui.widgets.common import MTButton, MTWidget, MTImage, MTPopupOverlay
@@ -26,12 +27,12 @@ if t.TYPE_CHECKING:
 
 
 _PAGES: tuple[PageSpec | None, ...] = (
-    PageSpec(ProxyCheckerPage,          'CHCKR',     'Proxy_Checker',           'checker.svg'),
-    PageSpec(RobloxCookieSorterPage,    'CK_SRTR',   'Roblox_Cookie_Sorter',    'sorter.svg'),
-    PageSpec(RobloxCookieCheckerPage,   'CK_CHCKR',  'Roblox_Cookie_Checker',   'checker.svg'),
-    PageSpec(RobloxCookieRefresherPage, 'CK_RFRSHR', 'Roblox_Cookie_Refresher', 'refresher.svg'),
+    # PageSpec(page_class=ProxyCheckerPage,                                           tr_key='CHCKR',     obj_name='Proxy_Checker',           icon_path='checker.svg', has_page_controller=True),
+    PageSpec(page_class=RobloxCookieSorterPage,    worker_class=RobloxCookieSorter, tr_key='CK_SRTR',   obj_name='Roblox_Cookie_Sorter',    icon_path='sorter.svg', has_page_controller=True),
+    # PageSpec(page_class=RobloxCookieCheckerPage,                                    tr_key='CK_CHCKR',  obj_name='Roblox_Cookie_Checker',   icon_path='checker.svg', has_page_controller=True),
+    # PageSpec(page_class=RobloxCookieRefresherPage,                                  tr_key='CK_RFRSHR', obj_name='Roblox_Cookie_Refresher', icon_path='refresher.svg', has_page_controller=True),
     None,
-    PageSpec(SettingsPage,              'STNGS',     'Settings',                'settings.svg', has_page_controller=True),
+    PageSpec(page_class=SettingsPage,                                               tr_key='STNGS',     obj_name='Settings',                icon_path='settings.svg', has_page_controller=True),
 )
 
 
@@ -124,7 +125,6 @@ class MainWindow(QMainWindow):
 
     def _connect_signals(self) -> None:
         self._page_controller.pageChanged.connect(self.pageChanged.emit)
-        self.pageChanged.connect(lambda: print(self.page_state()))
 
     @property
     def overlay(self) -> MTPopupOverlay:

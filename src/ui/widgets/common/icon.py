@@ -15,11 +15,11 @@ class MTIcon(MTWidget):
         self,
         parent: QWidget | None = None,
         *,
-        obj_name: tuple[str, ...] = (),
         source: str = '',
         color: str | None = None,
         rotation: float = 0.0,
         size: int = 16,
+        obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent)
         self.setObjectName(build_object_name((*obj_name, MTIcon._OBJECT_NAME)))

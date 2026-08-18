@@ -13,14 +13,14 @@ if t.TYPE_CHECKING:
 
 
 class Badge(CookieCheckerBase, BaseMixin, BadgeMixin):
-    __tablename__ = "badges"
+    __tablename__ = 'badges'
 
-    place_ref_id: Mapped[int] = mapped_column(ForeignKey("places.id"), index=True)
-    place: Mapped["Place"] = relationship(back_populates="badges")
+    place_ref_id: Mapped[int] = mapped_column(ForeignKey('places.id'), index=True)
+    place: Mapped['Place'] = relationship(back_populates='badges')
 
 
 class BadgeOwned(CookieCheckerBase, BaseMixin, ResultBadgeMixin):
-    __tablename__ = "badges_owned"
+    __tablename__ = 'badges_owned'
 
-    badge: Mapped["Badge"] = relationship()
-    result: Mapped["CookieCheckerResult"] = relationship(back_populates="badges")
+    badge: Mapped['Badge'] = relationship()
+    result: Mapped['CookieCheckerResult'] = relationship(back_populates='badges')

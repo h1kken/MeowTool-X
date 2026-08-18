@@ -1,4 +1,4 @@
-from src.app.types import AppServices
+from .types import AppServices
 
 
 services: AppServices

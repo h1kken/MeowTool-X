@@ -36,8 +36,6 @@ class PageController(QObject):
         self._parent_controller = parent_page_controller
         self._child_controllers: dict[str, PageController] = {}
         
-        self.set_child_controller
-
         self._pages: dict[str, _PageEntry] = {}
         self._button_group = MTButtonGroup()
         
