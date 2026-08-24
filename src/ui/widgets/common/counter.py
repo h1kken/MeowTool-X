@@ -1,7 +1,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget
 
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.utils.qt import build_object_name
@@ -18,7 +18,7 @@ class MTCounter(MTWidget):
         self,
         parent: QWidget | None = None,
         *,
-        tr: Tr = Tr(),
+        tr: TrKey = TrKey(),
         icon_path: str = '',
         obj_name: tuple[str, ...] = (),
     ) -> None:
@@ -31,7 +31,7 @@ class MTCounter(MTWidget):
     def _build_ui(
         self,
         *,
-        tr: Tr,
+        tr: TrKey,
         icon_path: str = '',
     ) -> None:
         obj_name = self.objectName()

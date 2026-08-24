@@ -4,12 +4,12 @@ import typing as t
 
 from dataclasses import dataclass
 
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 
 
 @dataclass(frozen=True, slots=True)
 class ComboItem:
-    tr: Tr = Tr()
+    tr: TrKey = TrKey()
     text: str | None = None
 
 

@@ -4,7 +4,7 @@ import typing as t
 
 from PySide6.QtWidgets import QWidget
 
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -42,39 +42,39 @@ class SettingsRobloxGeneralPage(BasePage):
         obj_name = self.objectName()
         return [
             MTCollapsibleContainer(
-                tr=Tr(key='CK_PRS'),
+                tr=TrKey(key='CK_PRS'),
                 obj_name=(obj_name, 'Main'),
                 widgets=[
                     MTSwitchSetting(
                         config=self._config,
                         cfg_key='Roblox>General>Add Symbols Between Warning And Cookie',
-                        tr=Tr(key='ADD_SMBLS_BTWN_WRNG_CCK'),
+                        tr=TrKey(key='ADD_SMBLS_BTWN_WRNG_CCK'),
                         obj_name=(obj_name, 'Add_Symbols_Between_Warning_And_Cookie'),
                     ),
                     MTLineEditSetting(
                         config=self._config,
                         cfg_key='Roblox>General>Symbols Between Warning And Cookie',
-                        tr=Tr(key='SMBLS_BTWN_WRNG_AND_CCK'),
+                        tr=TrKey(key='SMBLS_BTWN_WRNG_AND_CCK'),
                         obj_name=(obj_name, 'Symbols_Between_Warning_And_Cookie'),
                     ),
                 ],
             ),
             MTCollapsibleContainer(
-                tr=Tr(key='PRXY'),
+                tr=TrKey(key='PRXY'),
                 obj_name=(obj_name, 'Proxy'),
                 widgets=[
                     MTSwitchSetting(
                         config=self._config,
                         cfg_key='Roblox>General>Proxy>Use Proxy',
-                        tr=Tr(key='USE_PRXY'),
+                        tr=TrKey(key='USE_PRXY'),
                         obj_name=(obj_name, 'Use_Proxy'),
                     ),
                     MTComboBoxSetting(
                         config=self._config,
                         cfg_key='Roblox>General>Proxy>Auto Protocol If Not Specified',
-                        tr=Tr(key='AT_PRTCL_IF_NT_SPCFD'),
+                        tr=TrKey(key='AT_PRTCL_IF_NT_SPCFD'),
                         obj_name=(obj_name, 'Auto_Protocol_If_Not_Specified'),
-                        items=[ComboItem(Tr(key=item)) for item in ('http', 'https', 'socks4', 'socks5')],
+                        items=[ComboItem(TrKey(key=item)) for item in ('http', 'https', 'socks4', 'socks5')],
                     ),
                 ],
             ),

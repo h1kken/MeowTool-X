@@ -1,7 +1,7 @@
-from .manager import Translation, TranslationManager
+from .manager import TranslationKey, TranslationManager
 
 
 __all__ = (
-    'Translation',
+    'TranslationKey',
     'TranslationManager',
 )

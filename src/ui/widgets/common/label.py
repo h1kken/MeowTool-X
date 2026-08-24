@@ -3,7 +3,7 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel, QWidget
 
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 from src.translation.mixins import TranslatableMixin
 from src.utils.qt import build_object_name
 
@@ -31,7 +31,7 @@ class MTLabel(TranslatableMixin, QLabel):
         self,
         parent: QWidget | None = None,
         *,
-        tr: Tr = Tr(),
+        tr: TrKey = TrKey(),
         obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent, tr=tr)

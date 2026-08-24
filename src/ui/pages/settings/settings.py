@@ -4,7 +4,7 @@ import typing as t
 
 from PySide6.QtWidgets import QWidget
 
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 from src.ui.windows.types import PageSpec
 from src.ui.pages.base import BasePage
 from src.ui.controllers import HasPageController, PageController
@@ -26,13 +26,13 @@ if t.TYPE_CHECKING:
 
 
 _PAGES: tuple[PageSpec | None, ...] = (
-    PageSpec(page_class=SettingsMainPage,    tr=Tr(key='MAIN'),    obj_name='Main'),
-    PageSpec(page_class=SettingsOutputsPage, tr=Tr(key='OUTPUTS'), obj_name='Outputs'),
-    PageSpec(page_class=SettingsProxyPage,   tr=Tr(key='PROXY'),   obj_name='Proxy', has_page_controller=True),
-    PageSpec(page_class=SettingsRobloxPage,  tr=Tr(key='ROBLOX'),  obj_name='Roblox', has_page_controller=True),
-    PageSpec(page_class=SettingsMiscPage,    tr=Tr(key='MISC'),    obj_name='Misc'),
-    PageSpec(page_class=SettingsConfigPage,  tr=Tr(key='CONFIG'),  obj_name='Config'),
-    PageSpec(page_class=SettingsThemePage,   tr=Tr(key='THEME'),   obj_name='Theme'),
+    PageSpec(page_class=SettingsMainPage,    tr=TrKey(key='MAIN'),    obj_name='Main'),
+    PageSpec(page_class=SettingsOutputsPage, tr=TrKey(key='OUTPUTS'), obj_name='Outputs'),
+    PageSpec(page_class=SettingsProxyPage,   tr=TrKey(key='PROXY'),   obj_name='Proxy', has_page_controller=True),
+    PageSpec(page_class=SettingsRobloxPage,  tr=TrKey(key='ROBLOX'),  obj_name='Roblox', has_page_controller=True),
+    PageSpec(page_class=SettingsMiscPage,    tr=TrKey(key='MISC'),    obj_name='Misc'),
+    PageSpec(page_class=SettingsConfigPage,  tr=TrKey(key='CONFIG'),  obj_name='Config'),
+    PageSpec(page_class=SettingsThemePage,   tr=TrKey(key='THEME'),   obj_name='Theme'),
     None,
 )
 

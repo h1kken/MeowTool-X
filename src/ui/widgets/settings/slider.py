@@ -5,7 +5,7 @@ import typing as t
 from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QWidget
 
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import MTLabel, MTSlider, MTSpinBox
@@ -24,7 +24,7 @@ class MTSliderSetting(MTBaseSetting[int]):
         *,
         config: Config | ConfigLoader,
         cfg_key: str,
-        tr: Tr = Tr(),
+        tr: TrKey = TrKey(),
         obj_name: tuple[str, ...] = (),
         min_value: int,
         max_value: int,
@@ -41,7 +41,7 @@ class MTSliderSetting(MTBaseSetting[int]):
     def _build_ui(
         self,
         *,
-        tr: Tr,
+        tr: TrKey,
     ) -> None:
         obj_name = self.objectName()
         

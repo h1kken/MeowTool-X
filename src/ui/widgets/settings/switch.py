@@ -7,7 +7,7 @@ from PySide6.QtGui import QMouseEvent
 from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import QWidget
 
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import MTLabel, MTSwitch
@@ -26,7 +26,7 @@ class MTSwitchSetting(MTBaseSetting[bool]):
         *,
         config: Config | ConfigLoader,
         cfg_key: str,
-        tr: Tr = Tr(),
+        tr: TrKey = TrKey(),
         obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent, config=config, cfg_key=cfg_key, obj_name=(*obj_name, MTSwitchSetting._OBJECT_NAME))
@@ -37,7 +37,7 @@ class MTSwitchSetting(MTBaseSetting[bool]):
     def _build_ui(
         self,
         *,
-        tr: Tr,
+        tr: TrKey,
     ) -> None:
         obj_name = self.objectName()
         

@@ -4,7 +4,7 @@ import typing as t
 
 from PySide6.QtWidgets import QWidget
 
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -41,13 +41,13 @@ class SettingsProxyCheckerPage(BasePage):
         obj_name = self.objectName()
         return [
             MTCollapsibleContainer(
-                tr=Tr(key='GNRL'),
+                tr=TrKey(key='GNRL'),
                 obj_name=(obj_name, 'General'),
                 widgets=[
                     MTSliderSetting(
                         config=self._config,
                         cfg_key='Proxy>Checker>Main Threads',
-                        tr=Tr(key='MN_THRDS'),
+                        tr=TrKey(key='MN_THRDS'),
                         obj_name=(obj_name, 'Main_Threads'),
                         min_value=1,
                         max_value=1000,
@@ -55,7 +55,7 @@ class SettingsProxyCheckerPage(BasePage):
                     MTSliderSetting(
                         config=self._config,
                         cfg_key='Proxy>Checker>Maximum Wait Response',
-                        tr=Tr(key='MX_WT_RESP'),
+                        tr=TrKey(key='MX_WT_RESP'),
                         obj_name=(obj_name, 'Maximum_Wait_Response'),
                         min_value=1,
                         max_value=60,
@@ -63,13 +63,13 @@ class SettingsProxyCheckerPage(BasePage):
                     MTSwitchSetting(
                         config=self._config,
                         cfg_key='Proxy>Checker>Save Good In Custom File',
-                        tr=Tr(key='SV_GD_IN_CSTM_FL'),
+                        tr=TrKey(key='SV_GD_IN_CSTM_FL'),
                         obj_name=(obj_name, 'Save_Good_In_Custom_File'),
                     ),
                     MTSwitchSetting(
                         config=self._config,
                         cfg_key='Proxy>Checker>Save Without Protocol',
-                        tr=Tr(key='SV_WTOUT_PRTCL'),
+                        tr=TrKey(key='SV_WTOUT_PRTCL'),
                         obj_name=(obj_name, 'Save_Without_Protocol'),
                     ),
                 ],

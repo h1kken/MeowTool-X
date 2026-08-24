@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QMouseEvent, QResizeEvent
 from PySide6.QtWidgets import QWidget
 
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.settings.base import MTBaseSetting
@@ -400,7 +400,7 @@ class _CookieCheckerSortPopup(MTPopup):
         parent: QWidget | None = None,
         *,
         config: Config | ConfigLoader,
-        tr: Tr = Tr(),
+        tr: TrKey = TrKey(),
         obj_name: tuple[str, ...] = (),
         field_name: str,
         sort_kind: SortCategoryKind,
@@ -530,7 +530,7 @@ class MTCookieCheckerFieldSetting(MTSwitchSetting):
         *,
         config: Config | ConfigLoader,
         cfg_key: str,
-        tr: Tr = Tr(),
+        tr: TrKey = TrKey(),
         obj_name: tuple[str, ...] = (),
         field_name: str,
     ) -> None:

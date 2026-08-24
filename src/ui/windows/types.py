@@ -4,7 +4,7 @@ import typing as t
 
 from dataclasses import dataclass
 
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 
 if t.TYPE_CHECKING:
     from src.ui.pages.base import BasePage
@@ -15,7 +15,7 @@ if t.TYPE_CHECKING:
 class PageSpec:
     page_class: type[BasePage]
     worker_class: type[BaseWorker] | None = None
-    tr: Tr = Tr()
+    tr: TrKey = TrKey()
     obj_name: str = ''
     icon_path: str | None = None
     has_page_controller: bool = False

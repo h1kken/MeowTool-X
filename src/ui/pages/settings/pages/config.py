@@ -6,7 +6,7 @@ from PySide6.QtCore import QFileSystemWatcher, QSignalBlocker, QTimer
 from PySide6.QtWidgets import QWidget, QStackedWidget
 
 from src.app.paths import PATH_DEFAULT_CONFIG, PATH_CONFIGS_SRC, PATH_CONFIGS_USER
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -58,31 +58,31 @@ class SettingsConfigPage(BasePage):
         self._actions_column_layout = create_layout(LayoutType.VBOX, self._actions_column_widget)
         self._main_content_layout.addWidget(self._actions_column_widget)
         
-        self._selected_value = self._add_info_row(tr=Tr(key='SLCTD'), obj_name=(obj_name, 'Selected'))
-        self._loaded_value = self._add_info_row(tr=Tr(key='LDD'), obj_name=(obj_name, 'Loaded'))
+        self._selected_value = self._add_info_row(tr=TrKey(key='SLCTD'), obj_name=(obj_name, 'Selected'))
+        self._loaded_value = self._add_info_row(tr=TrKey(key='LDD'), obj_name=(obj_name, 'Loaded'))
 
-        self._autoload_row = MTSwitchSetting(config=self._config.loader, cfg_key=CLKey.LOADER_CONFIG_ON_LOAD, tr=Tr(key='ATLD_SLCTD_CFG'), obj_name=(obj_name, 'Autoload'))
+        self._autoload_row = MTSwitchSetting(config=self._config.loader, cfg_key=CLKey.LOADER_CONFIG_ON_LOAD, tr=TrKey(key='ATLD_SLCTD_CFG'), obj_name=(obj_name, 'Autoload'))
         self._actions_column_layout.addWidget(self._autoload_row)
         
-        self._auto_save_row = MTSwitchSetting(config=self._config.loader, cfg_key=CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES, tr=Tr(key='AT_SV_CFG_CHNGS'), obj_name=(obj_name, 'Auto_Save'))
+        self._auto_save_row = MTSwitchSetting(config=self._config.loader, cfg_key=CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES, tr=TrKey(key='AT_SV_CFG_CHNGS'), obj_name=(obj_name, 'Auto_Save'))
         self._actions_column_layout.addWidget(self._auto_save_row)
 
-        self._load_button = MTButton(tr=Tr(key='LD'), obj_name=(obj_name, 'Load'))
+        self._load_button = MTButton(tr=TrKey(key='LD'), obj_name=(obj_name, 'Load'))
         self._actions_column_layout.addWidget(self._load_button)
         
-        self._save_button = MTButton(tr=Tr(key='SV'), obj_name=(obj_name, 'Save'))
+        self._save_button = MTButton(tr=TrKey(key='SV'), obj_name=(obj_name, 'Save'))
         self._actions_column_layout.addWidget(self._save_button)
 
-        self._create_stack = self._build_inline_editor('Create', tr=Tr(key='CRT'))
+        self._create_stack = self._build_inline_editor('Create', tr=TrKey(key='CRT'))
         self._actions_column_layout.addWidget(self._create_stack)
         
-        self._rename_stack = self._build_inline_editor('Rename', tr=Tr(key='RNM'))
+        self._rename_stack = self._build_inline_editor('Rename', tr=TrKey(key='RNM'))
         self._actions_column_layout.addWidget(self._rename_stack)
 
         self._delete_stack = self._build_delete_stack()
         self._actions_column_layout.addWidget(self._delete_stack)
 
-        self._open_location_button = MTButton(tr=Tr(key='OPN_FL_LCTN'), obj_name=(obj_name, 'Open_File_Location'))
+        self._open_location_button = MTButton(tr=TrKey(key='OPN_FL_LCTN'), obj_name=(obj_name, 'Open_File_Location'))
         self._actions_column_layout.addWidget(self._open_location_button)
         
         self._actions_column_layout.addStretch()
@@ -90,7 +90,7 @@ class SettingsConfigPage(BasePage):
     def _add_info_row(
         self,
         *,
-        tr: Tr = Tr(),
+        tr: TrKey = TrKey(),
         obj_name: tuple[str, ...] = (),
     ) -> MTPlainLabel:        
         row = MTWidget(obj_name=(*obj_name, 'Row'))
@@ -110,7 +110,7 @@ class SettingsConfigPage(BasePage):
         self,
         mode: str,
         *,
-        tr: Tr = Tr(),
+        tr: TrKey = TrKey(),
     ) -> MTInlineStackedWidget:
         obj_name = self.objectName()
         
@@ -148,14 +148,14 @@ class SettingsConfigPage(BasePage):
         
         stack = MTInlineStackedWidget(obj_name=(obj_name, 'Delete'))
 
-        self._delete_button = MTButton(tr=Tr(key='DLT'), obj_name=(obj_name, 'Delete'))
+        self._delete_button = MTButton(tr=TrKey(key='DLT'), obj_name=(obj_name, 'Delete'))
         stack.addWidget(self._delete_button)
 
         confirm_row = MTWidget(obj_name=(obj_name, 'Delete_Confirm_Row'))
         confirm_layout = create_layout(LayoutType.HBOX, confirm_row)
         stack.addWidget(confirm_row)
         
-        self._delete_confirm_button = MTButton(tr=Tr(key='CNFRM'), obj_name=(obj_name, 'Delete_Confirm'))
+        self._delete_confirm_button = MTButton(tr=TrKey(key='CNFRM'), obj_name=(obj_name, 'Delete_Confirm'))
         confirm_layout.addWidget(self._delete_confirm_button, 1)
         
         self._delete_cancel_button = MTButton(obj_name=(obj_name, 'Delete_Cancel'))

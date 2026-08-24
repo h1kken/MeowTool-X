@@ -4,7 +4,7 @@ import typing as t
 
 from PySide6.QtWidgets import QWidget
 
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 from src.ui.windows.types import PageSpec
 from src.ui.pages.base import BasePage
 from src.ui.controllers import HasPageController, PageController
@@ -22,9 +22,9 @@ if t.TYPE_CHECKING:
 
 
 _PAGES: tuple[PageSpec | None, ...] = (
-    PageSpec(page_class=SettingsRobloxCookieSorterPage,    tr=Tr(key='CK_SRTR'),   obj_name='Cookie_Sorter'),
-    PageSpec(page_class=SettingsRobloxCookieCheckerPage,   tr=Tr(key='CK_CHCKR'),  obj_name='Cookie_Checker'),
-    PageSpec(page_class=SettingsRobloxCookieRefresherPage, tr=Tr(key='CK_RFRSHR'), obj_name='Cookie_Refresher'),
+    PageSpec(page_class=SettingsRobloxCookieSorterPage,    tr=TrKey(key='CK_SRTR'),   obj_name='Cookie_Sorter'),
+    PageSpec(page_class=SettingsRobloxCookieCheckerPage,   tr=TrKey(key='CK_CHCKR'),  obj_name='Cookie_Checker'),
+    PageSpec(page_class=SettingsRobloxCookieRefresherPage, tr=TrKey(key='CK_RFRSHR'), obj_name='Cookie_Refresher'),
     None,
 )
 

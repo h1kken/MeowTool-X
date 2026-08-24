@@ -18,7 +18,7 @@ if t.TYPE_CHECKING:
 
 
 @dataclass(frozen=True, slots=True)
-class Translation:
+class TranslationKey:
     key: str = ''
     prefix: str = ''
     suffix: str = ''

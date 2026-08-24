@@ -4,7 +4,7 @@ import typing as t
 
 from PySide6.QtWidgets import QWidget
 
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 from src.services.roblox import RobloxCookieSorter
 from src.ui.controllers import PageController
 from src.ui.layouts.enums import LayoutType
@@ -54,7 +54,7 @@ class RobloxCookieSorterPage(BasePage):
         
     def _create_prepare_page(self) -> None:
         obj_name = self.objectName()
-        tr = Tr(key='PREPARE')
+        tr = TrKey(key='PREPARE')
         name = 'Prepare'
 
         page = BasePreparePage(worker_class=RobloxCookieSorter, config=self._config, obj_name=(obj_name, name))
@@ -64,7 +64,7 @@ class RobloxCookieSorterPage(BasePage):
         
     def _create_process_page(self) -> None:
         obj_name = self.objectName()
-        tr = Tr(key='PREPARE')
+        tr = TrKey(key='PREPARE')
         name = 'Prepare'
 
         page = BasePreparePage(worker_class=RobloxCookieSorter, config=self._config, obj_name=(obj_name, name))
@@ -81,7 +81,7 @@ class RobloxCookieSorterPage(BasePage):
         
         run = CookieSorterRun()
         
-        tr = Tr(key='RUN', suffix=f' #{run.id}')
+        tr = TrKey(key='RUN', suffix=f' #{run.id}')
         name = 'Run'
         
         page = RobloxCookieSorterProcessPage(config=self._config)
@@ -130,13 +130,13 @@ class RobloxCookieSorterProcessPage(BasePage):
         self._counters_layout = create_layout(LayoutType.HBOX, self._counters_widget)
         self._main_layout.addWidget(self._counters_widget)
 
-        self._valid_counter = MTCounter(tr=Tr(key='VALID'), obj_name=(obj_name, 'Valid'))
+        self._valid_counter = MTCounter(tr=TrKey(key='VALID'), obj_name=(obj_name, 'Valid'))
         self._counters_layout.addWidget(self._valid_counter)
 
-        self._duplicate_counter = MTCounter(tr=Tr(key='DUPLICATE'), obj_name=(obj_name, 'Duplicate'))
+        self._duplicate_counter = MTCounter(tr=TrKey(key='DUPLICATE'), obj_name=(obj_name, 'Duplicate'))
         self._counters_layout.addWidget(self._duplicate_counter)
 
-        self._invalid_counter = MTCounter(tr=Tr(key='INVALID'), obj_name=(obj_name, 'Invalid'))
+        self._invalid_counter = MTCounter(tr=TrKey(key='INVALID'), obj_name=(obj_name, 'Invalid'))
         self._counters_layout.addWidget(self._invalid_counter)
 
         self._actions_widget = MTWidget(obj_name=(obj_name, 'Actions'))
@@ -144,10 +144,10 @@ class RobloxCookieSorterProcessPage(BasePage):
         self._main_layout.addWidget(self._actions_widget)
 
         # Actions
-        self._pause_button = MTButton(tr=Tr(key='PAUSE'), obj_name=(obj_name, 'Pause'), checkable=True)
+        self._pause_button = MTButton(tr=TrKey(key='PAUSE'), obj_name=(obj_name, 'Pause'), checkable=True)
         self._actions_layout.addWidget(self._pause_button)
 
-        self._stop_button = MTButton(tr=Tr(key='STOP'), obj_name=(obj_name, 'Stop'))
+        self._stop_button = MTButton(tr=TrKey(key='STOP'), obj_name=(obj_name, 'Stop'))
         self._actions_layout.addWidget(self._stop_button)
         
     def _connect_signals(self) -> None:

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from PySide6.QtCore import QThread
 from PySide6.QtWidgets import QWidget, QHeaderView
 
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -61,7 +61,7 @@ class BasePreparePage(BasePage):
         self._content_layout = create_layout(LayoutType.VBOX, self._content_widget)
         self._main_layout.addWidget(self._content_widget)
 
-        self._drop_zone = MTDropZone(tr=Tr('DRG_AND_DRP'), obj_name=(obj_name,))
+        self._drop_zone = MTDropZone(tr=TrKey('DRG_AND_DRP'), obj_name=(obj_name,))
         self._content_layout.addWidget(self._drop_zone, stretch=1)
         
         self._data_table = MTTable(obj_name=(obj_name,))
@@ -86,13 +86,13 @@ class BasePreparePage(BasePage):
         self._buttons_layout = create_layout(LayoutType.HBOX, self._buttons_widget)
         self._main_layout.addWidget(self._buttons_widget)
         
-        self._clear_button = MTButton(tr=Tr(key='CLR'), obj_name=(obj_name, 'Clear'))
+        self._clear_button = MTButton(tr=TrKey(key='CLR'), obj_name=(obj_name, 'Clear'))
         self._clear_button.hide()
         self._buttons_layout.addWidget(self._clear_button)
         
         self._buttons_layout.addStretch()
         
-        self._start_button = MTButton(tr=Tr(key='STRT'), obj_name=(obj_name, 'Start'))
+        self._start_button = MTButton(tr=TrKey(key='STRT'), obj_name=(obj_name, 'Start'))
         self._buttons_layout.addWidget(self._start_button)
 
     def _connect_signals(self) -> None:

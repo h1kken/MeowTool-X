@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QMainWindow
 
 from src.app.constants import PROGRAM_TITLE
 from src.services.roblox.cookie_sorter import RobloxCookieSorter
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 from src.ui.constants import WINDOW_X, WINDOW_Y
 from src.ui.windows.types import PageSpec
 from src.ui.controllers import HasPageController, PageController
@@ -29,11 +29,11 @@ if t.TYPE_CHECKING:
 
 _PAGES: tuple[PageSpec | None, ...] = (
     # PageSpec(page_class=ProxyCheckerPage,                                           tr=TrKey(key='CHCKR'),     icon_path='checker.svg', has_page_controller=True),
-    PageSpec(page_class=RobloxCookieSorterPage,    worker_class=RobloxCookieSorter, tr=Tr(key='CK_SRTR'),   icon_path='sorter.svg', has_page_controller=True),
+    PageSpec(page_class=RobloxCookieSorterPage,    worker_class=RobloxCookieSorter, tr=TrKey(key='CK_SRTR'),   icon_path='sorter.svg', has_page_controller=True),
     # PageSpec(page_class=RobloxCookieCheckerPage,                                    tr=TrKey(key='CK_CHCKR'),  icon_path='checker.svg', has_page_controller=True),
     # PageSpec(page_class=RobloxCookieRefresherPage,                                  tr=TrKey(key='CK_RFRSHR'), icon_path='refresher.svg', has_page_controller=True),
     None,
-    PageSpec(page_class=SettingsPage,                                               tr=Tr(key='STNGS'),     icon_path='settings.svg', has_page_controller=True),
+    PageSpec(page_class=SettingsPage,                                               tr=TrKey(key='STNGS'),     icon_path='settings.svg', has_page_controller=True),
 )
 
 

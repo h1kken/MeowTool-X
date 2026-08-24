@@ -5,7 +5,7 @@ import typing as t
 from PySide6.QtCore import Qt, QObject, QAbstractItemModel
 from PySide6.QtWidgets import QWidget
 
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 import src.app.context as ctx
 translator = ctx.services.translator
 
@@ -18,7 +18,7 @@ class TranslatableMixin:
         self,
         parent: QWidget | None = None,
         *args: object,
-        tr: Tr = Tr(),
+        tr: TrKey = TrKey(),
         **kwargs: object,
     ) -> None:
         super().__init__(parent, *args, **kwargs) # type: ignore
@@ -76,7 +76,7 @@ class TranslatableHeaderTableModelMixin:
         self,
         parent: QObject | None = None,
         *args: object,
-        trs: tuple[Tr, ...] = (),
+        trs: tuple[TrKey, ...] = (),
         **kwargs: object,
     ) -> None:
         super().__init__(parent, *args, **kwargs)  # type: ignore

@@ -6,7 +6,7 @@ import collections.abc as cabc
 from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QWidget
 
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import  MTLabel, MTComboBox
@@ -26,7 +26,7 @@ class MTComboBoxSetting(MTBaseSetting[str]):
         *,
         config: Config | ConfigLoader,
         cfg_key: str,
-        tr: Tr = Tr(),
+        tr: TrKey = TrKey(),
         obj_name: tuple[str, ...] = (),
         items: cabc.Sequence[ComboItem],
         on_changed: cabc.Callable[[str], None] | None = None,
@@ -42,7 +42,7 @@ class MTComboBoxSetting(MTBaseSetting[str]):
     def _build_ui(
         self,
         *,
-        tr: Tr,
+        tr: TrKey,
     ) -> None:
         obj_name = self.objectName()
         

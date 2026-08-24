@@ -5,7 +5,7 @@ from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import QWidget
 
 from src.app.paths import PATH_ICONS_SRC
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.helpers import repolish
@@ -23,7 +23,7 @@ class _CollapsibleHeader(MTWidget):
         self,
         parent: QWidget | None = None,
         *,
-        tr: Tr = Tr(),
+        tr: TrKey = TrKey(),
         obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent, obj_name=(*obj_name, _CollapsibleHeader._OBJECT_NAME))
@@ -35,7 +35,7 @@ class _CollapsibleHeader(MTWidget):
     def _build_ui(
         self,
         *,
-        tr: Tr = Tr(),
+        tr: TrKey = TrKey(),
     ) -> None:
         obj_name = self.objectName()
         
@@ -72,7 +72,7 @@ class MTCollapsibleContainer(MTWidget):
         self,
         parent: QWidget | None = None,
         *,
-        tr: Tr = Tr(),
+        tr: TrKey = TrKey(),
         obj_name: tuple[str, ...] = (),
         expanded: bool = True,
         widgets: cabc.Sequence[QWidget] | None = None,
@@ -87,7 +87,7 @@ class MTCollapsibleContainer(MTWidget):
     def _build_ui(
         self,
         *,
-        tr: Tr,
+        tr: TrKey,
         widgets: cabc.Sequence[QWidget] | None
     ) -> None:
         obj_name = self.objectName()

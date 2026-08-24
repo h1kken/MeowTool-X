@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QWidget
 
 import src.app.context as ctx
 from src.app.paths import PATH_TRANSLATIONS_SRC, PATH_TRANSLATIONS_USER
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -44,13 +44,13 @@ class SettingsMainPage(BasePage):
         obj_name = self.objectName()
         return [
             MTCollapsibleContainer(
-                tr=Tr(key='GNRL'),
+                tr=TrKey(key='GNRL'),
                 obj_name=(obj_name, 'General'),
                 widgets=[
                     MTComboBoxSetting(
                         config=self._config,
                         cfg_key='General>Language',
-                        tr=Tr(key='LANG'),
+                        tr=TrKey(key='LANG'),
                         obj_name=(obj_name, 'Language'),
                         items=self._get_all_languages(),
                         on_changed=ctx.services.translator.load,
@@ -67,6 +67,6 @@ class SettingsMainPage(BasePage):
                 continue
 
             for path in translations_path.glob('*.axis'):
-                languages.add(ComboItem(Tr(key=path.stem), path.stem))
+                languages.add(ComboItem(TrKey(key=path.stem), path.stem))
         
         return sorted(languages, key=lambda item: item.tr.key.lower())

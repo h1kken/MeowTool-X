@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QObject, QModelIndex
 
-from src.translation import Translation as Tr
+from src.translation import TranslationKey as TrKey
 from src.translation.mixins import TranslatableHeaderTableModelMixin
 
 from ..base import TableItem, TableModel
@@ -27,10 +27,10 @@ class PrepareTableItem(TableItem):
 class PrepareTableModel(TranslatableHeaderTableModelMixin, TableModel[PrepareTableItem]):
     _COLUMN_COUNT = 4
     _TRS = (
-        Tr(key='#'),
-        Tr(key='DT'),
-        Tr(key='LNS'),
-        Tr()
+        TrKey(key='#'),
+        TrKey(key='DT'),
+        TrKey(key='LNS'),
+        TrKey()
     )
     
     def __init__(
