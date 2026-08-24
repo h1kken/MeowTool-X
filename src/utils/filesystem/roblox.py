@@ -6,12 +6,12 @@ from src.utils.logging import logger
 
 
 def detect_roblox_path() -> Path | None:
-    if PATH_FISHSTRAP.exists():
+    if PATH_FISHSTRAP.is_dir():
         return PATH_FISHSTRAP
-    if PATH_BLOXSTRAP.exists():
+    if PATH_BLOXSTRAP.is_dir():
         return PATH_BLOXSTRAP
 
-    if PATH_ROBLOXPLAYERBETA.exists():
+    if PATH_ROBLOXPLAYERBETA.is_dir():
         paths = sorted(
             list(PATH_ROBLOXPLAYERBETA.iterdir()),
             key=lambda entry: entry.stat().st_mtime,

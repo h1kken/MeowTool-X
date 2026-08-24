@@ -6,6 +6,7 @@ import collections.abc as cabc
 from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QWidget
 
+from src.translation import Translation as Tr
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.common import  MTLabel, MTComboBox
@@ -25,7 +26,7 @@ class MTComboBoxSetting(MTBaseSetting[str]):
         *,
         config: Config | ConfigLoader,
         cfg_key: str,
-        tr_key: str = '',
+        tr: Tr = Tr(),
         obj_name: tuple[str, ...] = (),
         items: cabc.Sequence[ComboItem],
         on_changed: cabc.Callable[[str], None] | None = None,
@@ -35,19 +36,19 @@ class MTComboBoxSetting(MTBaseSetting[str]):
         self._items = items
         self._on_changed = on_changed
         
-        self._build_ui(tr_key=tr_key)
+        self._build_ui(tr=tr)
         self._connect_signals()
 
     def _build_ui(
         self,
         *,
-        tr_key: str = '',
+        tr: Tr,
     ) -> None:
         obj_name = self.objectName()
         
         self._main_layout = create_layout(LayoutType.HBOX, self)
 
-        self._label = MTLabel(tr_key=tr_key, obj_name=(obj_name,))
+        self._label = MTLabel(tr=tr, obj_name=(obj_name,))
         self._main_layout.addWidget(self._label)
 
         self._combo_box = MTComboBox(obj_name=(obj_name,))
@@ -67,7 +68,7 @@ class MTComboBoxSetting(MTBaseSetting[str]):
                 if item.text is None:
                     self._combo_box.add_item(item)
                 else:
-                    self._combo_box.addItem(item.text, item.tr_key)
+                    self._combo_box.addItem(item.text, item.tr.key)
 
         self._set_current_value(self.value)
 

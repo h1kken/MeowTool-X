@@ -5,6 +5,7 @@ from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import QWidget
 
 from src.app.paths import PATH_ICONS_SRC
+from src.translation import Translation as Tr
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.widgets.helpers import repolish
@@ -22,26 +23,25 @@ class _CollapsibleHeader(MTWidget):
         self,
         parent: QWidget | None = None,
         *,
-        tr_key: str = '',
+        tr: Tr = Tr(),
         obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent, obj_name=(*obj_name, _CollapsibleHeader._OBJECT_NAME))
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        
-        self._build_ui(tr_key=tr_key)
-    
         self.setExpanded(True)
+        
+        self._build_ui(tr=tr)
     
     def _build_ui(
         self,
         *,
-        tr_key: str = '',
+        tr: Tr = Tr(),
     ) -> None:
         obj_name = self.objectName()
         
         self._main_layout = create_layout(LayoutType.HBOX, self)
         
-        self._label = MTLabel(tr_key=tr_key, obj_name=(obj_name, 'Title'))
+        self._label = MTLabel(tr=tr, obj_name=(obj_name, 'Title'))
         self._main_layout.addWidget(self._label)
         
         self._main_layout.addStretch()
@@ -72,7 +72,7 @@ class MTCollapsibleContainer(MTWidget):
         self,
         parent: QWidget | None = None,
         *,
-        tr_key: str = '',
+        tr: Tr = Tr(),
         obj_name: tuple[str, ...] = (),
         expanded: bool = True,
         widgets: cabc.Sequence[QWidget] | None = None,
@@ -81,20 +81,20 @@ class MTCollapsibleContainer(MTWidget):
 
         self._expanded = expanded
         
-        self._build_ui(tr_key=tr_key, widgets=widgets)
+        self._build_ui(tr=tr, widgets=widgets)
         self._connect_signals()
         
     def _build_ui(
         self,
         *,
-        tr_key: str,
+        tr: Tr,
         widgets: cabc.Sequence[QWidget] | None
     ) -> None:
         obj_name = self.objectName()
         
         self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        self._header = _CollapsibleHeader(self, tr_key=tr_key, obj_name=(obj_name,))
+        self._header = _CollapsibleHeader(self, tr=tr, obj_name=(obj_name,))
         self._header.setCursor(Qt.CursorShape.PointingHandCursor)
         self._main_layout.addWidget(self._header)
         

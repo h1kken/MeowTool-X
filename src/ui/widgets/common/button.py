@@ -5,6 +5,7 @@ import collections.abc as cabc
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget, QPushButton
 
+from src.translation import Translation as Tr
 from src.translation.mixins import TranslatableMixin
 from src.utils.qt import build_object_name
 
@@ -42,13 +43,13 @@ class MTButton(TranslatableMixin, QPushButton):
         self,
         parent: QWidget | None = None,
         *,
-        tr_key: str = '',
+        tr: Tr = Tr(),
         obj_name: tuple[str, ...] = (),
         checkable: bool = False,
         checked: bool = False,
         action: cabc.Callable[[], None] | None = None,
     ) -> None:
-        super().__init__(parent, tr_key=tr_key)
+        super().__init__(parent, tr=tr)
         self.setObjectName(build_object_name((*obj_name, MTButton._OBJECT_NAME)))
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)

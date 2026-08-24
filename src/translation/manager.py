@@ -4,6 +4,7 @@ import typing as t
 
 from pathlib import Path
 from types import MappingProxyType
+from dataclasses import dataclass
 
 from PySide6.QtCore import QObject, Signal
 
@@ -14,8 +15,15 @@ from src.config import ConfigKey as CKey
 
 if t.TYPE_CHECKING:
     from src.config import Config
-    
-    
+
+
+@dataclass(frozen=True, slots=True)
+class Translation:
+    key: str = ''
+    prefix: str = ''
+    suffix: str = ''
+
+
 class TranslationManager(QObject):
     languageChanged = Signal()
 
@@ -38,7 +46,7 @@ class TranslationManager(QObject):
     
     def load(self, name: str | None = None) -> None:        
         if name is None:
-            name = str(self._config.get(CKey.GENERAL_LANGUAGE)).strip()
+            name = self._config.get(CKey.GENERAL_LANGUAGE, str)
         
         try:
             path = self._resolve_translation(name)

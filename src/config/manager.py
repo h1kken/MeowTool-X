@@ -53,7 +53,7 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
     
     def load(self, name: str | None = None) -> None:
         if name is None:
-            name = str(self.loader.get(CLKey.LOADER_CONFIG_ON_LOAD)).strip()
+            name = self.loader.get(CLKey.LOADER_CONFIG_ON_LOAD, str)
         
         path = PATH_CONFIGS_USER / f'{name}.txt'
         if not path.is_file():
@@ -106,7 +106,7 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
         super().set(key, value, sep=sep)
         self.valueChanged.emit(key.replace(sep, '>'), value)
 
-        if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES) or force_save:
+        if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES, bool) or force_save:
             self.save()
 
     def set_many(self, items: cabc.Mapping[str, DataValue] | cabc.Iterable[tuple[str, DataValue]], *, sep: str = '>', force_save: bool = False) -> None:
@@ -115,5 +115,5 @@ class Config(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
             super().set(str(key), value, sep=sep)
             self.valueChanged.emit(str(key).replace(sep, '>'), value)
 
-        if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES) or force_save:
+        if self.loader.get(CLKey.SAVER_AUTO_SAVE_CONFIG_CHANGES, bool) or force_save:
             self.save()

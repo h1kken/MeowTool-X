@@ -3,10 +3,12 @@ from __future__ import annotations
 import typing as t
 
 from pathlib import Path
+from dataclasses import dataclass
 
 from PySide6.QtCore import QThread
 from PySide6.QtWidgets import QWidget, QHeaderView
 
+from src.translation import Translation as Tr
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -18,6 +20,13 @@ from src.utils.filesystem import FS
 if t.TYPE_CHECKING:
     from src.config import Config
     from src.services.base_worker import BaseWorker
+
+
+@dataclass(frozen=True, slots=True)
+class RunSpec:
+    run_id: int
+    thread: QThread
+    worker: BaseWorker
 
 
 class BasePreparePage(BasePage):
@@ -35,7 +44,7 @@ class BasePreparePage(BasePage):
         
         self._thread: QThread | None = None
         
-        self._workers: dict[str, BaseWorker] = {}
+        self._runs: list[RunSpec] = []
         self._worker_class: type[BaseWorker] = worker_class
 
         self._dropped_files_keys: set[str] = set()
@@ -52,38 +61,38 @@ class BasePreparePage(BasePage):
         self._content_layout = create_layout(LayoutType.VBOX, self._content_widget)
         self._main_layout.addWidget(self._content_widget)
 
-        self._drop_zone = MTDropZone(tr_key='DRG_AND_DRP', obj_name=(obj_name,))
+        self._drop_zone = MTDropZone(tr=Tr('DRG_AND_DRP'), obj_name=(obj_name,))
         self._content_layout.addWidget(self._drop_zone, stretch=1)
         
-        self._table = MTTable(obj_name=(obj_name,))
+        self._data_table = MTTable(obj_name=(obj_name,))
         
         self._model = PrepareTableModel(self)
-        self._table.setModel(self._model)
+        self._data_table.setModel(self._model)
         
-        header = self._table.horizontalHeader()
+        header = self._data_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         header.setSectionsMovable(False)
         
-        self._path_delegate = PathDelegate(self._table)
-        self._table.setItemDelegateForColumn(1, self._path_delegate)
+        self._path_delegate = PathDelegate(self._data_table)
+        self._data_table.setItemDelegateForColumn(1, self._path_delegate)
         
-        self._delete_button_delegate = DeleteButtonDelegate(self._table)
-        self._table.setItemDelegateForColumn(3, self._delete_button_delegate)
+        self._delete_button_delegate = DeleteButtonDelegate(self._data_table)
+        self._data_table.setItemDelegateForColumn(3, self._delete_button_delegate)
         
-        self._content_layout.addWidget(self._table, stretch=1)
+        self._content_layout.addWidget(self._data_table, stretch=1)
         
         self._buttons_widget = MTWidget(obj_name=(obj_name, 'Buttons'))
         self._buttons_layout = create_layout(LayoutType.HBOX, self._buttons_widget)
         self._main_layout.addWidget(self._buttons_widget)
         
-        self._clear_button = MTButton(tr_key='CLR', obj_name=(obj_name, 'Clear'))
+        self._clear_button = MTButton(tr=Tr(key='CLR'), obj_name=(obj_name, 'Clear'))
         self._clear_button.hide()
         self._buttons_layout.addWidget(self._clear_button)
         
         self._buttons_layout.addStretch()
         
-        self._start_button = MTButton(tr_key='STRT', obj_name=(obj_name, 'Start'))
+        self._start_button = MTButton(tr=Tr(key='STRT'), obj_name=(obj_name, 'Start'))
         self._buttons_layout.addWidget(self._start_button)
 
     def _connect_signals(self) -> None:
@@ -128,20 +137,24 @@ class BasePreparePage(BasePage):
         self._clear_button.hide()
 
     def _start(self) -> None: # TODO: self._workers, not self._worker
-        if self._thread and self._thread.isRunning():
-            return
         if not self._model.items:
             return
 
-        self._thread = QThread(self)
-        self._worker = self._worker_class(self._config)
-        self._worker.moveToThread(self._thread)
+        thread = QThread(self)
+        worker = self._worker_class(self._config)
+        worker.moveToThread(thread)
 
-        self._thread.started.connect(self._worker.run)
-        self._worker.finished.connect(self._thread.quit)
-        self._thread.finished.connect(self._cleanup_worker)
+        thread.started.connect(worker.run)
+        worker.finished.connect(thread.quit)
+        thread.finished.connect(self._cleanup_worker)
 
-        self._thread.start()
+        self._runs.append(RunSpec(
+            run_id=,
+            thread=thread,
+            worker=worker,
+        ))
+
+        thread.start()
 
     def _cleanup_worker(self) -> None:
         if self._worker is not None:

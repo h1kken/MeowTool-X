@@ -4,6 +4,7 @@ import typing as t
 
 from PySide6.QtWidgets import QWidget
 
+from src.translation import Translation as Tr
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -40,13 +41,13 @@ class SettingsRobloxCookieRefresherPage(BasePage):
         obj_name = self.objectName()
         return [
             MTCollapsibleContainer(
-                tr_key='GNRL',
+                tr=Tr(key='GNRL'),
                 obj_name=(obj_name, 'Main'),
                 widgets=[
                     MTSwitchSetting(
                         config=self._config,
                         cfg_key='Roblox>Cookie Refresher>Break Old Cookies',
-                        tr_key='BRK_OLD_C',
+                        tr=Tr(key='BRK_OLD_C'),
                         obj_name=(obj_name, 'Break_Old_Cookies')
                     ),
                 ],

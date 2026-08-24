@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QWidget
 
 import src.app.context as ctx
 from src.app.paths import PATH_DEFAULT_THEME, PATH_THEMES_SRC, PATH_THEMES_USER
+from src.translation import Translation as Tr
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -57,38 +58,38 @@ class SettingsThemePage(BasePage):
         self._actions_column_layout = create_layout(LayoutType.VBOX, self._action_columns_widget)
         self._content_layout.addWidget(self._action_columns_widget)
         
-        self._selected_value = self._add_info_row(tr_key='SLCTD', obj_name=(obj_name, 'Selected'))
-        self._loaded_value = self._add_info_row(tr_key='LDD', obj_name=(obj_name, 'Loaded'))
+        self._selected_value = self._add_info_row(tr=Tr(key='SLCTD'), obj_name=(obj_name, 'Selected'))
+        self._loaded_value = self._add_info_row(tr=Tr(key='LDD'), obj_name=(obj_name, 'Loaded'))
 
-        self._autoload_row = MTSwitchSetting(config=self._config, cfg_key=CKey.GENERAL_THEME, tr_key='ATLD_SLCTD_CFG', obj_name=(obj_name, 'Autoload'))
+        self._autoload_row = MTSwitchSetting(config=self._config, cfg_key=CKey.GENERAL_THEME, tr=Tr(key='ATLD_SLCTD_CFG'), obj_name=(obj_name, 'Autoload'))
         self._actions_column_layout.addWidget(self._autoload_row)
         
-        self._load_button = MTButton(tr_key='LD', obj_name=(obj_name, 'Apply'))
+        self._load_button = MTButton(tr=Tr(key='LD'), obj_name=(obj_name, 'Apply'))
         self._actions_column_layout.addWidget(self._load_button)
         
-        self._create_stack = self._build_inline_editor('Create', tr_key='CRT')
+        self._create_stack = self._build_inline_editor('Create', tr=Tr(key='CRT'))
         self._actions_column_layout.addWidget(self._create_stack)
         
-        self._rename_stack = self._build_inline_editor('Rename', tr_key='RNM')
+        self._rename_stack = self._build_inline_editor('Rename', tr=Tr(key='RNM'))
         self._actions_column_layout.addWidget(self._rename_stack)
 
         self._delete_stack = self._build_delete_stack()
         self._actions_column_layout.addWidget(self._delete_stack)
 
-        self._open_location_button = MTButton(tr_key='OPN_FL_LCTN', obj_name=(obj_name, 'Open_File_Location'))
+        self._open_location_button = MTButton(tr=Tr(key='OPN_FL_LCTN'), obj_name=(obj_name, 'Open_File_Location'))
         self._actions_column_layout.addWidget(self._open_location_button)
 
     def _add_info_row(
         self,
         *,
-        tr_key: str = '',
+        tr: Tr,
         obj_name: tuple[str, ...] = (),
     ) -> MTPlainLabel:
         row = MTWidget(obj_name=(*obj_name, 'Info'))
         row_layout = create_layout(LayoutType.HBOX, row)
         self._actions_column_layout.addWidget(row)
         
-        label = MTLabel(tr_key=tr_key, obj_name=(*obj_name, 'Label'))
+        label = MTLabel(tr=tr, obj_name=(*obj_name, 'Label'))
         row_layout.addWidget(label)
         
         value = MTPlainLabel(text='-', obj_name=(*obj_name, 'Value'))
@@ -100,13 +101,13 @@ class SettingsThemePage(BasePage):
         self,
         mode: str,
         *,
-        tr_key: str = '',
+        tr: Tr,
     ) -> MTInlineStackedWidget:
         obj_name = self.objectName()
         
         stack = MTInlineStackedWidget(obj_name=(obj_name, mode))
         
-        button = MTButton(tr_key=tr_key, obj_name=(obj_name, mode))
+        button = MTButton(tr=tr, obj_name=(obj_name, mode))
         stack.addWidget(button)
 
         row = MTWidget(obj_name=(obj_name, mode, 'Editor_Row'))
@@ -138,14 +139,14 @@ class SettingsThemePage(BasePage):
         
         stack = MTInlineStackedWidget(obj_name=(obj_name, 'Delete',))
         
-        self._delete_button = MTButton(tr_key='DLT', obj_name=(obj_name, 'Delete'))
+        self._delete_button = MTButton(tr=Tr(key='DLT'), obj_name=(obj_name, 'Delete'))
         stack.addWidget(self._delete_button)
         
         row = MTWidget(obj_name=(obj_name, 'Delete_Confirm_Row'))
         row_layout = create_layout(LayoutType.HBOX, row)
         stack.addWidget(row)
         
-        self._delete_confirm = MTButton(tr_key='CNFRM', obj_name=(obj_name, 'Delete_Confirm'))
+        self._delete_confirm = MTButton(tr=Tr(key='CNFRM'), obj_name=(obj_name, 'Delete_Confirm'))
         row_layout.addWidget(self._delete_confirm, 1)
         
         self._delete_cancel = MTButton(obj_name=(obj_name, 'Delete_Cancel'))
@@ -182,7 +183,7 @@ class SettingsThemePage(BasePage):
         self._config.configLoaded.connect(self._on_config_loaded)
 
     def _on_config_loaded(self) -> None:
-        self._autoload_name = str(self._config.get(CKey.GENERAL_THEME)).strip()
+        self._autoload_name = self._config.get(CKey.GENERAL_THEME, str)
         ctx.services.theme.load(self._autoload_name)
 
     def _on_themes_dir_changed(self, _path: str) -> None:

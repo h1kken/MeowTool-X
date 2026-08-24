@@ -30,6 +30,3 @@ def _is_console_stream(stream: object) -> bool:
 
 
 IS_LAUNCHED_WITH_CONSOLE = _is_console_stream(sys.stdout)
-
-
-__all__ = [name for name in globals() if name.isupper()]

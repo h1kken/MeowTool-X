@@ -2,33 +2,44 @@ from time import monotonic
 from queue import Queue, Empty
 import typing as t
 
+from sqlalchemy import inspect
+from sqlalchemy.dialects.sqlite import insert
+from sqlalchemy.orm import Mapper, Session
+from sqlalchemy.engine import CursorResult
+
 if t.TYPE_CHECKING:
     from src.db.manager import DatabaseHandler
-    from src.db.models.cookie_checker import CookieCheckerResult
 
+
+T = t.TypeVar('T')
 
 # TODO: move to advanced config
 _BATCH_SIZE = 100
 _COMMIT_INTERVAL = 5
 
 
-class DatabaseWriter:
-    def __init__(self, handler: DatabaseHandler):
+class DatabaseWriter(t.Generic[T]):
+    def __init__(
+        self,
+        handler: DatabaseHandler,
+        model: type[T],
+        on_duplicates: t.Callable[[int], None] | None = None,
+    ) -> None:
         self._handler = handler
+        self._model = model
+        self._on_duplicates = on_duplicates
         
-        self._queue: Queue[CookieCheckerResult] = Queue()
+        self._queue: Queue[T] = Queue()
         self._running = False
+        self._duplicates = 0
 
-    def put(self, obj: CookieCheckerResult) -> None:
+    def put(self, obj: T) -> None:
         self._queue.put(obj)
-
-    def stop(self) -> None:
-        self._running = False
 
     def run(self) -> None:
         session = self._handler.session()
 
-        batch: list[CookieCheckerResult] = []
+        batch: list[T] = []
         last_commit = monotonic()
 
         self._running = True
@@ -40,9 +51,7 @@ class DatabaseWriter:
                 pass
 
             if len(batch) >= _BATCH_SIZE or (batch and monotonic() - last_commit >= _COMMIT_INTERVAL):
-                session.add_all(batch)
-                session.commit()
-                session.expunge_all()
+                self._write_batch(session, batch)
 
                 batch.clear()
                 last_commit = monotonic()
@@ -52,3 +61,34 @@ class DatabaseWriter:
             session.commit()
             
         session.close()
+    
+    def stop(self) -> None:
+        self._running = False
+    
+    def _write_batch(
+        self,
+        session: Session,
+        batch: list[T],
+    ) -> None:
+        mapper = t.cast(Mapper[t.Any], inspect(self._model))
+
+        rows = [
+            {
+                column.key: getattr(obj, column.key)
+                for column in mapper.columns
+                if column.key in mapper.column_attrs
+            }
+            for obj in batch
+        ]
+        stmt = insert(self._model).values(rows).on_conflict_do_nothing()
+        result = t.cast(CursorResult[t.Any], session.execute(stmt))
+
+        inserted = result.rowcount
+        duplicates = len(batch) - inserted
+
+        session.commit()
+
+        self._duplicates += duplicates
+
+        if self._on_duplicates is not None:
+            self._on_duplicates(self._duplicates)

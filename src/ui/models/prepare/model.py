@@ -1,55 +1,43 @@
 from __future__ import annotations
 
-import collections.abc as cabc
-
 from dataclasses import dataclass
 from pathlib import Path
-from uuid import UUID, uuid4
 
-from PySide6.QtCore import Qt, QObject, QModelIndex, QAbstractTableModel, Signal
+from PySide6.QtCore import Qt, QObject, QModelIndex
 
+from src.translation import Translation as Tr
 from src.translation.mixins import TranslatableHeaderTableModelMixin
+
+from ..base import TableItem, TableModel
 
 
 @dataclass(slots=True)
-class PrepareTableItem:
-    id: UUID
+class PrepareTableItem(TableItem):
     value: str | Path
     lines: int
 
     @classmethod
     def create(cls, value: str | Path, lines: int) -> PrepareTableItem:
         return cls(
-            id=uuid4(),
             value=value,
             lines=lines,
         )
 
 
-class PrepareTableModel(TranslatableHeaderTableModelMixin, QAbstractTableModel):
-    itemAdded = Signal(PrepareTableItem)
-    itemRemoved = Signal(PrepareTableItem)
-    
+class PrepareTableModel(TranslatableHeaderTableModelMixin, TableModel[PrepareTableItem]):
     _COLUMN_COUNT = 4
-    _TR_KEYS = ('#', 'DT', 'LNS', '')
+    _TRS = (
+        Tr(key='#'),
+        Tr(key='DT'),
+        Tr(key='LNS'),
+        Tr()
+    )
     
     def __init__(
         self,
         parent: QObject | None = None,
     ) -> None:
-        super().__init__(parent, tr_keys=PrepareTableModel._TR_KEYS)
-    
-        self._items: list[PrepareTableItem] = []
-    
-    @property
-    def items(self) -> cabc.Sequence[PrepareTableItem]:
-        return self._items
-    
-    def rowCount(self, _parent: QModelIndex = QModelIndex()) -> int: # type: ignore[override]
-        return len(self._items)
-
-    def columnCount(self, _parent: QModelIndex = QModelIndex()) -> int: # type: ignore[override]
-        return PrepareTableModel._COLUMN_COUNT
+        super().__init__(parent, trs=self._TRS)
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> object | None: # type: ignore[override]
         if not index.isValid():
@@ -64,35 +52,3 @@ class PrepareTableModel(TranslatableHeaderTableModelMixin, QAbstractTableModel):
             case 1: return str(item.value)
             case 2: return item.lines
             case _: pass
-
-    def item_at(self, row: int) -> PrepareTableItem | None:
-        if not 0 <= row < len(self._items):
-            return
-        return self._items[row]
-    
-    def add_item(self, item: PrepareTableItem):
-        row = len(self._items)
-        self.beginInsertRows(QModelIndex(), row, row)
-        self._items.append(item)
-        self.endInsertRows()
-        
-        self.itemAdded.emit(item)
-    
-    def remove_item(self, item_id: UUID) -> None:
-        row = next((row for row, item in enumerate(self._items) if item.id == item_id), None)
-        if row is None:
-            return
-
-        self.beginRemoveRows(QModelIndex(), row, row)
-        item = self._items.pop(row)
-        self.endRemoveRows()
-        
-        self.itemRemoved.emit(item)
-
-    def clear(self) -> None:
-        if not self._items:
-            return
-    
-        self.beginRemoveRows(QModelIndex(), 0, len(self._items) - 1)
-        self._items.clear()
-        self.endRemoveRows()

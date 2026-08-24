@@ -4,6 +4,7 @@ import typing as t
 
 from PySide6.QtWidgets import QWidget
 
+from src.translation import Translation as Tr
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -40,13 +41,13 @@ class SettingsRobloxCookieSorterPage(BasePage):
         obj_name = self.objectName()
         return [
             MTCollapsibleContainer(
-                tr_key='GNRL',
+                tr=Tr(key='GNRL'),
                 obj_name=(obj_name, 'Main'),
                 widgets=[
                     MTLineEditSetting(
                         config=self._config,
                         cfg_key='Roblox>Cookie Sorter>Output Filename',
-                        tr_key='OTPT_FLNM',
+                        tr=Tr(key='OTPT_FLNM'),
                         obj_name=(obj_name, 'Output_Filename'),
                     ),
                 ],

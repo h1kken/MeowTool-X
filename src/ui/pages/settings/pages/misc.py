@@ -4,6 +4,7 @@ import typing as t
 
 from PySide6.QtWidgets import QWidget
 
+from src.translation import Translation as Tr
 from src.ui.pages.base import BasePage
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
@@ -44,49 +45,49 @@ class SettingsMiscPage(BasePage):
         obj_name = self.objectName()
         return [
             MTCollapsibleContainer(
-                tr_key='DBGR',
+                tr=Tr(key='DBGR'),
                 obj_name=(obj_name, 'Debugger'),
                 widgets=[
                     MTSwitchSetting(
                         config=self._config.loader,
                         cfg_key=CLKey.MISC_DEBUGGER_DEBUG,
-                        tr_key='DEBUG',
+                        tr=Tr(key='DEBUG'),
                         obj_name=(obj_name, 'Debug')
                     ),
                     MTSwitchSetting(
                         config=self._config.loader,
                         cfg_key=CLKey.MISC_DEBUGGER_INFO,
-                        tr_key='INFO',
+                        tr=Tr(key='INFO'),
                         obj_name=(obj_name, 'Info')
                     ),
                     MTSwitchSetting(
                         config=self._config.loader,
                         cfg_key=CLKey.MISC_DEBUGGER_WARNING,
-                        tr_key='WARNING',
+                        tr=Tr(key='WARNING'),
                         obj_name=(obj_name, 'Warning')
                     ),
                     MTSwitchSetting(
                         config=self._config.loader,
                         cfg_key=CLKey.MISC_DEBUGGER_ERROR,
-                        tr_key='ERROR',
+                        tr=Tr(key='ERROR'),
                         obj_name=(obj_name, 'Error')
                     ),
                     MTSwitchSetting(
                         config=self._config.loader,
                         cfg_key=CLKey.MISC_DEBUGGER_EXCEPTION,
-                        tr_key='EXCEPTION',
+                        tr=Tr(key='EXCEPTION'),
                         obj_name=(obj_name, 'Exception')
                     ),
                 ],
             ),
             MTCollapsibleContainer(
-                tr_key='DS_RPC',
+                tr=Tr(key='DS_RPC'),
                 obj_name=(obj_name, 'Discord_RPC'),
                 widgets=[
                     MTSwitchSetting(
                         config=self._config.loader,
                         cfg_key=CKey.MISC_DISCORD_RPC,
-                        tr_key='ENBL',
+                        tr=Tr(key='ENBL'),
                         obj_name=(obj_name, 'Enabled'),
                     ),
                 ],

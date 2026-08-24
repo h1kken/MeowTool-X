@@ -74,7 +74,6 @@ PATH_CONFIGS_USER = PATH_APPDATA_APP_DIR / 'Configs'
 PATH_LOGS = PATH_APPDATA_APP_DIR / 'Logs'
 
 PATH_CACHE = PATH_APPDATA_APP_DIR / 'Cache'
-PATH_CACHE_AVATARS = PATH_CACHE / 'Avatars'
 
 PATH_DATABASES = PATH_APPDATA_APP_DIR / 'Databases'
 
@@ -87,6 +86,3 @@ PATH_ROBLOX_COOKIE_REFRESHER_DB = PATH_DATABASES_ROBLOX / 'CookieRefresher.db'
 PATH_FISHSTRAP = PATH_LOCALAPPDATA / 'Fishstrap' / 'Fishstrap.exe'
 PATH_BLOXSTRAP = PATH_LOCALAPPDATA / 'Bloxstrap' / 'Bloxstrap.exe'
 PATH_ROBLOXPLAYERBETA = PATH_SYSTEM_DRIVE / 'Program Files (x86)' / 'Roblox' / 'Versions'
-
-
-__all__ = [name for name in globals() if name.startswith('PATH_')]

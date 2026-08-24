@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QMainWindow
 
 from src.app.constants import PROGRAM_TITLE
 from src.services.roblox.cookie_sorter import RobloxCookieSorter
+from src.translation import Translation as Tr
 from src.ui.constants import WINDOW_X, WINDOW_Y
 from src.ui.windows.types import PageSpec
 from src.ui.controllers import HasPageController, PageController
@@ -27,12 +28,12 @@ if t.TYPE_CHECKING:
 
 
 _PAGES: tuple[PageSpec | None, ...] = (
-    # PageSpec(page_class=ProxyCheckerPage,                                           tr_key='CHCKR',     obj_name='Proxy_Checker',           icon_path='checker.svg', has_page_controller=True),
-    PageSpec(page_class=RobloxCookieSorterPage,    worker_class=RobloxCookieSorter, tr_key='CK_SRTR',   obj_name='Roblox_Cookie_Sorter',    icon_path='sorter.svg', has_page_controller=True),
-    # PageSpec(page_class=RobloxCookieCheckerPage,                                    tr_key='CK_CHCKR',  obj_name='Roblox_Cookie_Checker',   icon_path='checker.svg', has_page_controller=True),
-    # PageSpec(page_class=RobloxCookieRefresherPage,                                  tr_key='CK_RFRSHR', obj_name='Roblox_Cookie_Refresher', icon_path='refresher.svg', has_page_controller=True),
+    # PageSpec(page_class=ProxyCheckerPage,                                           tr=TrKey(key='CHCKR'),     icon_path='checker.svg', has_page_controller=True),
+    PageSpec(page_class=RobloxCookieSorterPage,    worker_class=RobloxCookieSorter, tr=Tr(key='CK_SRTR'),   icon_path='sorter.svg', has_page_controller=True),
+    # PageSpec(page_class=RobloxCookieCheckerPage,                                    tr=TrKey(key='CK_CHCKR'),  icon_path='checker.svg', has_page_controller=True),
+    # PageSpec(page_class=RobloxCookieRefresherPage,                                  tr=TrKey(key='CK_RFRSHR'), icon_path='refresher.svg', has_page_controller=True),
     None,
-    PageSpec(page_class=SettingsPage,                                               tr_key='STNGS',     obj_name='Settings',                icon_path='settings.svg', has_page_controller=True),
+    PageSpec(page_class=SettingsPage,                                               tr=Tr(key='STNGS'),     icon_path='settings.svg', has_page_controller=True),
 )
 
 
@@ -100,7 +101,7 @@ class MainWindow(QMainWindow):
                 continue
             
             name = str(spec.obj_name).replace('_', ' ')
-            self._tab_names_by_key[spec.tr_key] = name
+            self._tab_names_by_key[spec.tr.key] = name
             
             if spec.has_page_controller:
                 page = spec.page_class(
@@ -113,11 +114,11 @@ class MainWindow(QMainWindow):
                     config=self._config,
                 )
                 
-            button = MTButton(tr_key=spec.tr_key, obj_name=('Sidebar', spec.obj_name, 'Tab'))
+            button = MTButton(tr=spec.tr, obj_name=('Sidebar', spec.obj_name, 'Tab'))
             self._sidebar_layout.addWidget(button)
             
             self._page_controller.add_page(
-                key=spec.tr_key,
+                key=spec.tr.key,
                 name=name,
                 page=page,
                 button=button,

@@ -5,6 +5,7 @@ import typing as t
 from PySide6.QtCore import Qt, QObject, QAbstractItemModel
 from PySide6.QtWidgets import QWidget
 
+from src.translation import Translation as Tr
 import src.app.context as ctx
 translator = ctx.services.translator
 
@@ -17,11 +18,11 @@ class TranslatableMixin:
         self,
         parent: QWidget | None = None,
         *args: object,
-        tr_key: str = '',
+        tr: Tr = Tr(),
         **kwargs: object,
     ) -> None:
         super().__init__(parent, *args, **kwargs) # type: ignore
-        self._tr_key = tr_key
+        self._tr = tr
         
         translator.languageChanged.connect(self._update_text)
         self._update_text()
@@ -29,7 +30,7 @@ class TranslatableMixin:
     def _update_text(self) -> None:
         setter = getattr(self, 'setText', None)
         if callable(setter):
-            setter(translator.tr(self._tr_key))
+            setter(f'{self._tr.prefix}{translator.tr(self._tr.key)}{self._tr.suffix}')
 
 
 class _ComboBoxProtocol(t.Protocol):
@@ -53,7 +54,7 @@ class TranslatableComboBoxMixin:
 
     def add_item(self, item: ComboItem) -> None:
         combo = t.cast(_ComboBoxProtocol, self)
-        combo.addItem(translator.tr(item.tr_key), item.tr_key)
+        combo.addItem(translator.tr(item.tr.key), item.tr.key)
 
     def add_items(self, items: list[ComboItem]) -> None:
         for item in items:
@@ -75,24 +76,25 @@ class TranslatableHeaderTableModelMixin:
         self,
         parent: QObject | None = None,
         *args: object,
-        tr_keys: tuple[str, ...] = (),
+        trs: tuple[Tr, ...] = (),
         **kwargs: object,
     ) -> None:
         super().__init__(parent, *args, **kwargs)  # type: ignore
-        self._tr_keys = tr_keys
+        self._trs = trs
 
         translator.languageChanged.connect(self._update_headers)
 
     def _update_headers(self) -> None:
         model = t.cast(QAbstractItemModel, self)
-        model.headerDataChanged.emit(Qt.Orientation.Horizontal, 0, len(self._tr_keys) - 1)
+        model.headerDataChanged.emit(Qt.Orientation.Horizontal, 0, len(self._trs) - 1)
     
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> object | None:
         if role != Qt.ItemDataRole.DisplayRole:
             return
         if orientation != Qt.Orientation.Horizontal:
             return
-        if not 0 <= section < len(self._tr_keys):
+        if not 0 <= section < len(self._trs):
             return
         
-        return translator.tr(self._tr_keys[section])
+        tr = self._trs[section]
+        return f'{tr.prefix}{translator.tr(tr.key)}{tr.suffix}'

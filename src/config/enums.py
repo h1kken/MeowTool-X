@@ -17,7 +17,9 @@ class ConfigLoaderKey(StrEnum):
     UPDATER_CHECK_UPDATES = f'{UPDATER_PATH}>Check Updates'
     
     # Misc
-    MISC_PATH               = 'Misc'
+    MISC_PATH = 'Misc'
+    
+    # Misc > Debugger
     MISC_DEBUGGER_PATH      = f'{MISC_PATH}>Debugger'
     MISC_DEBUGGER_DEBUG     = f'{MISC_DEBUGGER_PATH}>Debug'
     MISC_DEBUGGER_INFO      = f'{MISC_DEBUGGER_PATH}>Info'
@@ -50,7 +52,9 @@ class ConfigKey(StrEnum):
     OUTPUTS_DISCORD_WEBHOOK_SEND_RESULTS = f'{OUTPUTS_DISCORD_WEBHOOK_PATH}>Send Results'
     
     # Proxy
-    PROXY_PATH                             = 'Proxy'
+    PROXY_PATH = 'Proxy'
+    
+    # Proxy > Checker
     PROXY_CHECKER_PATH                     = f'{PROXY_PATH}>Checker'
     PROXY_CHECKER_MAIN_THREADS             = f'{PROXY_CHECKER_PATH}>Main Threads'
     PROXY_CHECKER_MAXIMUM_WAIT_RESPONSE    = f'{PROXY_CHECKER_PATH}>Maximum Wait Response'
@@ -58,14 +62,20 @@ class ConfigKey(StrEnum):
     PROXY_CHECKER_SAVE_WITHOUT_PROTOCOL    = f'{PROXY_CHECKER_PATH}>Save Without Protocol'
     
     # Roblox
-    ROBLOX_PATH                                         = 'Roblox'
-    ROBLOX_GENERAL_PATH                                 = f'{ROBLOX_PATH}>General'
+    ROBLOX_PATH = 'Roblox'
+    
+    # Roblox > General
+    ROBLOX_GENERAL_PATH = f'{ROBLOX_PATH}>General'
+    
+    # Roblox > General > Proxy
     ROBLOX_GENERAL_PROXY_PATH                           = f'{ROBLOX_GENERAL_PATH}>Proxy'
     ROBLOX_GENERAL_PROXY_USE_PROXY                      = f'{ROBLOX_GENERAL_PROXY_PATH}>Use Proxy'
     ROBLOX_GENERAL_PROXY_AUTO_PROTOCOL_IF_NOT_SPECIFIED = f'{ROBLOX_GENERAL_PROXY_PATH}>Auto Protocol If Not Specified'
     
-    ROBLOX_COOKIE_CHECKER_PATH           = f'{ROBLOX_PATH}>Cookie Sorter'
-    ROBLOX_COOKIE_SORTER_OUTPUT_FILENAME = f'{ROBLOX_COOKIE_CHECKER_PATH}>Output Filename'
+    # Roblox > Cookie Sorter
+    ROBLOX_COOKIE_SORTER_PATH            = f'{ROBLOX_PATH}>Cookie Sorter'
+    ROBLOX_COOKIE_SORTER_OUTPUT_FILENAME = f'{ROBLOX_COOKIE_SORTER_PATH}>Output Filename'
+    ROBLOX_COOKIE_SORTER_THREADS         = f'{ROBLOX_COOKIE_SORTER_PATH}>Threads'
     
     # Misc
     MISC_PATH        = 'Misc'

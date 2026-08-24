@@ -36,6 +36,8 @@ class DelegateButtonStateStyle:
 class DeleteButtonDelegate(QStyledItemDelegate):
     clicked = Signal(UUID)
 
+    _COLUMN = 3
+
     def __init__(
         self,
         parent: QObject | None = None,
@@ -78,7 +80,7 @@ class DeleteButtonDelegate(QStyledItemDelegate):
     def editorEvent(self, event: QEvent, model: PrepareTableModel, _option: QStyleOptionViewItem, index: QModelIndex) -> bool: # type: ignore[override]
         if event.type() != QEvent.Type.MouseButtonRelease:
             return False
-        if index.column() != 3:
+        if index.column() != self._COLUMN:
             return False
 
         item = model.item_at(index.row())

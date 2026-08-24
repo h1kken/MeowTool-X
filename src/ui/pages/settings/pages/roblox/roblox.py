@@ -4,6 +4,7 @@ import typing as t
 
 from PySide6.QtWidgets import QWidget
 
+from src.translation import Translation as Tr
 from src.ui.windows.types import PageSpec
 from src.ui.pages.base import BasePage
 from src.ui.controllers import HasPageController, PageController
@@ -21,9 +22,9 @@ if t.TYPE_CHECKING:
 
 
 _PAGES: tuple[PageSpec | None, ...] = (
-    PageSpec(page_class=SettingsRobloxCookieSorterPage,    tr_key='CK_SRTR',   obj_name='Cookie_Sorter'),
-    PageSpec(page_class=SettingsRobloxCookieCheckerPage,   tr_key='CK_CHCKR',  obj_name='Cookie_Checker'),
-    PageSpec(page_class=SettingsRobloxCookieRefresherPage, tr_key='CK_RFRSHR', obj_name='Cookie_Refresher'),
+    PageSpec(page_class=SettingsRobloxCookieSorterPage,    tr=Tr(key='CK_SRTR'),   obj_name='Cookie_Sorter'),
+    PageSpec(page_class=SettingsRobloxCookieCheckerPage,   tr=Tr(key='CK_CHCKR'),  obj_name='Cookie_Checker'),
+    PageSpec(page_class=SettingsRobloxCookieRefresherPage, tr=Tr(key='CK_RFRSHR'), obj_name='Cookie_Refresher'),
     None,
 )
 
@@ -63,7 +64,7 @@ class SettingsRobloxPage(BasePage):
                 continue
             
             name = spec.obj_name.replace('_', ' ')
-            self._tab_names_by_key[spec.tr_key] = name
+            self._tab_names_by_key[spec.tr.key] = name
 
             if spec.has_page_controller:
                 page = spec.page_class(
@@ -78,11 +79,11 @@ class SettingsRobloxPage(BasePage):
                     obj_name=(obj_name,),
                 )
                 
-            button = MTButton(tr_key=spec.tr_key, obj_name=(obj_name, spec.obj_name, 'Tab'))
+            button = MTButton(tr=spec.tr, obj_name=(obj_name, spec.obj_name, 'Tab'))
             self._tabs_layout.addWidget(button)
             
             self._page_controller.add_page(
-                key=spec.tr_key,
+                key=spec.tr.key,
                 name=name,
                 page=page,
                 button=button,

@@ -3,188 +3,119 @@ from __future__ import annotations
 import typing as t
 import collections.abc as cabc
 
+import py7zr
+import zstandard as zstd
+import lz4.frame as lz4f
 import bz2
 import gzip
 import lzma
 import mmap
-import os
 import shutil
 import tarfile
 import tempfile
 import zipfile
+import rarfile
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Lock
 
-from PySide6.QtCore import Signal
-
+from src.app.paths import PATH_ROBLOX_COOKIE_SORTER_DB
+from src.db.models.cookie_sorter.base import CookieSorterBase
+from src.db.models.cookie_sorter.result import CookieSorterResult
+from src.db.names import DatabaseName
+from src.db.handler import DatabaseHandler
+from src.db.writer import DatabaseWriter
 from src.services.base_worker import BaseWorker
-from src.services.roblox import archive_support
+from src.utils.archive import Archive
+from src.utils.archive.constants import ARCHIVE_STREAM_COPY_CHUNK_BYTES
 from src.services.roblox.constants import DATE_ROBLOX_COOKIE_SORTER_FORMAT, ROBLOX_COOKIE_START
 from src.services.roblox.regexes import ROBLOX_COOKIE_PATTERN_BYTES, STRING_100_PLUS_SYMBOLS_PATTERN_BYTES
 from src.services.roblox.types import ReadableBinaryStream
+from src.utils.archive.archive import Archive
 from src.utils.datetime import current_date
-from src.utils.filesystem import FS
 from src.utils.logging import logger
+from src.config import ConfigKey as CKey
 
 if t.TYPE_CHECKING:
     from src.config import Config
 
-try:
-    import py7zr
-except ImportError:
-    py7zr = None
 
-try:
-    import rarfile
-except ImportError:
-    rarfile = None
-
-try:
-    import zstandard as zstd
-except ImportError:
-    zstd = None
-
-try:
-    import lz4.frame as lz4f
-except ImportError:
-    lz4f = None
-
-if t.TYPE_CHECKING:
-    from rarfile import RarFile
-    RarFileType: t.TypeAlias = RarFile
-else:
-    RarFileType: t.TypeAlias = t.Any
 class RobloxCookieSorter(BaseWorker):
-    statement = Signal(str)
-    progress = Signal(int)
-    finished = Signal(dict)
-    _DEFAULT_SORTER_WORKERS = min(8, max(2, os.cpu_count() or 2))
-
     def __init__(
         self,
-        config: Config,
         *,
-        input_paths: list[Path] | None = None,
-        text_chunks: list[str] | None = None,
-        use_default_folder: bool = True,
+        config: Config,
+        data: list[str | Path],
     ) -> None:
         super().__init__()
         self._config = config
+        self._data = data
 
         # Settings
-        output_filename = str(self._config.get('Roblox>Cookie Sorter>Output Filename')).strip()
-        self._filename = FS.normalize_filename(output_filename if output_filename else 'output')
-        
-        self._search_no_roblox_cookie_pattern = bool(self._config.get('Roblox>Cookie Sorter>Search For 100 Plus Symbols Strings'))
-        self._symbols_between_warning_and_cookie = str(self._config.get('Roblox>General>Symbols Between Warning And Cookie')).strip() if self._config.get('Roblox>General>Add Symbols Between Warning And Cookie') else ''
+        self._threads = self._config.get(CKey.ROBLOX_COOKIE_SORTER_THREADS, int)
 
-        self._base_path = Path('Roblox', 'Cookie Sorter')
-        self._default_outputs_path = self._base_path / 'outputs'
-        raw_save_path = self._config.get('Roblox>Cookie Sorter>Save Path')
-        self._save_path = Path(raw_save_path) if isinstance(raw_save_path, (str, Path)) else self._default_outputs_path
-        self._input_paths = [Path(path) for path in (input_paths or [])]
-        self._text_chunks = [chunk for chunk in (text_chunks or []) if chunk.strip()]
-        self._use_default_folder = use_default_folder
-
-        self._counter_unique = 0
-        self._counter_duplicate = 0
-        self._counter_incorrect = 0
-
-        self._cookie_set: set[str] = set()
-        raw_workers = t.cast(object, self._config.get('Roblox>Cookie Sorter>Threads'))
-        if raw_workers is None:
-            raw_workers = t.cast(object, self._config.get('Roblox>Cookie Sorter>Main Threads'))
-        if isinstance(raw_workers, tuple):
-            tuple_workers = t.cast(tuple[object, ...], raw_workers)
-            raw_workers = tuple_workers[0] if tuple_workers else self._DEFAULT_SORTER_WORKERS
-        try:
-            self._max_workers = max(1, int(raw_workers if isinstance(raw_workers, (int, float, str)) else self._DEFAULT_SORTER_WORKERS))
-        except (TypeError, ValueError):
-            self._max_workers = self._DEFAULT_SORTER_WORKERS
-        self._lock = Lock()
-        self._missing_backend_warnings: set[str] = set()
-
+        # Prepare
         self._date_of_sorting = current_date(DATE_ROBLOX_COOKIE_SORTER_FORMAT)
+        
+        self._lock = Lock()
+        self._unique_counter = 0
+        self._duplicate_counter = 0
+        self._incorrect_counter = 0
+        
+        self._db_handler = DatabaseHandler(DatabaseName.COOKIE_SORTER, PATH_ROBLOX_COOKIE_SORTER_DB, CookieSorterBase)
+        self._db_writer = DatabaseWriter(self._db_handler, CookieSorterResult, self._on_duplicates)
+
         self._is_running = True
 
-    def _add_incorrect(self, count: int = 1) -> None:
-        if count <= 0:
+    def _on_duplicates(self, num: int) -> None:
+        ...
+
+    def run(self) -> None:
+        logger.info(f'Roblox Cookie Sorter started in {self._date_of_sorting}')
+
+        db_writer_thread = threading.Thread(target=self._db_writer.run, name='cookie-sorter-db-writer', daemon=False)
+        db_writer_thread.start()
+
+        if self._is_running:
+            with ThreadPoolExecutor(max_workers=self._threads) as executor:
+                for _ in executor.map(self._process_data, self._data):
+                    pass
+
+        self._db_writer.stop()
+        db_writer_thread.join()
+
+        self.finished.emit(
+            {
+                'unique': self._unique_counter,
+                'duplicate': self._duplicate_counter,
+                'incorrect': self._incorrect_counter,
+            }
+        )
+
+    def stop(self) -> None:
+        self._is_running = False
+
+    # increments
+    def _add_unique(self, num: int = 1) -> None:
+        if num <= 0:
             return
         with self._lock:
-            self._counter_incorrect += count
+            self._unique_counter += num
 
-    def _read_file_head(self, path: Path, size: int = 8) -> bytes:
-        try:
-            with open(path, 'rb') as f:
-                return f.read(size)
-        except OSError:
-            return b''
-
-    def _looks_like_tar_file(self, path: Path) -> bool:
-        try:
-            with open(path, 'rb') as f:
-                f.seek(archive_support.ARCHIVE_TAR_USTAR_OFFSET)
-                return f.read(len(archive_support.ARCHIVE_TAR_USTAR_SIGNATURE)) == archive_support.ARCHIVE_TAR_USTAR_SIGNATURE
-        except OSError:
-            return False
-
-    def _detect_archive_kind(self, path: Path, *, name_hint: str | None = None) -> str | None:
-        by_name = archive_support.archive_kind_from_name(name_hint or path.name)
-        if by_name is not None:
-            return by_name
-
-        by_signature = archive_support.archive_kind_from_signature(self._read_file_head(path))
-        if by_signature is not None:
-            return by_signature
-
-        if self._looks_like_tar_file(path):
-            return 'tar'
-        return None
-
-    def _warn_missing_backend(self, backend: str) -> None:
-        if backend in self._missing_backend_warnings:
+    def _add_duplicate(self, num: int = 1) -> None:
+        if num <= 0:
             return
-        self._missing_backend_warnings.add(backend)
-        logger.warning(f'Missing optional backend for archive format: {backend}')
+        with self._lock:
+            self._duplicate_counter += num
 
-    def _is_supported_input_file(self, path: Path) -> bool:
-        if not path.is_file():
-            return False
-        if self._default_outputs_path in path.parents:
-            return False
-        return True
+    def _add_incorrect(self, num: int = 1) -> None:
+        if num <= 0:
+            return
+        with self._lock:
+            self._incorrect_counter += num
 
-    def _iter_files_from_directory(self, directory: Path) -> cabc.Iterator[Path]:
-        for path in directory.rglob('*'):
-            if self._is_supported_input_file(path):
-                yield path
-
-    def _collect_input_files(self) -> list[Path]:
-        files: list[Path] = []
-
-        if self._use_default_folder and self._base_path.exists():
-            files.extend(self._iter_files_from_directory(self._base_path))
-
-        for path in self._input_paths:
-            if not path.exists():
-                continue
-            if path.is_file() and self._is_supported_input_file(path):
-                files.append(path)
-                continue
-            if path.is_dir():
-                files.extend(self._iter_files_from_directory(path))
-
-        deduped: list[Path] = []
-        seen: set[str] = set()
-        for path in files:
-            key = FS.path_key(path)
-            if key in seen:
-                continue
-            seen.add(key)
-            deduped.append(path)
-        return deduped
-
+    # extractors
     def _decode_token(self, raw: bytes) -> str | None:
         if not raw:
             self._add_incorrect()
@@ -193,6 +124,7 @@ class RobloxCookieSorter(BaseWorker):
         token = raw.decode(encoding='utf-8', errors='ignore').strip().rstrip(';')
         if token:
             return token
+        
         self._add_incorrect()
 
     def _iter_lines(self, data: bytes | mmap.mmap) -> cabc.Iterator[bytes]:
@@ -226,13 +158,6 @@ class RobloxCookieSorter(BaseWorker):
                         cookies.add(cookie)
                         total_found += 1
 
-                if self._search_no_roblox_cookie_pattern and not found_in_line:
-                    for match in STRING_100_PLUS_SYMBOLS_PATTERN_BYTES.finditer(line):
-                        found_in_line = True
-                        cookie = self._decode_token(match.group(0))
-                        if cookie:
-                            cookies.add(f'{ROBLOX_COOKIE_START}{self._symbols_between_warning_and_cookie}{cookie}')
-                            total_found += 1
             except (TypeError, ValueError):
                 self._add_incorrect()
                 continue
@@ -252,15 +177,15 @@ class RobloxCookieSorter(BaseWorker):
                 return self._extract_cookies_from_bytes(mm)
 
     def _extract_from_stream(self, stream: ReadableBinaryStream, *, name: str, depth: int) -> tuple[set[str], int]:
-        suffix = archive_support.archive_suffix_for_name(name) or '.bin'
+        suffix = Archive.suffix_from_name(name) or '.bin'
         tmp_path: Path | None = None
 
         try:
             with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-                shutil.copyfileobj(t.cast(t.Any, stream), tmp, length=archive_support.ARCHIVE_STREAM_COPY_CHUNK_BYTES)
+                shutil.copyfileobj(stream, tmp, length=ARCHIVE_STREAM_COPY_CHUNK_BYTES)
                 tmp_path = Path(tmp.name)
 
-            nested = self._extract_archive_file(tmp_path, depth=depth, name_hint=name)
+            nested = self._extract_from_archive(tmp_path, depth=depth, name_hint=name)
             if nested is not None:
                 return nested
 
@@ -316,11 +241,10 @@ class RobloxCookieSorter(BaseWorker):
 
         return cookies, total_found
 
-    def _extract_from_rar(self, archive: RarFileType, *, depth: int) -> tuple[set[str], int]:
+    def _extract_from_rar(self, archive: rarfile.RarFile, *, depth: int) -> tuple[set[str], int]:
         cookies: set[str] = set()
         total_found = 0
-        archive_any = t.cast(t.Any, archive)
-        for info in t.cast(list[t.Any], archive_any.infolist()):
+        for info in t.cast(list[t.Any], archive.infolist()):
             if not self._is_running:
                 break
 
@@ -335,7 +259,8 @@ class RobloxCookieSorter(BaseWorker):
 
             entry_name = str(getattr(info, 'filename', None) or getattr(info, 'name', '') or '')
             try:
-                with archive_any.open(info, 'r') as stream:
+                archive_mod = t.cast(t.Any, archive)
+                with archive_mod.open(info, 'r') as stream:
                     nested_cookies, nested_total_found = self._extract_from_stream(stream, name=entry_name, depth=depth + 1)
                     cookies.update(nested_cookies)
                     total_found += nested_total_found
@@ -345,12 +270,11 @@ class RobloxCookieSorter(BaseWorker):
 
         return cookies, total_found
 
-    def _extract_from_7z_file(self, path: Path, *, depth: int) -> tuple[set[str], int]:
+    def _extract_from_7z(self, path: Path, *, depth: int) -> tuple[set[str], int]:
         cookies: set[str] = set()
         total_found = 0
-        archive_mod = t.cast(t.Any, py7zr)
         with tempfile.TemporaryDirectory() as temp_dir:
-            with archive_mod.SevenZipFile(path, mode='r') as archive:
+            with py7zr.SevenZipFile(path, mode='r') as archive:
                 archive.extractall(path=temp_dir)
 
             root = Path(temp_dir)
@@ -361,7 +285,7 @@ class RobloxCookieSorter(BaseWorker):
                     continue
 
                 try:
-                    nested = self._extract_archive_file(extracted, depth=depth + 1, name_hint=extracted.name)
+                    nested = self._extract_from_archive(extracted, depth=depth + 1)
                     if nested is not None:
                         nested_cookies, nested_total_found = nested
                         cookies.update(nested_cookies)
@@ -382,64 +306,61 @@ class RobloxCookieSorter(BaseWorker):
         return path.stem
 
     def _extract_from_single_compressed_path(self, path: Path, *, depth: int, kind: str | None = None) -> tuple[set[str], int] | None:
-        compression_kind = kind or self._detect_archive_kind(path)
+        compression_kind = kind or Archive.detect_kind(path)
         if compression_kind is None:
             return None
+        
         out_name = self._decompressed_name(path)
+        
         match compression_kind:
             case 'gz':
                 with gzip.open(path, 'rb') as stream:
                     return self._extract_from_stream(stream, name=out_name, depth=depth + 1)
+
             case 'bz2':
                 with bz2.open(path, 'rb') as stream:
                     return self._extract_from_stream(stream, name=out_name, depth=depth + 1)
+
             case 'xz':
                 with lzma.open(path, 'rb') as stream:
                     return self._extract_from_stream(stream, name=out_name, depth=depth + 1)
+
             case 'zst':
-                if zstd is None:
-                    self._warn_missing_backend('zstandard')
-                    return None
-                zstd_mod = t.cast(t.Any, zstd)
                 with open(path, 'rb') as fh:
-                    dctx = zstd_mod.ZstdDecompressor()
-                    with dctx.stream_reader(fh) as stream:
+                    with zstd.ZstdDecompressor().stream_reader(fh) as stream:
                         return self._extract_from_stream(stream, name=out_name, depth=depth + 1)
+
             case 'lz4':
-                if lz4f is None:
-                    self._warn_missing_backend('lz4')
-                    return None
                 lz4f_mod = t.cast(t.Any, lz4f)
                 with lz4f_mod.open(path, mode='rb') as stream:
                     return self._extract_from_stream(stream, name=out_name, depth=depth + 1)
+
             case _:
                 return None
 
-    def _extract_archive_file(self, path: Path, *, depth: int, name_hint: str | None = None) -> tuple[set[str], int] | None:
-        kind = self._detect_archive_kind(path, name_hint=name_hint)
+    def _extract_from_archive(self, path: Path, *, depth: int, name_hint: str | None = None) -> tuple[set[str], int] | None:
+        kind = Archive.detect_kind(path, name_hint=name_hint)
         if kind is None:
             return
 
         try:
             match kind:
+                
                 case 'zip':
                     with zipfile.ZipFile(path) as zf:
                         return self._extract_from_zip(zf, depth=depth)
+
                 case 'tar':
                     with tarfile.open(path, 'r:*') as tf:
                         return self._extract_from_tar(tf, depth=depth)
+
                 case '7z':
-                    if py7zr is None:
-                        self._warn_missing_backend('py7zr')
-                        return None
-                    return self._extract_from_7z_file(path, depth=depth)
+                    return self._extract_from_7z(path, depth=depth)
+
                 case 'rar':
-                    if rarfile is None:
-                        self._warn_missing_backend('rarfile')
-                        return None
-                    rarfile_mod = t.cast(t.Any, rarfile)
-                    with rarfile_mod.RarFile(path) as archive:
+                    with rarfile.RarFile(path) as archive:
                         return self._extract_from_rar(archive, depth=depth)
+
                 case _:
                     payload_cookies = self._extract_from_single_compressed_path(path, depth=depth, kind=kind)
                     if payload_cookies is not None:
@@ -447,6 +368,37 @@ class RobloxCookieSorter(BaseWorker):
 
         except (OSError, ValueError, EOFError, zipfile.BadZipFile, tarfile.TarError, lzma.LZMAError, RuntimeError) as e:
             logger.debug(f'Archive parse fallback for {path}: {e}')
+
+    def _process_data(self, data: list[str | Path]) -> None:
+        for item in data:
+            if isinstance(item, str):
+                self._process_text(item)
+            else:
+                self._process_file(item)
+        
+    def _process_file(self, file_path: Path) -> None:
+        try:
+            archive_cookies = self._extract_from_archive(file_path, depth=0)
+            if archive_cookies is None:
+                cookies, total_found = self._extract_cookies_from_regular_file(file_path)
+            else:
+                cookies, total_found = archive_cookies
+
+            unique_cookies_counter = self._merge_cookies(cookies, total_found=total_found)
+            logger.debug(f'{unique_cookies_counter} unique cookies in {file_path}')
+        except (OSError, ValueError, UnicodeError) as e:
+            self._add_incorrect()
+            logger.exception(f'Error: {e}')
+
+    def _process_text(self, text: str) -> None:
+        if not self._is_running:
+            return
+        
+        try:
+            cookies, total_found = self._extract_cookies_from_bytes(text.encode('utf-8', errors='ignore'))
+            self._merge_cookies(cookies, total_found=total_found)
+        except (OSError, ValueError, UnicodeError):
+            self._add_incorrect()
 
     def _merge_cookies(self, cookies: set[str], *, total_found: int) -> int:
         if not cookies and total_found <= 0:
@@ -462,62 +414,3 @@ class RobloxCookieSorter(BaseWorker):
             self._counter_duplicate += duplicate_counter
 
             return unique_cookies_counter
-
-    def _process_file(self, file_path: Path) -> None:
-        try:
-            archive_cookies = self._extract_archive_file(file_path, depth=0)
-            if archive_cookies is None:
-                cookies, total_found = self._extract_cookies_from_regular_file(file_path)
-            else:
-                cookies, total_found = archive_cookies
-
-            unique_cookies_counter = self._merge_cookies(cookies, total_found=total_found)
-            logger.debug(f'{unique_cookies_counter} unique cookies in {file_path}')
-        except (OSError, ValueError, UnicodeError) as e:
-            self._add_incorrect()
-            logger.exception(f'Error: {e}')
-
-    def _process_text_chunks(self) -> None:
-        for chunk in self._text_chunks:
-            if not self._is_running:
-                return
-            try:
-                cookies, total_found = self._extract_cookies_from_bytes(chunk.encode('utf-8', errors='ignore'))
-                self._merge_cookies(cookies, total_found=total_found)
-            except (OSError, ValueError, UnicodeError):
-                self._add_incorrect()
-
-    def stop(self) -> None:
-        self._is_running = False
-
-    def run(self) -> None:
-        logger.info(f'Roblox Cookie Sorter started in {self._date_of_sorting}')
-
-        file_paths = self._collect_input_files()
-        logger.info(f'Roblox Cookie Sorter workload: files={len(file_paths)}, text_blocks={len(self._text_chunks)}, workers={self._max_workers}')
-
-        self._process_text_chunks()
-
-        if self._is_running and file_paths:
-            with ThreadPoolExecutor(max_workers=self._max_workers) as executor:
-                for _ in executor.map(self._process_file, file_paths):
-                    pass
-
-        if self._cookie_set:
-            save_path = self._save_path / self._date_of_sorting
-            FS.ensure_dir(save_path)
-            with open(save_path / f'{self._filename}.txt', 'a', encoding='utf-8') as f:
-                f.write('\n'.join(self._cookie_set))
-
-        self.finished.emit(
-            {
-                'unique': self._counter_unique,
-                'duplicate': self._counter_duplicate,
-                'incorrect': self._counter_incorrect,
-                'sources': {
-                    'files': len(file_paths),
-                    'text_blocks': len(self._text_chunks),
-                    'use_default_folder': self._use_default_folder,
-                },
-            }
-        )

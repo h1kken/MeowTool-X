@@ -1,6 +1,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget
 
+from src.translation import Translation as Tr
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.utils.qt import build_object_name
@@ -17,7 +18,7 @@ class MTCounter(MTWidget):
         self,
         parent: QWidget | None = None,
         *,
-        tr_key: str = '',
+        tr: Tr = Tr(),
         icon_path: str = '',
         obj_name: tuple[str, ...] = (),
     ) -> None:
@@ -25,12 +26,12 @@ class MTCounter(MTWidget):
         self.setObjectName(build_object_name((*obj_name, MTCounter._OBJECT_NAME)))
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         
-        self._build_ui(tr_key=tr_key, icon_path=icon_path)
+        self._build_ui(tr=tr, icon_path=icon_path)
 
     def _build_ui(
         self,
         *,
-        tr_key: str = '',
+        tr: Tr,
         icon_path: str = '',
     ) -> None:
         obj_name = self.objectName()
@@ -41,7 +42,7 @@ class MTCounter(MTWidget):
         self._info_layout = create_layout(LayoutType.HBOX, self._info_widget)
         self._main_layout.addWidget(self._info_widget)
         
-        self._info_label = MTLabel(tr_key=tr_key, obj_name=(obj_name, 'Info'))
+        self._info_label = MTLabel(tr=tr, obj_name=(obj_name, 'Info'))
         self._info_layout.addWidget(self._info_label)
 
         self._info_layout.addStretch()

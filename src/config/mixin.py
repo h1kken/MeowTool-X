@@ -18,17 +18,16 @@ from src.core.types import DataValue, DataMap
 if t.TYPE_CHECKING:
     from .types import ConfigMixinHost
 
+T = t.TypeVar('T')
+
+
 class GetConfigMixin:
-    def get(self: ConfigMixinHost, key: str, *, sep: str = '>') -> DataValue:
-        value = t.cast(DataValue, get_safe(self.data, key, sep=sep, default=CONFIG_MISSING_DEFAULT))
+    def get(self: ConfigMixinHost, key: str, type_: type[T], *, sep: str = '>') -> T:
+        value = t.cast(T, get_safe(self.data, key, sep=sep, default=CONFIG_MISSING_DEFAULT))
         if value is not CONFIG_MISSING_DEFAULT:
             return value
-
-        default_value = t.cast(DataValue, get_safe(self.defaults, key, sep=sep, default=CONFIG_MISSING_DEFAULT))
-        if default_value is not CONFIG_MISSING_DEFAULT:
-            return default_value
-
-        return None
+        
+        return t.cast(T, get_safe(self.defaults, key, sep=sep))
 
 
 class SetConfigMixin:

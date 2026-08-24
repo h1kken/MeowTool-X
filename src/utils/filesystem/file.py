@@ -20,6 +20,14 @@ TDefault = t.TypeVar('TDefault')
 
 class FS:
     @staticmethod
+    def read_file_head(path: Path, size: int = 8) -> bytes:
+        try:
+            with open(path, 'rb') as f:
+                return f.read(size)
+        except OSError:
+            return b''
+    
+    @staticmethod
     def path_key(path: Path) -> str:
         try:
             return str(path.resolve()).casefold()

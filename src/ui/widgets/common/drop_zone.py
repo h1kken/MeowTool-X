@@ -4,6 +4,7 @@ from PySide6.QtCore import QMimeData, Qt, Signal
 from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent, QKeySequence, QMouseEvent, QShortcut
 from PySide6.QtWidgets import QApplication, QWidget, QFileDialog
 
+from src.translation import Translation as Tr
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 
@@ -21,7 +22,7 @@ class MTDropZone(MTWidget):
         self,
         parent: QWidget | None = None,
         *,
-        tr_key: str = '',
+        tr: Tr = Tr(),
         obj_name: tuple[str, ...] = (),
         accept_files: bool = True,
         accept_text: bool = True,
@@ -38,19 +39,19 @@ class MTDropZone(MTWidget):
         self._accept_text = accept_text
         self._browse_on_click = browse_on_click
 
-        self._build_ui(tr_key=tr_key)
+        self._build_ui(tr=tr)
         self._connect_signals()
 
     def _build_ui(
         self,
         *,
-        tr_key: str = '',
+        tr: Tr,
     ) -> None:
         obj_name = self.objectName()
         
         self._main_layout = create_layout(LayoutType.VBOX, self)
 
-        self._label = MTLabel(tr_key=tr_key, obj_name=(obj_name,))
+        self._label = MTLabel(tr=tr, obj_name=(obj_name,))
         self._main_layout.addWidget(self._label)
 
     def _connect_signals(self) -> None:

@@ -4,12 +4,15 @@ import typing as t
 
 from PySide6.QtWidgets import QWidget
 
+from src.translation import Translation as Tr
 from src.services.roblox import RobloxCookieSorter
 from src.ui.controllers import PageController
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
 from src.ui.pages import BasePage, BasePreparePage
 from src.ui.widgets.common import MTButton, MTCounter, MTProgressBar, MTScrollArea, MTWidget
+from src.db.models.cookie_sorter import CookieSorterRun
+from src.ui.widgets.common.table import MTTable
 
 if t.TYPE_CHECKING:
     from src.config import Config
@@ -29,7 +32,7 @@ class RobloxCookieSorterPage(BasePage):
         super().__init__(parent, config=config, obj_name=(*obj_name, RobloxCookieSorterPage._OBJECT_NAME))
         self._parent_page_controller = parent_page_controller
 
-        self._tab_names_by_key: dict[str, str] = {}
+        # self._runs: dict[int, CookieSorterRunTab] = {}
         
         self._build_ui()
     
@@ -47,23 +50,50 @@ class RobloxCookieSorterPage(BasePage):
 
         self._page_controller = PageController(self._main_layout, parent_page_controller=self._parent_page_controller)
 
-        tr_key, name = 'PREPARE', 'Prepare'
-        self._tab_names_by_key[tr_key] = name
+        self._create_prepare_page()
+        
+    def _create_prepare_page(self) -> None:
+        obj_name = self.objectName()
+        tr = Tr(key='PREPARE')
+        name = 'Prepare'
 
-        page = BasePreparePage(worker_class=RobloxCookieSorter, config=self._config, obj_name=(obj_name,))
-        button = MTButton(tr_key=tr_key, obj_name=(obj_name, name, 'Tab'))
+        page = BasePreparePage(worker_class=RobloxCookieSorter, config=self._config, obj_name=(obj_name, name))
+        button = MTButton(tr=tr, obj_name=(obj_name, name, 'Tab'))
         self._tabs_container_layout.addWidget(button)
-        self._page_controller.add_page(key=tr_key, name=name, page=page, button=button)
+        self._page_controller.add_page(key=tr.key, name=name, page=page, button=button)
+        
+    def _create_process_page(self) -> None:
+        obj_name = self.objectName()
+        tr = Tr(key='PREPARE')
+        name = 'Prepare'
+
+        page = BasePreparePage(worker_class=RobloxCookieSorter, config=self._config, obj_name=(obj_name, name))
+        button = MTButton(tr=tr, obj_name=(obj_name, name, 'Tab'))
+        self._tabs_container_layout.addWidget(button)
+        self._page_controller.add_page(key=tr.key, name=name, page=page, button=button)
         
     @property
     def page_controller(self) -> PageController | None:
         return self._page_controller
 
     def create_run(self) -> None:
+        obj_name = self.objectName()
+        
+        run = CookieSorterRun()
+        
+        tr = Tr(key='RUN', suffix=f' #{run.id}')
+        name = 'Run'
+        
+        page = RobloxCookieSorterProcessPage(config=self._config)
+        button = MTButton(tr=tr, obj_name=(obj_name, name, 'Tab'))
+        
+        self._tabs_container_layout.addWidget(button)
+        self._page_controller.add_page(key=tr.key, name=name, page=page, button=button)
+
+    def close_run(self) -> None:
         ...
 
-
-class RobloxCookieSorterProcessPage(BasePage):
+class RobloxCookieSorterProcessPage(BasePage):    
     _OBJECT_NAME = 'Roblox_Cookie_Sorter_Process'
 
     def __init__(
@@ -76,24 +106,56 @@ class RobloxCookieSorterProcessPage(BasePage):
         super().__init__(parent, config=config, obj_name=(*obj_name, RobloxCookieSorterProcessPage._OBJECT_NAME))
 
         self._build_ui()
+        self._connect_signals()
 
     def _build_ui(self) -> None:
         obj_name = self.objectName()
         
         self._main_layout = create_layout(LayoutType.VBOX, self)
         
+        # Progress Bar
         self._progress_bar = MTProgressBar(obj_name=(obj_name,))
         self._main_layout.addWidget(self._progress_bar)
         
+        self._main_layout.addStretch()
+        
+        # Threads View
+        self._threads_table = MTTable()
+        self._main_layout.addWidget(self._threads_table)
+        
+        self._main_layout.addStretch()
+        
+        # Counters
         self._counters_widget = MTWidget(obj_name=(obj_name, 'Counters'))
         self._counters_layout = create_layout(LayoutType.HBOX, self._counters_widget)
         self._main_layout.addWidget(self._counters_widget)
 
-        self._valid_counter = MTCounter(tr_key='VALID', obj_name=(obj_name, 'Valid'))
+        self._valid_counter = MTCounter(tr=Tr(key='VALID'), obj_name=(obj_name, 'Valid'))
         self._counters_layout.addWidget(self._valid_counter)
 
-        self._duplicate_counter = MTCounter(tr_key='DUPLICATE', obj_name=(obj_name, 'Duplicate'))
+        self._duplicate_counter = MTCounter(tr=Tr(key='DUPLICATE'), obj_name=(obj_name, 'Duplicate'))
         self._counters_layout.addWidget(self._duplicate_counter)
 
-        self._invalid_counter = MTCounter(tr_key='INVALID', obj_name=(obj_name, 'Invalid'))
+        self._invalid_counter = MTCounter(tr=Tr(key='INVALID'), obj_name=(obj_name, 'Invalid'))
         self._counters_layout.addWidget(self._invalid_counter)
+
+        self._actions_widget = MTWidget(obj_name=(obj_name, 'Actions'))
+        self._actions_layout = create_layout(LayoutType.HBOX, self._actions_widget)
+        self._main_layout.addWidget(self._actions_widget)
+
+        # Actions
+        self._pause_button = MTButton(tr=Tr(key='PAUSE'), obj_name=(obj_name, 'Pause'), checkable=True)
+        self._actions_layout.addWidget(self._pause_button)
+
+        self._stop_button = MTButton(tr=Tr(key='STOP'), obj_name=(obj_name, 'Stop'))
+        self._actions_layout.addWidget(self._stop_button)
+        
+    def _connect_signals(self) -> None:
+        self._pause_button.clicked.connect(self._on_pause_clicked)
+        self._stop_button.clicked.connect(self._on_stop_clicked)
+        
+    def _on_pause_clicked(self, _checked: bool) -> None:
+        ...
+        
+    def _on_stop_clicked(self) -> None:
+        ...
