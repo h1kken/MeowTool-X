@@ -7,18 +7,15 @@ from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import Mapper, Session
 from sqlalchemy.engine import CursorResult
 
-if t.TYPE_CHECKING:
-    from src.db.manager import DatabaseHandler
-
+from .manager import DatabaseHandler
 
 T = t.TypeVar('T')
 
-# TODO: move to advanced config
-_BATCH_SIZE = 100
-_COMMIT_INTERVAL = 5
-
 
 class DatabaseWriter(t.Generic[T]):
+    BATCH_SIZE = 100
+    COMMIT_INTERVAL = 5
+    
     def __init__(
         self,
         handler: DatabaseHandler,
@@ -50,7 +47,7 @@ class DatabaseWriter(t.Generic[T]):
             except Empty:
                 pass
 
-            if len(batch) >= _BATCH_SIZE or (batch and monotonic() - last_commit >= _COMMIT_INTERVAL):
+            if len(batch) >= self.BATCH_SIZE or (batch and monotonic() - last_commit >= self.COMMIT_INTERVAL):
                 self._write_batch(session, batch)
 
                 batch.clear()

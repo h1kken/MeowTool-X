@@ -30,7 +30,7 @@ class PrepareTableModel(TranslatableHeaderTableModelMixin, TableModel[PrepareTab
         TrKey(key='#'),
         TrKey(key='DT'),
         TrKey(key='LNS'),
-        TrKey()
+        TrKey(),
     )
     
     def __init__(

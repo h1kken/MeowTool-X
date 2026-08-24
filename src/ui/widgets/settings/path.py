@@ -33,7 +33,13 @@ class MTPathSetting(MTBaseSetting[str]):
         file_filter: str = '',
         caption: str | None = None,
     ) -> None:
-        super().__init__(parent, config=config, cfg_key=cfg_key, obj_name=(*obj_name, MTPathSetting._OBJECT_NAME))
+        super().__init__(
+            parent,
+            config=config,
+            cfg_key=cfg_key,
+            type_=str,
+            obj_name=(*obj_name, MTPathSetting._OBJECT_NAME),
+        )
         self._mode = mode
         self._file_filter = file_filter
         self._caption = caption.strip() if isinstance(caption, str) and caption.strip() else None

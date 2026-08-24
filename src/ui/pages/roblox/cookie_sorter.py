@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import typing as t
 
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget, QHeaderView
 
 from src.translation import TranslationKey as TrKey
 from src.services.roblox import RobloxCookieSorter
 from src.ui.controllers import PageController
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
+from src.ui.models.threads.model import ThreadsTableModel
 from src.ui.pages import BasePage, BasePreparePage
 from src.ui.widgets.common import MTButton, MTCounter, MTProgressBar, MTScrollArea, MTWidget
 from src.db.models.cookie_sorter import CookieSorterRun
@@ -120,8 +121,13 @@ class RobloxCookieSorterProcessPage(BasePage):
         self._main_layout.addStretch()
         
         # Threads View
-        self._threads_table = MTTable()
+        self._threads_model = ThreadsTableModel(self)
+        self._threads_table = MTTable(model=self._threads_model)
         self._main_layout.addWidget(self._threads_table)
+        
+        header = self._threads_table.horizontalHeader()
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        header.setSectionsMovable(False)
         
         self._main_layout.addStretch()
         

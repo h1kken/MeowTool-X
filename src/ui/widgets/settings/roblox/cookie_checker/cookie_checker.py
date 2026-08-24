@@ -77,7 +77,13 @@ class _BoundSwitchRow(MTBaseSetting[bool]):
         text: str = '',
         obj_name: tuple[str, ...] = (),
     ) -> None:
-        super().__init__(parent, config=config, cfg_key=cfg_key, obj_name=(*obj_name, _BoundSwitchRow._OBJECT_NAME))
+        super().__init__(
+            parent,
+            config=config,
+            cfg_key=cfg_key,
+            type_=bool,
+            obj_name=(*obj_name, _BoundSwitchRow._OBJECT_NAME),
+        )
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
         self._suspend_config_write = False

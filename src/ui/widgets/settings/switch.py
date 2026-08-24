@@ -29,7 +29,13 @@ class MTSwitchSetting(MTBaseSetting[bool]):
         tr: TrKey = TrKey(),
         obj_name: tuple[str, ...] = (),
     ) -> None:
-        super().__init__(parent, config=config, cfg_key=cfg_key, obj_name=(*obj_name, MTSwitchSetting._OBJECT_NAME))
+        super().__init__(
+            parent,
+            config=config,
+            cfg_key=cfg_key,
+            type_=bool,
+            obj_name=(*obj_name, MTSwitchSetting._OBJECT_NAME),
+        )
         
         self._build_ui(tr=tr)
         self._connect_signals()

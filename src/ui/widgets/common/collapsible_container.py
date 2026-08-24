@@ -28,9 +28,10 @@ class _CollapsibleHeader(MTWidget):
     ) -> None:
         super().__init__(parent, obj_name=(*obj_name, _CollapsibleHeader._OBJECT_NAME))
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setExpanded(True)
         
         self._build_ui(tr=tr)
+        
+        self.setExpanded(True)
     
     def _build_ui(
         self,

@@ -79,7 +79,7 @@ class DiscordRPC:
             self._worker = None
 
     def _read_enabled(self) -> bool:
-        return bool(self._config.get(CKey.MISC_DISCORD_RPC))
+        return self._config.get(CKey.MISC_DISCORD_RPC, bool)
 
     def _on_config_loaded(self) -> None:
         self._set_enabled(self._read_enabled())

@@ -29,7 +29,13 @@ class MTSliderSetting(MTBaseSetting[int]):
         min_value: int,
         max_value: int,
     ) -> None:
-        super().__init__(parent, config=config, cfg_key=cfg_key, obj_name=(*obj_name, MTSliderSetting._OBJECT_NAME))
+        super().__init__(
+            parent,
+            config=config,
+            cfg_key=cfg_key,
+            type_=int,
+            obj_name=(*obj_name, MTSliderSetting._OBJECT_NAME),
+        )
         
         self._prev_value = self.value
         self._min_value = min_value

@@ -17,10 +17,8 @@ T = t.TypeVar('T')
 @t.overload
 def log_action(action: str, *, re_raise: t.Literal[True]) -> cabc.Callable[[cabc.Callable[t.Concatenate[Path, P], R]], cabc.Callable[t.Concatenate[Path, P], R]]: ...
 
-
 @t.overload
 def log_action(action: str, *, re_raise: t.Literal[False] = False) -> cabc.Callable[[cabc.Callable[t.Concatenate[Path, P], R]], cabc.Callable[t.Concatenate[Path, P], R | None]]: ...
-
 
 def log_action(action: str, *, re_raise: bool = False) -> cabc.Callable[[cabc.Callable[t.Concatenate[Path, P], R]], cabc.Callable[t.Concatenate[Path, P], R] | cabc.Callable[t.Concatenate[Path, P], R | None]]:
     def log_action_decorator(func: cabc.Callable[t.Concatenate[Path, P], R]) -> cabc.Callable[t.Concatenate[Path, P], R] | cabc.Callable[t.Concatenate[Path, P], R | None]:

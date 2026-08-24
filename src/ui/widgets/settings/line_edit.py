@@ -27,7 +27,13 @@ class MTLineEditSetting(MTBaseSetting[str]):
         tr: TrKey = TrKey(),
         obj_name: tuple[str, ...] = (),
     ) -> None:
-        super().__init__(parent, config=config, cfg_key=cfg_key, obj_name=obj_name)
+        super().__init__(
+            parent,
+            config=config,
+            cfg_key=cfg_key,
+            type_=str,
+            obj_name=obj_name,
+        )
 
         self._build_ui(tr=tr)
         self._connect_signals()

@@ -60,11 +60,11 @@ class ConfigLoader(QObject, GetConfigMixin, SetConfigMixin, SaveConfigMixin):
 
     def _apply_logger_settings(self) -> None:
         logger.apply_debug_settings(
-            debug=bool(self.get(CLKey.MISC_DEBUGGER_DEBUG)),
-            info=bool(self.get(CLKey.MISC_DEBUGGER_INFO)),
-            warning=bool(self.get(CLKey.MISC_DEBUGGER_WARNING)),
-            error=bool(self.get(CLKey.MISC_DEBUGGER_ERROR)),
-            exception=bool(self.get(CLKey.MISC_DEBUGGER_EXCEPTION)),
+            debug=self.get(CLKey.MISC_DEBUGGER_DEBUG, bool),
+            info=self.get(CLKey.MISC_DEBUGGER_INFO, bool),
+            warning=self.get(CLKey.MISC_DEBUGGER_WARNING, bool),
+            error=self.get(CLKey.MISC_DEBUGGER_ERROR, bool),
+            exception=self.get(CLKey.MISC_DEBUGGER_EXCEPTION, bool),
         )
 
     def _load(self) -> None:

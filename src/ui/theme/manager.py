@@ -53,7 +53,7 @@ class ThemeManager(QObject):
 
     def load(self, name: str | None = None) -> None:
         if name is None:
-            name = str(self._config.get(CKey.GENERAL_THEME)).strip()
+            name = self._config.get(CKey.GENERAL_THEME, str)
         
         path = PATH_THEMES_USER / f'{name}.json5'
         if not path.is_file():

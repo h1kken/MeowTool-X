@@ -64,23 +64,19 @@ class BasePreparePage(BasePage):
         self._drop_zone = MTDropZone(tr=TrKey('DRG_AND_DRP'), obj_name=(obj_name,))
         self._content_layout.addWidget(self._drop_zone, stretch=1)
         
-        self._data_table = MTTable(obj_name=(obj_name,))
+        self._prepare_model = PrepareTableModel(self)
+        self._prepare_table = MTTable(model=self._prepare_model, obj_name=(obj_name,))
+        self._content_layout.addWidget(self._prepare_table, stretch=1)
         
-        self._model = PrepareTableModel(self)
-        self._data_table.setModel(self._model)
-        
-        header = self._data_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        header = self._prepare_table.horizontalHeader()
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         header.setSectionsMovable(False)
         
-        self._path_delegate = PathDelegate(self._data_table)
-        self._data_table.setItemDelegateForColumn(1, self._path_delegate)
+        self._path_delegate = PathDelegate(self._prepare_table)
+        self._prepare_table.setItemDelegateForColumn(1, self._path_delegate)
         
-        self._delete_button_delegate = DeleteButtonDelegate(self._data_table)
-        self._data_table.setItemDelegateForColumn(3, self._delete_button_delegate)
-        
-        self._content_layout.addWidget(self._data_table, stretch=1)
+        self._delete_button_delegate = DeleteButtonDelegate(self._prepare_table)
+        self._prepare_table.setItemDelegateForColumn(3, self._delete_button_delegate)
         
         self._buttons_widget = MTWidget(obj_name=(obj_name, 'Buttons'))
         self._buttons_layout = create_layout(LayoutType.HBOX, self._buttons_widget)
@@ -99,10 +95,10 @@ class BasePreparePage(BasePage):
         self._drop_zone.pathsDropped.connect(self._add_files)
         self._drop_zone.textDropped.connect(self._add_text)
         
-        self._model.itemAdded.connect(self._on_item_added)
-        self._model.itemRemoved.connect(self._on_item_removed)
+        self._prepare_model.itemAdded.connect(self._on_item_added)
+        self._prepare_model.itemRemoved.connect(self._on_item_removed)
         
-        self._delete_button_delegate.clicked.connect(self._model.remove_item)
+        self._delete_button_delegate.clicked.connect(self._prepare_model.remove_item)
         
         self._clear_button.clicked.connect(self._clear)
         self._start_button.clicked.connect(self._start)
@@ -113,7 +109,7 @@ class BasePreparePage(BasePage):
     def _on_item_removed(self, item: PrepareTableItem) -> None:
         if isinstance(item.value, Path):
             self._dropped_files_keys.discard(FS.path_key(item.value))
-        if not self._model.items:
+        if not self._prepare_model.items:
             self._clear_button.hide()
 
     def _add_files(self, paths: list[Path]) -> None:
@@ -123,21 +119,21 @@ class BasePreparePage(BasePage):
                 continue
             
             self._dropped_files_keys.add(key)
-            self._model.add_item(PrepareTableItem.create(value=path, lines=0))
+            self._prepare_model.add_item(PrepareTableItem.create(value=path, lines=0))
 
     def _add_text(self, text: str) -> None:
         if not text.strip():
             return
         
-        self._model.add_item(PrepareTableItem.create(value=text, lines=0))
+        self._prepare_model.add_item(PrepareTableItem.create(value=text, lines=0))
 
     def _clear(self) -> None:
-        self._model.clear()
+        self._prepare_model.clear()
         self._dropped_files_keys.clear()
         self._clear_button.hide()
 
     def _start(self) -> None: # TODO: self._workers, not self._worker
-        if not self._model.items:
+        if not self._prepare_model.items:
             return
 
         thread = QThread(self)
@@ -148,11 +144,11 @@ class BasePreparePage(BasePage):
         worker.finished.connect(thread.quit)
         thread.finished.connect(self._cleanup_worker)
 
-        self._runs.append(RunSpec(
-            run_id=,
-            thread=thread,
-            worker=worker,
-        ))
+        # self._runs.append(RunSpec(
+        #     run_id=,
+        #     thread=thread,
+        #     worker=worker,
+        # ))
 
         thread.start()
 

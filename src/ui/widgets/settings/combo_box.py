@@ -31,7 +31,13 @@ class MTComboBoxSetting(MTBaseSetting[str]):
         items: cabc.Sequence[ComboItem],
         on_changed: cabc.Callable[[str], None] | None = None,
     ) -> None:
-        super().__init__(parent, config=config, cfg_key=cfg_key, obj_name=(*obj_name, MTComboBoxSetting._OBJECT_NAME))
+        super().__init__(
+            parent,
+            config=config,
+            cfg_key=cfg_key,
+            type_=str,
+            obj_name=(*obj_name, MTComboBoxSetting._OBJECT_NAME),
+        )
         
         self._items = items
         self._on_changed = on_changed
