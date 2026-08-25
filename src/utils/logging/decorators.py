@@ -25,7 +25,7 @@ def log_action(action: str, *, re_raise: bool = False) -> cabc.Callable[[cabc.Ca
         if re_raise:
             @functools.wraps(func)
             def log_action_wrapper_reraise(path: Path, *args: P.args, **kwargs: P.kwargs) -> R:
-                with logger.origin_scope(overwrite=False, depth=2):
+                with logger.origin_scope(depth=2):
                     try:
                         return func(path, *args, **kwargs)
                     except FileExistsError:
@@ -39,7 +39,7 @@ def log_action(action: str, *, re_raise: bool = False) -> cabc.Callable[[cabc.Ca
 
         @functools.wraps(func)
         def log_action_wrapper(path: Path, *args: P.args, **kwargs: P.kwargs) -> R | None:
-            with logger.origin_scope(overwrite=False, depth=2):
+            with logger.origin_scope(depth=2):
                 try:
                     return func(path, *args, **kwargs)
                 except FileExistsError as e:
@@ -57,7 +57,7 @@ def log_action(action: str, *, re_raise: bool = False) -> cabc.Callable[[cabc.Ca
 def log_network_request(func: cabc.Callable[P, cabc.Awaitable[T]]) -> cabc.Callable[P, cabc.Awaitable[T]]:
     @functools.wraps(func)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-        with logger.origin_scope(overwrite=False, depth=2):
+        with logger.origin_scope(depth=2):
             start = time.perf_counter()
             result = await func(*args, **kwargs)
             end = time.perf_counter()

@@ -1,6 +1,8 @@
+import typing as t
+
+import threading
 from time import monotonic
 from queue import Queue, Empty
-import typing as t
 
 from sqlalchemy import inspect
 from sqlalchemy.dialects.sqlite import insert
@@ -8,11 +10,16 @@ from sqlalchemy.orm import Mapper, Session
 from sqlalchemy.engine import CursorResult
 
 from .manager import DatabaseHandler
+from .commands import BatchableDatabaseCommand, UpdateRunCommand
 
 T = t.TypeVar('T')
 
 
-class DatabaseWriter(t.Generic[T]):
+class DatabaseCommand(t.Protocol):
+    def execute(self, session: Session) -> None: ...
+
+
+class DatabaseWriter:
     BATCH_SIZE = 100
     COMMIT_INTERVAL = 5
     
@@ -26,41 +33,55 @@ class DatabaseWriter(t.Generic[T]):
         self._model = model
         self._on_duplicates = on_duplicates
         
-        self._queue: Queue[T] = Queue()
-        self._running = False
+        self._queue: Queue[DatabaseCommand] = Queue()
         self._duplicates = 0
+        
+        self._stop_event = threading.Event()
 
-    def put(self, obj: T) -> None:
+    def put(self, obj: DatabaseCommand) -> None:
         self._queue.put(obj)
 
     def run(self) -> None:
         session = self._handler.session()
 
-        batch: list[T] = []
+        batch: list[BatchableDatabaseCommand] = []
         last_commit = monotonic()
 
-        self._running = True
-        while self._running:
-            try:
-                obj = self._queue.get(timeout=1)
-                batch.append(obj)
-            except Empty:
-                pass
+        try:
+            while not self._stop_event.is_set():
+                try:
+                    command = self._queue.get(timeout=1)
+                except Empty:
+                    if batch and (monotonic() - last_commit) >= self.COMMIT_INTERVAL:
+                        self._write_batch(session, batch)
+                        batch.clear()
+                        last_commit = monotonic()
+                        
+                    continue
 
-            if len(batch) >= self.BATCH_SIZE or (batch and monotonic() - last_commit >= self.COMMIT_INTERVAL):
+                # add record to batch
+                if isinstance(command, BatchableDatabaseCommand):
+                    batch.append(command)
+
+                # check if other command
+                else:
+                    if batch:
+                        self._write_batch(session, batch)
+                        batch.clear()
+                        last_commit = monotonic()
+
+                    command.execute(session)
+                    session.commit()
+                    continue
+
+            if batch:
                 self._write_batch(session, batch)
-
-                batch.clear()
-                last_commit = monotonic()
                 
-        if batch:
-            session.add_all(batch)
-            session.commit()
-            
-        session.close()
+        finally:
+            session.close()
     
     def stop(self) -> None:
-        self._running = False
+        self._stop_event.set()
     
     def _write_batch(
         self,

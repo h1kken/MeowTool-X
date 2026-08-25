@@ -65,8 +65,8 @@ class RobloxCookieSorterPage(BasePage):
         
     def _create_process_page(self) -> None:
         obj_name = self.objectName()
-        tr = TrKey(key='PREPARE')
-        name = 'Prepare'
+        tr = TrKey(key='PROCESS')
+        name = 'Process'
 
         page = BasePreparePage(worker_class=RobloxCookieSorter, config=self._config, obj_name=(obj_name, name))
         button = MTButton(tr=tr, obj_name=(obj_name, name, 'Tab'))

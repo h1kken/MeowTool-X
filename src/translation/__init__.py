@@ -1,4 +1,5 @@
-from .manager import TranslationKey, TranslationManager
+from .dataclasses import TranslationKey
+from .manager import TranslationManager
 
 
 __all__ = (

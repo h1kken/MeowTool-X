@@ -1,3 +1,4 @@
+# TODO: it wont to be
 import typing as t
 
 
@@ -8,14 +9,10 @@ type NamedIdMap = dict[int, str]
 type SessionEntry = dict[str, JsonDict | str | None]
 
 
-class ReadableBinaryStream(t.Protocol):
-    def read(self, size: int = -1, /) -> bytes: ...
-
 __all__ = (
     'JsonDict',
     'JsonList',
     'NamedIdMap',
     'PlaceDataMap',
-    'ReadableBinaryStream',
     'SessionEntry',
 )

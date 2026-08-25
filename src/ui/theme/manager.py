@@ -6,7 +6,7 @@ import json5
 from pathlib import Path
 from collections import defaultdict
 
-from PySide6.QtCore import Qt, QObject, Signal
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QLayout, QWidget, QPushButton
 
