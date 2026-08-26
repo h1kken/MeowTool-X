@@ -12,9 +12,9 @@ class Desktop:
         return QDesktopServices.openUrl(QUrl(url))
 
     @staticmethod
-    def open_file_location(path: Path) -> None:
+    def open_file_location(path: Path) -> bool:
         if sys.platform.startswith('win'):
             subprocess.Popen(['explorer', '/select,', str(path)])
-            return
+            return True
 
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(path).parent)))
+        return QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(path).parent)))

@@ -62,7 +62,9 @@ def log_network_request(func: cabc.Callable[P, cabc.Awaitable[T]]) -> cabc.Calla
             result = await func(*args, **kwargs)
             end = time.perf_counter()
             elapsed_ms = int((end - start) * 1000)
+            
             if isinstance(result, ClientResponse):
                 logger.debug(f'[{func.__name__.upper()}:{result.status}] {result.url} for {elapsed_ms}ms')
+                
             return result
     return wrapper

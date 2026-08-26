@@ -1,3 +1,5 @@
+import faulthandler
+
 import typing as t
 
 import sys
@@ -12,31 +14,23 @@ import loguru
 
 from src.app.paths import PATH_ROOT, PATH_LOGS
 from src.app.constants import PROGRAM_NAME, IS_LAUNCHED_WITH_CONSOLE, PROGRAM_VERSION
-from src.utils.ansi import YELLOW, LIGHTGREEN, LIGHTYELLOW, LIGHTCYAN, CLEAR
 
-from .constants import (
-    DATE_LOGGER_FORMAT,
-    LOGGER_INDENT_FUNCTION,
-    LOGGER_INDENT_LEVEL,
-    LOGGER_INDENT_LINE,
-    LOGGER_INDENT_NAME,
-    LOG_ORIGIN_DEFAULT,
-    LOGGER_ROTATION,
-    LOGGER_RETENTION,
-)
 from .enums import LogLevel
 
-_LOG_ORIGIN: ContextVar[str] = ContextVar('log_origin', default=LOG_ORIGIN_DEFAULT)
+from ..ansi import ANSI
+
+_LOG_ORIGIN_DEFAULT = '-'
+_LOG_ORIGIN: ContextVar[str] = ContextVar('log_origin', default=_LOG_ORIGIN_DEFAULT)
 
 
 def _capture_origin(depth: int = 1) -> str:
     frame = inspect.currentframe()
     if frame is None:
-        return LOG_ORIGIN_DEFAULT
+        return _LOG_ORIGIN_DEFAULT
     for _ in range(depth + 1):
         frame = frame.f_back
         if frame is None:
-            return LOG_ORIGIN_DEFAULT
+            return _LOG_ORIGIN_DEFAULT
 
     try:
         file_path = Path(frame.f_code.co_filename)
@@ -72,9 +66,9 @@ def _patcher(record: t.Any) -> None:
     origin_path = _LOG_ORIGIN.get()
     origin_line = '-'
     
-    if origin_path and origin_path != LOG_ORIGIN_DEFAULT and ':' in origin_path:
+    if origin_path and origin_path != _LOG_ORIGIN_DEFAULT and ':' in origin_path:
         origin_path, origin_line = origin_path.rsplit(':', 1)
-    elif origin_path == LOG_ORIGIN_DEFAULT:
+    elif origin_path == _LOG_ORIGIN_DEFAULT:
         file = record.get('file')
         file_path = getattr(file, 'path', None)
         line = record.get('line')
@@ -102,13 +96,23 @@ def _patcher(record: t.Any) -> None:
             origin_path = display_path
             origin_line = str(line)
         else:
-            origin_path = LOG_ORIGIN_DEFAULT
+            origin_path = _LOG_ORIGIN_DEFAULT
             
     record['extra']['name'] = origin_path
     record['extra']['line'] = origin_line
 
 
 class Logger:
+    DATE_FORMAT = '%d.%m.%Y %H.%M.%S'
+
+    INDENT_NAME = 40
+    INDENT_LINE = 4
+    INDENT_FUNCTION = 27
+    INDENT_LEVEL = 8
+
+    ROTATION = 10 # MBytes
+    RETENTION = 3
+    
     def __init__(
         self,
         name: str = PROGRAM_NAME,
@@ -116,9 +120,12 @@ class Logger:
         stream: bool = IS_LAUNCHED_WITH_CONSOLE,
         console_level: LogLevel = LogLevel.INFO,
         file_level: LogLevel = LogLevel.DEBUG,
-    ):
-        self._path = PATH_LOGS / f'{datetime.now().strftime(DATE_LOGGER_FORMAT)}.log'
+    ) -> None:
+        self._path = PATH_LOGS / f'{datetime.now().strftime(Logger.DATE_FORMAT)}.log'
         self._path.parent.mkdir(parents=True, exist_ok=True)
+        
+        self._crash_path = PATH_LOGS / f'{self._path.stem}.crashlog'
+        self.setup_crash_handler(self._crash_path)
         
         self._logger = loguru.logger
         self._stream = stream
@@ -128,6 +135,10 @@ class Logger:
         
         self._configure_sinks()
         self._log_environment_info()
+
+    def setup_crash_handler(self, path: Path) -> None:
+        file = open(path, 'a', encoding='utf-8')
+        faulthandler.enable(file)
 
     def apply_debug_settings(
         self,
@@ -161,7 +172,7 @@ class Logger:
         depth: int = 1,
     ) -> t.Any:
         current = _LOG_ORIGIN.get()
-        if not overwrite and current != LOG_ORIGIN_DEFAULT:
+        if not overwrite and current != _LOG_ORIGIN_DEFAULT:
             yield current
             return
         resolved = (origin or '').strip() or _capture_origin(depth=depth + 1)
@@ -204,15 +215,15 @@ class Logger:
                 '<level>{{level:<{level_i}}}</level> {yl}|{cl} '
                 '<level>{{message}}</level>{cl}'
             ).format(
-                lg = LIGHTGREEN,
-                yl = YELLOW,
-                lc = LIGHTCYAN,
-                ly = LIGHTYELLOW,
-                cl = CLEAR,
-                name_i = LOGGER_INDENT_NAME,
-                line_i = LOGGER_INDENT_LINE,
-                function_i = LOGGER_INDENT_FUNCTION,
-                level_i = LOGGER_INDENT_LEVEL
+                lg = ANSI.LIGHTGREEN,
+                yl = ANSI.YELLOW,
+                lc = ANSI.LIGHTCYAN,
+                ly = ANSI.LIGHTYELLOW,
+                cl = ANSI.CLEAR,
+                name_i = Logger.INDENT_NAME,
+                line_i = Logger.INDENT_LINE,
+                function_i = Logger.INDENT_FUNCTION,
+                level_i = Logger.INDENT_LEVEL
             )
             
             self._logger.add(
@@ -230,18 +241,18 @@ class Logger:
             '{{level:<{level_i}}} | '
             '{{message}}'
         ).format(
-            name_i = LOGGER_INDENT_NAME,
-            line_i = LOGGER_INDENT_LINE,
-            function_i = LOGGER_INDENT_FUNCTION,
-            level_i = LOGGER_INDENT_LEVEL
+            name_i = Logger.INDENT_NAME,
+            line_i = Logger.INDENT_LINE,
+            function_i = Logger.INDENT_FUNCTION,
+            level_i = Logger.INDENT_LEVEL
         )
         
         self._logger.add(
             self._path,
             level=self._file_level,
             format=_logger_file_format,
-            rotation=f'{LOGGER_ROTATION} MB',
-            retention=LOGGER_RETENTION,
+            rotation=f'{Logger.ROTATION} MB',
+            retention=Logger.RETENTION,
             encoding='utf-8',
             enqueue=True,
             filter=self._make_sink_filter(),

@@ -22,11 +22,10 @@ from src.db.names import DatabaseName
 from src.db.writer import DatabaseWriter
 from src.db.commands import UpdateModelCommand
 from src.services.base_worker import BaseWorker
-from src.services.roblox.constants import DATE_ROBLOX_COOKIE_SORTER_FORMAT
 from src.services.roblox.regexes import ROBLOX_COOKIE_PATTERN_BYTES
 from src.utils.archive.constants import ARCHIVE_STREAM_COPY_CHUNK_BYTES
-from src.utils.datetime import current_date
 from src.utils.logging import logger
+from src.utils.datetime import DateTime
 from src.utils.archive import Archive
 from src.utils.bytes import Bytes
 from src.utils.string import String
@@ -52,7 +51,7 @@ class RobloxCookieSorter(BaseWorker):
         self._threads = self._config.get(CKey.ROBLOX_COOKIE_SORTER_THREADS, int)
 
         # prepare
-        self._date_of_sorting = current_date(DATE_ROBLOX_COOKIE_SORTER_FORMAT)
+        self._date_of_sorting = DateTime.current_utc_date()
         
         self._lock = threading.Lock()
         self._unique_counter = 0
@@ -70,7 +69,7 @@ class RobloxCookieSorter(BaseWorker):
         self._pause_event.set()
 
     def _on_duplicates(self, i: int) -> None:
-        ...
+        self._duplicate_counter += i
     
     def _on_run_create(self, run: CookieSorterRun) -> None:
         self._run = run
@@ -81,9 +80,15 @@ class RobloxCookieSorter(BaseWorker):
         
         self._db_writer_thread.start()
         
+        # create run record
         self._db_writer.put(
             CreateModelCommand(
                 model=CookieSorterRun,
+                values={
+                    'started_at': self._date_of_sorting,
+                    'status': 'abandoned',
+                    'data': [str(item) for item in self._data],
+                },
                 callback=self._on_run_create,
             )
         )
@@ -97,16 +102,20 @@ class RobloxCookieSorter(BaseWorker):
                 
             self._executor.shutdown()
             
-            if self._stop_event.is_set():
-                self._db_writer.put(
-                    UpdateModelCommand(
-                        model=CookieSorterRun,
-                        id=self._run.id,
-                        values={
-                            # TODO
-                        }
-                    )
+            # update run record
+            self._db_writer.put(
+                UpdateModelCommand(
+                    model=CookieSorterRun,
+                    id=self._run.id,
+                    values={
+                        'finished_at': DateTime.current_utc_date(),
+                        'status': 'finished' if not self._stop_event.is_set() else 'abandoned',
+                        'unique_count': self._unique_counter,
+                        'duplicate_count': self._duplicate_counter,
+                        'incorrect_count': self._incorrect_counter,
+                    },
                 )
+            )
         finally:
             self._db_writer.stop()
             self._db_writer_thread.join()
@@ -114,6 +123,7 @@ class RobloxCookieSorter(BaseWorker):
     # actions
     def stop(self) -> None:
         self._stop_event.set()
+        self._pause_event.set()
         self._executor.shutdown(wait=False, cancel_futures=True)
 
     def pause(self) -> None:
@@ -164,6 +174,9 @@ class RobloxCookieSorter(BaseWorker):
     # extractors
     def _extract_from_bytes(self, data: bytes | mmap.mmap) -> None:
         for line in Bytes.iter_lines(data):
+            self._pause_event.wait()
+            if self._stop_event.is_set():
+                return
             
             try:
                 for match in ROBLOX_COOKIE_PATTERN_BYTES.finditer(line):
@@ -188,6 +201,10 @@ class RobloxCookieSorter(BaseWorker):
                 self._add_incorrect()
 
     def _extract_from_stream(self, stream: ReadableBinaryStream, name: str) -> None:
+        self._pause_event.wait()
+        if self._stop_event.is_set():
+            return
+        
         suffix = Archive.suffix_from_name(name) or '.bin'
         temp_path: Path | None = None
 
@@ -203,6 +220,10 @@ class RobloxCookieSorter(BaseWorker):
                 FS.delete_file(temp_path)
 
     def _extract_from_file(self, path: Path) -> None:
+        self._pause_event.wait()
+        if self._stop_event.is_set():
+            return
+        
         with open(path, 'rb') as f:
             if f.seek(0, 2) == 0:
                 self._add_incorrect()
@@ -213,6 +234,10 @@ class RobloxCookieSorter(BaseWorker):
                 self._extract_from_bytes(mm)
 
     def _extract_from_compressed_file(self, path: Path, *, kind: str | None = None) -> tuple[set[str], int] | None:
+        self._pause_event.wait()
+        if self._stop_event.is_set():
+            return
+        
         compression_kind = kind or Archive.detect_kind(path)
         if compression_kind is None:
             return
@@ -234,6 +259,10 @@ class RobloxCookieSorter(BaseWorker):
                 return
 
     def _extract_from_archive(self, path: Path, *, name_hint: str | None = None) -> bool:
+        self._pause_event.wait()
+        if self._stop_event.is_set():
+            return True
+        
         kind = Archive.detect_kind(path, name_hint=name_hint)
         if kind is None:
             return False

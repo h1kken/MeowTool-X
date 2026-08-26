@@ -7,10 +7,10 @@ from src.utils.logging import logger
 
 def _normalize_property_name(value: t.Any) -> str:
     if isinstance(value, QByteArray):
-        return bytes(value.data()).decode('utf-8', errors='ignore')
+        return bytes(value.data()).decode(errors='ignore')
 
     if isinstance(value, (bytes, bytearray)):
-        return value.decode('utf-8', errors='ignore')
+        return value.decode(errors='ignore')
 
     return str(value)
 

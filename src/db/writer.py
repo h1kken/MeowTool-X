@@ -1,6 +1,5 @@
 import typing as t
 
-import threading
 from time import monotonic
 from queue import Queue, Empty
 
@@ -9,14 +8,12 @@ from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import Mapper, Session
 from sqlalchemy.engine import CursorResult
 
+from src.utils.logging import logger
+
 from .manager import DatabaseHandler
-from .commands import BatchableDatabaseCommand
+from .commands import DatabaseCommand, BatchableDatabaseCommand, ExecutableDatabaseCommand, StopDatabaseWriterCommand
 
 T = t.TypeVar('T')
-
-
-class DatabaseCommand(t.Protocol):
-    def execute(self, session: Session) -> None: ...
 
 
 class DatabaseWriter:
@@ -36,8 +33,6 @@ class DatabaseWriter:
         self._queue: Queue[DatabaseCommand] = Queue()
         self._duplicates = 0
         
-        self._stop_event = threading.Event()
-
     def put(self, command: DatabaseCommand) -> None:
         self._queue.put(command)
 
@@ -48,7 +43,7 @@ class DatabaseWriter:
         last_commit = monotonic()
 
         try:
-            while not self._stop_event.is_set():
+            while True:
                 try:
                     command = self._queue.get(timeout=1)
                 except Empty:
@@ -59,20 +54,26 @@ class DatabaseWriter:
                         
                     continue
 
-                # add record to batch
-                if isinstance(command, BatchableDatabaseCommand):
-                    batch.append(command)
+                match command:
+                    
+                    case BatchableDatabaseCommand():
+                        batch.append(command)
+                    
+                    case ExecutableDatabaseCommand():
+                        if batch:
+                            self._write_batch(session, batch)
+                            batch.clear()
+                            last_commit = monotonic()
 
-                # check if other command
-                else:
-                    if batch:
-                        self._write_batch(session, batch)
-                        batch.clear()
-                        last_commit = monotonic()
-
-                    command.execute(session)
-                    session.commit()
-                    continue
+                        command.execute(session)
+                        session.commit()
+                        continue
+                    
+                    case StopDatabaseWriterCommand():
+                        break
+                    
+                    case _:
+                        logger.warning(f'Unknown database command: {command!r}')
 
             if batch:
                 self._write_batch(session, batch)
@@ -81,7 +82,7 @@ class DatabaseWriter:
             session.close()
     
     def stop(self) -> None:
-        self._stop_event.set()
+        self._queue.put(StopDatabaseWriterCommand())
     
     def _write_batch(
         self,

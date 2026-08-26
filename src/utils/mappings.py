@@ -8,6 +8,12 @@ from copy import deepcopy
 from src.core.types import DataValue, DataMap
 
 
+def clone_value(value: DataValue) -> DataValue:
+    if isinstance(value, tuple):
+        return deepcopy(value[0]) if value else None
+    return deepcopy(value)
+
+
 def merge_dicts(
     user_map: DataMap,
     default_map: DataMap,
@@ -63,9 +69,3 @@ def merge_dicts(
                 validated[key] = t.cast(DataValue, converter(user_value, None)) if converter else user_value
 
     return validated
-
-
-def clone_value(value: DataValue) -> DataValue:
-    if isinstance(value, tuple):
-        return deepcopy(value[0]) if value else None
-    return deepcopy(value)
