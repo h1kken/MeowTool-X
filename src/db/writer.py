@@ -24,11 +24,11 @@ class DatabaseWriter:
         self,
         handler: DatabaseHandler,
         model: type[T],
-        on_duplicates: t.Callable[[int], None] | None = None,
+        callback: t.Callable[[dict[str, int]], None] | None = None,
     ) -> None:
         self._handler = handler
         self._model = model
-        self._on_duplicates = on_duplicates
+        self._callback = callback
         
         self._queue: Queue[DatabaseCommand] = Queue()
         self._duplicates = 0
@@ -107,7 +107,8 @@ class DatabaseWriter:
 
         session.commit()
 
-        self._duplicates += duplicates
-
-        if self._on_duplicates is not None:
-            self._on_duplicates(self._duplicates)
+        if self._callback is not None:
+            self._callback({
+                'unique': inserted,
+                'duplicate': duplicates,
+            })

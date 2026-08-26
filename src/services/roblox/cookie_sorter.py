@@ -13,11 +13,9 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import src.app.context as ctx
-from src.db.commands.create import CreateModelCommand
-from src.db.models.cookie_sorter.run import CookieSorterRun
-db = ctx.services.database
 from src.config import ConfigKey as CKey
-from src.db.models.cookie_sorter import CookieSorterResult
+from src.db.commands.create import CreateModelCommand
+from src.db.models.cookie_sorter import CookieSorterRun, CookieSorterResult
 from src.db.names import DatabaseName
 from src.db.writer import DatabaseWriter
 from src.db.commands import UpdateModelCommand
@@ -37,6 +35,10 @@ if t.TYPE_CHECKING:
 
 
 class RobloxCookieSorter(BaseWorker):
+    PROGRESS_LOOP_INTERVAL = 0.20
+    
+    RUN_CREATING_TIME_LIMIT = 5
+    
     def __init__(
         self,
         *,
@@ -45,21 +47,22 @@ class RobloxCookieSorter(BaseWorker):
     ) -> None:
         super().__init__()
         self._config = config
+        self._db = ctx.services.database
         self._data = data
 
         # settings
         self._threads = self._config.get(CKey.ROBLOX_COOKIE_SORTER_THREADS, int)
 
         # prepare
-        self._date_of_sorting = DateTime.current_utc_date()
+        self._date_of_sorting = DateTime.current_date(utc=True)
         
         self._lock = threading.Lock()
         self._unique_counter = 0
         self._duplicate_counter = 0
         self._incorrect_counter = 0
         
-        self._db_handler = db.get(DatabaseName.COOKIE_SORTER)
-        self._db_writer = DatabaseWriter(self._db_handler, CookieSorterResult, self._on_duplicates)
+        self._db_handler = self._db.get(DatabaseName.COOKIE_SORTER)
+        self._db_writer = DatabaseWriter(self._db_handler, CookieSorterResult, self._on_batch_written)
         self._db_writer_thread = threading.Thread(target=self._db_writer.run, name='cookie-sorter-db-writer', daemon=False)
 
         self._executor = ThreadPoolExecutor(max_workers=self._threads)
@@ -68,30 +71,38 @@ class RobloxCookieSorter(BaseWorker):
         self._pause_event = threading.Event()
         self._pause_event.set()
 
-    def _on_duplicates(self, i: int) -> None:
-        self._duplicate_counter += i
+        self._progress_loop_thread = threading.Thread(target=self._progress_loop, name='cookie-sorter-progress-loop', daemon=False)
+        self._progress_loop_stop_event = threading.Event()
+
+        self._run_created_event = threading.Event()
+
+    def _on_batch_written(self, counters: dict[str, int]) -> None:
+        with self._lock:
+            self._add_unique(counters['unique'])
+            self._add_duplicate(counters['duplicate'])
+
+    def _get_progress(self) -> dict[str, int]:
+        with self._lock:
+            return {
+                'unique': self._unique_counter,
+                'duplicate': self._duplicate_counter,
+                'incorrect': self._incorrect_counter,
+            }
+
+    def _progress_loop(self) -> None:
+        while not self._progress_loop_stop_event.wait(self.PROGRESS_LOOP_INTERVAL):
+            self.progress.emit(self._get_progress())
+        self.progress.emit(self._get_progress())
     
     def _on_run_create(self, run: CookieSorterRun) -> None:
         self._run = run
         self.run_created.emit(run)
+        self._run_created_event.set()
 
     def run(self) -> None:
         logger.info(f'Roblox Cookie Sorter started in {self._date_of_sorting}')
         
-        self._db_writer_thread.start()
-        
-        # create run record
-        self._db_writer.put(
-            CreateModelCommand(
-                model=CookieSorterRun,
-                values={
-                    'started_at': self._date_of_sorting,
-                    'status': 'abandoned',
-                    'data': [str(item) for item in self._data],
-                },
-                callback=self._on_run_create,
-            )
-        )
+        self._start_run()
 
         try:
             for data in self._data:
@@ -108,8 +119,8 @@ class RobloxCookieSorter(BaseWorker):
                     model=CookieSorterRun,
                     id=self._run.id,
                     values={
-                        'finished_at': DateTime.current_utc_date(),
-                        'status': 'finished' if not self._stop_event.is_set() else 'abandoned',
+                        'finished_at': DateTime.current_date(utc=True),
+                        'status': 'completed' if not self._stop_event.is_set() else 'stopped',
                         'unique_count': self._unique_counter,
                         'duplicate_count': self._duplicate_counter,
                         'incorrect_count': self._incorrect_counter,
@@ -117,10 +128,38 @@ class RobloxCookieSorter(BaseWorker):
                 )
             )
         finally:
-            self._db_writer.stop()
-            self._db_writer_thread.join()
+            self._finish_run()
+    
+    # run actions
+    def _start_run(self) -> None:
+        self._db_writer_thread.start()
+        
+        # create run record
+        self._db_writer.put(
+            CreateModelCommand(
+                model=CookieSorterRun,
+                values={
+                    'started_at': self._date_of_sorting,
+                    'status': 'stopped', # should be 'processing' maybe... but im too lazy to process it after closing the program
+                    'data': [str(item) for item in self._data],
+                },
+                callback=self._on_run_create,
+            )
+        )
+        
+        if not self._run_created_event.wait(timeout=self.RUN_CREATING_TIME_LIMIT):
+            raise TimeoutError(f'Run creation timed out after {self.RUN_CREATING_TIME_LIMIT}s')
 
-    # actions
+        self._progress_loop_thread.start()
+    
+    def _finish_run(self) -> None:
+        self._db_writer.stop()
+        self._db_writer_thread.join()
+        
+        self._progress_loop_stop_event.set()
+        self._progress_loop_thread.join()
+
+    # ui actions
     def stop(self) -> None:
         self._stop_event.set()
         self._pause_event.set()
@@ -136,14 +175,12 @@ class RobloxCookieSorter(BaseWorker):
     def _add_unique(self, i: int = 1) -> None:
         if i <= 0:
             return
-        with self._lock:
-            self._unique_counter += i
+        self._unique_counter += i
 
     def _add_duplicate(self, i: int = 1) -> None:
         if i <= 0:
             return
-        with self._lock:
-            self._duplicate_counter += i
+        self._duplicate_counter += i
 
     def _add_incorrect(self, i: int = 1) -> None:
         if i <= 0:

@@ -12,23 +12,17 @@ class DateTime:
     DATETIME_EPOCH_THRESHOLD_MS = 1_000_000_000_000
     DATETIME_TIME_ANCHOR_DATE = date(1900, 1, 1)
 
-    # current date
     @staticmethod
-    def current_date() -> datetime:
-        return datetime.now()
+    def current_date(utc: bool = False) -> datetime:
+        return datetime.now(timezone.utc if utc else None)
 
     @staticmethod
-    def current_utc_date() -> datetime:
-        return datetime.now(timezone.utc)
-
-    # ts to date
-    @staticmethod
-    def timestamp_to_local_date(timestamp: int, output_format: str = DATE_FORMAT) -> str:
-        return datetime.fromtimestamp(timestamp).strftime(output_format)
+    def utc_to_local_date(value: datetime) -> datetime:
+        return value.astimezone()
 
     @staticmethod
-    def timestamp_to_utc_date(timestamp: int, output_format: str = DATE_FORMAT) -> str:
-        return datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc).strftime(output_format)
+    def timestamp_to_date(timestamp: int, utc: bool = False) -> datetime:
+        return datetime.fromtimestamp(timestamp, timezone.utc if utc else None)
 
     # formaters
     @staticmethod
@@ -106,4 +100,4 @@ class DateTime:
         if parsed is not None:
             return parsed.strftime(output_format)
 
-        logger.warning(f'Can\'t convert date: {value}')
+        logger.warning(f'Failed convert date: {value}')
