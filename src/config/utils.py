@@ -5,7 +5,7 @@ import typing as t
 from copy import deepcopy
 
 from src.utils.mappings import clone_value, merge_dicts
-from src.utils.string import safe_literal_eval
+from src.utils.string import String
 from src.core.types import DataValue, DataMap
 
 from .constants import CONFIG_COMMENT_SYMBOLS, CONFIG_INDENT
@@ -41,7 +41,7 @@ def parse_config(text: str) -> DataMap:
 
         if ':' in line:
             key, value = map(str.strip, line.split(':', 1))
-            stack[-1][0][key] = t.cast(DataValue, safe_literal_eval(value))
+            stack[-1][0][key] = t.cast(DataValue, String.safe_literal_eval(value))
         else:
             while stack and stack[-1][1] >= indent:
                 stack.pop()
@@ -85,7 +85,7 @@ def _convert_to_bool(user_value: str) -> bool | str:
 
 def _parse_numeric(value: object) -> object:
     if isinstance(value, str):
-        return safe_literal_eval(value)
+        return String.safe_literal_eval(value)
     return value
 
 

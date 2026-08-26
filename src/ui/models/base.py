@@ -7,6 +7,8 @@ from uuid import UUID, uuid4
 from PySide6.QtCore import QModelIndex, Signal, QAbstractTableModel
 from PySide6.QtWidgets import QWidget
 
+from src.translation.mixins import TranslatableHeaderTableModelMixin
+
 
 @dataclass(slots=True)
 class TableItem:
@@ -16,17 +18,17 @@ class TableItem:
 TItem = t.TypeVar("TItem", bound=TableItem)
 
 
-class TableModel(QAbstractTableModel, t.Generic[TItem]):
+class TableModel(TranslatableHeaderTableModelMixin, QAbstractTableModel, t.Generic[TItem]):
     itemAdded = Signal(TableItem)
     itemRemoved = Signal(TableItem)
     
-    _COLUMN_COUNT: int
+    _TRS = ()
     
     def __init__(
         self,
         parent: QWidget | None = None,
     ) -> None:
-        super().__init__(parent)
+        super().__init__(parent, trs=self._TRS)
         
         self._items: list[TItem] = []
     
@@ -38,7 +40,7 @@ class TableModel(QAbstractTableModel, t.Generic[TItem]):
         return len(self._items)
 
     def columnCount(self, _parent: QModelIndex = QModelIndex()) -> int: # type: ignore[override]
-        return self._COLUMN_COUNT
+        return len(self._TRS)
 
     def item_at(self, row: int) -> TItem | None:
         if not (0 <= row < len(self._items)):

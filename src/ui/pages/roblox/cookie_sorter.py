@@ -9,11 +9,9 @@ from src.services.roblox import RobloxCookieSorter
 from src.ui.controllers import PageController
 from src.ui.layouts.enums import LayoutType
 from src.ui.layouts.factory import create_layout
-from src.ui.models.threads.model import ThreadsTableModel
+from src.ui.models.threads import ThreadsTableModel
 from src.ui.pages import BasePage, BasePreparePage
-from src.ui.widgets.common import MTButton, MTCounter, MTProgressBar, MTScrollArea, MTWidget
-from src.db.models.cookie_sorter import CookieSorterRun
-from src.ui.widgets.common.table import MTTable
+from src.ui.widgets.common import MTButton, MTCounter, MTProgressBar, MTTable, MTScrollArea, MTWidget
 
 if t.TYPE_CHECKING:
     from src.config import Config
@@ -42,7 +40,7 @@ class RobloxCookieSorterPage(BasePage):
         
         self._main_layout = create_layout(LayoutType.VBOX, self)
         
-        self._tabs_widget = MTScrollArea(obj_name=(obj_name, 'Tabs')) # fuck scrollarea's size hint
+        self._tabs_widget = MTScrollArea(obj_name=(obj_name, 'Tabs'))
         self._main_layout.addWidget(self._tabs_widget)
         
         self._tabs_container_widget = MTWidget(obj_name=(obj_name, 'Tabs_Container'))
@@ -51,24 +49,30 @@ class RobloxCookieSorterPage(BasePage):
 
         self._page_controller = PageController(self._main_layout, parent_page_controller=self._parent_page_controller)
 
-        self._create_prepare_page()
+        self._prepare_page = self._create_prepare_page()
         
-    def _create_prepare_page(self) -> None:
+        self._connect_signals()
+        
+    def _connect_signals(self) -> None:
+        self._prepare_page
+        
+    def _create_prepare_page(self) -> BasePreparePage:
         obj_name = self.objectName()
         tr = TrKey(key='PREPARE')
         name = 'Prepare'
 
-        page = BasePreparePage(worker_class=RobloxCookieSorter, config=self._config, obj_name=(obj_name, name))
+        page = BasePreparePage(worker_class=RobloxCookieSorter, config=self._config, obj_name=(obj_name,))
         button = MTButton(tr=tr, obj_name=(obj_name, name, 'Tab'))
         self._tabs_container_layout.addWidget(button)
         self._page_controller.add_page(key=tr.key, name=name, page=page, button=button)
+        return page
         
-    def _create_process_page(self) -> None:
+    def _create_run_page(self) -> None:
         obj_name = self.objectName()
-        tr = TrKey(key='PROCESS')
-        name = 'Process'
+        tr = TrKey(key='RUN')
+        name = 'Run'
 
-        page = BasePreparePage(worker_class=RobloxCookieSorter, config=self._config, obj_name=(obj_name, name))
+        page = RobloxCookieSorterRunPage(config=self._config, obj_name=(obj_name,))
         button = MTButton(tr=tr, obj_name=(obj_name, name, 'Tab'))
         self._tabs_container_layout.addWidget(button)
         self._page_controller.add_page(key=tr.key, name=name, page=page, button=button)
@@ -77,25 +81,8 @@ class RobloxCookieSorterPage(BasePage):
     def page_controller(self) -> PageController | None:
         return self._page_controller
 
-    def create_run(self) -> None:
-        obj_name = self.objectName()
-        
-        run = CookieSorterRun()
-        
-        tr = TrKey(key='RUN', suffix=f' #{run.id}')
-        name = 'Run'
-        
-        page = RobloxCookieSorterProcessPage(config=self._config)
-        button = MTButton(tr=tr, obj_name=(obj_name, name, 'Tab'))
-        
-        self._tabs_container_layout.addWidget(button)
-        self._page_controller.add_page(key=tr.key, name=name, page=page, button=button)
-
-    def close_run(self) -> None:
-        ...
-
-class RobloxCookieSorterProcessPage(BasePage):    
-    _OBJECT_NAME = 'Roblox_Cookie_Sorter_Process'
+class RobloxCookieSorterRunPage(BasePage):    
+    _OBJECT_NAME = 'Run'
 
     def __init__(
         self,
@@ -104,7 +91,7 @@ class RobloxCookieSorterProcessPage(BasePage):
         config: Config,
         obj_name: tuple[str, ...] = (),
     ) -> None:
-        super().__init__(parent, config=config, obj_name=(*obj_name, RobloxCookieSorterProcessPage._OBJECT_NAME))
+        super().__init__(parent, config=config, obj_name=(*obj_name, RobloxCookieSorterRunPage._OBJECT_NAME))
 
         self._build_ui()
         self._connect_signals()
@@ -114,15 +101,9 @@ class RobloxCookieSorterProcessPage(BasePage):
         
         self._main_layout = create_layout(LayoutType.VBOX, self)
         
-        # Progress Bar
-        self._progress_bar = MTProgressBar(obj_name=(obj_name,))
-        self._main_layout.addWidget(self._progress_bar)
-        
-        self._main_layout.addStretch()
-        
-        # Threads View
+        # threads table
         self._threads_model = ThreadsTableModel(self)
-        self._threads_table = MTTable(model=self._threads_model)
+        self._threads_table = MTTable(model=self._threads_model, obj_name=(obj_name,))
         self._main_layout.addWidget(self._threads_table)
         
         header = self._threads_table.horizontalHeader()
@@ -131,7 +112,11 @@ class RobloxCookieSorterProcessPage(BasePage):
         
         self._main_layout.addStretch()
         
-        # Counters
+        # progress bar
+        self._progress_bar = MTProgressBar(obj_name=(obj_name,))
+        self._main_layout.addWidget(self._progress_bar)
+        
+        # counters
         self._counters_widget = MTWidget(obj_name=(obj_name, 'Counters'))
         self._counters_layout = create_layout(LayoutType.HBOX, self._counters_widget)
         self._main_layout.addWidget(self._counters_widget)
@@ -149,7 +134,7 @@ class RobloxCookieSorterProcessPage(BasePage):
         self._actions_layout = create_layout(LayoutType.HBOX, self._actions_widget)
         self._main_layout.addWidget(self._actions_widget)
 
-        # Actions
+        # actions
         self._pause_button = MTButton(tr=TrKey(key='PAUSE'), obj_name=(obj_name, 'Pause'), checkable=True)
         self._actions_layout.addWidget(self._pause_button)
 

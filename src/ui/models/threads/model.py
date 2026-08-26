@@ -3,10 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QObject, QModelIndex
+from PySide6.QtCore import Qt, QModelIndex
+from PySide6.QtWidgets import QWidget
 
 from src.translation import TranslationKey as TrKey
-from src.translation.mixins import TranslatableHeaderTableModelMixin
 
 from ..base import TableItem, TableModel
 
@@ -16,16 +16,8 @@ class ThreadsTableItem(TableItem):
     value: str | Path
     lines: int
 
-    @classmethod
-    def create(cls, value: str | Path, lines: int) -> ThreadsTableItem:
-        return cls(
-            value=value,
-            lines=lines,
-        )
 
-
-class ThreadsTableModel(TranslatableHeaderTableModelMixin, TableModel[ThreadsTableItem]):
-    _COLUMN_COUNT = 3
+class ThreadsTableModel(TableModel[ThreadsTableItem]):
     _TRS = (
         TrKey(key='THRD'),
         TrKey(key='DT'),
@@ -34,9 +26,9 @@ class ThreadsTableModel(TranslatableHeaderTableModelMixin, TableModel[ThreadsTab
     
     def __init__(
         self,
-        parent: QObject | None = None,
+        parent: QWidget | None = None,
     ) -> None:
-        super().__init__(parent, trs=self._TRS)
+        super().__init__(parent)
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> object | None: # type: ignore[override]
         if not index.isValid():

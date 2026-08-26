@@ -119,13 +119,13 @@ class BasePreparePage(BasePage):
                 continue
             
             self._dropped_files_keys.add(key)
-            self._prepare_model.add_item(PrepareTableItem.create(value=path, lines=0))
+            self._prepare_model.add_item(PrepareTableItem(path))
 
     def _add_text(self, text: str) -> None:
         if not text.strip():
             return
         
-        self._prepare_model.add_item(PrepareTableItem.create(value=text, lines=0))
+        self._prepare_model.add_item(PrepareTableItem(text))
 
     def _clear(self) -> None:
         self._prepare_model.clear()
