@@ -5,12 +5,11 @@ import collections.abc as cabc
 
 from dataclasses import dataclass, field
 
+from src.core.types import JsonObject
+
 
 def _empty_str_dict() -> dict[str, str]:
     return {}
-
-
-type JsonObject = dict[str, t.Any]
 
 
 class NativeHttpHandleProtocol(t.Protocol):

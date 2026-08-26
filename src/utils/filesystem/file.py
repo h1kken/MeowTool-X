@@ -7,18 +7,21 @@ import shutil
 import zipfile
 from pathlib import Path
 
-from src.exceptions.json import NotADictionaryError
 from src.app.paths import PATH_APPDATA, PATH_APP_ROOT
+from src.core.types import JsonObject
 from src.utils.logging.decorators import log_action
 from src.utils.logging import logger
+from src.exceptions.json import NotADictionaryError
 
-from .constants import FILENAME_SPECIAL_CHARS, START_DIR_PATHS, START_FILE_PATHS
-from .types import JsonObject
+from .constants import START_DIR_PATHS, START_FILE_PATHS
 
 TDefault = t.TypeVar('TDefault')
 
 
 class FS:
+    PROGRAM_NAME_BLACKLIST_SPECIAL_CHARS = {'<', '>', '|', '^', '&'}
+    FILENAME_BLACKLIST_SPECIAL_CHARS = {'\\', '/', ':', '*', '?', '"', '<', '>', '|'}
+    
     @staticmethod
     def read_file_head(path: Path, size: int = 8) -> bytes:
         try:
@@ -72,7 +75,7 @@ class FS:
         if (
             not name
             or name.casefold() in blacklist
-            or any(char in name for char in FILENAME_SPECIAL_CHARS)
+            or any(char in name for char in FS.FILENAME_BLACKLIST_SPECIAL_CHARS)
         ):
             return default
         return name
