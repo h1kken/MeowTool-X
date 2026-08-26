@@ -1,4 +1,3 @@
-- Global tab system (runs, keybind runs) | +
 - UI Animations | +
 - Favorite settings | +
 - Theme/Config/Database migrations | +

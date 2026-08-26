@@ -1,5 +1,6 @@
+from src.db.mixins import BaseMixin, PlaceMixin
+
 from .base import TransactionAnalysisBase
-from src.db.models.mixins import BaseMixin, PlaceMixin
 
 
 class Place(TransactionAnalysisBase, BaseMixin, PlaceMixin):

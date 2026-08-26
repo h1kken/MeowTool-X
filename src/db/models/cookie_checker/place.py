@@ -5,8 +5,9 @@ import typing as t
 from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from src.db.mixins import BaseMixin, PlaceMixin, ResultPlaceMixin
+
 from .base import CookieCheckerBase
-from src.db.models.mixins import BaseMixin, PlaceMixin, ResultPlaceMixin
 
 if t.TYPE_CHECKING:
     from . import CookieCheckerResult, Badge, Gamepass, Product

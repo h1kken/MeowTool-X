@@ -4,8 +4,9 @@ import typing as t
 
 from sqlalchemy.orm import Mapped, relationship
 
+from src.db.mixins import BaseMixin, TransactionMixin, ResultPlaceMixin
+
 from .base import TransactionAnalysisBase
-from src.db.models.mixins import BaseMixin, TransactionMixin, ResultPlaceMixin
 
 if t.TYPE_CHECKING:
     from . import TransactionAnalysisResult, Place

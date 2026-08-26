@@ -13,10 +13,14 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import src.app.context as ctx
+from src.db.commands.create import CreateModelCommand
+from src.db.models.cookie_sorter.run import CookieSorterRun
 db = ctx.services.database
+from src.config import ConfigKey as CKey
 from src.db.models.cookie_sorter import CookieSorterResult
 from src.db.names import DatabaseName
 from src.db.writer import DatabaseWriter
+from src.db.commands import UpdateModelCommand
 from src.services.base_worker import BaseWorker
 from src.services.roblox.constants import DATE_ROBLOX_COOKIE_SORTER_FORMAT
 from src.services.roblox.regexes import ROBLOX_COOKIE_PATTERN_BYTES
@@ -26,7 +30,7 @@ from src.utils.logging import logger
 from src.utils.archive import Archive
 from src.utils.bytes import Bytes
 from src.utils.string import String
-from src.config import ConfigKey as CKey
+from src.utils.filesystem.file import FS
 
 if t.TYPE_CHECKING:
     from src.config import Config
@@ -67,11 +71,22 @@ class RobloxCookieSorter(BaseWorker):
 
     def _on_duplicates(self, i: int) -> None:
         ...
+    
+    def _on_run_create(self, run: CookieSorterRun) -> None:
+        self._run = run
+        self.run_created.emit(run)
 
     def run(self) -> None:
         logger.info(f'Roblox Cookie Sorter started in {self._date_of_sorting}')
-
+        
         self._db_writer_thread.start()
+        
+        self._db_writer.put(
+            CreateModelCommand(
+                model=CookieSorterRun,
+                callback=self._on_run_create,
+            )
+        )
 
         try:
             for data in self._data:
@@ -83,7 +98,15 @@ class RobloxCookieSorter(BaseWorker):
             self._executor.shutdown()
             
             if self._stop_event.is_set():
-                ...
+                self._db_writer.put(
+                    UpdateModelCommand(
+                        model=CookieSorterRun,
+                        id=self._run.id,
+                        values={
+                            # TODO
+                        }
+                    )
+                )
         finally:
             self._db_writer.stop()
             self._db_writer_thread.join()
@@ -134,7 +157,7 @@ class RobloxCookieSorter(BaseWorker):
 
     def _process_text(self, text: str) -> None:
         try:
-            self._extract_from_bytes(text.encode('utf-8', errors='ignore'))
+            self._extract_from_bytes(text.encode(errors='ignore'))
         except (OSError, ValueError, UnicodeError):
             self._add_incorrect()
 
@@ -152,24 +175,32 @@ class RobloxCookieSorter(BaseWorker):
                         self._add_incorrect()
                         continue
                     
-                    self._db_writer.put(CookieSorterResult(cookie=cookie))
+                    self._db_writer.put(
+                        CreateModelCommand(
+                            model=CookieSorterResult,
+                            values={
+                                'run_ref_id': self._run.id,
+                                'cookie': cookie,
+                            }
+                        )
+                    )
             except (TypeError, ValueError):
                 self._add_incorrect()
 
     def _extract_from_stream(self, stream: ReadableBinaryStream, name: str) -> None:
         suffix = Archive.suffix_from_name(name) or '.bin'
-        tmp_path: Path | None = None
+        temp_path: Path | None = None
 
         try:
-            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-                shutil.copyfileobj(stream, tmp, length=ARCHIVE_STREAM_COPY_CHUNK_BYTES)
-                tmp_path = Path(tmp.name)
+            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp_file:
+                shutil.copyfileobj(stream, temp_file, length=ARCHIVE_STREAM_COPY_CHUNK_BYTES)
+                temp_path = Path(temp_file.name)
 
-            if not self._extract_from_archive(tmp_path, name_hint=name):
-                self._extract_from_file(tmp_path)
+            if not self._extract_from_archive(temp_path, name_hint=name):
+                self._extract_from_file(temp_path)
         finally:
-            if tmp_path is not None:
-                tmp_path.unlink(missing_ok=True)
+            if temp_path is not None:
+                FS.delete_file(temp_path)
 
     def _extract_from_file(self, path: Path) -> None:
         with open(path, 'rb') as f:
@@ -222,5 +253,5 @@ class RobloxCookieSorter(BaseWorker):
 
             return True
         except (OSError, ValueError, EOFError, zipfile.BadZipFile, tarfile.TarError, lzma.LZMAError, RuntimeError) as e:
-            logger.debug(f'Archive parse fallback for {path}: {e}')
+            logger.debug(f'Archive parse fail {path}: {e}')
             return True

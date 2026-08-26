@@ -21,5 +21,5 @@ class CookieSorterResult(CookieSorterResultBase):
 
     @validates('cookie')
     def _set_cookie_hash(self, _key: str, value: str) -> str:
-        self.cookie_hash = hashlib.sha256(value.encode('utf-8')).digest()
+        self.cookie_hash = hashlib.sha256(value.encode()).digest()
         return value

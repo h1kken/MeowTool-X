@@ -7,12 +7,10 @@ from sqlalchemy.orm import Session
 
 from .base import ExecutableDatabaseCommand
 
-from ..protocols import RunModelProtocol
-
 
 @dataclass(slots=True)
-class UpdateRunCommand(ExecutableDatabaseCommand):
-    model: type[RunModelProtocol]
+class UpdateModelCommand(ExecutableDatabaseCommand):
+    model: type[t.Any]
     id: int
     values: dict[str, t.Any]
 
@@ -22,3 +20,4 @@ class UpdateRunCommand(ExecutableDatabaseCommand):
             .where(self.model.id == self.id)
             .values(**self.values),
         )
+        session.commit()

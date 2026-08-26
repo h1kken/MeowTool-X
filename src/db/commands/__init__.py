@@ -1,6 +1,7 @@
 from .base import DatabaseCommand, BatchableDatabaseCommand, ExecutableDatabaseCommand
 
-from .run import UpdateRunCommand
+from .create import CreateModelCommand
+from .update import UpdateModelCommand
 
 
 __all__ = (
@@ -8,5 +9,6 @@ __all__ = (
     'BatchableDatabaseCommand',
     'ExecutableDatabaseCommand',
     
-    'UpdateRunCommand',
+    'CreateModelCommand',
+    'UpdateModelCommand',
 )

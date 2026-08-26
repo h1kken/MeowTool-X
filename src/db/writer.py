@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapper, Session
 from sqlalchemy.engine import CursorResult
 
 from .manager import DatabaseHandler
-from .commands import BatchableDatabaseCommand, UpdateRunCommand
+from .commands import BatchableDatabaseCommand
 
 T = t.TypeVar('T')
 
@@ -38,8 +38,8 @@ class DatabaseWriter:
         
         self._stop_event = threading.Event()
 
-    def put(self, obj: DatabaseCommand) -> None:
-        self._queue.put(obj)
+    def put(self, command: DatabaseCommand) -> None:
+        self._queue.put(command)
 
     def run(self) -> None:
         session = self._handler.session()

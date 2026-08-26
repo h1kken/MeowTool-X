@@ -26,20 +26,12 @@ class DatabaseHandler:
         self._autoflush = autoflush
         self._expire_on_commit = expire_on_commit
         
-        self.engine = create_engine(
-            f'sqlite:///{path.as_posix()}',
-            echo=False,
-        )
-
-        self._session_factory = sessionmaker(
-            bind=self.engine,
-            autoflush=False,
-            expire_on_commit=False,
-        )
+        self._engine = create_engine(f'sqlite:///{path.as_posix()}', echo=False)
+        self._session_factory = sessionmaker(self._engine, autoflush=False, expire_on_commit=False)
         
     def ensure_created_all(self) -> None:
         FS.ensure_dir(self.path.parent)
-        self.base.metadata.create_all(self.engine)
+        self.base.metadata.create_all(self._engine)
 
     def session(self) -> Session:
         self.ensure_created_all()

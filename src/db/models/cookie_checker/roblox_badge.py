@@ -4,8 +4,9 @@ import typing as t
 
 from sqlalchemy.orm import Mapped, relationship
 
+from src.db.mixins import BaseMixin, RobloxBadgeMixin, ResultRobloxBadgeMixin
+
 from .base import CookieCheckerBase
-from src.db.models.mixins import BaseMixin, RobloxBadgeMixin, ResultRobloxBadgeMixin
 
 if t.TYPE_CHECKING:
     from . import CookieCheckerResult

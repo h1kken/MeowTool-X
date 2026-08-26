@@ -5,8 +5,9 @@ import typing as t
 from sqlalchemy import BigInteger, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from src.db.mixins import BaseMixin, GroupMixin, ResultGroupMixin
+
 from .base import CookieCheckerBase
-from src.db.models.mixins import BaseMixin, GroupMixin, ResultGroupMixin
 
 if t.TYPE_CHECKING:
     from . import CookieCheckerResult

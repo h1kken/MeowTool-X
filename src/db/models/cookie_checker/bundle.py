@@ -4,9 +4,9 @@ import typing as t
 
 from sqlalchemy.orm import Mapped, relationship
 
-from .base import CookieCheckerBase
-from src.db.models.mixins import BaseMixin, BundleMixin, ResultBundleMixin
+from src.db.mixins import BaseMixin, BundleMixin, ResultBundleMixin
 
+from .base import CookieCheckerBase
 
 if t.TYPE_CHECKING:
     from . import CookieCheckerResult
