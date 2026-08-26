@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from PySide6.QtCore import QModelIndex, Signal, QAbstractTableModel
 from PySide6.QtWidgets import QWidget
 
+from src.translation import TranslationKey as TrKey
 from src.translation.mixins import TranslatableHeaderTableModelMixin
 
 
@@ -22,7 +23,7 @@ class TableModel(TranslatableHeaderTableModelMixin, QAbstractTableModel, t.Gener
     itemAdded = Signal(TableItem)
     itemRemoved = Signal(TableItem)
     
-    _TRS = ()
+    _TRS: tuple[TrKey, ...]
     
     def __init__(
         self,

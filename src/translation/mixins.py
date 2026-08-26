@@ -27,6 +27,10 @@ class TranslatableMixin:
         translator.languageChanged.connect(self._update_text)
         self._update_text()
 
+    def set_tr(self, tr: TrKey) -> None:
+        self._tr = tr
+        self._update_text()
+
     def _update_text(self) -> None:
         setter = getattr(self, 'setText', None)
         if callable(setter):
@@ -54,7 +58,8 @@ class TranslatableComboBoxMixin:
 
     def add_item(self, item: ComboItem) -> None:
         combo = t.cast(_ComboBoxProtocol, self)
-        combo.addItem(translator.tr(item.tr.key), item.tr.key)
+        tr = item.tr
+        combo.addItem(f'{tr.prefix}{translator.tr(tr.key)}{tr.suffix}', item.tr)
 
     def add_items(self, items: list[ComboItem]) -> None:
         for item in items:
@@ -64,11 +69,11 @@ class TranslatableComboBoxMixin:
         combo = t.cast(_ComboBoxProtocol, self)
         
         for i in range(combo.count()):
-            tr_key = combo.itemData(i, Qt.ItemDataRole.UserRole)
-            if not isinstance(tr_key, str):
+            tr = combo.itemData(i, Qt.ItemDataRole.UserRole)
+            if not isinstance(tr, TrKey):
                 continue
             
-            combo.setItemText(i, translator.tr(tr_key))
+            combo.setItemText(i, f'{tr.prefix}{translator.tr(tr.key)}{tr.suffix}')
 
 
 class TranslatableHeaderTableModelMixin:
@@ -83,6 +88,9 @@ class TranslatableHeaderTableModelMixin:
         self._trs = trs
 
         translator.languageChanged.connect(self._update_headers)
+
+    def set_trs(self, trs: tuple[TrKey, ...]) -> None:
+        self._trs = trs
 
     def _update_headers(self) -> None:
         model = t.cast(QAbstractItemModel, self)

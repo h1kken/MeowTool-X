@@ -94,9 +94,9 @@ class RobloxCookieSorter(BaseWorker):
             self.progress.emit(self._get_progress())
         self.progress.emit(self._get_progress())
     
-    def _on_run_create(self, run: CookieSorterRun) -> None:
+    def _on_run_created(self, run: CookieSorterRun) -> None:
         self._run = run
-        self.run_created.emit(run)
+        self.runCreated.emit(run)
         self._run_created_event.set()
 
     def run(self) -> None:
@@ -143,7 +143,7 @@ class RobloxCookieSorter(BaseWorker):
                     'status': 'stopped', # should be 'processing' maybe... but im too lazy to process it after closing the program
                     'data': [str(item) for item in self._data],
                 },
-                callback=self._on_run_create,
+                callback=self._on_run_created,
             )
         )
         
@@ -165,11 +165,11 @@ class RobloxCookieSorter(BaseWorker):
         self._pause_event.set()
         self._executor.shutdown(wait=False, cancel_futures=True)
 
-    def pause(self) -> None:
-        self._pause_event.clear()
-
-    def unpause(self) -> None:
-        self._pause_event.set()
+    def pause(self, paused: bool) -> None:
+        if paused:
+            self._pause_event.clear()
+        else:
+            self._pause_event.set()
 
     # increments
     def _add_unique(self, i: int = 1) -> None:
@@ -195,10 +195,10 @@ class RobloxCookieSorter(BaseWorker):
         else:
             self._process_file(item)
     
-    def _process_file(self, file_path: Path) -> None:
+    def _process_file(self, path: Path) -> None:
         try:
-            if not self._extract_from_archive(file_path):
-                self._extract_from_file(file_path)
+            if not self._extract_from_archive(path):
+                self._extract_from_file(path)
         except (OSError, ValueError, UnicodeError):
             self._add_incorrect()
 

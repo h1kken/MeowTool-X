@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import typing as t
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget, QHeaderView
 
+from src.db.models.cookie_sorter.run import CookieSorterRun
+from src.services.base_worker import BaseWorker
 from src.translation import TranslationKey as TrKey
 from src.services.roblox import RobloxCookieSorter
 from src.ui.controllers import PageController
@@ -30,8 +33,6 @@ class RobloxCookieSorterPage(BasePage):
     ):
         super().__init__(parent, config=config, obj_name=(*obj_name, RobloxCookieSorterPage._OBJECT_NAME))
         self._parent_page_controller = parent_page_controller
-
-        # self._runs: dict[int, CookieSorterRunTab] = {}
         
         self._build_ui()
     
@@ -54,7 +55,7 @@ class RobloxCookieSorterPage(BasePage):
         self._connect_signals()
         
     def _connect_signals(self) -> None:
-        self._prepare_page
+        self._prepare_page.startClicked.connect(self._create_run_page)
         
     def _create_prepare_page(self) -> BasePreparePage:
         obj_name = self.objectName()
@@ -64,34 +65,41 @@ class RobloxCookieSorterPage(BasePage):
         page = BasePreparePage(worker_class=RobloxCookieSorter, config=self._config, obj_name=(obj_name,))
         button = MTButton(tr=tr, obj_name=(obj_name, name, 'Tab'))
         self._tabs_container_layout.addWidget(button)
+        
         self._page_controller.add_page(key=tr.key, name=name, page=page, button=button)
         return page
         
-    def _create_run_page(self) -> None:
+    def _create_run_page(self, worker: BaseWorker) -> None:
         obj_name = self.objectName()
         tr = TrKey(key='RUN')
         name = 'Run'
-
-        page = RobloxCookieSorterRunPage(config=self._config, obj_name=(obj_name,))
-        button = MTButton(tr=tr, obj_name=(obj_name, name, 'Tab'))
+        
+        page = RobloxCookieSorterRunPage(worker=worker, config=self._config, obj_name=(obj_name,))
+        button = MTButton(tr=tr, obj_name=(obj_name, name, 'Tab'))        
         self._tabs_container_layout.addWidget(button)
+        
         self._page_controller.add_page(key=tr.key, name=name, page=page, button=button)
         
     @property
     def page_controller(self) -> PageController | None:
         return self._page_controller
 
-class RobloxCookieSorterRunPage(BasePage):    
+
+class RobloxCookieSorterRunPage(BasePage):
+    runCreated = Signal(object)
+    
     _OBJECT_NAME = 'Run'
 
     def __init__(
         self,
         parent: QWidget | None = None,
         *,
+        worker: BaseWorker,
         config: Config,
         obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent, config=config, obj_name=(*obj_name, RobloxCookieSorterRunPage._OBJECT_NAME))
+        self._worker = worker
 
         self._build_ui()
         self._connect_signals()
@@ -142,11 +150,15 @@ class RobloxCookieSorterRunPage(BasePage):
         self._actions_layout.addWidget(self._stop_button)
         
     def _connect_signals(self) -> None:
-        self._pause_button.clicked.connect(self._on_pause_clicked)
+        self._worker.runCreated.connect(self._on_run_created)
+        self._pause_button.toggled.connect(self._on_pause_toggle)
         self._stop_button.clicked.connect(self._on_stop_clicked)
-        
-    def _on_pause_clicked(self, _checked: bool) -> None:
-        ...
-        
+
+    def _on_run_created(self, run: CookieSorterRun) -> None:
+        self.runCreated.emit(run)
+
+    def _on_pause_toggle(self, paused: bool) -> None:
+        self._worker.pause(paused)
+    
     def _on_stop_clicked(self) -> None:
-        ...
+        self._worker.stop()

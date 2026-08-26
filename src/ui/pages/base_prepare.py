@@ -5,7 +5,7 @@ import typing as t
 from pathlib import Path
 from dataclasses import dataclass
 
-from PySide6.QtCore import QThread
+from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import QWidget, QHeaderView
 
 from src.translation import TranslationKey as TrKey
@@ -24,12 +24,13 @@ if t.TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True)
 class RunSpec:
-    run_id: int
     thread: QThread
     worker: BaseWorker
 
 
 class BasePreparePage(BasePage):
+    startClicked = Signal(object)
+    
     _OBJECT_NAME = 'Prepare'
     
     def __init__(
@@ -44,7 +45,7 @@ class BasePreparePage(BasePage):
         
         self._thread: QThread | None = None
         
-        self._runs: list[RunSpec] = []
+        self._runs: dict[int, RunSpec] = {}
         self._worker_class: type[BaseWorker] = worker_class
 
         self._dropped_files_keys: set[str] = set()
@@ -101,7 +102,7 @@ class BasePreparePage(BasePage):
         self._delete_button_delegate.clicked.connect(self._prepare_model.remove_item)
         
         self._clear_button.clicked.connect(self._clear)
-        self._start_button.clicked.connect(self._start)
+        self._start_button.clicked.connect(self._on_start_clicked)
 
     def _on_item_added(self, _item: PrepareTableItem) -> None:
         self._clear_button.show()
@@ -132,31 +133,22 @@ class BasePreparePage(BasePage):
         self._dropped_files_keys.clear()
         self._clear_button.hide()
 
-    def _start(self) -> None: # TODO: self._workers, not self._worker
+    def _on_start_clicked(self) -> None:
         if not self._prepare_model.items:
             return
-
+        
         thread = QThread(self)
         worker = self._worker_class(self._config)
         worker.moveToThread(thread)
+        
+        self.startClicked.emit(worker)
 
         thread.started.connect(worker.run)
         worker.finished.connect(thread.quit)
-        thread.finished.connect(self._cleanup_worker)
+        worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(lambda: self._runs.pop(run_id, None))
+        thread.finished.connect(thread.deleteLater)
 
-        # self._runs.append(RunSpec(
-        #     run_id=,
-        #     thread=thread,
-        #     worker=worker,
-        # ))
+        self._runs[run_id] = RunSpec(thread, worker)
 
         thread.start()
-
-    def _cleanup_worker(self) -> None:
-        if self._worker is not None:
-            self._worker.deleteLater()
-            self._worker = None
-
-        if self._thread is not None:
-            self._thread.deleteLater()
-            self._thread = None

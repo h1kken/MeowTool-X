@@ -8,8 +8,10 @@ from src.utils.qt import build_object_name
 
 @t.overload
 def create_layout(layout_type: t.Literal[LayoutType.HBOX], parent: QWidget | None = None, *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0) -> QHBoxLayout: ...
+
 @t.overload
 def create_layout(layout_type: t.Literal[LayoutType.VBOX], parent: QWidget | None = None, *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0) -> QVBoxLayout: ...
+
 @t.overload
 def create_layout(layout_type: t.Literal[LayoutType.GRID], parent: QWidget | None = None, *, margins: int | tuple[int, int, int, int] = 0, spacing: int = 0) -> QGridLayout: ...
 

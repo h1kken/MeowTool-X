@@ -14,7 +14,7 @@ from ..base import TableItem, TableModel
 @dataclass(slots=True)
 class ThreadsTableItem(TableItem):
     value: str | Path
-    lines: int
+    lines: int = 0
 
 
 class ThreadsTableModel(TableModel[ThreadsTableItem]):
