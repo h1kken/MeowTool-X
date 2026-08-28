@@ -118,6 +118,7 @@ class RobloxCookieSorter(BaseWorker):
             # update run record
             self._db_writer.put(
                 UpdateModelCommand(
+                    run_id=self._run.id,
                     model=CookieSorterRun,
                     id=self._run.id,
                     values={
@@ -142,6 +143,7 @@ class RobloxCookieSorter(BaseWorker):
         # create run record
         self._db_writer.put(
             CreateModelCommand(
+                run_id=self._run.id,
                 model=CookieSorterRun,
                 values={
                     'started_at': self._date_of_sorting,

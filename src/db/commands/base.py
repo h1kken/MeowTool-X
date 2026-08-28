@@ -13,6 +13,7 @@ class BatchableDatabaseCommand(DatabaseCommand):
     values: dict[str, object]
 
 
+@dataclass(slots=True)
 class ExecutableDatabaseCommand(DatabaseCommand):
     run_id: int
     

@@ -69,7 +69,7 @@ class DatabaseWriter(QObject):
                 
                 match command:
                     
-                    case BatchableDatabaseCommand():                        
+                    case BatchableDatabaseCommand():
                         batch = batches.setdefault(command.run_id, [])
                         batch.append(command)
                         
