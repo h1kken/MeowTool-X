@@ -36,7 +36,7 @@ class DelegateButtonStateStyle:
 class DeleteButtonDelegate(QStyledItemDelegate):
     clicked = Signal(UUID)
 
-    _COLUMN = 3
+    _COLUMN = 2
 
     def __init__(
         self,

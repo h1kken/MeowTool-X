@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import hashlib
-
 from sqlalchemy import ForeignKey, LargeBinary, String, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, validates
+from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import CookieSorterResultBase
 
@@ -19,7 +17,7 @@ class CookieSorterResult(CookieSorterResultBase):
     cookie: Mapped[str] = mapped_column(String, nullable=False)
     cookie_hash: Mapped[bytes] = mapped_column(LargeBinary(32), nullable=False)
 
-    @validates('cookie')
-    def _set_cookie_hash(self, _key: str, value: str) -> str:
-        self.cookie_hash = hashlib.sha256(value.encode()).digest()
-        return value
+    # @validates('cookie')
+    # def _set_cookie_hash(self, _key: str, value: str) -> str:
+    #     self.cookie_hash = hashlib.sha256(value.encode()).digest()
+    #     return value

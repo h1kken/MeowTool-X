@@ -96,11 +96,7 @@ class MTIcon(MTWidget):
             self.update()
             return
 
-        color = (
-            self._color
-            if self._color is not None
-            else self.palette().windowText().color().name(QColor.NameFormat.HexArgb)
-        )
+        color = self._color if self._color is not None else self.palette().windowText().color().name(QColor.NameFormat.HexArgb)
 
         self._pixmap = build_icon_pixmap(self._source, color, self._rotation, self._size,)
 

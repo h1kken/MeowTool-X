@@ -42,12 +42,9 @@ class BasePreparePage(BasePage):
         obj_name: tuple[str, ...] = (),
     ) -> None:
         super().__init__(parent, config=config, obj_name=(*obj_name, BasePreparePage._OBJECT_NAME))
+        self._worker_class: type[BaseWorker] = worker_class
         
         self._thread: QThread | None = None
-        
-        self._runs: dict[int, RunSpec] = {}
-        self._worker_class: type[BaseWorker] = worker_class
-
         self._dropped_files_keys: set[str] = set()
 
         self._build_ui()
@@ -113,6 +110,23 @@ class BasePreparePage(BasePage):
         if not self._prepare_model.items:
             self._clear_button.hide()
 
+    def _on_start_clicked(self) -> None:
+        if not self._prepare_model.items:
+            return
+        
+        thread = QThread(self)
+        worker = self._worker_class(config=self._config, data=[item.value for item in self._prepare_model.items])
+        worker.moveToThread(thread)
+        
+        self.startClicked.emit(worker)
+
+        thread.started.connect(worker.run)
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+
+        thread.start()
+
     def _add_files(self, paths: list[Path]) -> None:
         for path in paths:
             key = FS.path_key(path)
@@ -132,23 +146,3 @@ class BasePreparePage(BasePage):
         self._prepare_model.clear()
         self._dropped_files_keys.clear()
         self._clear_button.hide()
-
-    def _on_start_clicked(self) -> None:
-        if not self._prepare_model.items:
-            return
-        
-        thread = QThread(self)
-        worker = self._worker_class(self._config)
-        worker.moveToThread(thread)
-        
-        self.startClicked.emit(worker)
-
-        thread.started.connect(worker.run)
-        worker.finished.connect(thread.quit)
-        worker.finished.connect(worker.deleteLater)
-        thread.finished.connect(lambda: self._runs.pop(run_id, None))
-        thread.finished.connect(thread.deleteLater)
-
-        self._runs[run_id] = RunSpec(thread, worker)
-
-        thread.start()

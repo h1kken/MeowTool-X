@@ -56,6 +56,9 @@ class RobloxCookieSorterPage(BasePage):
         
     def _connect_signals(self) -> None:
         self._prepare_page.startClicked.connect(self._create_run_page)
+    
+    def _on_run_created(self, run: CookieSorterRun, button: MTButton) -> None:
+        button.set_tr(TrKey(key='RUN', suffix=f' #{run.id}'))
         
     def _create_prepare_page(self) -> BasePreparePage:
         obj_name = self.objectName()
@@ -75,8 +78,13 @@ class RobloxCookieSorterPage(BasePage):
         name = 'Run'
         
         page = RobloxCookieSorterRunPage(worker=worker, config=self._config, obj_name=(obj_name,))
-        button = MTButton(tr=tr, obj_name=(obj_name, name, 'Tab'))        
+        button = MTButton(tr=tr, obj_name=(obj_name, name, 'Tab'))
         self._tabs_container_layout.addWidget(button)
+        
+        def on_run_created(run: CookieSorterRun) -> None:
+            button.set_tr(TrKey(key='RUN', suffix=f' #{run.id}'))
+        
+        page.runCreated.connect(on_run_created) # lambda should be casted, i wont
         
         self._page_controller.add_page(key=tr.key, name=name, page=page, button=button)
         
@@ -148,17 +156,29 @@ class RobloxCookieSorterRunPage(BasePage):
 
         self._stop_button = MTButton(tr=TrKey(key='STOP'), obj_name=(obj_name, 'Stop'))
         self._actions_layout.addWidget(self._stop_button)
-        
+
     def _connect_signals(self) -> None:
         self._worker.runCreated.connect(self._on_run_created)
-        self._pause_button.toggled.connect(self._on_pause_toggle)
+        self._worker.progress.connect(self._on_progress_updated)
+        self._worker.finished.connect(self._on_run_finished)
+        self._pause_button.toggled.connect(self._on_pause_toggled)
         self._stop_button.clicked.connect(self._on_stop_clicked)
 
     def _on_run_created(self, run: CookieSorterRun) -> None:
         self.runCreated.emit(run)
 
-    def _on_pause_toggle(self, paused: bool) -> None:
+    def _on_run_finished(self) -> None:
+        self._pause_button.setEnabled(False)
+
+    def _on_progress_updated(self, progress: dict[str, int]) -> None:
+        self._valid_counter.set_value(progress['valid'])
+        self._duplicate_counter.set_value(progress['duplicate'])
+        self._invalid_counter.set_value(progress['invalid'])
+
+    def _on_pause_toggled(self, paused: bool) -> None:
         self._worker.pause(paused)
+        self._pause_button.set_tr(TrKey(key='UNPAUSE' if paused else 'PAUSE'))
     
     def _on_stop_clicked(self) -> None:
         self._worker.stop()
+        self._on_pause_toggled(False)

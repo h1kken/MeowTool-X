@@ -3,6 +3,7 @@ from .base import DatabaseCommand, BatchableDatabaseCommand, ExecutableDatabaseC
 from .writer.stop import StopDatabaseWriterCommand
 
 from .create import CreateModelCommand
+from .insert import InsertCommand
 from .update import UpdateModelCommand
 
 
@@ -14,5 +15,6 @@ __all__ = (
     'StopDatabaseWriterCommand',
     
     'CreateModelCommand',
+    'InsertCommand',
     'UpdateModelCommand',
 )

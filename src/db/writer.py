@@ -3,10 +3,11 @@ import typing as t
 from time import monotonic
 from queue import Queue, Empty
 
-from sqlalchemy import inspect
 from sqlalchemy.dialects.sqlite import insert
-from sqlalchemy.orm import Mapper, Session
+from sqlalchemy.orm import Session
 from sqlalchemy.engine import CursorResult
+
+from PySide6.QtCore import QObject, Signal
 
 from src.utils.logging import logger
 
@@ -16,8 +17,10 @@ from .commands import DatabaseCommand, BatchableDatabaseCommand, ExecutableDatab
 T = t.TypeVar('T')
 
 
-class DatabaseWriter:
-    BATCH_SIZE = 100
+class DatabaseWriter(QObject):
+    batchWritten = Signal(int, dict)
+    
+    BATCH_SIZE = 1000
     COMMIT_INTERVAL = 5
     
     def __init__(
@@ -30,8 +33,7 @@ class DatabaseWriter:
         self._model = model
         self._callback = callback
         
-        self._queue: Queue[DatabaseCommand] = Queue()
-        self._duplicates = 0
+        self._queue: Queue[DatabaseCommand] = Queue(maxsize=10_000)
         
     def put(self, command: DatabaseCommand) -> None:
         self._queue.put(command)
@@ -39,35 +41,47 @@ class DatabaseWriter:
     def run(self) -> None:
         session = self._handler.session()
 
-        batch: list[BatchableDatabaseCommand] = []
-        last_commit = monotonic()
+        batches: dict[int, list[BatchableDatabaseCommand]] = {}
+        last_batch_write = monotonic()
+
+        def process_batch(session: Session, run_id: int, batch: list[BatchableDatabaseCommand]):
+            if not batch:
+                return
+            
+            nonlocal last_batch_write
+            self._write_batch(session, run_id, batch)
+            batch.clear()
+            last_batch_write = monotonic()
 
         try:
             while True:
                 try:
                     command = self._queue.get(timeout=1)
                 except Empty:
-                    if batch and (monotonic() - last_commit) >= self.COMMIT_INTERVAL:
-                        self._write_batch(session, batch)
-                        batch.clear()
-                        last_commit = monotonic()
-                        
-                    continue
+                    command = None
+                
+                if (monotonic() - last_batch_write) >= self.COMMIT_INTERVAL:
+                    for run_id, batch in batches.items():
+                        process_batch(session, run_id, batch)
 
+                if command is None:
+                    continue
+                
                 match command:
                     
-                    case BatchableDatabaseCommand():
+                    case BatchableDatabaseCommand():                        
+                        batch = batches.setdefault(command.run_id, [])
                         batch.append(command)
+                        
+                        if len(batch) >= self.BATCH_SIZE:
+                            process_batch(session, command.run_id, batch)
                     
                     case ExecutableDatabaseCommand():
-                        if batch:
-                            self._write_batch(session, batch)
-                            batch.clear()
-                            last_commit = monotonic()
+                        batch = batches[command.run_id]
+                        process_batch(session, command.run_id, batch)
 
                         command.execute(session)
                         session.commit()
-                        continue
                     
                     case StopDatabaseWriterCommand():
                         break
@@ -75,30 +89,22 @@ class DatabaseWriter:
                     case _:
                         logger.warning(f'Unknown database command: {command!r}')
 
-            if batch:
-                self._write_batch(session, batch)
-                
+            for run_id, batch in batches.items():
+                process_batch(session, run_id, batch)
+         
+        except Exception as e: # TODO: if writer dies - all runs dies too
+            session.rollback()
+            logger.error(f'Failed to write batch: model={self._model.__name__}, error={type(e).__name__}: {getattr(e, 'orig', e)}')
+            
         finally:
             session.close()
     
     def stop(self) -> None:
         self._queue.put(StopDatabaseWriterCommand())
     
-    def _write_batch(
-        self,
-        session: Session,
-        batch: list[T],
-    ) -> None:
-        mapper = t.cast(Mapper[t.Any], inspect(self._model))
-
-        rows = [
-            {
-                column.key: getattr(obj, column.key)
-                for column in mapper.columns
-                if column.key in mapper.column_attrs
-            }
-            for obj in batch
-        ]
+    def _write_batch(self, session: Session, run_id: int, batch: list[BatchableDatabaseCommand]) -> None:
+        rows = [command.values for command in batch]
+        
         stmt = insert(self._model).values(rows).on_conflict_do_nothing()
         result = t.cast(CursorResult[t.Any], session.execute(stmt))
 
@@ -107,8 +113,10 @@ class DatabaseWriter:
 
         session.commit()
 
-        if self._callback is not None:
-            self._callback({
-                'unique': inserted,
+        self.batchWritten.emit(
+            run_id,
+            {
+                'inserted': inserted,
                 'duplicate': duplicates,
-            })
+            }
+        )

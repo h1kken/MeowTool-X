@@ -11,14 +11,14 @@ import lzma
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+import hashlib
 
 import src.app.context as ctx
 from src.config import ConfigKey as CKey
-from src.db.commands.create import CreateModelCommand
+from src.db.commands import CreateModelCommand, InsertCommand, UpdateModelCommand
 from src.db.models.cookie_sorter import CookieSorterRun, CookieSorterResult
 from src.db.names import DatabaseName
 from src.db.writer import DatabaseWriter
-from src.db.commands import UpdateModelCommand
 from src.services.base_worker import BaseWorker
 from src.services.roblox.regexes import ROBLOX_COOKIE_PATTERN_BYTES
 from src.utils.archive.constants import ARCHIVE_STREAM_COPY_CHUNK_BYTES
@@ -45,27 +45,25 @@ class RobloxCookieSorter(BaseWorker):
         config: Config,
         data: list[str | Path],
     ) -> None:
-        super().__init__()
-        self._config = config
+        super().__init__(config=config, data=data)
         self._db = ctx.services.database
-        self._data = data
 
         # settings
         self._threads = self._config.get(CKey.ROBLOX_COOKIE_SORTER_THREADS, int)
 
         # prepare
-        self._date_of_sorting = DateTime.current_date(utc=True)
+        self._date_of_sorting = DateTime.current_datetime(utc=True)
         
         self._lock = threading.Lock()
-        self._unique_counter = 0
+        self._valid_counter = 0
         self._duplicate_counter = 0
-        self._incorrect_counter = 0
+        self._invalid_counter = 0
         
         self._db_handler = self._db.get(DatabaseName.COOKIE_SORTER)
         self._db_writer = DatabaseWriter(self._db_handler, CookieSorterResult, self._on_batch_written)
         self._db_writer_thread = threading.Thread(target=self._db_writer.run, name='cookie-sorter-db-writer', daemon=False)
 
-        self._executor = ThreadPoolExecutor(max_workers=self._threads)
+        self._executor = ThreadPoolExecutor(max_workers=self._threads, thread_name_prefix='cookie-sorter')
 
         self._stop_event = threading.Event()
         self._pause_event = threading.Event()
@@ -78,15 +76,15 @@ class RobloxCookieSorter(BaseWorker):
 
     def _on_batch_written(self, counters: dict[str, int]) -> None:
         with self._lock:
-            self._add_unique(counters['unique'])
+            self._add_valid(counters['inserted'])
             self._add_duplicate(counters['duplicate'])
 
     def _get_progress(self) -> dict[str, int]:
         with self._lock:
             return {
-                'unique': self._unique_counter,
+                'valid': self._valid_counter,
                 'duplicate': self._duplicate_counter,
-                'incorrect': self._incorrect_counter,
+                'invalid': self._invalid_counter,
             }
 
     def _progress_loop(self) -> None:
@@ -100,11 +98,12 @@ class RobloxCookieSorter(BaseWorker):
         self._run_created_event.set()
 
     def run(self) -> None:
-        logger.info(f'Roblox Cookie Sorter started in {self._date_of_sorting}')
+        logger.info(f'Roblox Cookie Sorter started in {DateTime.convert_datetime(DateTime.utc_to_local_datetime(self._date_of_sorting))}')
         
         self._start_run()
 
         try:
+            # work
             for data in self._data:
                 if self._stop_event.is_set():
                     break
@@ -113,20 +112,26 @@ class RobloxCookieSorter(BaseWorker):
                 
             self._executor.shutdown()
             
+            # finish
+            date_of_finished = DateTime.current_datetime(utc=True)            
+            
             # update run record
             self._db_writer.put(
                 UpdateModelCommand(
                     model=CookieSorterRun,
                     id=self._run.id,
                     values={
-                        'finished_at': DateTime.current_date(utc=True),
+                        'finished_at': date_of_finished,
                         'status': 'completed' if not self._stop_event.is_set() else 'stopped',
-                        'unique_count': self._unique_counter,
+                        'valid_count': self._valid_counter,
                         'duplicate_count': self._duplicate_counter,
-                        'incorrect_count': self._incorrect_counter,
+                        'invalid_count': self._invalid_counter,
                     },
                 )
             )
+            
+            self.finished.emit()
+            logger.info(f'Roblox Cookie Sorter finished in {DateTime.convert_datetime(DateTime.utc_to_local_datetime(date_of_finished))}')
         finally:
             self._finish_run()
     
@@ -172,10 +177,10 @@ class RobloxCookieSorter(BaseWorker):
             self._pause_event.set()
 
     # increments
-    def _add_unique(self, i: int = 1) -> None:
+    def _add_valid(self, i: int = 1) -> None:
         if i <= 0:
             return
-        self._unique_counter += i
+        self._valid_counter += i
 
     def _add_duplicate(self, i: int = 1) -> None:
         if i <= 0:
@@ -186,10 +191,12 @@ class RobloxCookieSorter(BaseWorker):
         if i <= 0:
             return
         with self._lock:
-            self._incorrect_counter += i
+            self._invalid_counter += i
 
     # processors
     def _process_data(self, item: str | Path) -> None:
+        thread = threading.current_thread() # TODO
+        
         if isinstance(item, str):
             self._process_text(item)
         else:
@@ -226,11 +233,12 @@ class RobloxCookieSorter(BaseWorker):
                         continue
                     
                     self._db_writer.put(
-                        CreateModelCommand(
-                            model=CookieSorterResult,
+                        InsertCommand(
+                            run_id=self._run.id,
                             values={
                                 'run_ref_id': self._run.id,
                                 'cookie': cookie,
+                                'cookie_hash': hashlib.sha256(cookie.encode()).digest(),
                             }
                         )
                     )

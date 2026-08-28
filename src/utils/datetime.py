@@ -7,21 +7,21 @@ from src.utils.logging import logger
 
 
 class DateTime:
-    DATE_FORMAT = '%d.%m.%Y'
-    DATE_TIME_FORMAT = '%d.%m.%Y %H:%M:%S'
-    DATETIME_EPOCH_THRESHOLD_MS = 1_000_000_000_000
-    DATETIME_TIME_ANCHOR_DATE = date(1900, 1, 1)
+    _DATE_FORMAT_DEFAULT = '%d.%m.%Y'
+    _DATETIME_FORMAT_DEFAULT = '%d.%m.%Y %H:%M:%S'
+    _DATETIME_EPOCH_THRESHOLD_MS = 1_000_000_000_000
+    _DATETIME_TIME_ANCHOR_DATE = date(1900, 1, 1)
 
     @staticmethod
-    def current_date(utc: bool = False) -> datetime:
+    def current_datetime(utc: bool = False) -> datetime:
         return datetime.now(timezone.utc if utc else None)
 
     @staticmethod
-    def utc_to_local_date(value: datetime) -> datetime:
+    def utc_to_local_datetime(value: datetime) -> datetime:
         return value.astimezone()
 
     @staticmethod
-    def timestamp_to_date(timestamp: int, utc: bool = False) -> datetime:
+    def timestamp_to_datetime(timestamp: int, utc: bool = False) -> datetime:
         return datetime.fromtimestamp(timestamp, timezone.utc if utc else None)
 
     # formaters
@@ -43,7 +43,7 @@ class DateTime:
 
     # parsers
     @staticmethod
-    def parse_date(value: object) -> datetime | None:
+    def parse_datetime(value: object) -> datetime | None:
         if isinstance(value, datetime):
             return value
 
@@ -51,11 +51,11 @@ class DateTime:
             return datetime.combine(value, time.min)
 
         if isinstance(value, time):
-            return datetime.combine(DateTime.DATETIME_TIME_ANCHOR_DATE, value)
+            return datetime.combine(DateTime._DATETIME_TIME_ANCHOR_DATE, value)
 
         if isinstance(value, (int, float)):
             timestamp = float(value)
-            if abs(timestamp) >= DateTime.DATETIME_EPOCH_THRESHOLD_MS:
+            if abs(timestamp) >= DateTime._DATETIME_EPOCH_THRESHOLD_MS:
                 timestamp /= 1000.0
             try:
                 return datetime.fromtimestamp(timestamp)
@@ -71,7 +71,7 @@ class DateTime:
 
         try:
             numeric = float(text)
-            if abs(numeric) >= DateTime.DATETIME_EPOCH_THRESHOLD_MS:
+            if abs(numeric) >= DateTime._DATETIME_EPOCH_THRESHOLD_MS:
                 numeric /= 1000.0
             return datetime.fromtimestamp(numeric)
         except ValueError:
@@ -95,8 +95,8 @@ class DateTime:
 
     # converters
     @staticmethod
-    def convert_date(value: object, output_format: str = DATE_TIME_FORMAT) -> str | None:
-        parsed = DateTime.parse_date(value)
+    def convert_datetime(value: object, output_format: str = _DATETIME_FORMAT_DEFAULT) -> str | None:
+        parsed = DateTime.parse_datetime(value)
         if parsed is not None:
             return parsed.strftime(output_format)
 
